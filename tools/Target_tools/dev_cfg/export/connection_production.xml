@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name="connection production">
+  <device id="0x03000009">
+      <props id="1" id_name="NT_DEVCFG_CONN_TIMEOUT" min="20" max="20" helptext="default-connection time out" type="0x00000002"> 20 </props>
+      <props id="2" id_name="NT_DEVCFG_CONN_RETRY_COUNT" min="0" max="0" helptext="default-max connection retry " type="0x00000002"> 0 </props>
+      <props id="3" id_name="NT_DEVCFG_CONN_WLAN_MLME_TO" helptext="default-auth/assoc timeout value" type="0x00000002"> 1000 </props>
+	  <props id="4" id_name="NT_DEVCFG_CONN_MLME_SM_RETRY_CNT" helptext="default-auth/assoc retry count" type="0x00000002"> 3 </props>
+      <props id="5" id_name="NT_DEVCFG_CONN_ASSOC_COMEBACK_TIMEOUT" helptext="default-assoc comeback timeout value" type="0x00000002"> 2 </props>
+      <props id="6" id_name="NT_DEVCFG_CONN_ADDBA_RESP_TIMM" helptext="default-add ba resp timer" type="0x00000002"> 1 </props>
+      <props id="7" id_name="NT_DEVCFG_CONN_MIC_ERR_TIMM" helptext="default-mic error timer" type="0x00000002"> 60 </props>
+      <props id="8" id_name="NT_DEVCFG_CONN_TKIP_WAIT_TIMM" helptext="default-tkip countermeasure timer" type="0x00000002"> 50 </props>
+	  <props id="9" id_name="NT_DEVCFG_CONN_CONSECUTIVE_BMISS_THRESHOLD" min="15" max="15" helptext="default-beacon miss threshold to initiate reconnect" type="0x00000002"> 15 </props>
+      <props id="10" id_name="NT_DEVCFG_CONN_MODIFIED_BEACON_INTERVAL" min="100" max="100" helptext="modified beacon interval" type="0x00000002"> 100 </props>
+	  <props id="11" id_name="NT_DEVCFG_CONN_STA_INACT_INTERVAL" min="0" max="0" helptext="sta inactivity interval in secs" type="0x00000002"> 0 </props>
+      <props id="12" id_name="NT_DEVCFG_CONN_PS_STA_INACT_FACTOR" helptext="power save sta inactivity factor" type="0x00000002"> 10 </props>
+      <props id="13" id_name="NT_DEVCFG_TRANSMIT_INTERRUPT_THRESHOLD_CONFIG" helptext="to configure the lowest voltage below which transmission interrupt will be triggered" type="0x00000002">0x3F</props>
+      <props id="14" id_name="NT_DEVCFG_RINT_MEASUREMENT_START_THRESHOLD_CONFIG" helptext="config for the voltage below which Rint measurement of coin cell will be started" type="0x00000002">0xDD</props>
+      <props id="15" id_name="NT_DEVCFG_RINT_MEASUREMENT_STOP_THRESHOLD_CONFIG" helptext="config for the voltage above which Rint measurement of coin cell  will be stopped" type="0x00000002">0x14F</props>
+      <props id="16" id_name="NT_DEVCFG_TXOP_VBATT_AVERAGE_SAMPLES_CONFIG" helptext="after collecting (2^config) no of samples out put will be given by HKADC after TXOP" type="0x00000002">1</props>
+      <props id="17" id_name="NT_DEVCFG_RINT_AVERAGE_SAMPLES_CONFIG" helptext="after collecting (2^config) no of samples out put will be given by HKADC for Rint measurement" type="0x00000002">1</props>
+      <props id="18" id_name="NT_DEVCFG_RINT_MEASUREMENT_WINDOW_TIME_CONFIG" helptext="time span for Vbatt Rint measurement window" type="0x00000002">0x384</props>
+      <props id="19" id_name="NT_DEVCFG_RINT_MEASUREMENT_TIME_OUT_CONFIG" helptext="if time span for Vbatt Rint measurement window expires,and the voltage does not come back to stop threshold, this much extra time is given to coin cell for recovery,after expiration of this time vbatt timeout interrupt will be triggered" type="0x00000002">0x1F4</props>
+      <props id="20" id_name="NT_DEVCFG_DEFAULT_PHY_MODE" min="0" max="5" helptext="default-phymode MODE_11B/MODE_11G/MODE_11NG_HT20/MODE_UNKNOWN/MODE_MAX" type="0x00000002"> 5 </props>
+	  <props id="21" id_name="NT_DEVCFG_OPERATING_CHAN" helptext="default-operating channel-ns" type="0x00000002"> 3 </props>
+      <props id="22" id_name="NT_DEVCFG_AUTO_BA" min="0" max="0" helptext="enable BA after connection" type="0x00000002"> 0 </props>
+      <props id="23" id_name="NT_DEVCFG_AUTO_BA_AC_TYPE" min="0" max="0" helptext="enable traffic after AUTO_BA" type="0x00000002"> 0 </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+   </device>
+</driver>
+</module>
+</dal>

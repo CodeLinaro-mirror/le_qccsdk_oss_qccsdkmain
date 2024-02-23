@@ -1,0 +1,106 @@
+SYNTAX=2
+
+beginCMTEST
+beginPROD
+
+
+#-------------------------------------------------------------------------------
+
+#---  Package BIN directory
+
+#-------------------------------------------------------------------------------
+
+beginCopying
+  .\.\build\FERMION\DEBUG\bin\FERMION.hex BIN\.\.\wifi\qcc532x_qcc522x\qcp5321.hex
+  .\.\core\wifi\halphy\phyrf_svc\tools\bdfUtils\device\bdf\qcp5321\bdwlan.bin BIN\.\.\wifi\qcc532x_qcc522x\bdwlan.bin
+  .\.\core\wifi\halphy\phyrf_svc\tools\Regulatory\regdb.bin BIN\.\.\wifi\qcc532x_qcc522x\regdb.bin
+  .\.\core\wifi\config_ini\mib BIN\.\.\wifi\qcc532x_qcc522x\mib
+
+
+endCopying
+
+beginDelete BIN
+endDelete BIN
+#================================================================================
+#
+#                Information about how this file is formatted
+#                --------------------------------------------
+#
+# This file is processed in a top down fashion.  Each statement will be 
+# read and executed accordingly.
+#
+# The format of this text file is:
+#
+#    Comments start with # in the first column
+#
+#    Blank lines are ignored
+#
+#    [ is used to designate the clientID.
+#    The packit script will automatically substitute [ with the clientID.
+#        For example, [.frm would become EQ.frm for the EQ build.
+#
+#    ] is used to designate the version number.  
+#    The packit script will automatically substitute ] with the version number.
+#        For example, ].rpt would become 1112.rpt for the EQ 1.1.12 build.
+#
+#    [] is used to designate the build name (clientID + version)
+#    The packit script will automatically substitute [] with the build name.
+#        For example, [].log would become EQ1112.log for the EQ 1.1.12 build.
+#
+#    To specify files that are required before the packaging can begin:
+#
+#        beginRequired
+#        <file>
+#        endRequired
+#
+#    To include another package definition file:
+#
+#       include fileName.txt
+#
+#    To specify lines pertaining to a particular build type, surround 
+#    the lines with the appropriate "begin" and "end" statements:
+#
+#        beginCMTEST 
+#        endCMTEST
+#
+#        beginPROD
+#        endPROD
+#
+#        beginTEST 
+#        endTEST
+#
+#    To specify files that are added to a directory:
+#
+#        beginAdd <DirName  or  DirName\name.zip  or  DirName\name.exe>
+#        <file to add>
+#        endAdd <DirName>
+#
+#    When DirName is specified by itself, the files are copied to the directory.
+#    When DirName\name.zip is specified, the files are zipped into a regular zip file.
+#    When DirName\name.exe is specified, the files are zipped into a self extracting file.
+#
+#    To specify files that are to be removed from a directory:
+#
+#        beginDel <DirName  or  DirName\name.zip  or  DirName\name.exe>
+#        <file to delete>
+#        endDel <DirName>
+#
+#    When DirName is specified by itself, the files are deleted from the directory.
+#    When DirName\name.zip is specified, the files are deleted from the zip file.
+#    When DirName\name.exe is specified, the files are deleted from the self extracting file.
+#
+#    To specify files that are to be copied to a different name:
+#        beginCopy
+#        <from> <to  or  DirName\to>
+#        endCopy
+#
+#    To create a DOS compatible self extracting file from a zip file:
+#        zip2exe <DirName\name.zip>
+#
+#    To create a packing list
+#        packList <DirName or DirName\name.zip or DirName\name.exe> <DirName\packname.lst>
+#
+#    To changethe file attributes:
+#        chmod <0444 or 0777> <DirName\*.*>
+#
+#================================================================================

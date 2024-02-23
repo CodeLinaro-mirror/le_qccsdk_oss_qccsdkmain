@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dal>
+<module name="sdk">
+<driver name="byte_sequence">
+  <device id="0x04000001">
+      <props id="1" id_name="byte_seq_one" helptext="for testing purpose random byte sequence is used" type="0x00000008"> 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,0x08, 0x09, 0x03, end </props>
+      <props id="2" id_name="byte_seq_two" helptext="for testing purpose random byte sequence is used" type="0x00000008"> 0x5a, 0x0b, 0xff, 0x86, 0xea, 0x58, 0x81, end </props>
+   </device>
+</driver>
+</module>
+</dal>

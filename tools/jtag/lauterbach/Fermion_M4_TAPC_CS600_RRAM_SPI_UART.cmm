@@ -1,0 +1,94 @@
+&scripts=OS.ENV("FERMION_SCRIPTS_DIR")
+cd &scripts
+
+area
+
+; Set the BOOT complete to 
+; [0]   power up PMIC
+; [1]   power up XO_DTOP
+; [2]   power up RFA_DTOP
+; [3]   power up SON
+; [5:4] power up MEM_NORMAL(01) RETTAINED(10) OFF (00)
+; [6]   power up CSS
+; [7]   Boot from CMEMA
+; [8]   Boot from CMEMB
+; [9]   Boot from CMEMC
+; [10]  Boot from CMEMD
+; [11]  Boot from RRAM
+; [22]  Boot from CMEME
+do JTAG2AHB_WRITE.cmm 0x011af854 0x07FFFDF
+
+; Boot code download complete
+do JTAG2AHB_WRITE.cmm 0x011af404 0x800000
+
+; 32bit Write RRAM legacy mode
+do JTAG2AHB_WRITE.cmm 0x011af81C 0x84002080
+; Switching to PLL lock
+do JTAG2AHB_WRITE.cmm 0x011AEDBC 0x3
+
+; PMU_BOOT_STRAP_CONFIG_SECURE
+do JTAG2AHB_WRITE.cmm 0x11AF924 0x63887466
+
+; PMU_CFG_IO_BASED_STRAP_OVERRIDE_VALUE
+do JTAG2AHB_WRITE.cmm 0x11AF938 0x000000c9
+
+; PMU_SYS_SOFT_RESET_REQ
+do JTAG2AHB_WRITE.cmm 0x11AEC3C 0x1
+
+WAIT 5000.MS
+
+do JTAG2AHB_WRITE.cmm 0x011af854 0x07FFFDF
+
+; Boot code download complete
+do JTAG2AHB_WRITE.cmm 0x011af404 0x800000
+
+; 32bit Write RRAM legacy mode
+do JTAG2AHB_WRITE.cmm 0x011af81C 0x84002080
+
+
+ 
+; Lock JTAG port and enable debug cable
+JTAG.LOCK
+JTAG.PIN ENable
+; release System Reset and reset TAP Controller
+JTAG.PIN NRESET HIGH
+JTAG.PIN NTRST LOW
+WAIT 50.MS ; wait until reset is active
+JTAG.PIN NTRST HIGH
+WAIT 50.MS ; wait until reset is released
+
+
+; move from “Run-Test/ Idle“ to "Shift-IR" state
+JTAG.SHIFTTMS 0 0 0 1 1 0 0
+
+; 7 Bit "Shift-IR" value 0x0B, switch to "Exit1-IR" on last bit
+JTAG.SHIFTREG 1 1 0 1 0 0 0
+
+; move to “Run-Test/ Idle“ from "Exit1-IR" state
+JTAG.SHIFTTMS 1 0
+
+; release JTAG port
+JTAG.PIN TMS 0 ; Pull TMS pin to 0
+JTAG.PIN TDI 0 ; Pull TDI pin to 0
+JTAG.UNLOCK
+
+
+; Manual config
+SYS.CPU CortexM4F 
+SYS.Option EnReset OFF 
+SYS.Option TRST OFF 
+;SYS.jtagclock CTCK 100KHz 
+SYS.jtagclock CTCK 1MHz
+SYS.CONFIG.AHBAP1.Base DP:0x40000
+SYS.MEMACCESS AHB
+
+SYS.Attach 
+Break
+
+;d.dump 0x001A0FB0--0x001A0FFF
+d.dump 0x0000--0x001FF
+
+ 
+
+
+

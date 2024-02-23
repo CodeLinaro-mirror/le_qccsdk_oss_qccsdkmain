@@ -1,0 +1,5 @@
+
+config BOARD_QCC730V2_SOCKET
+	bool "BOARD QCC730V2 SOCKET"
+	select SOC_QCC730V2
+	default n

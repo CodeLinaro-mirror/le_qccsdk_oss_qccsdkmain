@@ -1,0 +1,13 @@
+menu "console setting"
+config QCCSDK_CONSOLE
+    bool "QCCSDK_CONSOLE enable"
+    default n
+    help
+        enable QCCSDK Console
+		
+config RTT_VIEW_CLI
+    bool "RTT_VIEW_CLI enable"
+    default n
+    help
+        enable RTT VIEW CLI		
+endmenu

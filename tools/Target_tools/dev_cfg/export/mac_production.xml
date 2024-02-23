@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name="mac production">
+  <device id="0x03000011">
+      <props id="1" id_name="NT_DEVCFG_DEFAULT_MAC_ADDR_AP_P1" helptext="default-MAC address of AP first 2 bytes" type="0x00000002"> 0x0404 </props>
+      <props id="2" id_name="NT_DEVCFG_DEFAULT_MAC_ADDR_AP_P2" helptext="default-MAC address of AP second 2 bytes" type="0x00000002"> 0x0404 </props>
+      <props id="3" id_name="NT_DEVCFG_DEFAULT_MAC_ADDR_AP_P3" helptext="default-MAC address of AP third 2 bytes" type="0x00000002"> 0x0404 </props>
+      <props id="4" id_name="NT_DEVCFG_DEFAULT_MAC_ADDR_STA_P1" helptext="default-MAC address of STA first 2 bytes" type="0x00000002"> 0x0808 </props>
+      <props id="5" id_name="NT_DEVCFG_DEFAULT_MAC_ADDR_STA_P2" helptext="default-MAC address of STA second 2 bytes" type="0x00000002"> 0x0808 </props>
+	  <props id="6" id_name="NT_DEVCFG_DEFAULT_MAC_ADDR_STA_P3" helptext="default-MAC address of STA third 2 bytes" type="0x00000002"> 0x0808 </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+   </device>
+</driver>
+</module>
+</dal>

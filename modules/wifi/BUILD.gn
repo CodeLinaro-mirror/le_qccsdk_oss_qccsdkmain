@@ -1,0 +1,27 @@
+#
+import("//configs_decl.gni")
+
+projects_wifi_core = [
+    "../../../comp/wifi/core/system",
+    "../../../comp/wifi/core/hostif",
+    "../../../comp/wifi/core/wifi/halphy",
+    "../../../comp/wifi/core/wifi/dpm",
+    "../../../comp/wifi/core/wifi/hal",
+    "../../../comp/wifi/core/wifi/mlm",
+    "../../../comp/wifi/core/wifi/security",
+    "../../../comp/wifi/core/wifi/sme",
+    "../../../comp/wifi/core/wifi/coex",
+    "../../../comp/wifi/core/wifi/wmi",
+    "../../../comp/wifi/core/wifi/config_ini",
+    "../../../comp/wifi/core/wifi/tools/unit_test",
+]
+
+config("_config") {
+}
+
+static_library("wifi") {
+    output_name = "wifi_core"
+    output_dir = "${root_build_dir}/lib"
+    complete_static_lib = true
+    public_deps = projects_wifi_core
+}

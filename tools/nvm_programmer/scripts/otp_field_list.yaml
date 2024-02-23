@@ -1,0 +1,109 @@
+#OTP Fields List -v2.0
+#READ_WRITE_PERMISSIONS
+- name: READ_PERMISSION_HW_ENCRYPTION_KEY
+  address: '0x00000030'
+  offset: '4'
+  length: '1'
+  access: READ_WRITE
+- name: WRITE_PERMISSION_READ_WRITE_PEMRIONS
+  address: '0x00000030'
+  offset: '26'
+  length: '1'
+  access: READ_WRITE
+- name: WRITE_PERMISSION_HW_ENCRYPTION_KEY
+  address: '0x00000030'
+  offset: '28'
+  length: '1'
+  access: READ_WRITE
+- name: WRITE_PERMISSION_PK_HASH
+  address: '0x00000030'
+  offset: '29'
+  length: '1'
+  access: READ_WRITE
+- name: WRITE_PERMISSION_OEM_SECURE_BOOT
+  address: '0x00000030'
+  offset: '31'
+  length: '1'
+  access: READ_WRITE
+- name: WRITE_PERMISSION_ANTI_ROLL_BACK
+  address: '0x00000034'
+  offset: '0'
+  length: '1'
+  access: READ_WRITE
+- name: WRITE_PERMISSION_FIRMWARE
+  address: '0x00000034'
+  offset: '3'
+  length: '1'
+  access: READ_WRITE
+- name: WRITE_PERMISSION_NPS_CONFIG
+  address: '0x00000034'
+  offset: '9'
+  length: '1'
+  access: READ_WRITE
+
+#HW_ENCRYPTION_KEY
+- name: HW_ENCRYPTION_KEY
+  address: '0x00000060'
+  offset: '0'
+  length: '128'
+  access: READ_WRITE
+
+#PK_HASH
+- name: PK_HASH
+  address: '0x00000070'
+  offset: '0'
+  length: '256'
+  access: READ_WRITE
+
+#OEM_SECURE_BOOT
+- name: TOTAL_ROT_NUM
+  address: '0x000000A0'
+  offset: '4'
+  length: '4'
+  access: READ_WRITE
+- name: MODEL_ID
+  address: '0x000000A0'
+  offset: '16'
+  length: '16'
+  access: READ_WRITE
+- name: SECURE_BOOT_ENFORCE
+  address: '0x000000A4'
+  offset: '0'
+  length: '3'
+  access: READ_WRITE
+- name: OEM_ID
+  address: '0x000000A4'
+  offset: '8'
+  length: '16'
+  access: READ_WRITE
+- name: OEM_DEBUG_DISABLE
+  address: '0x000000A4'
+  offset: '24'
+  length: '8'
+  access: READ_WRITE
+- name: DISABLE_QC_RMA
+  address: '0x000000A8'
+  offset: '0'
+  length: '1'
+  access: READ_WRITE
+- name: ROT_INDEX
+  address: '0x000000A8'
+  offset: '16'
+  length: '8'
+  access: READ_WRITE
+
+#ANTI_ROLLBACK
+- 
+  name: M4_ANTI_ROLLBACK
+  address: '0x000000B4'
+  offset: '0'
+  length: '64'
+  access: READ_WRITE
+
+#MAC_ADDRESSES, the first 6 bytes of FIRMWARE
+- name: MAC_ADDRESSES
+  address: '0x000001C0'
+  offset: '0'
+  length: '48'
+  access: READ_WRITE
+     

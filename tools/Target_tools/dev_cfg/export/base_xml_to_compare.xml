@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name=" ">
+  <device id=" ">
+      <props id=" " id_name=" " min=" " max=" " oem_configurable=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+
+
+</module>
+</dal>

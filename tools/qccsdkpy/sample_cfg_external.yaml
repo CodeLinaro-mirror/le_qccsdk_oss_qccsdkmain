@@ -1,0 +1,45 @@
+
+#exnternal user conigurations
+
+#Qualcomm internal use
+exreset: &exreset
+    enable: False
+    #power reset script absolute path
+    power_py: Null
+    #delay before operating DUT after reset
+    power_down_up_delay_s: 5
+
+#configure flash options
+flash: &flash
+    #configure flash interface, only support 'jtag'
+    interface: jtag
+    #configure flash tool, support ['python' as public use, 'exe' as Qualcomm internal use].
+    tool: python
+    #configure default action when not specified, support [flash, erease]
+    default_action: flash
+
+build: &build
+    #configure default action when not specified, support [build, clean, rebuild]
+    default_action: build
+
+qccsdk:
+    #configure board name, support ['qcc730v1_socket', 'qcc730v2_socket', 'qcc730v2_evb11_hostless', 'qcc730v2_evb12_hostless', 'qcc730v2_evb13_hostless']
+    board: &board qcc730v2_evb11_hostless
+    #configure application direcotry path
+    #support [pbl, sbl, prg, ftm, 001lcli, intg, demo/qcli_demo, demo/posix_demo, demo/hello_world, <external dir>]
+    #    prg means jtag programmer, only support build. For qualcomm internal use.
+    #    001lcli means original local cli. For qualcomm internal use.
+    #    intg means integration, defined internally. For qualcomm internal use.
+    #    <external dir> means application locating out side of qccsdk, requiring matching demo files configuration such as prj.conf
+    appdir: &appdir demo/qcli_demo
+    #configure output_path as '*output'
+    output: &output output
+    #configure jtag interface name, support ['openocd', 'jlink', 'trace32']
+    #    'openocd' and 'jlink' as public use, trace32' as Qualcomm internal use
+    jtag: &jtag openocd
+    #configure flash options
+    flash: *flash
+    #configure build options
+    build: *build
+    #configure external reset tool
+    exreset: *exreset

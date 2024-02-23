@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name="powersave_twt production">
+  <device id="0x03000005">
+      <props id="1" id_name="NT_DEVCFG_TWT_ENABLE" min="0" max="1" helptext="enable/disable TWT feature" type="0x00000002"> 0 </props>
+      <props id="2" id_name="NT_DEVCFG_TWT_DTIM_CONFIG " min="0" max="2" helptext="twt dtim sleep enable/disable/auto(enable/disable depending on proxy arp support on ap)" type="0x00000002"> 0 </props>
+      <props id="3" id_name="NT_DEVCFG_TWT_ALIGNMENT_CONFIG " min="120" max="120" helptext="to configure twt alignment " type="0x00000002 "> 120 </props>
+      <props id="4" id_name="NT_DEVCFG_TWT_WAKEUP_INTERVAL_LO" min="12000" max="12000" helptext="TWT wake interval lower32 bit" type="0x00000002"> 0x00002ee0 </props>
+      <props id="5" id_name="NT_DEVCFG_TWT_MIN_WAKEUP_DURATION" min="250" max="250" helptext="TWT wakeup time" type="0x00000002"> 250 </props>
+	  <props id="6" id_name="NT_DEVCFG_TWT_BROADCAST" helptext="TWT Broadcast mode" type="0x00000002"> 0 </props>
+      <props id="7" id_name="NT_DEVCFG_TWT_WAKEUP_INTERVAL_HI" min="0" max="0" helptext="TWT wake interval higherer32 bit" type="0x00000002">0x00000000</props>
+      <props id="8" id_name="NT_DEVCFG_TWT_WAKEUP_TYPE" min="0" max="1" helptext="to set the twt wake up periodically or without period,1 signifies periodic / implicit,0 signifies aperiodic / explicit" type="0x00000002"> 0 </props>
+      <props id="9" id_name="NT_DEV_CFG_TWT_FLOW_TYPE" min="0" max="1" helptext="to set the twt flow that is announced or unannounced,1 signifies unannounced, 0 signifies announced" type="0x00000002"> 1 </props>
+      <props id="10" id_name="NT_DEVCFG_TWT_WIFI_FW_ENABLE " min="0" max="1" helptext="enable/disable TWT feature for WiFi FW " type="0x00000002"> 1 </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+   </device>
+</driver>
+</module>
+</dal>

@@ -1,0 +1,70 @@
+#
+sbl_dir = "//bootloader/SBL"
+core_dir = "//../comp/qcc730/core"
+kernel_dir = "//../comp/freertos/FreeRTOS/Source"
+qurt_dir = "//../comp/qurt/FreeRTOS/2.0"
+
+inc_list = [
+  "${sbl_dir}/system",
+  "${sbl_dir}/elf_loader",
+  "${sbl_dir}/include",
+  "${sbl_dir}/src",
+  "${core_dir}/hostif/api/wifi",
+  "${core_dir}/system/inc",
+  "${core_dir}/wifi/mlm/include",
+  "${sbl_dir}/common",
+  "${sbl_dir}/sbl_auth/inc",
+  "${sbl_dir}/sbl_auth/rollback",
+  "${kernel_dir}/include",
+  "${kernel_dir}/portable/GCC/ARM_CM4F",
+  "//build/freertos/common/config_files",
+  "//include",
+  "//lib/misc/inc",
+  "//arch/arm/system/include/cmsis",
+  "//lib/libc/include",
+  "//include",
+  "${qurt_dir}",
+  "//modules/hal/inc",
+  "//modules/hal/qcc730/qspi",
+  "//modules/hal/qcc730/flash",
+  "//modules/hal/qcc730/qtmr",
+  "../../comp/posix/include",
+]
+
+pbl_dep_src = [
+  "${sbl_dir}/elf_loader/boot_elf_loader.c",
+  "${sbl_dir}/elf_loader/boot_elf_mem.c",
+  "${sbl_dir}/system/nt_bl_rram_dxe.c",
+  "${sbl_dir}/debug/boot_print.c",
+  "${sbl_dir}/debug/boot_log.c",
+]
+
+core_src = [
+  "//modules/hal/qcc730/qspi/ferm_qspi.c",
+  "//modules/hal/qcc730/flash/ferm_flash.c",
+  "//lib/libc/source/safeAPI.c",
+]
+
+sbl_src = [
+  "system/nt_bl_uart.c",
+  "system/nt_bl_mem.c",
+  "system/sbl_storage.c",
+  "src/sbl_main.c",
+#"src/pbl_patch.c",
+  "sbl_auth/sbl_auth.c",
+  "sbl_auth/rollback/boot_rollback_version.c",
+  "sbl_auth/rollback/boot_rollback_version_impl.c",
+]
+
+source_set("SBL") {
+    sources = pbl_dep_src
+    sources += core_src
+    sources += sbl_src
+    include_dirs = inc_list
+    defines = [
+        "SBL_BUILD",
+        "P_DEBUG",
+        "CONFIG_NON_OS",
+        "__LINUX_ERRNO_EXTENSIONS__",
+    ]
+}

@@ -1,0 +1,110 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+#
+
+declare_args() {
+    arm_tool_prefix = "arm-none-eabi-"
+}
+
+
+ar = arm_tool_prefix + "ar"
+cc = arm_tool_prefix + "gcc"
+cxx = arm_tool_prefix + "g++"
+ld = arm_tool_prefix + "ld"
+if (host_os == "win") {
+    stamp = "cmd.exe /c echo >"
+} else {
+    stamp = "touch"
+}
+
+
+common_flags = [
+    "-mcpu=cortex-m4", "-mthumb", "-mfloat-abi=softfp",
+    "-mfpu=fpv4-sp-d16", "-Os", "-fmessage-length=0", "-fsigned-char",
+    "-ffunction-sections", "-fdata-sections", "-fno-common",
+    "-fno-inline-functions", "-ffreestanding", "-fno-builtin",
+    "-fsingle-precision-constant", "-fstack-usage",
+    "-fno-move-loop-invariants", "-g",
+]
+
+common_flags_c = [
+    "-Wno-implicit-function-declaration",
+    "-std=gnu11",
+]
+
+common_flags_cc = [
+    "-std=gnu++11", "-fabi-version=0",
+]
+
+config("common_cflags") {
+    cflags = common_flags
+    cflags_c = common_flags_c
+    cflags_cc = common_flags_cc
+}
+
+toolchain("arm_gcc") {
+    lib_switch = "-l"
+    lib_dir_switch = "-L"
+    default_output_dir = "${root_out_dir}"
+
+    tool("cc") {
+        depfile = "{{output}}.d"
+        command = "$cc -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
+        depsformat = "gcc"
+        outputs = [
+            "{{source_out_dir}}/{{source_name_part}}.o",
+        ]
+        description = "compile {{source}}"
+    }
+
+    tool("cxx") {
+        depfile = "{{output}}.d"
+        command = "$cxx -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
+        depsformat = "gcc"
+        outputs = [
+            "{{source_out_dir}}/{{source_name_part}}.o",
+        ]
+        description = "compile {{source}}"
+    }
+
+    tool("asm") {
+        depfile = "{{output}}.d"
+        command = "$cc -MMD -MF $depfile {{defines}} {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
+        depsformat = "gcc"
+        outputs = [
+            "{{source_out_dir}}/{{source_name_part}}.o",
+        ]
+        description = "assemble {{source}}"
+    }
+
+    tool("alink") {
+        outfile = "{{output_dir}}/{{target_output_name}}"
+        rspfile = "$outfile.rsp"
+        rspfile_content = "{{inputs}}"
+        command = "$ar rcs {{output}} @$rspfile"
+        outputs = [
+            "$outfile{{output_extension}}",
+        ]
+        default_output_extension = ".a"
+        output_prefix = "lib"
+        description = "link {{output}}"
+    }
+
+    tool("link") {
+        outfile = "{{output_dir}}/{{target_output_name}}"
+        rspfile = "$outfile.rsp"
+        rspfile_content = "{{inputs}}"
+        command = "$ld {{ldflags}} --start-group @$rspfile {{solibs}} --end-group {{libs}} -o {{output}}"
+        outputs = [
+            "$outfile{{output_extension}}",
+        ]
+        description = "link {{output}}"
+    }
+
+    tool("stamp") {
+        command = "$stamp {{output}}"
+        description = "stamp {{output}}"
+    }
+}

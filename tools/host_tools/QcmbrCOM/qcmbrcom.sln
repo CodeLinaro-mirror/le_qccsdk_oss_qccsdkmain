@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33801.468
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "qcmbrcom", "qcmbrcom\qcmbrcom.vcxproj", "{7FC82E39-8191-4D73-9F90-B9AFC4AA0958}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7FC82E39-8191-4D73-9F90-B9AFC4AA0958}.Debug|x64.ActiveCfg = Debug|x64
+		{7FC82E39-8191-4D73-9F90-B9AFC4AA0958}.Debug|x64.Build.0 = Debug|x64
+		{7FC82E39-8191-4D73-9F90-B9AFC4AA0958}.Debug|x86.ActiveCfg = Debug|Win32
+		{7FC82E39-8191-4D73-9F90-B9AFC4AA0958}.Debug|x86.Build.0 = Debug|Win32
+		{7FC82E39-8191-4D73-9F90-B9AFC4AA0958}.Release|x64.ActiveCfg = Release|x64
+		{7FC82E39-8191-4D73-9F90-B9AFC4AA0958}.Release|x64.Build.0 = Release|x64
+		{7FC82E39-8191-4D73-9F90-B9AFC4AA0958}.Release|x86.ActiveCfg = Release|Win32
+		{7FC82E39-8191-4D73-9F90-B9AFC4AA0958}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9333E22C-FDDC-4CBC-A77C-B1F93F6716C3}
+	EndGlobalSection
+EndGlobal

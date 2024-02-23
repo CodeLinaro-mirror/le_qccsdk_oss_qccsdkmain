@@ -1,0 +1,5 @@
+
+config BOARD_QCC730V2_EVB11_HOSTLESS
+	bool "BOARD QCC730V2 EVB v1.1 HOSTLESS for xPA"
+	select SOC_QCC730V2
+	default n

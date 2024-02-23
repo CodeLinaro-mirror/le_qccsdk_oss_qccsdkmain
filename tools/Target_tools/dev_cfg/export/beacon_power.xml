@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name="beacon/power save">
+   <device id="0x03000004">
+      <props id="1" id_name="NT_DEVCFG_INTVAL" min="1" max="100" oem_configurable="false" helptext="default-beacon interval,256" type="0x00000002"> 100 </props>
+      <props id="2" id_name="NT_DEVCFG_TXPOWER" helptext="default-beacon interval-ns" type="0x00000002"> 0 </props>
+      <props id="3" id_name="NT_DEVCFG_DTIM_COUNT" helptext="default-ap dtim count" type="0x00000002"> 0 </props>
+      <props id="4" id_name="NT_DEVCFG_AP_DTIM_PERIOD" helptext="default-dtim period" type="0x00000002"> 2 </props>
+      <props id="5" id_name="NT_DEVCFG_BMPS_ENABLE " helptext="select power save feature 0: no power save ; 1:BMPS ; 2:UAPSD ; 3:WNM; 5:WUR" type="0x00000002 "> 0 </props>
+	  <props id="6" id_name="NT_DEVCFG_BMPS_IDLE_TIMER" helptext="default bmps idle time. config NT_DEVCFG_MODIFIED_BMPS_IDLE_TIME to change idle time if idle timer start again" type="0x00000002 "> 500 </props>
+      <props id="7" id_name="NT_DEVCFG_IMPS_ENABLE " helptext="Enable/Disable IMPS feature " type="0x00000002 "> 0 </props>
+      <props id="8" id_name="NT_DEVCFG_IMPS_IDLE_TIMER " helptext="default imps idle time " type="0x00000002 "> 30000 </props>
+      <props id="9" id_name="NT_DEVCFG_IMPS_SLEEP_TIMER " helptext="default imps sleep time " type="0x00000002 "> 30000 </props>
+      <props id="10" id_name="NT_DEVCFG_TWT_ALIGNMENT_CONFIG " helptext="to configure twt alignment " type="0x00000002 "> 120 </props>
+      <props id="11" id_name="NT_DEVCFG_WNM_ENABLE " helptext="Enable/Disable WNM feature " type="0x00000002 "> 0 </props>
+      <props id="12" id_name="NT_DEVCFG_BSS_MAX_IDLE_TIMER " helptext="default bss max idle time " type="0x00000002 "> 180 </props>
+      <props id="13" id_name="NT_DEVCFG_WNM_SLEEP_TIMER " helptext="default wnm sleep time " type=" 0x00000002"> 10000 </props>
+      <props id="14" id_name="NT_DEVCFG_WUR_ENABLE " helptext="Enable/Disable WUR feature " type="0x00000002 "> 0 </props>
+      <props id="15" id_name="NT_DEVCFG_WUR_SERVICE_PERIOD" helptext="set wur service period " type=" 0x00000002"> 2 </props>
+	  <props id="16" id_name="NT_DEVCFG_WUR_SERVICE_INTERVAL " helptext="set wur service interval" type="0x00000002"> 5000 </props>
+      <props id="17" id_name="NT_DEVCFG_WUR_BEACON_PERIOD " helptext=" set wur beacon period" type=" 0x00000002"> 5000 </props>
+      <props id="18" id_name="NT_DEVCFG_WUR_BEACON_OFFSET " helptext="set wur beacon offset " type="0x00000002 "> 20 </props>
+      <props id="19" id_name="NT_DEVCFG_WAKEUP_FRAME_AT_DATA_AVAILABILITY " helptext="wakeup frame at data availablitiy " type=" 0x00000002"> 1 </props>
+      <props id="20" id_name="NT_DEVCFG_SUSPEND_FRAME_AT_DATA_AVAILABILITY " helptext="suspend frame at data availablitiy " type=" 0x00000002"> 1 </props>
+	  <props id="21" id_name="NT_DEVCFG_SUSPEND_FRAME_IF_WAKEUP_FRAME_RECEIVED " helptext="suspend frame if wakeup frame is received" type=" 0x00000002"> 1 </props>
+      <props id="22" id_name="NT_DEVCFG_WUR_SOFT_DTIM_ENABLE" helptext="enable/disable wur software dtim" type="0x00000002"> 1 </props>
+      <props id="23" id_name="NT_DEVCFG_PRE_WAKEUP_TIME" helptext="Pre wake up time" type="0x00000002"> 9 </props>
+      <props id="24" id_name="NT_DEVCFG_BEACON_WAIT_TIME" helptext="beacon wait time" type="0x00000002"> 14 </props>
+      <props id="25" id_name="NT_DEVCFG_TELE_BEACON_WAIT_INC" helptext="telescopic beacon wait increment" type="0x00000002"> 5 </props>
+	  <props id="26" id_name="NT_DEVCFG_TELE_PRE_WAKE_INC" helptext="telescopic pre wakeup increment" type="0x00000002"> 10 </props>
+      <props id="27" id_name="NT_DEVCFG_NO_OF_ACCEPTABLE_BEACON_MISS" helptext="number of acceptable beacon miss" type="0x00000002"> 15 </props>
+      <props id="28" id_name="NT_DEVCFG_WNM_DTIM_CONFIG" helptext="WNM dtim sleep enable/disable/auto(enable/disable depending on proxy arp support on ap) " type="0x00000002"> 2 </props>
+      <props id="29" id_name="NT_DEVCFG_TWT_WAKEUP_INTERVAL_LO" helptext="TWT wake interval lower32 bit" type="0x00000002"> 0x00002ee0 </props>
+      <props id="30" id_name="NT_DEVCFG_TWT_MIN_WAKEUP_DURATION" helptext="TWT wakeup time" type="0x00000002"> 250 </props>
+	  <props id="31" id_name="NT_DEVCFG_TWT_BROADCAST" helptext="TWT Broadcast mode" type="0x00000002"> 0 </props>
+      <props id="32" id_name="NT_DEVCFG_MINIMUM_SLEEP_TIME_FOR_AON" helptext="Configure minimum sleep time for AON" type="0x00000002"> 2 </props>
+      <props id="33" id_name="NT_DEVCFG_SLEEP_CLOCK_SELECTION_FOR_AON" helptext="To select sleep clock for AON; select 0 for RC from PMIC, select 1 for XO from RFA and select 2 for XO from PMIC" type="0x00000002"> 1 </props>
+      <props id="34" id_name="NT_DEVGFG_THRESHOLD_WARNING_VOLTAGE_CONFIG" helptext="To configure the threshold voltage level,to have a warning of low voltage" type="0x00000002">0xDD</props>
+      <props id="35" id_name="NT_DEVCFG_TWT_WAKEUP_INTERVAL_HI" helptext="TWT wake interval higherer32 bit" type="0x00000002">0x00000000</props>
+	  <props id="36" id_name="NT_DEVCFG_SYSMON_TASK_PERIODICITY_CONFIG" helptext="To configure the periodicity of sysmon task" type="0x00000002">60000</props>
+	  <props id="37" id_name="NT_DEVCFG_UART_BAUD_RATE" helptext="To set the baud rate for UART" type="0x00000002"> 230400 </props>
+      <props id="38" id_name="NT_DEVCFG_MODIFIED_BMPS_IDLE_TIME" helptext="The modified bmps idle time will affect from second idle duration. it willl affect default idle time value,if it is > 0" type="0x00000002">5</props>
+      <props id="39" id_name="NT_DEVCFG_TWT_WAKEUP_TYPE" helptext="to set the twt wake up periodically or without period,1 signifies periodic / implicit,0 signifies aperiodic / explicit" type="0x00000002"> 0 </props>
+      <props id="40" id_name="NT_DEV_CFG_TWT_FLOW_TYPE" helptext="to set the twt flow that is announced or unannounced,1 signifies unannounced, 0 signifies announced" type="0x00000002"> 1 </props>
+   </device>
+</driver>
+</module>
+</dal>

@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name="performance debug">
+  <device id="0x03000010">
+      <props id="1" id_name="NT_DEVCFG_WMMP_BE_ACM" min="0" max="2" oem_configurable="false" helptext="default-acm parameter" type="0x00000002"> 0 </props>
+      <props id="2" id_name="NT_DEVCFG_WMMP_BE_AIFSN" helptext="default-aifsn parameters" type="0x00000002"> 3 </props>
+      <props id="3" id_name="NT_DEVCFG_WMMP_BE_MIN_LOGCW" helptext="default-cwmin in exponential form" type="0x00000002"> 4 </props>
+      <props id="4" id_name="NT_DEVCFG_WMMP_BE_MAX_LOGCW" helptext="default-cwmax in exponential form" type="0x00000002"> 10 </props>
+      <props id="5" id_name="NT_DEVCFG_WMMP_BE_TXOP_LIMIT" helptext="default-txopLimit" type="0x00000002"> 0 </props>
+      <props id="6" id_name="NT_DEVCFG_WMMP_BK_ACM" helptext="default-acm parameter of background effort" type="0x00000002"> 0 </props>
+      <props id="7" id_name="NT_DEVCFG_WMMP_BK_AIFSN" helptext="default-aifsn parameters of background effort" type="0x00000002"> 7 </props>
+      <props id="8" id_name="NT_DEVCFG_WMMP_BK_MIN_LOGCW" helptext="default-cwmin in exponential form of background effort" type="0x00000002"> 4 </props>
+	  <props id="9" id_name="NT_DEVCFG_WMMP_BK_MAX_LOGCW" helptext="default-cwmax in exponential form of background effort" type="0x00000002"> 10 </props>
+      <props id="10" id_name="NT_DEVCFG_WMMP_BK_TXOP_LIMIT" helptext="default-txopLimit of background effort" type="0x00000002"> 0 </props>      
+      <props id="11" id_name="NT_DEVCFG_WMMP_VI_ACM" min="0" max="2" oem_configurable="false" helptext="default-acm parameter for video" type="0x00000002"> 0 </props>
+      <props id="12" id_name="NT_DEVCFG_WMMP_VI_AIFSN" helptext="default-aifsn parameters for video" type="0x00000002"> 2 </props>
+      <props id="13" id_name="NT_DEVCFG_WMMP_VI_MIN_LOGCW" helptext="default-cwmin in exponential form for video" type="0x00000002"> 3 </props>
+      <props id="14" id_name="NT_DEVCFG_WMMP_VI_MAX_LOGCW" helptext="default-cwmax in exponential form for video" type="0x00000002"> 4 </props>
+      <props id="15" id_name="NT_DEVCFG_WMMP_VI_TXOP_LIMIT" helptext="default-txopLimit for video" type="0x00000002"> 94 </props>
+	  <props id="16" id_name="NT_DEVCFG_WMMP_VO_ACM" helptext="default-acm parameter for voice" type="0x00000002"> 0 </props>
+      <props id="17" id_name="NT_DEVCFG_WMMP_VO_AIFSN" helptext="default-aifsn parameters for voice" type="0x00000002"> 2 </props>
+      <props id="18" id_name="NT_DEVCFG_WMMP_VO_MIN_LOGCW" helptext="default-cwmin in exponential form for voice" type="0x00000002"> 2 </props>
+      <props id="19" id_name="NT_DEVCFG_WMMP_VO_MAX_LOGCW" helptext="default-cwmax in exponential form for voice" type="0x00000002"> 3 </props>
+      <props id="20" id_name="NT_DEVCFG_WMMP_VO_TXOP_LIMIT" helptext="default-txopLimit for voice" type="0x00000002"> 47 </props>
+	  <props id="21" id_name="NT_DEVCFG_WMM_STATUS" helptext="default-wmm status either enable/disable" type="0x00000002"> 1 </props>
+      <props id="22" id_name="NT_DEVCFG_HT" helptext=" default-High through put" type="0x00000002"> 1 </props>
+      <props id="23" id_name="NT_DEVCFG_DEFAULT_DHCP_ENABLE" min="0" max="1" helptext="Enable/Disable DHCP" type="0x00000002"> 0 </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+   </device>
+</driver>
+</module>
+</dal>

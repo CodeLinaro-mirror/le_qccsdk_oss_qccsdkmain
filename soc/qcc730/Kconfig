@@ -1,0 +1,5 @@
+
+rsource "Kconfig.peripherals"
+rsource "Kconfig*.soc"
+
+

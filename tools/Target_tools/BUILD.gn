@@ -1,0 +1,22 @@
+#
+
+import("//configs_decl.gni")
+#import("${root_build_dir}/mainconfig.gni")
+
+
+Target_tools_inc = [
+    "dev_cfg/inc",
+]
+
+Target_tools_src = [
+    "dev_cfg/src/nt_devcfg_byte_seq_parser.c",
+    "dev_cfg/src/nt_devcfg_parser.c",
+]
+
+config("_config") {
+    include_dirs = Target_tools_inc
+}
+
+source_set("Target_tools") {
+    sources = Target_tools_src
+}

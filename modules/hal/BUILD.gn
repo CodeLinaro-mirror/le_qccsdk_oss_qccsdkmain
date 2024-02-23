@@ -1,0 +1,43 @@
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+hal_inc = [
+    "inc",
+    "qcc730/qspi",
+    "qcc730/flash",
+    "qcc730/i2c",
+    "qcc730/fs",
+    "qcc730/qtmr",
+    "qcc730/prof",
+    "qcc730/uart",
+    "qcc730/gpio",
+    "qcc730/wdt",
+    "qcc730/qcspi",
+    "qcc730/rram",
+]
+
+config("_config") {
+    include_dirs = hal_inc
+}
+
+source_set("hal") {
+    sources = [
+        "qcc730/qspi/ferm_qspi.c",
+        "qcc730/flash/ferm_flash.c",
+        "qcc730/i2c/ferm_i2c.c",
+        "qcc730/qtmr/qtmr.c",
+        "qcc730/qtmr/timer.c",
+        "qcc730/uart/uart.c",
+        "qcc730/gpio/nt_gpio.c",
+        "qcc730/wdt/nt_wdt.c",
+        "qcc730/qcspi/qcspi_slave.c",
+        "qcc730/rram/nt_mem.c",
+    ]
+    if (CONFIG_QTIMER) {
+        sources += [ "qcc730/qtmr/ferm_qtmr.c" ]
+    }
+    if (CONFIG_PROF) {
+        sources += [ "qcc730/prof/ferm_prof.c" ]
+    }
+}

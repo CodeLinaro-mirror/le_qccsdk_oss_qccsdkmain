@@ -1,0 +1,53 @@
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+drivers_inc = [
+    "//include/api",
+    "//drivers/wlan",
+    "//hal/qcc730/i2c",
+]
+
+drivers_src = [
+    "peripherals/qapi_i2c.c",
+]
+
+lowpower_src = [
+    "lowpower/qapi_lowpower.c",
+]
+
+not_needed("*", [ ])
+
+config("_config") {
+    include_dirs = drivers_inc
+}
+
+source_set("drivers") {
+    sources = drivers_src
+    if (CONFIG_LOWPOWER_SHELL) {
+        sources += lowpower_src
+    }
+    if (CONFIG_PLATFORM_QAPI) {
+        sources += [
+            "platform/qapi_fw_info.c",
+            "platform/qapi_heap_status.c",
+        ]
+    }
+    if (CONFIG_WLAN) {
+        if (CONFIG_WIFI_SHELL) {
+            sources += [
+                "wlan/qapi_wlan_base.c",
+                "wlan/qapi_wlan_param_group.c",
+                "wlan/wlan_qapi_helper.c",
+                "wlan/wmi_api.c",
+                "wlan/wlan_drv.c",
+            ]
+        }
+    }
+    if (CONFIG_BOARD_QCC730_QSPI_ENABLE) {
+        sources += [
+            "peripherals/qapi_flash.c",
+        ]
+    }
+}
+

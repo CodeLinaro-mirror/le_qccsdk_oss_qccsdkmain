@@ -1,0 +1,323 @@
+/*
+ */
+
+#include "wlan_drv.h"
+#include "wlan_qapi_helper.h"
+
+/* Should be called under protection of p_cxt->wlan_qapi_cxt_mutex */
+static void _wlan_set_wep (void)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_CONNECT_CMD *p_connect_cmd = &p_cxt->connect_cmd;
+
+    p_connect_cmd->dot11AuthMode = OPEN_AUTH;
+    p_connect_cmd->authMode = WMI_NONE_AUTH;
+    p_connect_cmd->pairwiseCryptoType = WEP_CRYPT;
+}
+
+qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID, uint16_t group_ID, uint16_t param_ID, const void *data, uint32_t length,
+        qapi_WLAN_Wait_For_Status_e __attribute__((__unused__)) wait_For_Status)
+{
+    qapi_Status_t ret = QAPI_OK;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+
+    switch (group_ID) {
+    case __QAPI_WLAN_PARAM_GROUP_WIRELESS: {
+        switch (param_ID) {
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_SSID: {
+            if (!data || !length) {
+                warn_printf("clear connect ssid\n");
+            } else {
+                if (length > __QAPI_WLAN_MAX_SSID_LEN) {
+                    PRINT_ERR_INVALID_PARAM1("length", length);
+                    ret = QAPI_WLAN_ERR_EINVAL;
+                    break;
+                }
+            }
+            qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+            wlan_set_connect_ssid((unsigned char*)data, (uint8_t)length);
+            qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SSID */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_BSSID: {
+            if (!data || !length) {
+                warn_printf("clear connect bssid\n");
+            } else {
+                if (length != __QAPI_WLAN_MAC_LEN) {
+                    PRINT_ERR_INVALID_PARAM1("length", length);
+                    ret = QAPI_WLAN_ERR_EINVAL;
+                    break;
+                }
+            }
+            qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+            wlan_set_connect_bssid((uint8_t*)data, (uint8_t)length);
+            qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_BSSID */
+        }
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL: {
+			uint16_t channel = *((uint16_t *) data);
+			qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+			ret = wlan_set_channel(device_ID, channel);
+			qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_PHY_MODE: {
+			qapi_WLAN_Phy_Mode_e phy_mode = *((qapi_WLAN_Phy_Mode_e *) data);
+			ret = wlan_set_phy_mode(device_ID, (uint32_t)phy_mode);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_PHY_MODE */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_11N_HT: {
+			qapi_WLAN_11n_HT_Config_e htconfig = *(qapi_WLAN_11n_HT_Config_e *)data;
+			ret = wlan_set_11n_ht(device_ID, (uint8_t)htconfig);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_11N_HT */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE: {
+			uint8_t mode = *((uint8_t *) data);
+			ret = (qapi_Status_t)wlan_set_op_mode(mode);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_COUNTRY_CODE: {
+			uint8_t *country_code = (uint8_t *)data;
+			ret = wlan_set_country_code(device_ID, country_code);
+			if(ret == QAPI_OK)
+				memscpy(p_cxt->country_code,3,(char *)country_code,3);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_COUNTRY_CODE */
+		}
+        default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
+            PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
+            ret = QAPI_WLAN_ERR_EINVAL;
+        }
+        break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS */
+    }
+    case __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY: {
+        switch (param_ID) {
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_PASSPHRASE: {
+            if (!data || !length) {
+                warn_printf("clear passphrase\n");
+            } else {
+                if (length > __QAPI_WLAN_PASSPHRASE_LEN) {
+                    PRINT_ERR_INVALID_PARAM1("length", length);
+                    ret = QAPI_WLAN_ERR_EINVAL;
+                    break;
+                }
+            }
+            qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+            wlan_set_passphrase((uint8_t *)data, (uint8_t)length);
+            qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+            break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_PASSPHRASE */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE: {
+            if (!data || !length) {
+                warn_printf("clear authMode\n");
+            }
+            WMI_CONNECT_CMD *p_cmd = &p_cxt->connect_cmd;
+            qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+            if (!data || !length) {
+                wlan_clear_privacy();
+                info_printf("clear dot11AuthMode/authMode as open\n");
+            } else {
+                qapi_WLAN_Auth_Mode_e e_wpa_ver = (qapi_WLAN_Auth_Mode_e)(*(uint32_t*)data);
+                info_printf("set e_wpa_ver=%d\n", e_wpa_ver);
+                switch (e_wpa_ver) {
+                case QAPI_WLAN_AUTH_NONE_E:
+                    wlan_clear_privacy();
+                    break;
+                case QAPI_WLAN_AUTH_WEP_E:
+                    _wlan_set_wep();
+                    break;
+                case QAPI_WLAN_AUTH_WPA_PSK_E:
+                    p_cmd->dot11AuthMode = OPEN_AUTH;
+                    p_cmd->authMode = WMI_WPA_PSK_AUTH;
+                    break;
+                case QAPI_WLAN_AUTH_WPA2_PSK_E:
+                    p_cmd->dot11AuthMode = OPEN_AUTH;
+                    p_cmd->authMode = WMI_WPA2_PSK_AUTH;
+                    break;
+                default:
+                    PRINT_ERR_INVALID_PARAM1("e_wpa_ver", e_wpa_ver);
+                    ret = QAPI_WLAN_ERR_EINVAL;
+                    break;
+                }
+            }
+            qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+            break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_ENCRYPTION_TYPE: {
+            if (!data || !length) {
+                PRINT_ERR_INVALID_PARAM;
+                ret = QAPI_WLAN_ERR_EINVAL;
+                break;
+            }
+            qapi_WLAN_Crypt_Type_e e_cipher = (qapi_WLAN_Crypt_Type_e)(*(uint32_t*)data);
+            if (e_cipher >= QAPI_WLAN_CRYPT_INVALID_E) {
+                PRINT_ERR_INVALID_PARAM1("e_cipher", e_cipher);
+                ret = QAPI_WLAN_ERR_EINVAL;
+                break;
+            }
+            WMI_CONNECT_CMD *p_cmd = &p_cxt->connect_cmd;
+            qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+            info_printf("set e_cipher=%d\n", e_cipher);
+            switch (e_cipher) {
+            case QAPI_WLAN_CRYPT_NONE_E:
+                wlan_clear_privacy();
+                break;
+            case QAPI_WLAN_CRYPT_WEP_CRYPT_E:
+                _wlan_set_wep();
+                break;
+            case QAPI_WLAN_CRYPT_TKIP_CRYPT_E:
+                p_cmd->pairwiseCryptoType = TKIP_CRYPT;
+                p_cmd->groupCryptoType = TKIP_CRYPT;
+                break;
+            case QAPI_WLAN_CRYPT_AES_CRYPT_E:
+                p_cmd->pairwiseCryptoType = AES_CRYPT;
+                p_cmd->groupCryptoType = AES_CRYPT;
+                break;
+            default:
+                PRINT_ERR_INVALID_PARAM1("e_cipher", e_cipher);
+                ret = QAPI_WLAN_ERR_EINVAL;
+                break;
+            }
+            qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+            break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_ENCRYPTION_TYPE */
+        }
+        default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY + param_ID */
+            PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
+            ret = QAPI_WLAN_ERR_EINVAL;
+        }
+        break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY */
+    }
+    default: /* group_ID */
+        PRINT_ERR_INVALID_PARAM1("group_ID", group_ID);
+        ret = QAPI_WLAN_ERR_EINVAL;
+        break;
+    } /* group_ID */
+    return ret;
+}
+
+qapi_Status_t qapi_WLAN_Get_Param (uint8_t __attribute__((__unused__)) device_ID, uint16_t group_ID, uint16_t param_ID, void *data, uint32_t *length)
+
+{
+    qapi_Status_t ret = QAPI_OK;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+
+    if (!data || !length || !*length) {
+        return QAPI_WLAN_ERR_EINVAL;
+    }
+
+    switch (group_ID) {
+	case __QAPI_WLAN_PARAM_GROUP_WIRELESS: {
+		switch (param_ID) {
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE: {
+			qapi_WLAN_DEV_Mode_e *mode = (qapi_WLAN_DEV_Mode_e *)data;
+			if (*length < sizeof(qapi_WLAN_DEV_Mode_e)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+			if(p_cxt->opmode == WHAL_M_AP)
+				*mode = DEV_MODE_AP_E;
+			else
+				*mode = DEV_MODE_STATION_E;
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONCURRENCY_MODE: {
+			qapi_WLAN_DEV_Mode_e *conc_mode = (qapi_WLAN_DEV_Mode_e *)data;
+			if (*length < sizeof(qapi_WLAN_DEV_Mode_e)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+			if(p_cxt->conc_mode == WHAL_M_AP_STA)
+				*conc_mode = DEV_MODE_AP_STA_E;
+			else
+				*conc_mode = DEV_MODE_NO_CONC_E;
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONCURRENCY_MODE */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_MAC_ADDRESS: {
+			if (*length < __QAPI_WLAN_MAC_LEN) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+			wlan_get_mac_address(device_ID, data);
+			//memcpy(data, p_cxt->dev_common->devp[device_ID]->ic_myaddr, __QAPI_WLAN_MAC_LEN);//TODO
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_MAC_ADDRESS */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_POWER_MODE_PARAMS: {
+			uint8_t *powermode = (uint8_t *)data;
+			if (*length < sizeof(uint8_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+			wlan_get_power_mode(device_ID, powermode);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_POWER_MODE_PARAMS */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_PHY_MODE: {
+			uint8_t *phymode = (uint8_t *)data;
+			if (*length < sizeof(uint8_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+			wlan_get_phy_mode(phymode);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_PHY_MODE */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_COUNTRY_CODE: {
+			char *country_code = (char *)data;
+			if (*length < 4) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+			memscpy(country_code,3,p_cxt->country_code,3);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_COUNTRY_CODE */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSSI: {
+			uint8_t *rssi = (uint8_t *)data;
+			if (*length < sizeof(uint8_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+			ret = wlan_sta_get_rssi(device_ID, rssi);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSSI */
+		}
+		default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
+			PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
+			ret = QAPI_WLAN_ERR_EINVAL;
+		}
+		break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS */
+	}
+    case __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY: {
+        switch (param_ID) {
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE: {
+            uint8_t authMode = p_cxt->connect_cmd.authMode;
+            uint8_t pairwiseCryptoType = p_cxt->connect_cmd.pairwiseCryptoType;
+            qapi_WLAN_Auth_Mode_e *p_e_wpa_ver = (qapi_WLAN_Auth_Mode_e *)data;
+            if (*length < sizeof(qapi_WLAN_Auth_Mode_e)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            switch (authMode) {
+            case WMI_NONE_AUTH:
+                if (pairwiseCryptoType==NONE_CRYPT) {
+                    *p_e_wpa_ver = QAPI_WLAN_CRYPT_NONE_E;
+                } else if (pairwiseCryptoType==WEP_CRYPT) {
+                    *p_e_wpa_ver = QAPI_WLAN_AUTH_WEP_E;
+                }
+                *length = sizeof(qapi_WLAN_Auth_Mode_e);
+                break;
+            case WMI_WPA_PSK_AUTH:
+                *p_e_wpa_ver = QAPI_WLAN_AUTH_WPA_PSK_E;
+                *length = sizeof(qapi_WLAN_Auth_Mode_e);
+                break;
+            case WMI_WPA2_PSK_AUTH:
+                *p_e_wpa_ver = QAPI_WLAN_AUTH_WPA2_PSK_E;
+                *length = sizeof(qapi_WLAN_Auth_Mode_e);
+                break;
+            default:
+                //skip
+                break;
+            }
+            break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE */
+        }
+        default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY + param_ID */
+            PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
+            ret = QAPI_WLAN_ERR_EINVAL;
+        }
+        break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY */
+    }
+    default: /* group_ID */
+        PRINT_ERR_INVALID_PARAM1("group_ID", group_ID);
+        ret = QAPI_WLAN_ERR_EINVAL;
+        break;
+    } /* group_ID */
+    return ret;
+}
+

@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name="wifi_app">
+  <device id="0x03000006">
+      <props id="1" id_name="NT_DEVCFG_PROTECTION_MODE" helptext="protection mode" type="0x00000002"> 1 </props>
+      <props id="2" id_name="NT_DEVCFG_ONBOARDING_ENABLE" helptext="enable/disable onboarding" type="0x00000002"> 0 </props>
+      <props id="3" id_name="NT_DEVCFG_NETWORK_NAME" helptext="default ssid name" type="0x00000002"> 0xedcba </props>
+      <props id="4" id_name="NT_DEVCFG_AUTH_TYPE" helptext="Security type default is none" type="0x00000002"> 0 </props>
+      <props id="5" id_name="NT_DEVCFG_DEVICE_MODE" helptext="default device mode is STA" type="0x00000002"> 0 </props>
+ 	  <props id="6" id_name="NT_DEVCFG_RMF_ENABLE" helptext="disable rmf(1)/enable rmf only with cap bits(2)/enable rmf only with req bits(3)/enable rmf only with cap and req bits(4)" type="0x00000002"> 0 </props>
+      <props id="7" id_name="NT_DEVCFG_WEP_TYPE" helptext="wep type WEP40(1)/WEP104(2)" type="0x00000002"> 1 </props>
+      <props id="8" id_name="NT_DEVCFG_WEP_KEY_LENGTH" helptext="wep key length WEP40(5)/WEP104(13)" type="0x00000002"> 5 </props>
+      <props id="9" id_name="NT_DEVCFG_AUTO_START_ENABLED" helptext="to enable(1)/disable(0)start_device automatically in onboarding/commissioning" type="0x00000002"> 0 </props>
+      <props id="10" id_name="NT_DEVCFG_SERVER_DISABLE" helptext="to disable server while commissioning" type="0x00000002"> 0 </props>
+ 	  <props id="11" id_name="NT_DEVCFG_WIFIAPP_OMPS_SLEEP_TIME" helptext="default-omps sleep time" type="0x00000002"> 15000 </props>
+      <props id="12" id_name="NT_DEVCFG_WIFIAPP_OMPS_IDLE_TIME" helptext="default-omps idle time" type="0x00000002"> 90000 </props>
+      <props id="13" id_name="NT_DEVCFG_WEP40_KEY_ID" helptext="wep40 chosen key_id for connection " type="0x00000002"> 0 </props>
+      <props id="14" id_name="NT_DEVCFG_WEP40_STA_ID" helptext="chosen sta_id for AP for wep40 cnxn" type="0x00000002"> 1 </props>
+      <props id="15" id_name="NT_DEVCFG_WEP40_KEY_STRING" helptext="key used for conxn using wep40" type="0x00000002"> 0x12345 </props>
+ 	  <props id="16" id_name="NT_DEVCFG_WIFIAPP_OMPS_ENABLE" helptext="default-enalbe/disable omps" type="0x00000002"> 0 </props>
+      <props id="17" id_name="NT_DEVCFG_WIFIAPP_ENABLEDISC" helptext="default-enable disc" type="0x00000002"> 0 </props>
+      <props id="18" id_name="NT_DEVCFG_WIFIAPP_SERVICE_PERIOD" helptext="default-service period" type="0x00000002"> 2 </props>
+      <props id="19" id_name="NT_DEVCFG_WIFIAPP_SERVICE_INTERVAL" helptext="default-service interval" type="0x00000002"> 1000 </props>
+      <props id="20" id_name="NT_DEVCFG_WIFIAPP_BECON_PERIOD" helptext="default-becon period" type="0x00000002"> 1000 </props>
+	  <props id="21" id_name="NT_DEVCFG_WIFIAPP_BECON_OFFSET" helptext="default-beacon offset" type="0x00000002"> 50 </props>
+      <props id="22" id_name="NT_DEVCFG_WIFIAPP_BECON_CTS2S_ENABLE" helptext="default-CTS2Senable" type="0x00000002"> 0 </props>
+      <props id="23" id_name="NT_DEVCFG_WIFIAPP_CFEenable" helptext="default-CFEenable" type="0x00000002"> 0 </props>
+      <props id="24" id_name="NT_DEVCFG_WIFIAPP_WUR_MC_ENABLE" helptext="default-WUR_MC_ENABLE" type="0x00000002"> 0 </props>
+      <props id="25" id_name="NT_DEVCFG_WIFIAPP_RESULT_STATUS_SUCCESS" helptext="resut status for success" type="0x00000002"> 1 </props>
+ 	  <props id="26" id_name="NT_DEVCFG_WIFIAPP_RESULT_STATUS_FAILURE" helptext="resut status for failure" type="0x00000002"> 0 </props>
+      <props id="27" id_name="NT_DEVCFG_IMPS_SLEEP_TIME" helptext="default duration of imps sleep time" type="0x00000002"> 20000 </props>
+      <props id="28" id_name="NT_DEVCFG_IMPS_SLEEP_MODE" helptext="default imps sleep mode" type="0x00000002"> 3 </props>
+      <props id="29" id_name="NT_DEVCFG_IMPS_RETRY_COUNT" helptext="default imps retry count value" type="0x00000002"> 3 </props>
+      <props id="30" id_name="NT_DEVCFG_POWERSAVE_MODE_IMPS" helptext="powersave mode is imps" type="0x00000002"> 1 </props>
+ 	  <props id="31" id_name="NT_DEVCFG_POWERSAVE_MODE_BMPS" helptext="powersave mode is bmps" type="0x00000002"> 2 </props>
+      <props id="32" id_name="NT_DEVCFG_POWERSAVE_ENABLED" helptext="powersave enabled(1)/disabled(0)" type="0x00000002"> 1 </props>
+      <props id="33" id_name="NT_DEVCFG_DEF_DTIM_VALUE" helptext="default dtim value for app" type="0x00000002"> 5 </props>
+      <props id="34" id_name="NT_DEVCFG_POWERSAVE_WUR_EXIT_FOR_VALID_VENDOR" helptext="app should send wake command if it receive message from valid vendor" type="0x00000002">1</props>
+      <props id="35" id_name="NT_DEVCFG_ONBOARDING_via_CONCURRENCY" helptext="Onboarding via cONCURRENCY ENABLED" type="0x00000002"> 0 </props>
+ 	  <props id="36" id_name="NT_DEVCFG_DEFAULT_CONC_DEVICE_MODE" helptext="Default device mode chosen in ap_sta mode STA(1)/AP(0)" type="0x00000002"> 0 </props>
+      <props id="37" id_name="NT_DEVCFG_WIFI_ON_ENABLE" helptext="enables and disable the wifi on command at boot time" type=" 0x00000002"> 0 </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+   </device>
+</driver>
+</module>
+</dal>

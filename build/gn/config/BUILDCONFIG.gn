@@ -1,0 +1,25 @@
+#
+
+
+default_configs = [
+    "//:default_config",
+    "//build/gn/toolchain:common_cflags"
+]
+
+set_defaults("executable") {
+  configs = default_configs
+}
+
+set_defaults("source_set") {
+  configs = default_configs
+}
+
+set_defaults("static_library") {
+  configs = default_configs
+}
+
+set_defaults("shared_library") {
+  configs = default_configs
+}
+
+set_default_toolchain("../toolchain:arm_gcc")

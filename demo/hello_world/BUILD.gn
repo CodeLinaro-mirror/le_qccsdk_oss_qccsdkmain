@@ -1,0 +1,25 @@
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+hello_world_inc = [
+    "src",
+]
+
+hello_world_src = [
+    "src/hello_world_main.c",
+]
+
+not_needed("*", [ ])
+
+config("_config") {
+    if (image_name == "FERMION_HELLO_WORLD") {
+        include_dirs = hello_world_inc
+    }
+}
+
+source_set("hello_world") {
+    if (image_name == "FERMION_HELLO_WORLD") {
+        sources = hello_world_src
+    }
+}

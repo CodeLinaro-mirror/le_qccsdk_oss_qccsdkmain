@@ -1,0 +1,1 @@
+Replace the .launches folder in the <path_to_your_eclipse_workspace>\.metadata\.plugins\org.eclipse.debug.core\.launches with the .launches folder from the gitlab

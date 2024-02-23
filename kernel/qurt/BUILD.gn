@@ -1,0 +1,24 @@
+#
+
+import("//configs_decl.gni")
+
+qurt_inc = [
+    "../../../comp/qurt/FreeRTOS/2.0",
+]
+
+qurt_src = [
+    "../../../comp/qurt/FreeRTOS/2.0/qurt_signal.c",
+    "../../../comp/qurt/FreeRTOS/2.0/qurt_pipe.c",
+    "../../../comp/qurt/FreeRTOS/2.0/qurt_thread.c",
+    "../../../comp/qurt/FreeRTOS/2.0/qurt_timer.c",
+    "../../../comp/qurt/FreeRTOS/2.0/qurt_utils.c",
+    "../../../comp/qurt/FreeRTOS/2.0/qurt_rmutex.c",
+]
+
+config("_config") {
+    include_dirs = qurt_inc
+}
+
+source_set("qurt") {
+    sources = qurt_src
+}

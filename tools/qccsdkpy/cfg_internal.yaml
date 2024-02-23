@@ -1,0 +1,97 @@
+
+#WARNING: DO NOT touch this file for non-Qualcomm user
+#Qualcomm internal configuration
+
+#if cfg_external does not exist, will copy from sample_cfg_external
+cfg_external: cfg_external.yaml
+sample_cfg_external: sample_cfg_external.yaml
+
+qccsdk_supported_scripts: [set, get, flash, build]
+
+qccsdk_base:
+    #to check if workspace is a valid qccsdk
+    check_path: include/api/assert.h
+    #to check if workspace is a valid release qccsdk (also called chipcode)
+    release_sdk_check_path: bin/wlan/regdb.bin
+    #board dir
+    boards_dir: boards
+    log_dir: log
+    nvm_prg_path: tools/nvm_programmer/nvm_programmer.py
+
+#structure: [board, bdf_name]
+board_map:
+    fdt_name: bdwlan
+    repo:
+        bdf_dir: core/wifi/halphy/phyrf_svc/tools/bdfUtils/device/bdf/qcp5321
+        boards_supported: [qcc730v1_socket, qcc730v2_socket, qcc730v2_evb11_hostless, qcc730v2_evb12_hostless, qcc730v2_evb13_hostless]
+        qcc730v1_socket: bdwlan.bin
+        qcc730v2_socket: bdwlan03.bin
+        qcc730v2_evb11_hostless: bdwlan01.bin
+        qcc730v2_evb12_hostless: bdwlan02.bin
+        qcc730v2_evb13_hostless: bdwlan03.bin
+    SDK:
+        bdf_dir: bin/wlan
+        boards_supported: [qcc730v2_evb11_hostless, qcc730v2_evb13_hostless]
+        qcc730v1_socket: bdwlan.bin
+        qcc730v2_socket: bdwlan03.bin
+        qcc730v2_evb11_hostless: bdwlan01.bin
+        qcc730v2_evb12_hostless: bdwlan02.bin
+        qcc730v2_evb13_hostless: bdwlan03.bin
+
+regdb_map:
+    fdt_name: regdb
+    repo:
+        regdb_path: core/wifi/halphy/phyrf_svc/tools/Regulatory/regdb.bin
+    SDK:
+        regdb_path: bin/wlan/regdb.bin
+
+fdt_map:
+    nvm_entry_name: rram_fdt
+    repo:
+        fdt_path_app_bin: scripts/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_with_app_bin.bin
+        fdt_path_app_elf: scripts/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_default.bin
+    SDK:
+        fdt_path_app_bin: scripts/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_with_app_bin.bin
+        fdt_path_app_elf: scripts/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_default.bin
+
+#structure: [appdir, nvm_entry_name, image_name]
+appdir_map:
+    repo:
+        appdirs_specific_supported: [pbl, sbl, prg, ftm, 001lcli, intg]
+        appdirs_build_supported: [pbl, sbl, prg, ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, 001lcli, intg]
+        appdirs_flash_supported: [ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, 001lcli]
+    SDK:
+        appdirs_specific_supported: [sbl, prg, ftm]
+        appdirs_build_supported: [sbl, prg, demo/qcli_demo, demo/hello_world, demo/posix_demo]
+        appdirs_flash_supported: [ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo]
+    pbl: [rram_pbl, FERMION_PBL]
+    sbl: [rram_sbl, FERMION_SBL]
+    prg: [Null, FERMION_NVM_PROGRAMMER]
+    ftm: [rram_app, FERMION_FTM]
+    demo/qcli_demo: [flash_app, FERMION_IOE_QCLI_DEMO]
+    demo/hello_world: [flash_app, FERMION_HELLO_WORLD]
+    demo/posix_demo: [flash_app, FERMION_POSIX_DEMO]
+    001lcli: [flash_app, FERMION]
+    #intg: [Null, [FERMION_PBL, FERMION_SBL, FERMION_NVM_PROGRAMMER, FERMION_FTM, FERMION, FERMION_QCLI_DEMO, FERMION_HELLO_WORLD, FERMION_POSIX_DEMO]]
+    intg: [Null, [FERMION_NVM_PROGRAMMER, FERMION_PBL, FERMION_SBL, FERMION_FTM, FERMION_QCLI_DEMO]]
+
+#structure [nvm_entry_name, offset]
+nvm_offset:
+    rram_pbl: 0x200000
+    rram_fdt: &fdt_offset 0x208000
+    rram_sbl: 0x20A400
+    rram_sblB: 0x210400
+    rram_app: 0x216400
+    end: &rram_end 0x380000
+    flash_app: 0
+
+flash:
+    jtags_supported: [openocd, jlink]
+    actions_supported: [flash, erase]
+    openocd: ch347
+    jlink: jlink
+    nvm: [rram, flash, otp]
+    erase_rram: [*fdt_offset, *rram_end]
+
+build:
+    actions_supported: [clean, build, rebuild]

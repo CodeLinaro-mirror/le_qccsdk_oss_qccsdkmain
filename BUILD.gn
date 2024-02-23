@@ -1,0 +1,200 @@
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+is_pbl = false
+is_ioe_pbl = false
+is_sbl = false
+is_nvm_programmer = false
+is_ioe_qcli_demo = false
+elf_dir = "bin"
+build_type = "__DEBUG_BUILD"
+
+if (image_name == "FERMION_PBL") {
+    is_pbl = true
+}
+
+if (image_name == "FERMION_IOE_QCLI_DEMO") {
+    is_ioe_qcli_demo = true
+}
+
+if (image_name == "FERMION_SBL") {
+    is_sbl = true
+}
+
+if (image_name == "FERMION_NVM_PROGRAMMER") {
+    is_nvm_programmer = true
+}
+
+lib_c_nano_path = exec_script("build/gn/scripts/get_arm_gcc_lib_path.py", ["c_nano"], "list lines")
+lib_gcc_path = exec_script("build/gn/scripts/get_arm_gcc_lib_path.py", ["gcc"], "list lines")
+#lIb_bdreg_path = exec_script("build/freertos/eclipse-gcc/Scripts/frn_generate_regdb_bdwlan_lib.py", [rebase_path("."), board_name], "list lines")
+
+print(string_join("", ["Board is: ",getenv("QCCSDK_BOARD_NAME")]))
+
+projects_pbl = [
+    "//fermion_pbl",
+]
+
+projects_sbl = [
+    "//bootloader/SBL",
+]
+
+projects_nvm_programmer = [
+    "//tools/nvm_programmer",
+]
+
+projects_common = [
+    "//lib/segger/SEGGER_RTT",
+    "//modules/hal",
+    "//include",
+    "//build/freertos/common/application_code",
+    "//tools/Target_tools",
+    "//drivers",
+    "//lib",
+    "//modules/console",
+    "//demo/qcli_demo",
+    "//demo/hello_world",
+    "//demo/posix_demo",
+    "//demo/common",
+    "//kernel/freertos",
+    "//kernel/qurt",
+    "//modules/net/mbedtls",
+    "//modules/net/lwip",
+    "//arch/arm/system",
+]
+
+projects_wifi_core = [
+    "//modules/wifi",
+]
+
+not_needed("*", [ ])
+
+config("common_define") {
+    defines = [ "SCALE_INCLUDES", "CRM_BUILD_NUM=${build_id}", "IMAGE_FERMION",
+        "CONFIG_WLAN=1", "CONFIG_NET=1",
+    ]
+
+    defines += [ "DFU_BUILD", "PLATFORM_FERMION", "PHYDEVLIB_PRODUCT_FERMION", "PHYDEVLIB_IOT", "FERMION_SILICON"]
+    defines += [ "FERMION_CHIP_VERSION=${CHIP_VERSION_FERMION}" ]
+    if (CHIP_VERSION_FERMION == 2) {
+        defines += [ "FEMION_IOT" ]
+    }
+    defines += [ "SILICON_BUILD" ]
+    if (!is_pbl) {
+        defines += [
+            "USE_FERMION_HALMAC",
+            "__BUILD_TYPE=\"${build_type}\"",
+            "NT_DEBUG",
+            "DEBUG",
+            "CHIP_HALPHY_FULL_DEBUG",
+        ]
+    }
+}
+
+config("common_inc") {
+    cflags_c = [ "-include", rebase_path("${root_build_dir}/autoconf.h"), ]
+    include_dirs = []
+
+    if (CHIP_VERSION_FERMION == 1) {
+        include_dirs += [ "../comp/wifi/core/common/hwio/fermion/$PLATFORM_VERSION_FERMION" ]
+    } else if (CHIP_VERSION_FERMION == 2) {
+        include_dirs += [ "../comp/wifi/core/common/hwio/fermionv2/$PLATFORM_VERSION_FERMION_V2" ]
+    }
+    include_dirs += [ "../comp/wifi/core/common",
+        "${root_build_dir}",
+    ]
+
+    include_dirs += [ "modules/wifi/inc", ]
+    include_dirs += [ "../comp/lwip/src/include/", ]
+    include_dirs += [ "../comp/lwip/src/portable", ]
+    include_dirs += [ "../comp/lwip/src/include/lwip", ]
+    include_dirs += [ "../comp/lwip/src/include/compat/posix", ]
+}
+
+config("default_config") {
+    configs = [
+        ":common_define",
+        ":common_inc",
+    ]
+    if (!is_pbl && !is_sbl && !is_nvm_programmer) {
+        foreach(prj, projects_common) {
+            prj_cfg = string_join("", [ prj, ":_config" ])
+            configs += [ prj_cfg ]
+        }
+        if (!is_sdk) {
+            foreach(prj, projects_wifi_core) {
+                prj_cfg = string_join("", [ prj, ":_config" ])
+                configs += [ prj_cfg ]
+            }
+        }
+    }
+}
+
+config("linker_config") {
+    libs = []
+    lib_dirs = []
+    ldflags = [ "-no-wchar-size-warning", "--no-warn-mismatch",
+        "-L", rebase_path("build/freertos/eclipse-gcc/ldscripts"),
+    ]
+    if (is_pbl) {
+        ldflags += [ "-Tfrn_pbl.ld" ]
+    } else if (is_sbl) {
+        ldflags += [ "-Tfrn_ioe_sbl.ld" ]
+    } else if (is_nvm_programmer) {
+        ldflags += [ "-Tfrn_nvm_programmer.ld" ]
+    } else if (is_ioe_qcli_demo) {
+        ldflags += [ "-Tfrn_ioe_wlan_sys_image.ld" ]
+    } else {
+        ldflags += [ "-Tfrn_wlan_sys_image.ld" ]
+    }
+    ldflags += [ "-Tlibs.ld" ]
+    ldflags += [ "-n", "--gc-sections" ]
+    ldflags += [ "-Map", rebase_path("${root_build_dir}/${elf_dir}/${image_name}.map") ]
+
+    if (is_sdk) {
+        libs += [ "wifi_core", ]
+        lib_dirs += [ rebase_path("modules/wifi/qcc730/core/lib/${board_name}"), ]
+    }
+
+    if (is_sbl) {
+        ldflags += [ "--start-group", rebase_path("bootloader/SBL/src/pbl_patch.o"), "--end-group" ]
+    }
+
+    if (is_ioe_qcli_demo) {
+        ldflags += [ "--start-group", "bdwlan.o", "regdb.o", "--end-group" ]
+    }
+
+    libs += [ "c_nano", "nosys", "m", "gcc" ]
+    lib_dirs += [ "${lib_c_nano_path[0]}", "${lib_gcc_path[0]}" ]
+}
+
+executable("elf_target") {
+    public_deps = []
+    public_configs = [ ":linker_config" ]
+    if (is_pbl) {
+        public_deps += projects_pbl
+    } else if (is_sbl) {
+        public_deps += projects_sbl
+    } else if (is_nvm_programmer) {
+        public_deps += projects_nvm_programmer
+    } else {
+        public_deps += projects_common
+        if (!is_sdk) {
+            public_deps += projects_wifi_core
+        }
+    }
+    output_name = "${image_name}"
+    output_extension = "elf"
+    output_dir = "${root_build_dir}/${elf_dir}"
+}
+
+action("final_target") {
+    script = "//build/gn/scripts/post_process.py"
+    outputs = [ "$root_build_dir/${elf_dir}/${image_name}.bin", ]
+    args = [
+        rebase_path("$root_build_dir/${elf_dir}/${image_name}.elf", "", "."),
+    ]
+    public_deps = [ ":elf_target" ]
+}
+

@@ -1,0 +1,9 @@
+
+config SOC_QCC730V1
+	bool "SOC QCC730V1"
+	default n
+	select SOC_QCC730_HAS_UART_V1
+	select SOC_QCC730_HAS_BT_COEX
+	select SOC_QCC730_HAS_I2C
+	select SOC_QCC730_HAS_QSPI_V1
+	select SOC_QCC730_HAS_SPI_SLAVE

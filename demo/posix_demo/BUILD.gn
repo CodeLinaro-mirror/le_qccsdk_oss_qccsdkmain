@@ -1,0 +1,26 @@
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+posix_demo_inc = [
+    "src",
+]
+
+posix_demo_src = [
+    "src/posix_demo.c",
+    "src/posix_demo_main.c",
+]
+
+not_needed("*", [ ])
+
+config("_config") {
+    if (image_name == "FERMION_POSIX_DEMO") {
+        include_dirs = posix_demo_inc
+    }
+}
+
+source_set("posix_demo") {
+    if (image_name == "FERMION_POSIX_DEMO") {
+        sources = posix_demo_src
+    }
+}

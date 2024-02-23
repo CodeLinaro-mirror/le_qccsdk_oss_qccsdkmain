@@ -1,0 +1,7 @@
+
+config QCCSDK_BOARD_NAME
+	string "qccsdk board name"
+	default "$(QCCSDK_BOARD_NAME)"
+
+#$(info, QCCSDK_BOARD_NAME $(QCCSDK_BOARD_NAME))
+rsource "$(QCCSDK_BOARD_NAME)/Kconfig.board"

@@ -1,0 +1,25 @@
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+qcli_demo_inc = [
+    "src",
+]
+
+qcli_demo_src = [
+    "src/qcli_demo_main.c",
+]
+
+config("_config") {
+    if (image_name == "FERMION_QCLI_DEMO") {
+        include_dirs = qcli_demo_inc
+    }
+}
+
+not_needed("*", [ ])
+
+source_set("qcli_demo") {
+    if (image_name == "FERMION_QCLI_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO") {
+        sources = qcli_demo_src
+    }
+}

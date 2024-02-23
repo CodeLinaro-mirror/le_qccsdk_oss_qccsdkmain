@@ -1,0 +1,102 @@
+menu "lib setting"
+config FREERTOS_PLUS_POSIX
+    bool "enable FreeRTOS-Plus-POSIX"
+    default n
+
+config QCCSDK_DEMO
+    bool "enable QCCSDK DEMO"
+    default n
+config FLASH_SHELL
+    bool "enable flash shell"
+    depends on BOARD_QCC730_QSPI_ENABLE
+    default n
+config WIFI_SHELL
+    bool "enable wifi shell"
+    default n
+config WLAN_QAPI
+    bool "enable WLAN QAPI"
+    default n
+config PLATFORM_SHELL
+    bool "enable platform shell"
+    default n
+config LOWPOWER_SHELL
+    bool "enable low power shell"
+    default n
+config I2CM_SHELL
+    bool "enable i2c master shell"
+    default n
+config NET_SHELL
+    bool "enable net shell"
+    default n
+config PROF
+    bool "enable PROF"
+    default n
+config PLATFORM_QAPI
+    bool "enable platform qapi"
+    default y
+config QTIMER
+    bool "enable QTIMER"
+    default n
+
+config HEAP_STATISTIC
+    bool "enable heap statistic"
+    default n
+config WMI_EVENT
+    bool "enable wmi event"
+    default y
+config RING_IF
+    bool "enable ring interface"
+    default n
+config SAP_POWERSAVE
+    bool "enable powersave for sap"
+    default n
+config WFM_EN
+    bool "enable WFM"
+    default y
+config DEBUG_STATS
+    bool "enable DEBUG_STATS"
+    default n
+config DPM_STATS
+    bool "enable DPM_STATS"
+    default n
+config RA_DEBUG
+    bool "enable RA_DEBUG"
+    default n
+config WPS
+    bool "enable WPS"
+    default n
+config P2P
+    bool "enable P2P"
+    default n
+config COEX_MCI
+    bool "enable COEX_MCI"
+    default n
+config COEX_PTA
+    bool "enable COEX_PTA"
+    default n
+config 6G_BAND
+    bool "enable 6G_BAND"
+    default y
+config LWIP_HEAP_POOL
+    bool "enable LWIP_HEAP_POOL"
+    default n
+
+config FTM_MODE
+    bool "enable FTM mode"
+    default n
+
+config DEBUG_CMD_XPA
+    depends on BOARD_QCC730_XPA_AUTO_CTRL_ENABLE
+    bool "config debug cmd xpa"
+    default y
+
+config CH12_CH13_DISABLE_XPA
+    depends on BOARD_QCC730_XPA_AUTO_CTRL_ENABLE
+    bool "config channel 12 13 to disable xpa"
+    default n
+    
+config SIGMA_TRAFFIC
+    bool "enable SIGMA_TRAFFIC"
+    default y
+    
+endmenu

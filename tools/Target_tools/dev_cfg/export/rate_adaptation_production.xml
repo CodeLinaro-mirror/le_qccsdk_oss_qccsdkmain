@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name="rate_adaptation production">
+  <device id="0x03000007">
+      <props id="1" id_name="NT_DEVCFG_RA_FIXED_RATE_INDEX" helptext="default-fixed rate" type="0x00000002"> 0x0 </props>
+	  <props id="2" id_name="NT_DEVCFG_RA_ADAPTATION_TIMER" helptext="default-periodic timer or sampling period" type="0x00000002"> 200 </props>
+	  <props id="3" id_name="NT_DEVCFG_RA_FAST_JUMP_THRESHOLD" helptext="default-failure thershold  at tertiary rate before fast jump is enabled" type="0x00000002"> 50 </props>
+	  <props id="4" id_name="NT_DEVCFG_RA_MIN_PKT_TX_THRESHOLD" helptext="default-min pkts tx required to consider in next rate computation" type="0x00000002"> 10 </props>
+	  <props id="5" id_name="NT_DEVCFG_RA_MIN_GOOD_PUT_FILTER_COEF" helptext="default-Good put minimum threshold" type="0x00000002"> 30 </props>
+	  <props id="6" id_name="NT_DEVCFG_RA_MAX_GOOD_PUT_FILTER_COEF" helptext="default-Good put maximum threshold" type="0x00000002"> 90 </props>			
+      <props id="7" id_name="NT_DEVCFG_RETRY_THRESHOLD0" helptext="Zeroth tx retry threshold" type="0x00000002"> 2 </props>
+      <props id="8" id_name="NT_DEVCFG_RETRY_THRESHOLD1" helptext="First tx retry threshold" type="0x00000002"> 4 </props>
+      <props id="9" id_name="NT_DEVCFG_RETRY_THRESHOLD2" helptext="Second tx retry threshold" type="0x00000002"> 6 </props>
+      <props id="10" id_name="NT_DEVCFG_MGMT_RETRY_THRESHOLD0" helptext="Zeroth tx mgmt retry threshold" type="0x00000002"> 2 </props>
+	  <props id="11" id_name="NT_DEVCFG_MGMT_RETRY_THRESHOLD1" helptext="First tx mgmt retry threshold" type="0x00000002"> 4 </props>
+      <props id="12" id_name="NT_DEVCFG_MGMT_RETRY_THRESHOLD2" helptext="Second tx mgmt retry threshold" type="0x00000002"> 6 </props>
+      <props id="13" id_name="NT_DEVCFG_BC_MC_PRIMARY_RA_IDX" helptext="default bc mc primay tx rate" type="0x00000002"> 0x1B </props>
+      <props id="14" id_name="NT_DEVCFG_BC_MC_SECONDARY_RA_IDX" helptext="default bc mc secondary tx rate" type="0x00000002"> 0x1B </props>
+      <props id="15" id_name="NT_DEVCFG_BC_MC_TERTIARY_RA_IDX" helptext="default bc mc tertiary tx rate" type="0x00000002"> 0x1B </props>
+	  <props id="16" id_name="NT_DEVCFG_RA_PER_UPPER_THRESHOLD"  min="30" max="30" helptext="PER upper threshold" type="0x00000002"> 30 </props>
+      <props id="17" id_name="NT_DEVCFG_RA_UPRATE_SAMPLING_CNT" min="5" max="5" helptext="Uprate sampling count" type="0x00000002"> 5 </props>
+      <props id="18" id_name="NT_DEVCFG_RA_RETAIN_RATE" min="1" max="2" helptext="retain rate on wakeup 1-reset, 2-retain" type="0x00000002"> 1 </props>
+      <props id="19" id_name="NT_DEVCFG_RA_ON" min="0" max="1" helptext="default- rate adoption turned ON - 1  / OFF - 0" type="0x00000002"> 0  </props>
+      <props id="20" id_name="NT_DEVCFG_RA_FIXED_PRI_RATE_INDEX" min="0" max="0" helptext="default- pri fixed rate" type="0x00000002"> 0 </props>
+	  <props id="21" id_name="NT_DEVCFG_RA_FIXED_SEC_RATE_INDEX" min="0" max="0" helptext="default- sec fixed rate" type="0x00000002"> 0 </props>
+      <props id="22" id_name="NT_DEVCFG_RA_FIXED_TRI_RATE_INDEX" min="0" max="0" helptext="default- tri fixed rate" type="0x00000002"> 0 </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+   </device>
+</driver>
+</module>
+</dal>

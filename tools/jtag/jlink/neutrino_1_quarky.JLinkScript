@@ -1,0 +1,782 @@
+/*
+*/
+
+
+void m4tap_exec(U8 m4tap_instr)
+{
+   U32 ir_val;
+
+  // Per section B3.3.1 Required IR instructions in the ARM
+  // Debug Interface Arch Spec ADIv5.0 to ADIv5.2 (IHI0031D), the
+  // Coresight JTAG-DP IR instructions are:
+  // 0x8 - Select ABORT register
+  // 0xA - Select DPACC register
+  // 0xB - Select APACC register
+  // 0xE - Select IDCODE register
+  // 0xF - Select BYPASS register
+  // Unused IR values select the BYPASS register.
+
+  ir_val = m4tap_instr & 0xF;
+  JLINK_SYS_Report1("m4tap_exec: ir_val", ir_val);
+  JLINK_JTAG_StoreIR(ir_val);
+}
+
+void dap_reg_wr(U32 reg_addr, U32 reg_val)
+{
+   U32 acc_ctrl;
+
+   // The DPACC and APACC registers are 35 bits wide:
+   // Data[31:0] || Register Address[3:2] || RnW
+
+   acc_ctrl = ((reg_addr & 0x0C) >> 1) | // Reg Addr[3:2]
+              (0 << 0);                  // RnW[0] = 0 for write
+
+   JLINK_JTAG_StartDR();
+   JLINK_SYS_Report1("dap_reg_wr: acc_ctrl", acc_ctrl);
+   JLINK_JTAG_WriteDRCont(acc_ctrl, 3);
+   JLINK_SYS_Report1("dap_reg_wr: reg_val", reg_val);
+   JLINK_JTAG_WriteDREnd(reg_val, 32);
+}
+
+void dp_reg_wr(U32 reg_addr, U32 reg_val)
+{
+   m4tap_exec(0xA); // Select DPACC
+   dap_reg_wr(reg_addr, reg_val);
+}
+
+void ap_reg_wr(U32 reg_addr, U32 reg_val)
+{
+   m4tap_exec(0xB); // Select APACC
+   dap_reg_wr(reg_addr, reg_val);
+}
+
+void mem_dword_wr(U32 mem_addr, U32 val)
+{
+   // Configure the AP bank
+   JLINK_SYS_Report("mem_dword_wr: dp_reg_wr(0x08...)");
+   dp_reg_wr(0x08,       // SELECT - AP Select Register
+             (0 << 24) | // [31:24] APSEL = 0x00, Neutrino only supports AP[0]
+             (0 <<  8) | // [23:8] Reserved, 0x0000
+             (0 <<  4) | // [7:4] APBANKSEL = 0x00, addr bits [7:4] of AP's TAR and DRW regs
+             (0 <<  0)); // [3:0] DPBANKSEL = 0x00, CTRL/STAT for DP reg addr 0x00
+
+   // Set CSW
+   JLINK_SYS_Report("mem_dword_wr: ap_reg_wr(0x00...)");
+   ap_reg_wr(0x00,       // AHB-AP CSW - Control and Status Word
+             (0 << 30) | // [31:30] Reserved, 0b00
+             (1 << 29) | // [29] MasterType = 1 for debug
+             (0 << 26) | // [28:26] Reserved, 0b000
+             (1 << 25) | // [25] HPROT1 = 1 privilege
+             (1 << 24) | // [24] Reserved, 0b1
+             (0 << 12) | // [23:12] Reserved, 0x000
+             (0 <<  8) | // [11:8] Mode = 0x0 normal download and upload
+             (0 <<  7) | // [7] Transfer in progress, read only
+             (0 <<  6) | // [6] DbgStatus = DAPEN, read only
+             (0 <<  4) | // [5:4] AddrInc = 0b00 auto increment off
+             (0 <<  3) | // [3] Reserved, 0xb0
+             (2 <<  0)); // [2:0] Size = 0b010, 32-bit access
+
+   // Set TAR with the memory address to write to.
+   JLINK_SYS_Report("mem_dword_wr: ap_reg_wr(0x04...)");
+   ap_reg_wr(0x04, mem_addr);
+
+   // Write value to the memory address using the DRW.
+   JLINK_SYS_Report("mem_dword_wr: ap_reg_wr(0x0C...)");
+   ap_reg_wr(0x0C, val);
+}
+
+void local_reset_halt()
+{
+   int orig_speed;
+
+   orig_speed = JTAG_Speed;
+   JTAG_Speed = 100;
+
+   // Bring the JTAG FSM to the Run-Test/Idle state.
+   // JLINK_SYS_Report("local_reset_halt: JTAG_Store(0x1F...)");
+   // JTAG_Store(0x1F, 0, 8);
+
+   // Make sure the debug logic is powered up.
+   JLINK_SYS_Report("local_reset_halt: dp_reg_wr(CTRL/STAT)");
+   dp_reg_wr(0x00,       // CTRL/STAT - Control/Status Register
+             (0 << 31) | // [31] CSYSPWRUPACK, read only
+             (1 << 30) | // [30] CSYSPWRUPREQ = 1, system power up request
+             (0 << 29) | // [29] CDBGPWRUPACK, read only
+             (1 << 28) | // [28] CDBGPWRUPREQ = 1, debug power up request
+             (0 << 27) | // [27] CDBGRSTACK, read only
+             (0 << 26) | // [26] CDBGRSTREQ = 0, do not request debugger reset
+             (0 << 24) | // [25:24] Reserved
+             (0 << 12) | // [23:12] TRNCNT, transaction counter
+             (0 <<  8) | // [11:8] MASKLANE = 0x0, do not mask any byte lanes
+             (0 <<  7) | // [7] WDATAERR, reserved for JTAG-DP
+             (0 <<  6) | // [6] READOK, reserved for JTAG-DP
+             (1 <<  5) | // [5] STICKYERR = 1, clear this error status bit
+             (0 <<  4) | // [4] STICKYCMP = 0, do not clear compare match status bit
+             (0 <<  2) | // [3:2] TRNMODE = 0, normal operation
+             (0 <<  1) | // [1] STICKYORUN = 0, do not clear overrun status bit
+             (0 <<  0)); // [0] ORUNDETECT = 0, disable overrun detection
+
+   // Enable halting debug.
+   JLINK_SYS_Report("local_reset_halt: mem_dword_wr(DHCSR)");
+   mem_dword_wr(0xE000EDF0,      // DHCSR - Debug Halting Control and Status Register
+                (0xA05F << 16) | // [31:16] DBGKEY = 0xA05F to enable write
+                     (0 <<  6) | // [15:6] Reserved
+                     (0 <<  5) | // [5] C_SNAPSTALL = 0, no action
+                     (0 <<  4) | // [4] Reserved
+                     (0 <<  3) | // [3] C_MASKINTS = 0, do not mask interrupts
+                     (0 <<  2) | // [2] C_STEP = 0, no effect
+                     (1 <<  1) | // [1] C_HALT = 1, halt the processor
+                     (1 <<  0)); // [0] C_DEBUGEN = 1, halting debug enabled
+
+   // Enable halting debug trap on local reset.
+   JLINK_SYS_Report("local_reset_halt: mem_dword_wr(DEMCR)");
+   mem_dword_wr(0xE000EDFC, // DEMCR - Debug Exception and Monitor Control Register
+                (0 << 25) | // [31:25] Reserved
+                (1 << 24) | // [24] TRACENA = 1, Enable DWT and ITM
+                (0 << 20) | // [23:20] Reserved
+                (0 << 19) | // [19] MON_REQ = 0, DebugMonitor semaphore
+                (0 << 18) | // [18] MON_STEP = 0, do not step processor
+                (0 << 17) | // [17] MON_PEND = 0, Clear status of DebugMonitor exception
+                (0 << 16) | // [16] MON_EN = 0, disable DebugMonitor exception
+                (0 << 11) | // [15:11] Reserved
+                (1 << 10) | // [10] VC_HARDERR = 1, enable halting debug trap on HardFault
+                (1 <<  9) | // [9] VC_INTERR = 1, enable halting debug trap on fault during interrupt
+                (1 <<  8) | // [8] VC_BUSERR = 1, enable halting debug trap on BusFault
+                (1 <<  7) | // [7] VC_STATERR = 1, enable halting debug trap on state info error
+                (1 <<  6) | // [6] VC_CHKERR = 1, enable halting debug trap on UsageFault due to checking err
+                (1 <<  5) | // [5] VC_NOCPERR = 1, enable halting debug trap on UsageFault due to a coproc
+                (1 <<  4) | // [4] VC_MMPERR = 1, enable halting debug trap on a MemManage exception
+                (0 <<  1) | // [3:1] Reserved
+                (1 <<  0)); // [0] VC_CORERESET = 1, enable halting debug trap on local reset
+
+   // Trigger a local reset.
+   JLINK_SYS_Report("local_reset_halt: mem_dword_wr(AIRCR)");
+   mem_dword_wr(0xE000ED0C,      // AIRCR - Application Interrupt and Reset Control Register
+                (0x05FA << 16) | // [31:16] VECTKEY = 0x05FA to enable write
+                     (0 << 15) | // [15] ENDIANNESS = 0, little endian
+                     (0 << 11) | // [14:11] Reserved
+                     (0 <<  8) | // [10:8] PRIGROUP = 0,
+                     (0 <<  3) | // [7:3] Reserved
+                     (1 <<  2) | // [2] SYSRESETREQ = 1, request reset
+                     (0 <<  1) | // [1] VECTCLRACTIVE = 0, don't clear active state exception info
+                     (1 <<  0)); // [0] VECTRESET = 1, triggers local reset
+
+  JTAG_Speed = orig_speed;
+}
+
+void qtap_exec(U8 qtap_instr)
+{
+   int orig_speed;
+   U32 tdi_val;
+
+   orig_speed = JTAG_Speed;
+
+   JLINK_TIF_SetSpeed(100);
+
+   // Issue TAP reset to ensure we can reach the QTAP's IR
+   // Manually toggle TCK so that JTAG QTAP samples TRSTn state.
+
+   JTAG_TRSTPin = 0;
+   JLINK_TIF_SetClrTCK(0);
+   JLINK_TIF_SetClrTCK(1);
+   JLINK_TIF_SetClrTCK(0);
+   JLINK_TIF_SetClrTCK(1);
+   JTAG_TRSTPin = 1;
+   JLINK_TIF_SetClrTCK(0);
+   JLINK_TIF_SetClrTCK(1);
+   JLINK_TIF_SetClrTCK(0);
+   JLINK_TIF_SetClrTCK(1);
+
+   // TMS=1 for 5 TCK clocks will force the JTAG FSM into
+   // the Test-Logic-Reset state.
+   // TMS=0 for at least 1 TCK clock will force the JTAG FSM into
+   // the Run-Test/Idle state.
+   JLINK_SYS_Report("qtap_exec: JTAG_Store(0x1F...)");
+   //JLINK_JTAG_Store(0x1F, 0, 8);
+   JLINK_JTAG_Store(0x1F, 0, 16);
+
+   // TMS=1 for 2 TCK clocks will move the JTAG QTAP FSM into
+   // the Select-IR-Scan state.
+   // TMS=0 for 2 TCK clocks will move the JTAG QTAP FSM into
+   // the Shift-IR state.
+   // Shift the 7-bit QTAP instruction (e.g. 7b'0001011 == 0x0B)
+   // into the Instruction Register.
+   // Set TMS=1 for the last bit to move the JTAG QTAP FSM to
+   // the Exit1-IR state.
+   // Set TMS=1 for 1 TCK  to move the JTAG QTAP FSM to
+   // the Update-IR state.
+   // Set TMS=0 for 1 TCK to move the JTAG QTAP FSM to
+   // the Run-Test/Idle state.
+   // TMS = 0 1100 0000 0011 = 0x0C03
+   // TDI = 0 0000 1011 0000 = 0x00B0
+
+   tdi_val = qtap_instr << 4;
+   JLINK_SYS_Report1("qtap_exec: JTAG_Store(0x0C03...)", tdi_val);
+   JLINK_JTAG_Store(0x0C03, tdi_val, 13);
+
+   // If connected to another TAP, then bring the newly connected
+   // JTAG FSM to the Run-Test/Idle state.
+   if ((qtap_instr == 0x0B) || // M4 TAP
+       (qtap_instr == 0x10) || // LVTAP
+       (qtap_instr == 0x11))   // RRAM TAP
+   {
+      JLINK_SYS_Report("qtap_exec: JTAG_Store(0x1F...)");
+      JLINK_JTAG_Store(0x1F, 0, 16);
+   }
+
+   JTAG_TMSPin = 0;
+   JTAG_TDIPin = 0;
+
+   JLINK_TIF_SetSpeed(orig_speed);
+}
+
+U32 bit_reverse(U32 data, U32 bits)
+{
+   U32 rev_data;
+   U32 i;
+
+   i = 0;
+   rev_data = 0;
+   while (i < bits)
+   {
+      rev_data |= (data & 0x1) << (bits - 1 - i);
+      data >>= 1;
+      i += 1;
+   }
+
+   return (rev_data);
+}
+
+const U8 tms_buf[9] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0C};
+const U8 tdi_buf[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+U32 jtag2ahb_tdr(U8 rd_n_wr, U32 addr, U32 data)
+{
+   U32 ahb_op;
+   U32 status_lo;
+   U32 status_hi;
+   U32 rd_data;
+   U32 rv_data;
+   // Assume start from Run-Test/Idle state.
+   // TMS=1 for 1 TCK moves JTAG QTAP FSM to DR-Scan state.
+   // TMS=0 for 2 TCKs moves the JTAG QTAP FSM to Shift-DR state.
+   // TMS=0 for 63 TCKs shifts 63 bits from TDR to TDO.
+   // TMS=1 for 1 TCK shifts bit 64 from TDR to TDO and moves to Exit1-DR state.
+   // TMS=1 for 1 TCK moves the JTAG QTAP FSM to Update-DR state.
+   // TMS=0 for 1 TCK returns the JTAG QTAP FSM to Run-Test/Idle state.
+   // TMS = 0000 1100 0000 0000 0000 0000 0000 0000 0000
+   //       0000 0000 0000 0000 0000 0000 0000 0000 0001 = 0x0C0000000000000001
+
+//   const U8 tms_buf[9] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0C};
+//   const U8 tdi_buf[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+   U8 tdo_buf[9];
+
+  // The JTAG2AHB Test Data Register (TDR) fields are:
+  // bits 01:00 - Command opcode 0x1 = read, 0x2 = write
+  // bits 33:02 - 32-bit value to write
+  // bits 63:34 - Most significant 30 bits of the AHB address
+  // This value must be sent in bit reversed order.
+  // i.e. bit 63 must be sent first.
+
+   if (rd_n_wr == 1)
+   {
+      ahb_op = 0x1;  // AHB read
+   }
+   else
+   {
+      ahb_op = 0x2;  // AHB write
+   }
+
+   // Write to the TDR to initiate the operation.
+   JLINK_SYS_Report("jtag2ahb_tdr: JTAG_StartDR()");
+
+   JLINK_JTAG_StartDR();
+
+   rv_data = bit_reverse(addr >> 2, 30);
+   JLINK_JTAG_WriteDRCont(rv_data, 30);
+
+   rv_data = bit_reverse(data, 32);
+   JLINK_JTAG_WriteDRCont(rv_data, 32);
+
+   rv_data = bit_reverse(ahb_op, 2);
+   JLINK_JTAG_WriteDREnd(rv_data, 2);
+
+   // Wait for the operation to complete by polling the TDR.
+
+   do
+   {
+      // Write TDR = 0 to poll for status and data from the AHB operation.
+      JLINK_JTAG_ReadWriteBits(&tdi_buf[0], &tms_buf[0], &tdo_buf[0], 69);
+
+      // The status word format is as follows:
+      // bit 0     - Completion status 1 = error, 0 = success
+      // bit 32:01 - 32-bit value read from AHB addr
+      // bit 33    - Transaction status 1 = completed, 0 = pending
+      // bit 63:34 - Zeros
+      status_lo = ((tdo_buf[3] << 24) | (tdo_buf[2] << 16) |
+                   (tdo_buf[1] << 8) | tdo_buf[0]);
+      status_hi = ((tdo_buf[7] << 24) | (tdo_buf[6] << 16) |
+                   (tdo_buf[5] << 8) | tdo_buf[4]);
+
+      JLINK_SYS_Report1("jtag2ahb status_lo= ", status_lo);
+      JLINK_SYS_Report1("jtag2ahb status_hi= ", status_hi);
+   } while((status_hi & 0x2) == 0);
+
+   if (status_lo & 1)
+   {
+      JLINK_SYS_Report1("jtag2ahb failed addr[31:2], opcode[1:0] = ",
+                        (addr & 0xFFFFFFFC) | ahb_op);
+   }
+
+   if (ahb_op == 0x01)
+   {
+      rd_data = ((status_hi & 0x1) << 31) | (status_lo >> 1);
+   }
+   else
+   {
+      rd_data = 0;
+   }
+
+   return rd_data;
+}
+
+void cmem_a_init()
+{
+	jtag2ahb_tdr(0,  0x0 ,0x000304A8);
+	jtag2ahb_tdr(0,  0x4 ,0x00000415);
+	jtag2ahb_tdr(0,  0x8 ,0x00000419);
+	jtag2ahb_tdr(0,  0xc ,0x00000419);
+	jtag2ahb_tdr(0,  0x10 ,0x00000419);
+	jtag2ahb_tdr(0,  0x14 ,0x00000419);
+	jtag2ahb_tdr(0,  0x18 ,0x00000419);
+	jtag2ahb_tdr(0,  0x1c ,0x00000419);
+	jtag2ahb_tdr(0,  0x20 ,0x00000419);
+	jtag2ahb_tdr(0,  0x24 ,0x00000419);
+	jtag2ahb_tdr(0,  0x28 ,0x00000419);
+	jtag2ahb_tdr(0,  0x2c ,0x00000419);
+	jtag2ahb_tdr(0,  0x30 ,0x00000419);
+	jtag2ahb_tdr(0,  0x34 ,0x00000419);
+	jtag2ahb_tdr(0,  0x38 ,0x00000419);
+	jtag2ahb_tdr(0,  0x3c ,0x00000419);
+	jtag2ahb_tdr(0,  0x40 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x44 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x48 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x4c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x50 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x54 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x58 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x5c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x60 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x64 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x68 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x6c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x70 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x74 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x78 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x7c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x80 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x84 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x88 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x8c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x90 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x94 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x98 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x9c ,0x0000042D);
+	jtag2ahb_tdr(0,  0xa0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xa4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xa8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xac ,0x0000042D);
+	jtag2ahb_tdr(0,  0xb0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xb4 ,0x0000042F);
+	jtag2ahb_tdr(0,  0xb8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xbc ,0x0000042D);
+	jtag2ahb_tdr(0,  0xc0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xc4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xc8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xcc ,0x0000042D);
+	jtag2ahb_tdr(0,  0xd0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xd4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xd8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xdc ,0x0000042D);
+	jtag2ahb_tdr(0,  0xe0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xe4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xe8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xec ,0x0000042D);
+	jtag2ahb_tdr(0,  0xf0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xf4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xf8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0xfc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x100 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x104 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x108 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x10c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x110 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x114 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x118 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x11c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x120 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x124 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x128 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x12c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x130 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x134 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x138 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x13c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x140 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x144 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x148 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x14c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x150 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x154 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x158 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x15c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x160 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x164 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x168 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x16c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x170 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x174 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x178 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x17c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x180 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x184 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x188 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x18c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x190 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x194 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x198 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x19c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1a0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1a4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1a8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1ac ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1b0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1b4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1b8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1bc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1c0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1c4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1c8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1cc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1d0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1d4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1d8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1dc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1e0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1e4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1e8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1ec ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1f0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1f4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1f8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x1fc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x200 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x204 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x208 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x20c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x210 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x214 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x218 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x21c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x220 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x224 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x228 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x22c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x230 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x234 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x238 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x23c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x240 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x244 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x248 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x24c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x250 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x254 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x258 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x25c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x260 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x264 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x268 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x26c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x270 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x274 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x278 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x27c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x280 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x284 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x288 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x28c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x290 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x294 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x298 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x29c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2a0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2a4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2a8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2ac ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2b0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2b4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2b8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2bc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2c0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2c4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2c8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2cc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2d0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2d4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2d8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2dc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2e0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2e4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2e8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2ec ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2f0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2f4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2f8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x2fc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x300 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x304 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x308 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x30c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x310 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x314 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x318 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x31c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x320 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x324 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x328 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x32c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x330 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x334 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x338 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x33c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x340 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x344 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x348 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x34c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x350 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x354 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x358 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x35c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x360 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x364 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x368 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x36c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x370 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x374 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x378 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x37c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x380 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x384 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x388 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x38c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x390 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x394 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x398 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x39c ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3a0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3a4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3a8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3ac ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3b0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3b4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3b8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3bc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3c0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3c4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3c8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3cc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3d0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3d4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3d8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3dc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3e0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3e4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3e8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3ec ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3f0 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3f4 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3f8 ,0x0000042D);
+	jtag2ahb_tdr(0,  0x3fc ,0x0000042D);
+	jtag2ahb_tdr(0,  0x400 ,0xD00CF8DF);
+	jtag2ahb_tdr(0,  0x404 ,0xF814F000);
+	jtag2ahb_tdr(0,  0x408 ,0x47004800);
+	jtag2ahb_tdr(0,  0x40c ,0x00000455);
+	jtag2ahb_tdr(0,  0x410 ,0x000304A8);
+	jtag2ahb_tdr(0,  0x414 ,0xF81EF000);
+	jtag2ahb_tdr(0,  0x418 ,0x0F04F01E);
+	jtag2ahb_tdr(0,  0x41c ,0xF3EFBF0C);
+	jtag2ahb_tdr(0,  0x420 ,0xF3EF8008);
+	jtag2ahb_tdr(0,  0x424 ,0xE0008009);
+	jtag2ahb_tdr(0,  0x428 ,0xE7FEE7FE);
+	jtag2ahb_tdr(0,  0x42c ,0xE7FEE7FE);
+	jtag2ahb_tdr(0,  0x430 ,0x4D074C06);
+	jtag2ahb_tdr(0,  0x434 ,0x68E0E006);
+	jtag2ahb_tdr(0,  0x438 ,0x0301F040);
+	jtag2ahb_tdr(0,  0x43c ,0x0007E894);
+	jtag2ahb_tdr(0,  0x440 ,0x34104798);
+	jtag2ahb_tdr(0,  0x444 ,0xD3F642AC);
+	jtag2ahb_tdr(0,  0x448 ,0xFFDEF7FF);
+	jtag2ahb_tdr(0,  0x44c ,0x00000498);
+	jtag2ahb_tdr(0,  0x450 ,0x000004A8);
+	jtag2ahb_tdr(0,  0x454 ,0x4805B580);
+	jtag2ahb_tdr(0,  0x458 ,0xF80AF000);
+	jtag2ahb_tdr(0,  0x45c ,0xF44F4601);
+	jtag2ahb_tdr(0,  0x460 ,0xF0003000);
+	jtag2ahb_tdr(0,  0x464 ,0x2000F807);
+	jtag2ahb_tdr(0,  0x468 ,0xBF00BD80);
+	jtag2ahb_tdr(0,  0x46c ,0x011AF400);
+	jtag2ahb_tdr(0,  0x470 ,0x47706800);
+	jtag2ahb_tdr(0,  0x474 ,0x47706001);
+	jtag2ahb_tdr(0,  0x478 ,0xC808E002);
+	jtag2ahb_tdr(0,  0x47c ,0xC1081F12);
+	jtag2ahb_tdr(0,  0x480 ,0xD1FA2A00);
+	jtag2ahb_tdr(0,  0x484 ,0x47704770);
+	jtag2ahb_tdr(0,  0x488 ,0xE0012000);
+	jtag2ahb_tdr(0,  0x48c ,0x1F12C101);
+	jtag2ahb_tdr(0,  0x490 ,0xD1FB2A00);
+	jtag2ahb_tdr(0,  0x494 ,0x00004770);
+	jtag2ahb_tdr(0,  0x498 ,0x000004A8);
+	jtag2ahb_tdr(0,  0x49c ,0x000004A8);
+	jtag2ahb_tdr(0,  0x4a0 ,0x00030000);
+	jtag2ahb_tdr(0,  0x4a4 ,0x00000488);
+}
+void bbpll_init()
+{
+	JLINK_MEM_WriteU32(0x2040200, 0x070f2400);
+	JLINK_MEM_WriteU32(0x2042400, 0x14037000);
+	JLINK_MEM_WriteU32(0x2042404, 0x0f037000);
+	JLINK_MEM_WriteU32(0x2042408, 0x33c33000);
+	JLINK_MEM_WriteU32(0x204240C, 0x2ed33000);
+	JLINK_MEM_WriteU32(0x2042410, 0x0f1ee71f);
+	JLINK_MEM_WriteU32(0x2042414, 0x0d7efc1f);
+	JLINK_MEM_WriteU32(0x2042418, 0x0f1ee71f);
+	JLINK_MEM_WriteU32(0x204241C, 0x0d7efc1f);
+	JLINK_MEM_WriteU32(0x2042420, 0x8daec703);
+	JLINK_MEM_WriteU32(0x2042424, 0x8c6edb03);
+	JLINK_MEM_WriteU32(0x2042428, 0x8daec703);
+	JLINK_MEM_WriteU32(0x204242C, 0x8c6edb03);
+	JLINK_MEM_WriteU32(0x2042448, 0xb23318db);
+	JLINK_MEM_WriteU32(0x204244C, 0x00003370);
+	JLINK_MEM_WriteU32(0x2042438, 0x66000007);
+	JLINK_MEM_WriteU32(0x2041C00, 0x33442297);
+	JLINK_MEM_WriteU32(0x2041C0C, 0x66008700);
+	JLINK_MEM_WriteU32(0x2041C48, 0x00000028);
+	JLINK_MEM_WriteU32(0x2040400, 0x00000002);
+	JLINK_MEM_WriteU32(0x2040408, 0x3fbfc997);
+	JLINK_MEM_WriteU32(0x2040410, 0x04c1f04c);
+	JLINK_MEM_WriteU32(0x2040900, 0x94945b00);
+	JLINK_MEM_WriteU32(0x2040810, 0x116c2040);
+	JLINK_MEM_WriteU32(0x2040840, 0x1da41540);
+	JLINK_MEM_WriteU32(0x2040984, 0x0003ffff);
+	JLINK_MEM_WriteU32(0x2040988, 0xc000b00b);
+	JLINK_MEM_WriteU32(0x2040C00, 0x000007ef);
+	JLINK_MEM_WriteU32(0x2040C04, 0x00006421);
+	JLINK_MEM_WriteU32(0x2040C08, 0x01e0e300);
+	JLINK_MEM_WriteU32(0x2040C0C, 0x00002000);
+
+	// UART PLL Selection - cfg_xo_pll_sel[1] = 1, cfg_xo_pll_hw_sw_cntl[0] = 1
+	JLINK_MEM_WriteU32(0x011AEDC0, 0x00000003);
+}
+
+void rram_init()
+{
+  //Force the RRAM power down mode to standby
+  JLINK_MEM_WriteU32(0x011AF81C, 0x00000081);
+
+  //Disable clock gating for RRAM
+  JLINK_MEM_WriteU32(0x0119A004, 0x1FF102C0);
+
+  //Configure TRC registers
+  JLINK_MEM_WriteU32(0x00081000, 0x00000001);
+  JLINK_MEM_WriteU32(0x000810A0, 0x403C1022);
+  JLINK_MEM_WriteU32(0x000810B0, 0x00018204);
+  JLINK_MEM_WriteU32(0x000810C0, 0x00000820);
+  JLINK_MEM_WriteU32(0x000810D0, 0x000000AA);
+  JLINK_MEM_WriteU32(0x00081090, 0x000007DD);
+  JLINK_MEM_WriteU32(0x00081024, 0x00000000);
+  JLINK_MEM_WriteU32(0x00081020, 0x00160400);
+
+}
+
+int ConfigTargetSettings(void)
+{
+   CPU = CORTEX_M4;
+   JTAG_Speed = 10000;
+   JTAG_IRPre = 0;
+   JTAG_DRPre = 0;
+   JTAG_IRPost = 0;
+   JTAG_DRPost = 0;
+   JTAG_IRLen = 4;
+
+   return 0;
+}
+
+void AfterResetTarget()
+{
+   JLINK_SelectTIF(JLINK_TIF_JTAG);
+
+   qtap_exec(0x0B);  // Connect to the M4 TAP
+
+   local_reset_halt();
+
+   bbpll_init();
+}
+
+void InitTarget(void)
+{
+   JLINK_SelectTIF(JLINK_TIF_JTAG);
+
+   //if (MAIN_IsFirstIdentify != 0)
+   {
+      //JLINK_ExecCommand("SetResetType = 0");
+      //JLINK_SelectTIF(JLINK_TIF_JTAG);
+      //JLINK_TIF_ActivateTargetReset();
+      //JLINK_SYS_Sleep(200);
+      //JLINK_TIF_ReleaseTargetReset();
+      //JLINK_SYS_Sleep(50);
+   }
+
+   // Exclude the SIF registers from the memory map which only allow DXE accesses.
+
+   JLINK_MemRegion("0X011B38FC-0X011B3D03 X");
+
+   // For FPGA build 2.8.10, the CPU does not power up on reset until
+   // PMU.CFG[boot_code_download_completed] is set to 1.  So, write to this
+   // register using the JTAG2AHB chain.
+   qtap_exec(0x0E);                        // Select the JTAG2AHB chain
+   //cmem_a_init();
+   jtag2ahb_tdr(0, 0x011af854, 0x7DF);
+   jtag2ahb_tdr(0, 0x011af404, 0x800000);  // PMU.CFG[boot_code_download_completed] = 1
+
+   qtap_exec(0x0B);  // 7-bit QTAP instr to connect to the M4 TAP
+   //local_reset_halt();	// for quarky, don't reset/halt
+
+   if (JLINK_TARGET_IsHalted() == 0)
+   {
+      if (JLINK_TARGET_Halt() > 0)
+      {
+         JLINK_SYS_Report("InitTarget(): Could not halt CPU!\n");
+      }
+   }
+
+   JLINK_SYS_Report("B:bbpll_init()");
+   bbpll_init();
+   JLINK_SYS_Report("A:bbpll_init()");
+
+  // Neutrino 1.0 does not enable clocks to the CTI and TMC when the DEMCR.TRCENA = 1.
+  // So, need to manually enable the clocks below.
+
+  // Unlock access to ETM registers
+  JLINK_MEM_WriteU32(0xE0041FB0, 0xC5ACCE55);
+  JLINK_MEM_WriteU32(0xE0041FB0, 0xC5ACCE55); // Repeat to ensure write is performed.
+
+  // Enable CTI and TMC clock
+  JLINK_MEM_WriteU32(0xE0041000, 0xA10);
+
+  // Flush the I-cache
+  JLINK_MEM_WriteU32(0x01180000, 0x01);
+  JLINK_MEM_WriteU32(0x01180000, 0x00);
+
+  JLINK_ExecCommand("SetResetType = 1");
+}

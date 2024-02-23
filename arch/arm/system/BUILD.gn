@@ -1,0 +1,36 @@
+#
+
+import("//configs_decl.gni")
+
+sys_inc = [
+    "include",
+    "include/cmsis",
+    "include/cortexm",
+]
+
+system_src = [
+    "src/cmsis/enable_disable_intr.c",
+    "src/cmsis/system_Neutrino.c",
+    "src/cmsis/vectors_Neutrino.c",
+    "src/cortexm/_initialize_hardware.c",
+    "src/cortexm/_reset_hardware.c",
+    "src/cortexm/exception_handlers.c",
+    "src/diag/Trace.c",
+    "src/diag/trace_impl.c",
+    "src/newlib/assert.c",
+    "src/newlib/_exit.c",
+    "src/newlib/_sbrk.c",
+    "src/newlib/_startup.c",
+    "src/newlib/_syscalls.c",
+    "src/newlib/_cxx.cpp",
+]
+
+config("_config") {
+    include_dirs = sys_inc
+}
+
+source_set("system") {
+    sources = []
+    sources += system_src
+    cflags_c = [ "-w", ]
+}

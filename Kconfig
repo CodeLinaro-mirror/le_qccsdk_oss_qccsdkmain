@@ -1,0 +1,9 @@
+mainmenu "Fermion Kconfig"
+
+source "boards/Kconfig"
+source "soc/Kconfig"
+
+source "lib/Kconfig"
+source "modules/console/Kconfig"
+
+source "../comp/wifi/core/Kconfig"

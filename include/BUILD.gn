@@ -1,0 +1,23 @@
+#
+
+import("//configs_decl.gni")
+#import("${root_build_dir}/mainconfig.gni")
+
+
+include_inc_fermion = [
+    "qapi/common",
+    "qapi",
+    "api",
+    ".",
+]
+
+config("_config") {
+    include_dirs = include_inc_fermion
+    if (CONFIG_WLAN) {
+        include_dirs += [ "qapi/wlan" ]
+    }
+}
+
+source_set("include") {
+    sources = []
+}

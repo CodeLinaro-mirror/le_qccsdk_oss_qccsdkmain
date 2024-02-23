@@ -1,0 +1,78 @@
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+net_demo_src = [
+    "net/src/net_shell.c",
+    "net/src/iperf.c",
+    "net/src/ssl_demo.c",
+    "net/src/ping.c",
+]
+
+i2c_demo_src = [
+   "peripherals/i2c/i2c_demo.c",
+]
+
+qtmr_demo_src = [
+    "peripherals/qtmr/qtmr_demo.c",
+]
+
+lowpower_demo_src = [
+    "lowpower/lowpower_shell.c",
+]
+
+prof_demo_src = [
+    "prof/prof_demo.c",
+    "prof/prof_test_inst.c",
+]
+
+prof_demo_inc = [
+    "//modules/wifi/qcc730/core/system/inc/"
+]
+
+flash_demo_src = [
+    "peripherals/flash/flash_demo.c",
+]
+
+not_needed("*", [ ])
+
+config("_config") {
+    if (CONFIG_PROF) {
+        include_dirs = prof_demo_inc
+    }
+}
+
+source_set("common") {
+    sources = []
+    include_dirs = []
+    if (CONFIG_NET) {
+        if (CONFIG_NET_SHELL) {
+            sources += net_demo_src
+        }
+    }
+    if (CONFIG_I2CM_SHELL) {
+        sources += i2c_demo_src
+    }
+    if (CONFIG_QTIMER) {
+        sources += qtmr_demo_src
+    }
+    if (CONFIG_LOWPOWER_SHELL) {
+        sources += lowpower_demo_src
+    }
+    if (CONFIG_PROF) {
+        sources += prof_demo_src
+    }
+    if (CONFIG_FLASH_SHELL) {
+        sources += flash_demo_src
+    }
+    if (CONFIG_PLATFORM_SHELL) {
+        sources += [ "platform/platform_shell.c" ]
+    }
+    if (CONFIG_WLAN) {
+        if (CONFIG_WIFI_SHELL) {
+            include_dirs += ["//drivers/wlan"]
+            sources += [ "wlan/wifi_shell.c"]
+        }
+    }
+}
+

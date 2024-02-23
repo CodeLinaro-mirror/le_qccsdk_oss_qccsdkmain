@@ -1,0 +1,76 @@
+
+import("//configs_decl.gni")
+
+lwip_inc = [
+    "l./../../../comp/lwip/src/include/compat/posix",
+    "./../../../comp/lwip/src/include",
+    "./../../../comp/lwip/src/include/lwip",
+    "./../../../comp/lwip/src/portable",
+]
+
+lwip_src = [
+    "../../../../comp/lwip/src/api/api_lib.c",
+    "../../../../comp/lwip/src/api/api_msg.c",
+    "../../../../comp/lwip/src/api/err.c",
+    "../../../../comp/lwip/src/api/if_api.c",
+    "../../../../comp/lwip/src/api/netbuf.c",
+    "../../../../comp/lwip/src/api/netdb.c",
+    "../../../../comp/lwip/src/api/netifapi.c",
+    "../../../../comp/lwip/src/api/sockets.c",
+    "../../../../comp/lwip/src/api/tcpip.c",
+    "../../../../comp/lwip/src/api/nt_hosted_lwip_interface.c",
+    "../../../../comp/lwip/src/core/altcp.c",
+    "../../../../comp/lwip/src/core/altcp_alloc.c",
+    "../../../../comp/lwip/src/core/altcp_tcp.c",
+    "../../../../comp/lwip/src/core/def.c",
+    "../../../../comp/lwip/src/core/dns.c",
+    "../../../../comp/lwip/src/core/inet_chksum.c",
+    "../../../../comp/lwip/src/core/init.c",
+    "../../../../comp/lwip/src/core/ip.c",
+    "../../../../comp/lwip/src/core/mem.c",
+    "../../../../comp/lwip/src/core/memp.c",
+    "../../../../comp/lwip/src/core/netif.c",
+    "../../../../comp/lwip/src/core/nt_dhcps.c",
+    "../../../../comp/lwip/src/core/pbuf.c",
+    "../../../../comp/lwip/src/core/raw.c",
+    "../../../../comp/lwip/src/core/stats.c",
+    "../../../../comp/lwip/src/core/sys.c",
+    "../../../../comp/lwip/src/core/tcp.c",
+    "../../../../comp/lwip/src/core/tcp_in.c",
+    "../../../../comp/lwip/src/core/tcp_out.c",
+    "../../../../comp/lwip/src/core/timeouts.c",
+    "../../../../comp/lwip/src/core/udp.c",
+    "../../../../comp/lwip/src/core/ipv4/autoip.c",
+    "../../../../comp/lwip/src/core/ipv4/dhcp.c",
+    "../../../../comp/lwip/src/core/ipv4/etharp.c",
+    "../../../../comp/lwip/src/core/ipv4/icmp.c",
+    "../../../../comp/lwip/src/core/ipv4/igmp.c",
+    "../../../../comp/lwip/src/core/ipv4/ip4.c",
+    "../../../../comp/lwip/src/core/ipv4/ip4_addr.c",
+    "../../../../comp/lwip/src/core/ipv4/ip4_frag.c",
+    "../../../../comp/lwip/src/core/ipv6/dhcp6.c",
+    "../../../../comp/lwip/src/core/ipv6/ethip6.c",
+    "../../../../comp/lwip/src/core/ipv6/icmp6.c",
+    "../../../../comp/lwip/src/core/ipv6/inet6.c",
+    "../../../../comp/lwip/src/core/ipv6/ip6.c",
+    "../../../../comp/lwip/src/core/ipv6/ip6_addr.c",
+    "../../../../comp/lwip/src/core/ipv6/ip6_frag.c",
+    "../../../../comp/lwip/src/core/ipv6/mld6.c",
+    "../../../../comp/lwip/src/core/ipv6/nd6.c",
+    "../../../../comp/lwip/src/netif/bridgeif.c",
+    "../../../../comp/lwip/src/netif/bridgeif_fdb.c",
+    "../../../../comp/lwip/src/netif/ethernet.c",
+    "../../../../comp/lwip/src/portable/arch/sys_arch.c",
+    #"../../../../comp/lwip/src/api/altcp_tls_mbedtls.c",
+    "../../../../comp/lwip/src/api/altcp_tls_mbedtls_mem.c",
+]
+
+config("_config") {
+    include_dirs = lwip_inc
+}
+
+source_set("lwip") {
+    sources = []
+    sources += lwip_src
+    cflags_c = [ "-w", ]
+}

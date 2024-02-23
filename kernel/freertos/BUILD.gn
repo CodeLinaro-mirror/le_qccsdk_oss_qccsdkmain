@@ -1,0 +1,31 @@
+#
+
+import("//configs_decl.gni")
+
+freertos_inc = [
+    "../../../comp/freertos/FreeRTOS/Source/include",
+    "../../../comp/freertos/FreeRTOS/Source/portable/GCC/ARM_CM4F",
+]
+
+freertos_src = [
+    "../../../comp/freertos/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c",
+    "../../../comp/freertos/FreeRTOS/Source/portable/MemMang/heap_4.c",
+    "../../../comp/freertos/FreeRTOS/Source/portable/MemMang/nt_heap_test.c",
+    "../../../comp/freertos/FreeRTOS/Source/portable/MemMang/qc_heap.c",
+    "../../../comp/freertos/FreeRTOS/Source/portable/MemMang/qc_heap_bin.c",
+    "../../../comp/freertos/FreeRTOS/Source/event_groups.c",
+    "../../../comp/freertos/FreeRTOS/Source/list.c",
+    "../../../comp/freertos/FreeRTOS/Source/queue.c",
+    "../../../comp/freertos/FreeRTOS/Source/stream_buffer.c",
+    "../../../comp/freertos/FreeRTOS/Source/tasks.c",
+    "../../../comp/freertos/FreeRTOS/Source/timers.c",
+]
+
+config("_config") {
+    include_dirs = freertos_inc
+}
+
+source_set("freertos") {
+    sources = freertos_src
+    cflags_c = [ "-w", ]
+}

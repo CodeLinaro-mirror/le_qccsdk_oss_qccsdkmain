@@ -1,0 +1,41 @@
+#========================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#========================================================================
+
+core_dir = "//../comp/qcc730/core"
+
+inc_list = [
+    "//include",
+    "//include/qapi/common",
+    "//lib/misc/inc",
+    "//build/freertos/common/config_files",
+    "//include",
+    "//arch/arm/system/include/cmsis",
+    "//lib/libc/include",
+    "//../comp/qurt/FreeRTOS/2.0/",
+    "${core_dir}/system/inc",
+    "${core_dir}/wifi/mlm/include",
+    "//modules/hal/qcc730/qtmr",
+    "//modules/hal/qcc730/qspi",
+    "//modules/hal/qcc730/flash",
+    "//modules/hal/inc",
+    "//../comp/freertos/FreeRTOS/Source/include/",
+    "//../comp/freertos/FreeRTOS/Source/portable/GCC/ARM_CM4F",
+]
+
+src_list = [
+    "src/nvm_programmer.c",
+    "src/nvm_rram.c",
+    "src/nvm_flash.c",
+    "src/uart_print.c",
+    "//modules/hal/qcc730/qspi/ferm_qspi.c",
+    "//modules/hal/qcc730/flash/ferm_flash.c",
+    "//lib/libc/source/safeAPI.c",
+]
+
+source_set("nvm_programmer") {
+    defines = [ "CONFIG_NON_OS", ]
+    sources = src_list
+    include_dirs = inc_list
+}

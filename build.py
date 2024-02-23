@@ -1,0 +1,438 @@
+# -*- coding:utf-8 -*-
+#
+
+import os
+import sys
+import subprocess
+import logging
+from optparse import OptionParser
+import shutil
+import platform
+import re
+
+image_list = [ 'FERMION_PBL','FERMION_SBL', 'FERMION', 'FERMION_QCLI_DEMO', 'FERMION_IOE_QCLI_DEMO', 'FERMION_FTM', 'FERMION_HELLO_WORLD', 'FERMION_POSIX_DEMO', 'FERMION_NVM_PROGRAMMER' ]
+proj_conf = { 'FERMION':'apps/prj.conf', 'FERMION_QCLI_DEMO':'demo/qcli_demo/prj.conf', 'FERMION_IOE_QCLI_DEMO':'demo/qcli_demo/prj.conf', 'FERMION_PBL':'demo/qcli_demo/prj.conf', 'FERMION_SBL':'demo/qcli_demo/prj.conf', 'FERMION_FTM':'demo/ftm/ftm_prj.conf',
+    'FERMION_HELLO_WORLD':'demo/hello_world/prj.conf',
+    'FERMION_POSIX_DEMO':'demo/posix_demo/prj.conf',
+    'FERMION_NVM_PROGRAMMER':'demo/qcli_demo/prj.conf',
+}
+default_build_output = 'build'
+gn_path = '/pkg/qct/software/ubuntu/matter_tool'
+default_build_id = '0999'
+
+SOCKET_BOARD_CHIPV1 = 'qcc730v1_socket'
+SOCKET_BOARD_CHIPV2 = 'qcc730v2_socket'
+EVB_V11_HOSTLESS = 'qcc730v2_evb11_hostless'
+EVB_V12_HOSTLESS = 'qcc730v2_evb12_hostless'
+EVB_V13_HOSTLESS = 'qcc730v2_evb13_hostless'
+DEFAULT_BOARD_NAME = SOCKET_BOARD_CHIPV1
+ENV_BOARD_NAME = 'QCCSDK_BOARD_NAME'
+
+log_formatter = logging.Formatter('[%(asctime)s]: %(message)s', datefmt = '%a, %d %b %Y %H:%M:%S')
+
+global build_output
+global dotconfig
+global autoconfig
+global gnconfig
+global build_id
+global g_val_board_name
+global g_is_sdk_packed
+global log_path
+
+global main_options
+
+cur_dir = os.getcwd()
+project_root = cur_dir
+
+def log_to_file_deco(arg = True, arg2 = True):
+    def _deco(func):
+        def wrapper(*args, **kwargs):
+            logger = logging.getLogger()
+            fh = logging.FileHandler(os.path.join(log_path, 'build-%s.log'%func.__name__), mode = 'w')
+            fha = logging.FileHandler(os.path.join(log_path, 'build-all.log'), mode = 'a')
+            fh.setFormatter(log_formatter)
+            fha.setFormatter(log_formatter)
+            if arg:
+                logger.addHandler(fh)
+                logger.addHandler(fha)
+            ch = logging.StreamHandler()
+            #ch.setFormatter(log_formatter)
+            if arg2:
+                logger.addHandler(ch)
+            ret = func(*args, **kwargs)
+            if arg:
+                logger.removeHandler(fh)
+                logger.removeHandler(fha)
+            if arg2:
+                logger.removeHandler(ch)
+            return ret
+        return wrapper
+    return _deco
+
+def print_cmd (cmd):
+    cmd_dbg = ''
+    for param in cmd:
+        cmd_dbg += ' %s '%param
+    logging.info(cmd_dbg)
+
+def execute_cmd(cmd, log_file = None):
+    logging.error(cmd)
+    print_cmd(cmd)
+    log_to_file = []
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    while True:
+        if process.poll() is None:
+            line = process.stdout.readline()
+            line = line.decode('utf-8').replace('\r', '')
+            if line:
+                logging.warning(line)
+                log_to_file.append(line)
+        else:
+            break
+    line = process.stderr.readline()
+    line = line.decode('utf-8').replace('\r', '')
+    if line:
+        logging.warning(line)
+        log_to_file.append(line)
+
+    if (log_file):
+        with open(log_file, 'w') as op:
+            for ln in log_to_file:
+                op.write(ln)
+    #(stdout,stderr) = process.communicate()
+    if (process.returncode != 0):
+        logging.error('Failed')
+        sys.exit(-1)
+
+def execute_cmd_with_log(cmd):
+    logging.error(cmd)
+    print_cmd(cmd)
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (stdout,stderr) = process.communicate()
+    if (process.returncode != 0):
+        logging.error('Failed')
+    return (stdout,stderr,process.returncode)
+
+def option_parser():
+    parser = OptionParser(usage="usage: %prog [options] arguments", version="%prog 1.0")
+    parser.add_option("--image", "-i", action="store", type="string", dest="image", help="Image name [FERMION, FERMION_QCLI_DEMO, FERMION_PBL]")
+    parser.add_option("--board", "-b", action="store", type="string", dest="board", help="board name, also board dir name under boards/, such as [%s, %s, %s, %s, %s]"%(SOCKET_BOARD_CHIPV1, SOCKET_BOARD_CHIPV2, EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, EVB_V13_HOSTLESS))
+    parser.add_option("--all", "-a", action="store_true", default=False, dest="build_all", help="To build all images")
+    parser.add_option("--out", "-o", action="store", type="string", dest="out_dir", help="Output directory")
+    parser.add_option("--hint", action="store_true", default=False, dest="hint", help="Hint parameter: weak set out_dir=output/<board>, image=FERMION_QCLI_DEMO")
+    parser.add_option("--clean", "-c", action="store_true", default=False, dest="clean", help="To clean the build")
+    parser.add_option("--menuconfig", "-m", action="store_true", default=False, dest="menuconfig", help="To run menuconfig")
+    # parser.add_option("-d", action="store_true", default=True,  dest="debug", help="debug")
+    return parser.parse_args()
+
+@log_to_file_deco(True)
+def gen_bdf_obj():
+    global g_val_board_name
+    regdb_path = os.path.join(project_root, 'modules/wifi/bin/regdb.bin')
+    bdf_dir = os.path.join(project_root, 'modules/wifi/bin')
+    #generate regdb.o
+    cmd = 'arm-none-eabi-objcopy -I binary -O elf32-littlearm --binary-architecture arm'
+    logging.info('Gen regdb obj ....')
+    os.system('%s --rename-section .data=.regdb %s %s'%(cmd, regdb_path, os.path.join(build_output, 'regdb.o')))
+    #generate bdwlan.o
+    if g_val_board_name==SOCKET_BOARD_CHIPV1:
+        bdf_name = 'bdwlan.bin'
+    elif g_val_board_name==SOCKET_BOARD_CHIPV2:
+        bdf_name = 'bdwlan03.bin'
+    elif g_val_board_name==EVB_V11_HOSTLESS:
+        bdf_name = 'bdwlan01.bin'
+    elif g_val_board_name==EVB_V12_HOSTLESS:
+        bdf_name = 'bdwlan02.bin'
+    elif g_val_board_name==EVB_V13_HOSTLESS:
+        bdf_name = 'bdwlan03.bin'
+    else:
+        logging.warning('board=%s not supported', g_val_board_name)
+        sys.exit(-1)
+    logging.info('Gen bdf obj ....')
+    os.system('%s --rename-section .data=.bdf %s %s'%(cmd, os.path.join(bdf_dir, bdf_name), os.path.join(build_output, 'bdwlan.o')))
+
+@log_to_file_deco(True)
+def gen_dot_conf(image = 'fermion_legacy'):
+    global g_val_board_name
+    # python tools/kconfig_scripts/kconfig.py --handwritten-input-configs Kconfig build/output/.config build/output/include/autoconf.h build/output/kconfig-files-list.log demo/qcli_demo/prj.conf
+    prj_conf = proj_conf[image]
+    Kconfig_logfile = os.path.join(build_output, 'kconfig-files-list.log')
+    board_defconfig = 'boards/%s/%s_defconfig'%(g_val_board_name, g_val_board_name)
+    cmd = [ 'python', 'tools/kconfig_scripts/kconfig.py',
+        '--handwritten-input-configs', 'Kconfig', dotconfig,
+        autoconfig,
+        Kconfig_logfile,
+        board_defconfig,
+        prj_conf,
+    ]
+    logging.info('Gen dot config ....')
+    execute_cmd(cmd)
+
+@log_to_file_deco(True)
+def gen_auto_conf():
+    # python tools/kconfig_scripts/kconfig.py Kconfig .config build/output/include/autoconf.h build/output/kconfig-files-list.log .config
+    Kconfig_logfile = os.path.join(build_output, 'kconfig-files-list.log')
+    cmd = [ 'python', 'tools/kconfig_scripts/kconfig.py',
+        'Kconfig', dotconfig,
+        autoconfig,
+        Kconfig_logfile,
+        dotconfig,
+    ]
+    logging.info('Gen auto config ....')
+    execute_cmd(cmd)
+
+@log_to_file_deco(True)
+def gen_gn_main_config():
+    # Gen gn config file
+    cmd = [ 'python', 'build/gn/scripts/process_dotconfig.py',
+        dotconfig,
+        gnconfig,
+    ]
+    logging.info('Gen gn main config ....')
+    execute_cmd(cmd)
+
+@log_to_file_deco(True)
+def gen_from_xml():
+    # python tools/host_tools/dev_cfg/dev_xml_cfg_debug.py .
+    cmd = [ 'python', 'tools/host_tools/dev_cfg/dev_xml_cfg_debug.py', '.', ]
+    logging.info('Run dev_xml_cfg_debug.py ....')
+    execute_cmd(cmd)
+
+    # python tools/host_tools/dev_cfg/dev_cfg_debug.py .
+    cmd = [ 'python', 'tools/host_tools/dev_cfg/dev_cfg_debug.py', '.', ]
+    logging.info('Run dev_cfg_debug.py ....')
+    execute_cmd(cmd)
+
+@log_to_file_deco(True)
+def pre_build_script(variant_name = 'FERMION_QCLI_DEMO', variant_image_id = 'MM'):
+    # python build/freertos/eclipse-gcc/Scripts/chip_full_debug_halphy_prebuild.py . FERMION_QCLI_DEMO MM
+    # python build/freertos/eclipse-gcc/Scripts/pbl_prebuild.py . FERMION_PBL PBL
+    if variant_image_id == 'MM':
+        pre_build_script = 'chip_full_debug_halphy_prebuild.py'
+    if variant_image_id == 'PBL':
+        pre_build_script = 'pbl_prebuild.py'
+    if variant_image_id == 'SBL':
+        pre_build_script = 'sbl_prebuild.py'
+        cmd = [ 'python', 'build/freertos/eclipse-gcc/Scripts/' + pre_build_script, '.', variant_name, variant_image_id ]
+    #cmd = [ 'python', 'tools/host_tools/dev_cfg/' + pre_build_script, '.',
+    #    variant_name, variant_image_id,
+    #]
+    logging.info('Run prebuild.py ....')
+    execute_cmd(cmd)
+
+@log_to_file_deco(True, False)
+def gen_mib_from_xml():
+    # python core/wifi/config_ini/mib/xml_gen_from_xml.py tools/Target_tools/dev_cfg/export/master_xml.xml > core/wifi/config_ini/mib/mib.xml
+    cmd = [ 'python', 'core/wifi/config_ini/mib/xml_gen_from_xml.py',
+        'tools/Target_tools/dev_cfg/export/master_xml.xml',
+    ]
+    logging.info('Gen mib ....')
+    (out, err, rc) = execute_cmd_with_log(cmd)
+    out = out.decode('utf-8').replace('\r', '')
+    if (rc != 0):
+        logging.warning('mib_gen_from_xml failed')
+        sys.exit(-1)
+    with open('core/wifi/config_ini/mib/mib.xml', 'wb') as outp:
+        outp.write(out.encode('utf-8'))
+
+def prepare_gn_args(image = 'FERMION'):
+    global g_is_sdk_packed
+    # prepare args.gn
+    is_sdk_str = 'true' if g_is_sdk_packed else 'false'
+    logging.warning('is_sdk_packed: %s' % is_sdk_str)
+    if g_val_board_name==SOCKET_BOARD_CHIPV1:
+        CHIP_VERSION_FERMION = 1
+    elif g_val_board_name in [EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, SOCKET_BOARD_CHIPV2, EVB_V13_HOSTLESS]:
+        CHIP_VERSION_FERMION = 2
+    else:
+        logging.warning('board=%s not supported', g_val_board_name)
+        sys.exit(-1)
+    logging.warning('Chip version: %d' % CHIP_VERSION_FERMION)
+    args_content = []
+    args_content.append('image_name="%s"' % (image))
+    args_content.append('build_id="%d"' % (int(build_id)))
+    args_content.append('is_sdk=%s' % is_sdk_str)
+    args_content.append('CHIP_VERSION_FERMION=%d' % CHIP_VERSION_FERMION)
+    args_content.append('board_name="%s"'%g_val_board_name)
+    with open(gnconfig, 'r') as gncfg:
+        args = gncfg.readlines()
+        for ln in args:
+            ln = ln.split()
+            args_content.append('%s' % ln[0])
+    with open(gnconfig, 'wb') as outp:
+        for ln in args_content:
+            outp.write((ln+'\n').encode('utf-8'))
+
+@log_to_file_deco(True)
+def execute_gn_build(image = 'FERMION'):
+    prepare_gn_args(image)
+    #TO add more cases
+    if image == 'FERMION_SBL':
+        variant_image_id = 'SBL'
+        pre_build_script(image, variant_image_id)
+        #logging.warning('image=%s ....' %(image))
+    # gn gen
+    #gn_args = '--args='
+    #gn_args += 'image_name=\"%s\"' % (image)
+    #gn_args += ' build_id=\"%s\"' % (build_id)
+    #with open(gnconfig, 'r') as gncfg:
+    #    args = gncfg.readlines()
+    #    for ln in args:
+    #        ln = ln.split()
+    #        gn_args += ' %s' % ln[0]
+    cmd = [ 'gn', 'gen', build_output, ]
+    logging.warning('gn gen ....')
+    execute_cmd(cmd)
+
+    # gn args. For debug
+    cmd = [ 'gn', 'args',  build_output, '--list' ]
+    logging.warning('Run gn args --list ....')
+    (out, err, rc) = execute_cmd_with_log(cmd)
+    out = out.decode('utf-8').replace('\r', '')
+    err = err.decode('utf-8').replace('\r', '')
+    logging.warning(err)
+    with open(os.path.join(log_path,'build-gn-args.log'), 'wb') as outp:
+        outp.write(out.encode('utf-8'))
+        outp.write(err.encode('utf-8'))
+    if (rc != 0):
+        sys.exit(-1)
+
+    #cmd = [ 'ninja', '-v', '-d', 'keeprsp', '-C', build_output ]
+    #logging.warning('Run ninja ....')
+    #(out, err, rc) = execute_cmd_with_log(cmd)
+    #out = out.decode('utf-8').replace('\r', '')
+    #err = err.decode('utf-8').replace('\r', '')
+    #logging.warning(out)
+    #logging.warning(err)
+    #with open(os.path.join(log_path,'build-ninja.log'), 'wb') as outp:
+    #    outp.write(out.encode('utf-8'))
+    #    outp.write(err.encode('utf-8'))
+    #if (rc != 0):
+    #    sys.exit(-1)
+    cmd = [ 'ninja', '-d', 'keeprsp', '-C', build_output, '-v', 'final_target', ]
+    logging.warning('Run ninja ....')
+    #with open(os.path.join(log_path,'build-ninja.log'), 'w') as outp:
+    execute_cmd(cmd, os.path.join(log_path,'build-ninja.log'))
+
+def start_build(image = 'FERMION', out_dir = default_build_output):
+    global build_output
+    global dotconfig
+    global autoconfig
+    global gnconfig
+    global log_path
+
+    build_output = os.path.join(out_dir, image)
+    build_output = os.path.join(build_output, 'DEBUG')
+    if not os.path.exists(build_output):
+        os.makedirs(build_output)
+
+    log_path = os.path.join(build_output, 'log')
+    full_log = os.path.join(log_path,'build-all.log')
+    if os.path.exists(full_log):
+        #shutil.rmtree(log_path)
+        os.remove(full_log)
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
+
+    dotconfig = os.path.join(build_output, '.config')
+    autoconfig = os.path.join(build_output, 'autoconf.h')
+    gnconfig = os.path.join(build_output, 'args.gn')
+
+
+    if (main_options.clean):
+        print('Cleaning %s' % image)
+        shutil.rmtree(os.path.join(out_dir, image))
+    else:
+        # Start here ...
+        gen_bdf_obj()
+        gen_dot_conf(image)
+        if main_options.menuconfig:
+            print('Only Menuconfig')
+            execute_cmd('menuconfig Kconfig')
+            sys.exit(0)
+        gen_auto_conf()
+        gen_gn_main_config()
+        gen_from_xml()
+        #gen_mib_from_xml()
+        execute_gn_build(image)
+
+def setup_env():
+    global build_id
+    global g_is_sdk_packed
+    path_env = os.environ.get('PATH')
+    if path_env:
+        if (platform.system().lower() != 'windows'):
+            path_env = gn_path + ":" + path_env
+    else:
+        if (platform.system().lower() != 'windows'):
+            path_env = gn_path
+    if path_env:
+        os.environ['PATH'] = path_env
+    #crm_string = 'FERMION.IOE_HL.1.0-00186-QCAFMNSWPL-1'
+    crm_string = os.environ.get('CRM_BUILDID')
+    if crm_string == None:
+        file_path = os.path.join(".", "build_version.txt")
+        if os.path.exists(file_path):
+            with open(file_path, "r") as file:
+                crm_string = file.readline()
+                print('Not tiberium build, but a SDK build with CRM_BUILDID:{}'.format(crm_string))
+    if crm_string == None:
+        crm_string =''
+    print('CRM build: ' + crm_string)
+    match = re.search(r'-(0)*(\d+)(\.)?(\d)*-', crm_string)
+    if match:
+        build_id = match.group(2)
+    else:
+        print('non-CRM build, using defaut: ' + default_build_id)
+        build_id = default_build_id
+    print('build id: %d' % (int(build_id)))
+    if os.path.exists('modules/wifi/qcc730/core/bin/regdb.bin'):
+        g_is_sdk_packed = True
+    else:
+        g_is_sdk_packed = False
+
+def main():
+    global main_options
+    global g_val_board_name
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    setup_env()
+    (main_options, args) = option_parser()
+    if main_options.board != None:
+        g_val_board_name = main_options.board
+        #print('g_val_board_name got from cmd param')
+    elif ENV_BOARD_NAME in os.environ:
+        g_val_board_name = os.environ[ENV_BOARD_NAME]
+        #print('g_val_board_name got from ENV_BOARD_NAME')
+    else:
+        g_val_board_name = DEFAULT_BOARD_NAME
+        #print('g_val_board_name got from DEFAULT_BOARD_NAME')
+    os.environ[ENV_BOARD_NAME] = g_val_board_name
+    #print('ENV_BOARD_NAME=%s, g_val_board_name=%s'%(ENV_BOARD_NAME, g_val_board_name))
+    if main_options.out_dir is None:
+        if main_options.hint == True:
+            build_output_l = 'output/%s'%g_val_board_name
+        else:
+            build_output_l = default_build_output
+    else:
+        build_output_l = main_options.out_dir
+    if not main_options.build_all:
+        if main_options.image is None:
+            if main_options.hint == True:
+                main_options.image = 'FERMION_QCLI_DEMO'
+            else:
+                print("Error: image not provided!")
+                print(image_list)
+                sys.exit(-1)
+        if main_options.image not in image_list:
+            print("Error: image not in list:")
+            print(image_list)
+            sys.exit(-1)
+        start_build(main_options.image, build_output_l)
+    else:
+        for image in image_list:
+            start_build(image, build_output_l)
+
+if __name__ == "__main__":
+    main()
+

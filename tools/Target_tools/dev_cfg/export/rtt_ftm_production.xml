@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name="rtt_ftm production">
+  <device id="0x03000012">
+      <props id="1" id_name="NT_DEVCFG_LOCATION_TYPE" helptext="location_type" type="0x00000002"> 1 </props>
+      <props id="2" id_name="NT_DEVCFG_LOCATION" helptext="location" type="0x00000002"> 0 </props>
+      <props id="3" id_name="NT_DEVCFG_FTM_MODE" min="1" max="1" helptext="ftm_mode" type="0x00000002"> 1 </props>
+      <props id="4" id_name="NT_DEVCFG_ASAP" helptext="asap" type="0x00000002"> 1 </props>
+      <props id="5" id_name="NT_DEVCFG_FTM_PER_BURST" min="2" max="2" helptext="ftms_per_burst" type="0x00000002"> 2 </props>
+	  <props id="6" id_name="NT_DEVCFG_NO_OF_BUR_EXP" helptext="no_of_bur_exp" type="0x00000002"> 2 </props>
+      <props id="7" id_name="NT_DEVCFG_FTM_MIN_DELTA_RESP" helptext="delta time btw two sucessive ftm frames in 100us uints" type="0x00000002"> 1 </props>
+      <props id="8" id_name="NT_DEVCFG_FTM_BURST_DURATION_RESP" helptext="code value of burst duration" type="0x00000002"> 10 </props>
+      <props id="9" id_name="NT_DEVCFG_FTM_BURST_PERIOD_RESP" helptext="burst period value in 100ms uints" type="0x00000002"> 40 </props>
+      <props id="10" id_name="NT_DEVCFG_FORMAT_AND_BANDWIDTH" helptext="code value for format and bandwidth TABLE 9-257" type="0x00000002"> 0 </props>
+	  <props id="11" id_name="NT_DEVCFG_PARTIAL_TSF_TIME_OFFSET_RESP" helptext="DTSF value in ms" type="0x00000002"> 5 </props>
+      <props id="12" id_name="NT_DEVCFG_PARTIAL_TSF_TIMER_NO_PREFERENCE_INITIATOR" helptext="indicates the preference of partial TSF field value- 1(not prefered)" type="0x00000002"> 1 </props>
+      <props id="13" id_name="NT_DEVCFG_FTM_MIN_DELTA_INITIATOR" helptext="delta time btw two sucessive frames" type="0x00000002"> 0 </props>
+      <props id="14" id_name="NT_DEVCFG_FTM_BURST_DURATION_INITIATOR" helptext="code value of burst duration at the initiator" type="0x00000002"> 15 </props>
+      <props id="15" id_name="NT_DEVCFG_FTM_BURST_PERIOD_INITIATOR" helptext="burst period value in 100ms uints at the initiator" type="0x00000002"> 0 </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+          <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+   </device>
+</driver>
+</module>
+</dal>

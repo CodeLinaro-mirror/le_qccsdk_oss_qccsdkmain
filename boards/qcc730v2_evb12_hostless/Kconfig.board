@@ -1,0 +1,5 @@
+
+config BOARD_QCC730V2_EVB12_HOSTLESS
+	bool "BOARD QCC730V2 EVB v1.2 hostless for iPA, temp version due to without Flash"
+	select SOC_QCC730V2
+	default n

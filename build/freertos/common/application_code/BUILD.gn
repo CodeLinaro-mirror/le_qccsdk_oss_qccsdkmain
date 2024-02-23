@@ -1,0 +1,21 @@
+#
+
+import("//configs_decl.gni")
+#import("${root_build_dir}/mainconfig.gni")
+
+
+application_code_inc = [
+    "../config_files",
+]
+
+application_code_src = [
+    "main.c",
+]
+
+config("_config") {
+    include_dirs = application_code_inc
+}
+
+source_set("application_code") {
+    sources = application_code_src
+}

@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<dal>
+<module name="sdk">
+<driver name="roaming production">
+  <device id="0x03000003">
+      <props id="1" id_name="NT_DEVCFG_FG_SCAN_PROBE_TYPE" helptext="default foreground probe_type_active(1)/passive(2)" type="0x00000002"> 1 </props>
+      <props id="2" id_name="NT_DEVCFG_VALUE_FG_SSID_SCAN_TYPE" helptext="scan-type to scan all ssids(0)/specific ssid(1)" type="0x00000002"> 0 </props>
+      <props id="3" id_name="NT_DEVCFG_NUM_CHANNELS_SCANNED" helptext="no of channels to be scanned by default is one" type="0x00000002"> 11 </props>
+      <props id="4" id_name="NT_DEVCFG_ACTIVE_CHANNEL_DWELL_TIME" helptext="default active scan durartion" type="0x00000002"> 60 </props>
+      <props id="5" id_name="NT_DEVCFG_PASSIVE_CHANNEL_DWELL_TIME" helptext="default passive scan durartion" type="0x00000002"> 130 </props>
+	  <props id="6" id_name="NT_DEVCFG_RSSI_MIN_THRESH_DEFAULT" helptext="default minimum threshold value of RSSI" type="0x00000002"> 60 </props>
+      <props id="7" id_name="NT_DEVCFG_RSSI_MAX_THRESH_DEFAULT" helptext="default maximum threshold value of RSSI" type="0x00000002"> 120 </props>
+      <props id="8" id_name="NT_DEVCFG_RATE_MIN_THRESH_DEFAULT" helptext="default minimum threshold rate" type="0x00000002"> 16 </props>
+      <props id="9" id_name="NT_DEVCFG_RATE_MAX_THRESH_DEFAULT" helptext="default maximum threshold rate" type="0x00000002"> 18 </props>
+      <props id="10" id_name="NT_DEVCFG_FOREGROUND_SCAN_TYPE" helptext="type of foreground scan implicit(0)/explicit(1)" type="0x00000002"> 1 </props>
+	  <props id="11" id_name="NT_DEVCFG_VALUE_IMP_SSID_SCAN_TYPE" helptext="scan-type to scan all ssids(0)/specific ssid(1)" type="0x00000002"> 0 </props>
+      <props id="12" id_name="NT_DEVCFG_BG_SCAN_STATUS" helptext="default background scan status enabled/disabled" type="0x00000002"> 0 </props>
+      <props id="13" id_name="NT_DEVCFG_BG_PROBE_TYPE" helptext="default background probe_type_active(1)/passive(2)" type="0x00000002"> 1 </props> 
+      <props id="14" id_name="NT_DEVCFG_BG_SCAN_DURATION" helptext="default-time-period-bg-scan_time period for bg scan" type="0x00000002"> 30 </props>
+      <props id="15" id_name="NT_DEVCFG_BG_FULL_SCAN_FREQ" helptext="background full scan frequency" type="0x00000002"> 5 </props> 
+	  <props id="16" id_name="NT_DEVCFG_BG_SCAN_TRIGGER" helptext="background scan triger rssi(1)/rate(2)/periodic(3)/mixed(4)" type="0x00000002"> 3 </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+   </device>
+</driver>
+</module>
+</dal>
