@@ -1,9 +1,11 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include <stdio.h>
 #include <ctype.h>
-
+#include "wifi_cmn.h"
 #include "qapi_wlan.h"
 #include "qapi_console.h"
 
@@ -68,6 +70,13 @@ uint8_t get_active_device()
 {
 	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
 	return p_cxt->active_device;
+}
+
+qbool_t get_device_connect_state(void)
+{
+	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+       
+	return p_cxt->connected;
 }
 
 static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
@@ -175,6 +184,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
     case QAPI_WLAN_SCAN_COMPLETE_CB_E: {
         if (!payload || !payload_Length) {
             info_printf("QAPI_WLAN_SCAN_COMPLETE_CB_E event error\n");
+            break;
         }
 
         qapi_WLAN_Scan_Comp_Evt_t *p_scan_compl_evt = (qapi_WLAN_Scan_Comp_Evt_t*)payload;
@@ -222,6 +232,17 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
         info_printf("ssid = %s\n", p_cxt->ssid);
         info_printf("assoc_id=%d\n", cxnInfo->assoc_id);
         info_printf("host_initiated=%d\n", cxnInfo->host_initiated);
+        break;
+    }
+    case QAPI_WLAN_DISCONNECT_CB_E: {
+        qapi_WLAN_Join_Comp_Evt_t *cxnInfo = (qapi_WLAN_Join_Comp_Evt_t *)(payload);
+		if(cxnInfo->bss_Connection_Status) {
+            p_cxt->connected = false;
+        }
+        
+        if(p_cxt->ssid_length) 
+            info_printf("devId %d disconnected from ssid = %s\n", p_cxt->active_device, p_cxt->ssid);
+
         break;
     }
     }
@@ -536,8 +557,12 @@ static qapi_Status_t Scan(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Pa
         bss_cnt = scan_complete_evt.num_bss_cur;
         qapi_WLAN_Scan_Comp_Evt_t *scan_complete_evt_total = malloc(sizeof(qapi_WLAN_Scan_Comp_Evt_t) + bss_cnt*sizeof(qapi_WLAN_BSS_Scan_Info_t));
         ret = qapi_WLAN_Get_Scan_Results(deviceId, scan_complete_evt_total, &bss_cnt);
-        print_scan_results(scan_complete_evt_total);
-        free(scan_complete_evt_total);
+        if (scan_complete_evt_total) {
+            print_scan_results(scan_complete_evt_total);
+            free(scan_complete_evt_total);
+        } else {
+            info_printf("Failed to allocate memory to scan\n");
+        }
     }
 
 exit:
@@ -662,6 +687,11 @@ static qapi_Status_t Connect(uint32_t __attribute__((__unused__)) Parameter_Coun
 	uint8_t deviceId = get_active_device();
 	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
 
+    if(!p_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
     if( Parameter_Count < 1 || !Parameter_List ){
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
@@ -705,6 +735,11 @@ static qapi_Status_t GetRssi(uint32_t __attribute__((__unused__)) Parameter_Coun
 	uint32_t length = sizeof(rssi);
 	uint32_t deviceId = get_active_device();
 
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
 	ret = qapi_WLAN_Get_Param(deviceId,
 							__QAPI_WLAN_PARAM_GROUP_WIRELESS,
 							__QAPI_WLAN_PARAM_GROUP_WIRELESS_RSSI,
@@ -719,6 +754,12 @@ static qapi_Status_t Disconnect(uint32_t __attribute__((__unused__)) Parameter_C
 {
     qapi_Status_t ret= QAPI_OK;
 	uint8_t deviceId = get_active_device();
+
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
     pg_wifi_shell_cxt->auth = QAPI_WLAN_AUTH_NONE_E;
     ret = qapi_WLAN_Disconnect(deviceId);
     return ret;
@@ -729,6 +770,12 @@ static qapi_Status_t SetChannel(uint32_t __attribute__((__unused__)) Parameter_C
 	qapi_Status_t ret= QAPI_OK;
 	uint8_t deviceId = get_active_device();
 	uint32_t channelNum = 0;
+
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
 	if( Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
 		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 	}
@@ -741,7 +788,10 @@ static qapi_Status_t SetChannel(uint32_t __attribute__((__unused__)) Parameter_C
 								(void *) &channelNum,
 								sizeof(channelNum),
 								FALSE);
-    return ret;
+	if(ret != QAPI_OK) {
+		info_printf("set channel %d fail \n",channelNum);
+	}
+	return ret;
 }
 
 static qapi_Status_t SetPhyMode(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
@@ -810,27 +860,20 @@ static qapi_Status_t Set11nHTCap(uint32_t __attribute__((__unused__)) Parameter_
 static int32_t set_op_mode(char *opmode, char *hiddenSsid)
 {
 	int32_t ret = -1;
-	uint8_t hidden_flag = 1;
+	uint8_t hidden_flag = 0;
 	qapi_WLAN_DEV_Mode_e devMode;
 	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
 
 	if(!strcmp(opmode,"ap")) {
 		devMode = DEV_MODE_AP_E;
-		if(!strcmp(hiddenSsid,"hidden"))
-		{
-			#if 0
-			ret = qapi_WLAN_Set_Param(0,
-									__QAPI_WLAN_PARAM_GROUP_WIRELESS,
-									__QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_ENABLE_HIDDEN_MODE,
-									&hidden_flag,
-									sizeof(hidden_flag),
-									FALSE);
-			#endif
-			if(ret != 0)
-			{
-				info_printf("Not able to set hidden mode for AP \r\n");
-				return ret;
-			}
+		if(strcmp(hiddenSsid,"hidden") == 0) {
+			hidden_flag = 1;
+		}
+		else if(strcmp(hiddenSsid,"0") == 0 || strcmp(hiddenSsid,"") == 0) {
+			hidden_flag = 0;
+		}
+		else {
+			return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 		}
 	}
 	else if(!strcmp(opmode,"station")) {
@@ -855,11 +898,25 @@ static int32_t set_op_mode(char *opmode, char *hiddenSsid)
 
 	if(ret != QAPI_OK) {
 		info_printf("set mode %s fail\n",opmode);
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
 	} else {
 		if(devMode == DEV_MODE_AP_E)
 			p_cxt->active_device = NT_DEV_AP_ID;
 		else if(devMode == DEV_MODE_STATION_E)
 			p_cxt->active_device = NT_DEV_STA_ID;
+	}
+	
+	if(devMode == DEV_MODE_AP_E) {
+		ret = qapi_WLAN_Set_Param(NT_DEV_AP_ID, 
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_ENABLE_HIDDEN_MODE,
+								&hidden_flag,
+								sizeof(hidden_flag),
+								FALSE);
+		if(ret != 0) {
+			info_printf("Not able to set hidden mode for AP \r\n");
+			return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+		}
 	}
 	return ret;
 }
@@ -867,6 +924,11 @@ static int32_t set_op_mode(char *opmode, char *hiddenSsid)
 static qapi_Status_t SetOperatingMode(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
 	char *hidden = "";
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+	
 	if(Parameter_Count < 1 || !Parameter_List) {
 		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 	}
@@ -884,8 +946,68 @@ static qapi_Status_t SetPowerMode(uint32_t __attribute__((__unused__)) Parameter
 
 static qapi_Status_t SetAggregationParameters(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
-    PRINT_ERR_NOT_SUPPORTED;
-    return QAPI_WLAN_ERROR;
+	qapi_Status_t ret= QAPI_OK;
+	uint8_t deviceId = get_active_device();
+    qapi_WLAN_Aggregation_Params_t param;
+	if( Parameter_Count != 2 || !Parameter_List 
+        || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+	
+	param.tx_TID_Mask = Parameter_List[0].Integer_Value;
+    param.rx_TID_Mask = Parameter_List[1].Integer_Value;
+	if(param.tx_TID_Mask > 0xFF || param.rx_TID_Mask > 0xFF) {
+		info_printf("Tha MAX value of tx_TID_Mask and rx_TID_Mask is 0xFF\r\n");
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+	ret = qapi_WLAN_Set_Param(deviceId, 
+               __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+               __QAPI_WLAN_PARAM_GROUP_WIRELESS_ALLOW_TX_RX_AGGR_SET_TID,
+               &param,
+               sizeof(qapi_WLAN_Aggregation_Params_t),
+               FALSE);
+    if(ret != QAPI_OK)
+        info_printf("Set failed. WLAN should be enabled and please set the parameter before connecting.\r\n");
+	return ret;
+}
+
+
+static qapi_Status_t SetAMSDU(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	qapi_Status_t ret= QAPI_OK;
+	uint8_t deviceId = get_active_device();
+    uint8_t amsdu_rx_enable = 0;
+    
+	if( Parameter_Count != 2 || !Parameter_List ) {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+    if(strcmp(Parameter_List[0].String_Value,"rx"))
+    {
+        info_printf("Parameter should be rx\r\n");
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    
+    if(!strcmp(Parameter_List[1].String_Value,"enable"))
+    {
+        amsdu_rx_enable = 1;
+    }
+    else if (!strcmp(Parameter_List[1].String_Value,"disable"))
+    {
+        amsdu_rx_enable = 0;
+    }
+	else {
+	    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+	ret = qapi_WLAN_Set_Param(deviceId, 
+               __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+               __QAPI_WLAN_PARAM_GROUP_WIRELESS_AMSDU_RX,
+               &amsdu_rx_enable,
+               sizeof(amsdu_rx_enable),
+               FALSE);
+    if(ret != QAPI_OK)
+        info_printf("Set failed. WLAN should be enabled and please set the parameter before connecting.\r\n");
+	return ret;
 }
 
 static qapi_Status_t SetPromiscuous(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
@@ -1019,6 +1141,13 @@ static qapi_Status_t SetRate(uint32_t __attribute__((__unused__)) Parameter_Coun
 {
     qapi_WLAN_Set_Rate_Params_t set_rate_cfg;
 
+    memset(&set_rate_cfg, 0, sizeof(qapi_WLAN_Set_Rate_Params_t));
+
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
     if (!Parameter_List)
     {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
@@ -1056,7 +1185,14 @@ static qapi_Status_t GetRate(uint32_t __attribute__((__unused__)) Parameter_Coun
     qapi_Status_t ret = QAPI_OK;
     qapi_WLAN_Set_Rate_Params_t set_rate_cfg;
 
-    if ((!Parameter_List) && (Parameter_Count < 1))
+    memset(&set_rate_cfg, 0, sizeof(qapi_WLAN_Set_Rate_Params_t));
+
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
+    if ((!Parameter_List) || (Parameter_Count < 1))
     {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
@@ -1070,6 +1206,167 @@ static qapi_Status_t GetRate(uint32_t __attribute__((__unused__)) Parameter_Coun
                          set_rate_cfg.rate_s_rate, \
                          set_rate_cfg.rate_t_rate);
     }
+
+    return QAPI_OK;
+}
+
+
+int32_t set_ap_beacon_interval(uint32_t beacon_int_in_tu)
+{
+	uint32_t length = sizeof(qapi_WLAN_DEV_Mode_e);
+	qapi_WLAN_DEV_Mode_e opmode;
+	uint8_t deviceId = get_active_device();
+	
+	if(QAPI_OK != qapi_WLAN_Get_Param (deviceId, 
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+								&opmode,
+								&length)){
+		info_printf("get operation mode fail for device %d\n",deviceId);
+		return -1;
+	}
+	if(opmode != DEV_MODE_AP_E) {
+		info_printf("Please Set AP Mode to apply AP settings\r\n");
+		return -1;
+	}
+	
+	if((beacon_int_in_tu < 100) || (beacon_int_in_tu > 1000)) {
+		info_printf("beacon interval has to be within 100-1000 in units of ms \r\n");
+		return -1;
+	}
+	if (0 != qapi_WLAN_Set_Param (deviceId,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_BEACON_INTERVAL_IN_TU,
+								&beacon_int_in_tu,
+								sizeof(beacon_int_in_tu),  
+								FALSE))
+	{
+		info_printf("set beacon interval fail\r\n");
+		return -1;
+	}
+	return 0;	
+}
+
+static qapi_Status_t setAPBeaconInterval(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+	if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+	
+    if (Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    
+	if(0 != set_ap_beacon_interval(Parameter_List[0].Integer_Value)){
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+	}
+
+    return QAPI_OK;
+}
+
+int32_t set_ap_dtim_period(uint32_t dtim_period)
+{
+	uint32_t length = sizeof(qapi_WLAN_DEV_Mode_e);
+	qapi_WLAN_DEV_Mode_e opmode;
+	uint8_t deviceId = get_active_device();
+	if(QAPI_OK != qapi_WLAN_Get_Param (deviceId, 
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+								&opmode,
+								&length)){
+		info_printf("get operation mode fail for device %d\n",deviceId);
+		return -1;
+	}
+	if(opmode != DEV_MODE_AP_E) {
+		info_printf("Please Set AP Mode to apply AP settings\r\n");
+		return -1;
+	}
+	
+	if((dtim_period < 1) || (dtim_period > 255)) {
+		info_printf("DTIM period has to be within 1-255\r\n");
+		return -1;
+	}
+	if (0 != qapi_WLAN_Set_Param (deviceId,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_DTIM_INTERVAL,
+								&dtim_period,
+								sizeof(dtim_period),  
+								FALSE))
+	{
+		info_printf("set DTIM period fail\r\n");
+		return -1;
+	}
+	return 0;	
+}
+
+static qapi_Status_t setAPDtimPeriod(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+	
+    if (Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    
+	if(0 != set_ap_dtim_period(Parameter_List[0].Integer_Value)){
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+	}
+
+    return QAPI_OK;
+}
+
+int32_t set_ap_inactivity_period(uint32_t inactivity_time_in_mins)
+{
+	uint32_t length = sizeof(qapi_WLAN_DEV_Mode_e);
+	qapi_WLAN_DEV_Mode_e opmode;
+	uint8_t deviceId = get_active_device();
+	if(QAPI_OK != qapi_WLAN_Get_Param (deviceId, 
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+								&opmode,
+								&length)){
+		info_printf("get operation mode fail for device %d\n",deviceId);
+		return -1;
+	}
+	if(opmode != DEV_MODE_AP_E) {
+		info_printf("Please Set AP Mode to apply AP settings\r\n");
+		return -1;
+	}
+	
+	if(inactivity_time_in_mins < 1) {
+		info_printf("inactivity time should not be 0\r\n");
+		return -1;
+	}
+	if (0 != qapi_WLAN_Set_Param (deviceId,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
+								__QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_INACTIVITY_TIME_IN_MINS,
+								&inactivity_time_in_mins,
+								sizeof(inactivity_time_in_mins),  
+								FALSE))
+	{
+		info_printf("set inactivity period fail\r\n");
+		return -1;
+	}
+	return 0;	
+}
+
+static qapi_Status_t setAPInactivityPeriod(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+	
+    if (Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    
+	if(0 != set_ap_inactivity_period(Parameter_List[0].Integer_Value)){
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+	}
 
     return QAPI_OK;
 }
@@ -1092,7 +1389,8 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { Set11nHTCap,     "Set11nHTCap",           "<HTCap = disable|ht20>","Set 11n HT parameter"},
     { SetOperatingMode,"SetOperatingMode",      "<ap|station> [<hidden|0> <wps|0>]",  "Set the operating mode to either Soft-AP or STA. Hidden and wps parameters only apply to AP mode."},
     { SetPowerMode,    "SetPowerMode",          "<mode = 0: Max performance, 1: Power Save>",    "Set the device power mode."},
-    { SetAggregationParameters,"SetAggregationParameters",  "<tx_tid_mask> <rx_tid_mask>",    "Set aggregation on RX or TX or both. Enabled via TID bit mask (0x00-0xff)"},
+    { SetAggregationParameters,"SetAggregationParameters",  "<tx_tid_mask> <rx_tid_mask>",    "Set aggregation on RX or TX or both. Enabled via TID bit mask (0x00-0xff)"}, 
+    { SetAMSDU,        "SetAMSDU",              "<rx> <enable|disable>",    "Enable/Disable receive AMSDU"},
     { SetPromiscuous,  "SetPromiscuous",        "<enable|filter> [config|reset]",    "Enable/disable promoscuous mode and configure, reset filters."},
     { Enable80211v,    "Enable80211v",          "<1: enable| 0: disable>", "Enable/Disable 802.11v features"},
     { EnableSuspend,   "EnableSuspend",         "",                      "Enable WLAN Suspend. Should be done before connecting to a network."},
@@ -1104,6 +1402,9 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 #endif
     { SetRate,		"SetRate",       "rate : 0 ~ 27", 	"<sta_id/auto> <rate_1> <rate_2> <rate_3>"},
     { GetRate,		"GetRate",       "", 	"<sta_id>"},
+	{ setAPBeaconInterval,		"SetAPBeaconInterval",          "<beacon_interval_in_ms>", "Set the beacon interval in ms."},
+	{ setAPDtimPeriod,			"SetAPDtimPeriod",              "<dtim_period>",           "Set the DTIM period"},
+	{ setAPInactivityPeriod,	"SetAPInactivityPeriod",        "<inactivity_period_in_mins>",  "Set inactivity period "},
 };
 
 const QAPI_Console_Command_Group_t wifi_shell_cmd_group = {WLAN_SHELL_GROUP_NAME, sizeof(wifi_shell_cmds) / sizeof(QAPI_Console_Command_t), wifi_shell_cmds};

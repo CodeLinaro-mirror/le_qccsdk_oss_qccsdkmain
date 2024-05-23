@@ -1,3 +1,7 @@
+/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef _UART_PRINT_H_
 #define _UART_PRINT_H_
 
@@ -12,6 +16,10 @@
  *-----------------------------------------------------------------------*/
 
 #define UART_PRINT_ENABLE
+
+#define UNUSED(x) (void)(x) 
+
+#define LOG_LEVEL  2
 
 #define UART_PRINT_BUFF_LENGTH            256
 

@@ -16,10 +16,14 @@
 #define _WMI_H_
 
 #include <stdio.h>
+#include "wifi_cmn.h"
 #include "wlan_defs.h"
 #include "nt_common.h"
 #include "ieee80211_defs.h"
 #include "neutrino_startpack.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 
@@ -505,7 +509,7 @@ typedef PREPACK struct
 	   void* get_rmf_cfg_inf;
 } POSTPACK WMI_GET_CONFIG_CMD;
 
-#ifdef SUPPORT_UNIT_TEST_CMD
+//#ifdef SUPPORT_UNIT_TEST_CMD
 
 #define WMI_UNIT_TEST_ARGS_MAX (64-1)  //As control interface support 256 bytes, Hence 256/4 args
 
@@ -518,7 +522,7 @@ typedef PREPACK struct
     uint32_t args[WMI_UNIT_TEST_ARGS_MAX];
 }POSTPACK WMI_UNIT_TEST_CMD;
 
-#endif
+//#endif
 
 typedef PREPACK struct
 {
@@ -1689,6 +1693,11 @@ typedef enum {
     WIFI_PARAM_SET_LOGGER_ATTACHED = 4,
     WIFI_PARAM_SET_BA_TIMEOUT = 5,
     WIFI_PARAM_SET_EB_LOCATION = 6,
+    WIFI_PARAM_SET_AP_DTIM = 7,
+    WIFI_PARAM_SET_AP_INACTIVITY = 8,
+    WIFI_PARAM_SET_AP_HIDDEN = 9,
+    WIFI_PARAM_SET_ALLOW_AGGR = 10,
+    WIFI_PARAM_SET_AMSDU_RX = 11,
 }param_id;
 enum {
     WIFI_STATUS_SUCCESS,

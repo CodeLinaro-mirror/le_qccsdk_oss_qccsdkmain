@@ -4,6 +4,9 @@
 #define _WLAN_POWER_H_
 
 #include "nt_common.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "pm_api.h"
 #include "wmi.h"

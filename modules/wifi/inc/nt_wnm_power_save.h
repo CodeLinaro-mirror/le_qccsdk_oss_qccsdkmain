@@ -1,10 +1,15 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 
 #ifndef CORE_WIFI_SME_INC_NT_WNM_POWER_SAVE_H_
 #define CORE_WIFI_SME_INC_NT_WNM_POWER_SAVE_H_
 #include <stdio.h>
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 #ifdef NT_FN_WNM_POWERSAVE_MODE

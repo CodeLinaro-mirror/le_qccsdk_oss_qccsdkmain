@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef _HALPHY_DPD_CAL_H_
@@ -54,7 +56,7 @@ struct phyrf_dpd_internal_for_restore
 
 };
 #ifdef EMULATION_BUILD
-static struct phyrf_dpd_internal_for_restore gDpd4Restore;
+//static struct phyrf_dpd_internal_for_restore gDpd4Restore;
 #endif
 /* DPD Correction each field is 12 bit number */
 typedef struct dpd_correction_s {

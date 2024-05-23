@@ -1,4 +1,6 @@
 /*========================================================================
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 *
 * @file coex_api.h
 * @brief Coex API definitions
@@ -14,6 +16,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "nt_osal.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "nt_common.h"
 #ifdef SUPPORT_COEX

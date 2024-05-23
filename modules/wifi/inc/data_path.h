@@ -1,3 +1,8 @@
+/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef DATA_PATH_H_
 #define DATA_PATH_H_
 
@@ -6,6 +11,9 @@
 #include "bd.h"
 #include "dpm_ip.h"
 #include "defines.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"	/* Resolve the NT_TST_TIME_STAMP_ENABLE. */
 #include "nt_common.h"	/* Resolve the NT_MAC_ADDR_SIZE/NT_MAX_SSID_LEN/NT_IPV4_ADDR_SIZE */
 #include "data_path_sys.h"
@@ -38,7 +46,11 @@
 #define NT_DPM_MULTICAST_BIT			1		/** Multicast bit */
 
 #define NT_CONVERT_TO_DBM(rssi)			((rssi) - 100)
+#ifdef PLATFORM_FERMION
+#define NT_DPM_GET_RSSI(phystat) (halphy_rssi_correction)(((phystat) & 0xFF000000) >> 24)
+#else /* PLATFORM_FERMION */
 #define NT_DPM_GET_RSSI(phystat)		(((phystat) & 0xFF000000) >> 24)
+#endif /* PLATFORM_FERMION */
 
 /*****************************************EDIT BELOW***************************************************/
 
@@ -167,6 +179,8 @@
 #define DEFAULT_TIMEOUT      10 /* seconds */
 /******************************************************************************************************/
 
+#define SEQNO_MAX   (4096)
+#define SEQNO_DIFF(a,b) (((a) >= (b))? ((a) - (b)) : ((a) + (SEQNO_MAX) - (b)))
 #define IS_BROADCAST_MULTICAST(addr) ((!memcmp(addr, bc_add, NT_MAC_ADDR_SIZE)) || \
 				((addr[0] & NT_DPM_MULTICAST_BIT) == 0x1))
 
@@ -324,6 +338,7 @@ typedef struct bar_frame
 enum {
 	ENQUEUE_PKT,
 	PROCESS_PKT,
+	DROP_PKT,
 };
 
 enum {

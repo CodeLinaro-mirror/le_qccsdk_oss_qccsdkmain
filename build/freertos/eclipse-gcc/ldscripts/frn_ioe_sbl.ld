@@ -1,4 +1,6 @@
 /*
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 /*
@@ -30,6 +32,7 @@ INCLUDE frn_ioe_bl_cmn.ld
  __config_table_size = LENGTH(CONFIG_TABLE);
 
 __app_image_start_addr = ORIGIN(RRAMMEM);
+__app_image_xip_start_addr = ORIGIN(FLASH_XIP);
 /*
  * The entry point for SBL, which is used to load first function of SBL
  */

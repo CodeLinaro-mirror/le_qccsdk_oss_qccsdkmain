@@ -106,5 +106,5 @@ class GDB_Server(object):
         Parameters:
             client: object used to send commands to the gdb_client.
         '''
-        client.execute('gdb.execute("monitor reset halt")')
+        #client.execute('gdb.execute("monitor reset halt")')
 

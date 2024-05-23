@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*-------------------------------------------------------------------------
@@ -244,7 +246,7 @@ static qapi_Status_t command_ver(uint32_t __attribute__((__unused__)) Parameter_
 {
     printf("QAPI Ver: %d.%d.%d\n", QAPI_VERSION_MAJOR, QAPI_VERSION_MINOR, QAPI_VERSION_NIT);
     printf("crm num: %d.\n", CRM_BUILD_NUM);
-    printf("version: %d.%d.%d\t%s\n", WIFI_FW_VER_MAJOR,WIFI_FW_VER_MINOR,WIFI_FW_VER_COUNT,WIFI_FW_VARIANT_NAME);
+    printf("WiFi version: %d.%d.%d\t%s\n", WIFI_FW_VER_MAJOR,WIFI_FW_VER_MINOR,WIFI_FW_VER_COUNT,WIFI_FW_VARIANT_NAME);
 #ifdef CONFIG_QCCSDK_BOARD_NAME
 		printf("build board name: %s\n", CONFIG_QCCSDK_BOARD_NAME);
 #endif
@@ -252,10 +254,13 @@ static qapi_Status_t command_ver(uint32_t __attribute__((__unused__)) Parameter_
         unsigned int otp_version = *(unsigned int *)0x1a002c;
         unsigned int PBL_version = *(unsigned int *)0x200168;
         unsigned int kdf_lock = *(unsigned int *)0x1a0090;
-        printf("OTP-version %d.%d, PBL-version %d.%d.%d, KDF-Lock 0x%x\n",
+		unsigned int CUID_0 = *(unsigned int *)0x1a0004;
+		unsigned short CUID_1 = *(unsigned short *)0x1a0008;
+        printf("OTP: OTP-version %d.%d, PBL-version %d.%d.%d, KDF-Lock 0x%x, CUID 0x%x %x\n",
             ((otp_version>>24)&0xff), (((otp_version>>16)&0xff)),
             ((PBL_version>>24)&0xff), (((PBL_version>>16)&0xff)), (((PBL_version>>0)&0xffff)),
-            ((kdf_lock>>8)&0xff));
+            ((kdf_lock>>8)&0xff),
+            CUID_1, CUID_0);
     }
     printf("build date and time: %s - %s\n", __DATE__, __TIME__);
     return QAPI_OK;

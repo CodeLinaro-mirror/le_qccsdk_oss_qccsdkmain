@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "stdio.h"
@@ -27,7 +29,9 @@ uint8_t iperf_rx_quit = 0;
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
-#define IPERF_PRINTF(...) printf(__VA_ARGS__)
+extern QAPI_Console_Group_Handle_t net_shell_cmd_group_handle;              /* Handle for our QCLI Command Group. */
+
+#define IPERF_PRINTF(...) QCLI_Printf(net_shell_cmd_group_handle, __VA_ARGS__)
 
 // #define UDP_TX_DEBUG
 
@@ -36,6 +40,9 @@ uint8_t iperf_rx_quit = 0;
 /* loopback behavior (disabled or enabled) for multicast packets */
 #define IPV6_MC_LPBK_DIS 0 /**< Disable loopback behavior for multicast packets. */
 #define IPV6_MC_LPBK_EN 1  /**< Enable loopback behavior for multicast packets. */
+#define IPERF_TX_THREAD_PRIO   5
+#define IPERF_RX_THREAD_PRIO   7
+#define IPERF_RESULT_THREAD_PRIO   3
 
 #if TO_CHECK
 void iperf3_make_cookie(char *str, int len);
@@ -55,16 +62,18 @@ void iperf_tcp_rx(void *arg);
 void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt);
 #endif
 void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur);
+void iperf_rx_show_result(void *arg);
 
+extern qbool_t get_device_connect_state(void);
 extern void qurt_thread_sleep(uint32_t duration);
 #define HEADER_VERSION1 0x80000000
 
-uint8_t iperf_tx_quit;
-uint8_t iperf_rx_quit;
+//uint8_t iperf_tx_quit;
+//uint8_t iperf_rx_quit;
 
-#define MAX_STREAM 20
+#define MAX_STREAM 4
 uint8_t iperf_stream_id[MAX_STREAM] = {0};
-uint16_t bench_udp_rx_port_in_use = 0; /* Used to prevent two udp rx streams from using the same port */
+uint16_t bench_udp_rx_port_in_use[MAX_STREAM] = {0}; /* Used to prevent two udp rx streams from using the same port */
 
 #define BENCH_TCP_RX_MAX_SESSIONS 2                           /* Max number of TCP RX sessions */
 #define BENCH_TCP_MAX_SERVERS 2                               /* Max number of TCP servers that can execute in parallel */
@@ -83,6 +92,29 @@ int serverRefCount = 0;                                 /* Total number of activ
  * iperf function
  *
  **************************************************************************************/
+#define TCP_QUEUE_PBUF_THRESHOLD_DEFAULT    21
+#define TCP_QUEUE_PBUF_THRESHOLD_LOW    12
+#define TCP_QUEUE_PBUF_THRESHOLD_STEP    3
+extern uint8_t tcp_queue_pbuf_threshold;
+void iperf_incrs_tcp_queue_pbuf_thrsh(void)
+{
+    if (tcp_queue_pbuf_threshold < TCP_QUEUE_PBUF_THRESHOLD_DEFAULT)
+    {
+        tcp_queue_pbuf_threshold += TCP_QUEUE_PBUF_THRESHOLD_STEP;
+    }
+
+    return;
+}
+
+void iperf_decrs_tcp_queue_pbuf_thrsh(void)
+{
+    if (tcp_queue_pbuf_threshold > TCP_QUEUE_PBUF_THRESHOLD_LOW)
+    {
+        tcp_queue_pbuf_threshold -= TCP_QUEUE_PBUF_THRESHOLD_STEP;
+    }
+
+    return;
+}
 
 static void app_get_time(uint32_t *time_ms)
 {
@@ -101,6 +133,26 @@ static uint8_t iperf_get_unused_id()
         }
     }
     return i;
+}
+
+static uint8_t iperf_stream_full(void)
+{
+    uint8_t i;
+    for (i = 0; i < MAX_STREAM; i++)
+    {
+        if (iperf_stream_id[i] == 0)
+        {
+            break;
+        }
+    }
+
+    if (i >= MAX_STREAM)
+    {
+        IPERF_PRINTF("Reach the limited streams\n");
+        return 1;
+    }
+    
+    return 0;
 }
 
 static void iperf_common_clear_stats(THROUGHPUT_CXT *p_tCxt)
@@ -141,63 +193,6 @@ static uint32_t iperf_common_check_test_time(THROUGHPUT_CXT *p_tCxt)
         return 0;
 }
 
-static uint32_t iperf_common_IsTCP(THROUGHPUT_CXT *p_rxtCxt)
-{
-    return (p_rxtCxt->protocol == TCP);
-}
-
-static uint32_t iperf_tcp_IsPortInUse(uint16_t port)
-{
-    uint32_t ret = 0;
-    int i = 0;
-    bench_tcp_session_t *session;
-    bench_tcp_server_t *server;
-
-    for (i = 0; i < BENCH_TCP_MAX_SERVERS; i++)
-    {
-        server = &g_tcpServers[i];
-        if (server->busySlot && (server->port == port))
-        {
-            ret = 1;
-            break;
-        }
-    }
-
-    for (i = 0; i < BENCH_TCP_RX_MAX_SESSIONS; i++)
-    {
-        session = &g_tcpSessions[i];
-        if (session->busySlot && (session->port == port))
-        {
-            ret = 1;
-            break;
-        }
-    }
-
-    return ret;
-}
-
-static uint32_t iperf_common_IsUDP(THROUGHPUT_CXT *p_rxtCxt)
-{
-    return (p_rxtCxt->protocol == UDP);
-}
-
-static uint32_t iperf_udp_IsPortInUse(uint16_t port)
-{
-    int ret = 0;
-    if (bench_udp_rx_port_in_use == port)
-    {
-        IPERF_PRINTF("port %d is in use; use another port.\n", bench_udp_rx_port_in_use);
-        ret = 1;
-    }
-    else
-    {
-        /* If not used, set the port */
-        bench_udp_rx_port_in_use = port;
-    }
-
-    return ret;
-}
-
 static void iperf_common_SetProtocol(THROUGHPUT_CXT *p_rxtCxt, const char *protocol)
 {
     if (strcasecmp("udp", protocol) == 0)
@@ -216,18 +211,55 @@ static void iperf_common_SetProtocol(THROUGHPUT_CXT *p_rxtCxt, const char *proto
 
 static uint32_t iperf_common_IsPortInUse(THROUGHPUT_CXT *p_rxtCxt, uint16_t port)
 {
-    if (iperf_common_IsUDP(p_rxtCxt))
+    int i;
+    
+    if (p_rxtCxt->protocol == UDP)
     {
-        if (iperf_udp_IsPortInUse(port))
+        int j = -1;
+        
+        for (i = 0; i < MAX_STREAM; i++)
+        {
+            if (port == bench_udp_rx_port_in_use[i])
+            {
+                break;
+            }
+
+            if (0 == bench_udp_rx_port_in_use[i])
+            {
+                j = i;
+            }
+        }
+
+        if ((i < MAX_STREAM) || (j == -1))
         {
             return 1;
         }
-    }
-    else if (iperf_common_IsTCP(p_rxtCxt))
-    {
-        if (iperf_tcp_IsPortInUse(port))
+        else
         {
-            return 1;
+            bench_udp_rx_port_in_use[j] = port;
+        }
+    }
+    else if (p_rxtCxt->protocol == TCP)
+    {
+        bench_tcp_session_t *session;
+        bench_tcp_server_t *server;
+
+        for (i = 0; i < BENCH_TCP_MAX_SERVERS; i++)
+        {
+            server = &g_tcpServers[i];
+            if (server->busySlot && (server->port == port))
+            {
+                return 1;
+            }
+        }
+
+        for (i = 0; i < BENCH_TCP_RX_MAX_SESSIONS; i++)
+        {
+            session = &g_tcpSessions[i];
+            if (session->busySlot && (session->port == port))
+            {
+                return 1;
+            }
         }
     }
 
@@ -353,31 +385,29 @@ static int iperf_tcp_CreateSession(THROUGHPUT_CXT *p_tCxt)
  *****************************************************************************/
 static void iperf_tcp_CloseSession(bench_tcp_session_t *session, fd_set *rd_set)
 {
+    if ((session == NULL) || (rd_set == NULL))
+    {
+        return;
+    }
+    
     qurt_mutex_lock(&sessionLock);
     session->ready = 0;
     session->busySlot = 0;
 
     iperf_result_print(&session->pktStats, 0, 0);
-    qurt_mutex_unlock(&sessionLock);
 
     if (session->buffer)
     {
         free(session->buffer);
+        session->buffer = 0;
     }
 
-    qurt_mutex_lock(&sessionLock);
     FD_CLR(session->sock_peer, rd_set);
     closesocket(session->sock_peer);
 
-    if ((!tcpRefCount) || (!sessionRefCount))
-    {
-        IPERF_PRINTF("Invalid Refcount(tcpRefCount %d, sessionRefCount:%d\n",
-                     tcpRefCount, sessionRefCount);
-        return;
-    }
+    tcpRefCount = (tcpRefCount) ? (tcpRefCount - 1) : 0;
+    sessionRefCount = (sessionRefCount) ? (sessionRefCount - 1) : 0;
 
-    tcpRefCount--;
-    sessionRefCount--;
     memset(session, 0, sizeof(bench_tcp_session_t));
     if (!sessionRefCount)
         FD_ZERO(rd_set);
@@ -386,6 +416,8 @@ static void iperf_tcp_CloseSession(bench_tcp_session_t *session, fd_set *rd_set)
 
     if (!sessionRefCount)
         qurt_mutex_delete(&sessionLock);
+
+    return;
 }
 
 #if TO_CHECK
@@ -424,7 +456,7 @@ static int iperf_tcp_getServerId()
         }
     }
 
-    if (serverId >= BENCH_TCP_MAX_SERVERS)
+    if (serverId == -1 || serverId >= BENCH_TCP_MAX_SERVERS)
     {
         qurt_mutex_unlock(&serverLock);
         return -1;
@@ -444,7 +476,7 @@ static void iperf_tcp_stopServer(bench_tcp_server_t *server)
     closesocket(server->sockfd);
     server->sockfd = 0;
     memset(server, 0, sizeof(bench_tcp_server_t));
-    serverRefCount--;
+    serverRefCount = (serverRefCount) ? (serverRefCount - 1) : 0;
 
     qurt_mutex_unlock(&serverLock);
 
@@ -507,6 +539,7 @@ static void iperf_tcp_CloseAllSessions(THROUGHPUT_CXT *p_tCxt, fd_set *rd_set)
 }
 #endif
 
+#if 0
 static void iperf_print_buffer(const char *buf, uint32_t len, struct sockaddr *sock_addr, uint8_t direction)
 {
     (void)buf;
@@ -516,16 +549,7 @@ static void iperf_print_buffer(const char *buf, uint32_t len, struct sockaddr *s
 
     IPERF_PRINTF("to do...");
 }
-
-static void rxreorder_udp_payload_init(stat_udp_pattern_t *stat_udp)
-{
-    memset(stat_udp, 0, sizeof(stat_udp_pattern_t));
-}
-
-static int rxreorder_udp_payload_valid(stat_udp_pattern_t *stat_udp)
-{
-    return !!(stat_udp->stat_valid);
-}
+#endif
 
 #if TO_CHECK
 static void rxreorder_udp_payload_statistics(stat_udp_pattern_t *stat_udp, char *buffer, uint32_t len)
@@ -543,7 +567,7 @@ static void rxreorder_udp_payload_statistics(stat_udp_pattern_t *stat_udp, char 
         return;
     }
 
-    if (!rxreorder_udp_payload_valid(stat_udp))
+    if (!(stat_udp->stat_valid))
     {
         stat_udp->stat_valid = 1;
         stat_udp->seq_last = udp_pattern.seq;
@@ -594,7 +618,7 @@ static unsigned short ratio(uint32_t numerator, uint32_t denominator, unsigned s
 
 static void rxreorder_udp_payload_report(stat_udp_pattern_t *stat_udp)
 {
-    if (!rxreorder_udp_payload_valid(stat_udp))
+    if (!(stat_udp->stat_valid))
     {
         return;
     }
@@ -676,6 +700,11 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         return QAPI_ERR_INVALID_PARAM;
     }
 
+    if (iperf_stream_full())
+    {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    
     while (index < Parameter_Count)
     {
         if (0 == strcmp(Parameter_List[index].String_Value, "-u"))
@@ -756,6 +785,11 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             index++;
             interval = Parameter_List[index].Integer_Value;
             index++;
+
+            if (interval <= 0)
+            {
+                interval = 1;
+            }
         }
         else if (0 == strcmp(Parameter_List[index].String_Value, "-l"))
         {
@@ -769,6 +803,11 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             index++;
             seconds = Parameter_List[index].Integer_Value;
             index++;
+
+            if (seconds <= 0)
+            {
+                seconds = IPERF_DEFAULT_RUNTIME;
+            }
         }
         else if (0 == strcmp(Parameter_List[index].String_Value, "-n"))
         {
@@ -901,22 +940,39 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         if ((protocol == UDP) && mcastEnabled)
         {
             IPERF_PRINTF("Multicast transmit not yet implemented\n");
+            goto RET_ERR;
         }
         else if (protocol == UDP)
         {
-            iperf_common_SetParams(tCxt, tCxt->params.tx_params.v6, "udp", port, TX);
-            tCxt->protocol = UDP;
-            tCxt->test_type = TX;
+            uint32_t ret;
+            ret = iperf_common_SetParams(tCxt, tCxt->params.tx_params.v6, "udp", port, TX);
+            if (ret == 0)
+            {
+                tCxt->protocol = UDP;
+                tCxt->test_type = TX;
 
-            iperf_udp_tx(tCxt);
+                iperf_udp_tx(tCxt);
+            }
+            else 
+            {
+                goto RET_ERR;
+            }
         }
         else if (protocol == TCP)
         {
-            iperf_common_SetParams(tCxt, tCxt->params.tx_params.v6, "tcp", port, TX);
-            tCxt->protocol = TCP;
-            tCxt->test_type = TX;
+            uint32_t ret;
+            ret = iperf_common_SetParams(tCxt, tCxt->params.tx_params.v6, "tcp", port, TX);
+            if (ret == 0)
+            {
+                tCxt->protocol = TCP;
+                tCxt->test_type = TX;
 
-            iperf_tcp_tx(tCxt);
+                iperf_tcp_tx(tCxt);
+            }
+            else
+            {
+                goto RET_ERR;
+            }
         }
     }
     else if (operation_mode == IPERF_SERVER)
@@ -926,13 +982,15 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         if ((protocol == UDP) && mcastEnabled)
         {
             IPERF_PRINTF("Multicast receive not yet implemented\n");
+            goto RET_ERR;
         }
         else if (protocol == UDP)
         {
             if (iperf_common_SetParams(tCxt, tCxt->params.rx_params.v6, "udp", port, RX) != 0)
             {
                 IPERF_PRINTF("error: invalid port\n");
-                return QAPI_ERR_INVALID_PARAM;
+                
+                goto RET_ERR;
             }
             memset(&tCxt->pktStats, 0, sizeof(STATS));
             tCxt->protocol = UDP;
@@ -941,7 +999,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
 
 #if IPERF_RX_THREAD
     err_t ret;
-    ret = nt_qurt_thread_create(iperf_udp_rx, "udp_rx", 3072, tCxt, TCPIP_THREAD_PRIO, NULL);
+    ret = nt_qurt_thread_create(iperf_udp_rx, "udp_rx", 3072, tCxt, IPERF_RX_THREAD_PRIO, NULL);
 
     if (ret == -1)
     {
@@ -951,24 +1009,35 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             free(tCxt);
             tCxt = NULL;
         }
+
+        goto RET_OK;
     }
 #else
             iperf_udp_rx(tCxt);
 #endif
+            if (tCxt->pktStats.iperf_display_interval)
+            {
+                ret = nt_qurt_thread_create(iperf_rx_show_result, "udp_rx_rslt", 1024, tCxt, IPERF_RESULT_THREAD_PRIO, &(tCxt->rx_task_handler));
+                if (ret == -1)
+                {
+                    IPERF_PRINTF("UDP result task creation failed\r\n");
+                    goto RET_OK;
+                }
+            }
         }
         else if (protocol == TCP)
         {
             if (iperf_common_SetParams(tCxt, tCxt->params.rx_params.v6, "tcp", port, RX) != 0)
             {
                 IPERF_PRINTF("error: invalid port\n");
-                return QAPI_ERR_INVALID_PARAM;
+                goto RET_ERR;
             }
             tCxt->protocol = TCP;
             tCxt->test_type = RX;
             tCxt->pktStats.iperf_display_interval = interval;
 #if IPERF_RX_THREAD
     err_t ret;
-    ret = nt_qurt_thread_create(iperf_tcp_rx, "tcp_rx", 3072, tCxt, TCPIP_THREAD_PRIO, NULL);
+    ret = nt_qurt_thread_create(iperf_tcp_rx, "tcp_rx", 3072, tCxt, IPERF_RX_THREAD_PRIO, NULL);
 
     if (ret == -1)
     {
@@ -978,26 +1047,42 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             free(tCxt);
             tCxt = NULL;
         }
+
+        goto RET_OK;
     }
     //return;
 #else
             iperf_tcp_rx(tCxt);
 #endif
+            if (tCxt->pktStats.iperf_display_interval)
+            {
+                ret = nt_qurt_thread_create(iperf_rx_show_result, "tcp_rx_rslt", 1024, tCxt, IPERF_RESULT_THREAD_PRIO, &(tCxt->rx_task_handler));
+                if (ret == -1)
+                {
+                    IPERF_PRINTF("TCP result task creation failed\r\n");
+                    goto RET_OK;
+                }
+            }
         }
     }
     else
     {
         IPERF_PRINTF("Usage: iperf [-s|-c host] [options]\n");
         IPERF_PRINTF("Try `iperf -h` for more information.\n");
-        if(tCxt)
-        {
-            free(tCxt);
-            tCxt = NULL;
-        }
-        return QAPI_ERR_INVALID_PARAM;
+        goto RET_ERR;
     }
 
+RET_OK:
     return QAPI_OK;
+
+RET_ERR:
+    if(tCxt)
+    {
+        free(tCxt);
+        tCxt = NULL;
+    }
+    
+    return QAPI_ERR_INVALID_PARAM;
 }
 
 #define RATE_KBYTES 1000
@@ -1009,7 +1094,7 @@ void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur)
     char *transfer_unit = " ";
     char *bandwidth_unit = " ";
     uint32_t sec_val1, sec_val2;
-    uint32_t bytes;
+    uint32_t bytes = 0;
 
     msInterval = (cur - prev);
     // pCxtPara->total_bytes += pCxtPara->bytes;
@@ -1052,34 +1137,26 @@ void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur)
 
         sec_val1 = 0;
         sec_val2 = msInterval / 1000;
-        bytes = pCxtPara->total_bytes; /* Note: working with KB */
-#if 0
-    	if (bytes > BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE) {
-    		transfer_unit = "G";
-    		rem_bytes = ((bytes % (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE)) * 100) / (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE);
-    		bytes /= BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE;
-    	}
-    	else if (bytes > BYTES_PER_KILO_BYTE) {
-    		transfer_unit = "M";
-    		rem_bytes = ((bytes % (BYTES_PER_KILO_BYTE)) * 100) / BYTES_PER_KILO_BYTE;
-    		bytes /= BYTES_PER_KILO_BYTE;
-    	} else if (bytes) {
-    		transfer_unit = "K";
-    	}
-#else
-        if (bytes > BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE)
+
+        if (pCxtPara->total_bytes > BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE)
+        {
+            transfer_unit = "G";
+            rem_bytes = ((pCxtPara->total_bytes % (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE)) * 100) / 
+            (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE);
+            bytes = pCxtPara->total_bytes / (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE);
+        }
+        else if (pCxtPara->total_bytes > BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE)
         {
             transfer_unit = "M";
-            rem_bytes = ((bytes % (BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE)) * 100) / (BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE);
-            bytes /= BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE;
+            rem_bytes = ((pCxtPara->total_bytes % (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE)) * 100) / (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE);
+            bytes = pCxtPara->total_bytes / (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE);
         }
-        else if (bytes > BYTES_PER_KILO_BYTE)
-        {
+        else if (pCxtPara->total_bytes > BYTES_PER_KILO_BYTE) {
             transfer_unit = "K";
-            rem_bytes = ((bytes % (BYTES_PER_KILO_BYTE)) * 100) / BYTES_PER_KILO_BYTE;
-            bytes /= BYTES_PER_KILO_BYTE;
+            rem_bytes = ((pCxtPara->total_bytes % (BYTES_PER_KILO_BYTE)) * 100) / BYTES_PER_KILO_BYTE;
+            bytes = pCxtPara->total_bytes / BYTES_PER_KILO_BYTE;
         }
-#endif
+
     }
 
     if (throughput_Kbps >= RATE_KBYTES)
@@ -1139,7 +1216,14 @@ void iperf_result_print2(STATS *pCxtPara, uint32_t msInterval, uint64_t totalbyt
         sec_val2++;
     }
 
-    if (totalbyts > BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE)
+	if (totalbyts > BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE)
+    {
+		transfer_unit = "G";
+		rem_bytes = ((totalbyts % (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE)) * 100) / 
+		(BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE);
+		bytes = totalbyts / (BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE);
+	}
+	else if (totalbyts > BYTES_PER_KILO_BYTE*BYTES_PER_KILO_BYTE)
     {
         transfer_unit = "M";
         rem_bytes = ((totalbyts % (BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE)) * 100) / (BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE);
@@ -1234,7 +1318,7 @@ int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number) //,s
     hdr->stop_sec = htonl((p_tCxt->pktStats.last_time - p_tCxt->pktStats.first_time) / 1000);
     hdr->stop_usec = htonl(((p_tCxt->pktStats.last_time - p_tCxt->pktStats.first_time) % 1000) * 1000);
 
-    FD_ZERO(&rset);
+    memset(&rset, 0, sizeof(fd_set));
     FD_SET(p_tCxt->sock_peer, &rset);
 
     tv.tv_sec = 1;
@@ -1315,7 +1399,7 @@ void iperf_udp_ack_finish(THROUGHPUT_CXT *p_tCxt, struct sockaddr *faddr, uint32
     int sent_bytes = 0;
 
     fd_set readSet;
-    FD_ZERO(&readSet);
+    memset(&readSet, 0, sizeof(fd_set));
     FD_SET(p_tCxt->sock_local, &readSet);
     memset(ack_buf, 0, sizeof(ack_buf));
     while (count < 10)
@@ -1341,7 +1425,7 @@ void iperf_udp_ack_finish(THROUGHPUT_CXT *p_tCxt, struct sockaddr *faddr, uint32
             continue;
         }
 
-        if (iperf_rx_quit)
+        if ((iperf_rx_quit) || (get_device_connect_state() == false))
         {
             IPERF_PRINTF("4\n");
             break;
@@ -1375,6 +1459,10 @@ void iperf_udp_ack_finish(THROUGHPUT_CXT *p_tCxt, struct sockaddr *faddr, uint32
 static void iperf_client_send(void *arg)
 {
     THROUGHPUT_CXT *p_tCxt = (THROUGHPUT_CXT *)arg;
+    if (p_tCxt == NULL) {
+        IPERF_PRINTF("ERROR: p_tCxt in iperf_client_send() is NULL\n");
+        goto ERROR_2;
+    }
     uint32_t cur_packet_number, n_send_ok, n_send_fail;
     int32_t send_bytes;
     uint32_t packet_size = p_tCxt->params.tx_params.packet_size;
@@ -1398,6 +1486,11 @@ static void iperf_client_send(void *arg)
     n_send_ok = 0;
     n_send_fail = 0;
 
+    if (p_tCxt->protocol == TCP)
+    {
+        iperf_decrs_tcp_queue_pbuf_thrsh();
+    }
+
     app_get_time(&p_tCxt->pktStats.first_time);
 
     /* Convert bps to B/s, and then to packets/sec */
@@ -1414,13 +1507,12 @@ static void iperf_client_send(void *arg)
     p_tCxt->iperf_stream_id = iperf_get_unused_id();
     if (p_tCxt->iperf_stream_id == MAX_STREAM)
     {
-        IPERF_PRINTF("Reach the limited streams\n");
         goto ERROR_2;
     }
     p_tCxt->pktStats.iperf_stream_id = p_tCxt->iperf_stream_id;
     while (!is_test_done)
     {
-        if (iperf_tx_quit)
+        if ((iperf_tx_quit) || (get_device_connect_state() == false))
         {
             app_get_time(&p_tCxt->pktStats.last_time);
             break;
@@ -1432,7 +1524,7 @@ static void iperf_client_send(void *arg)
             while ((p_tCxt->buffer = malloc(packet_size)) == NULL)
             {
                 /*Wait till we get a buffer*/
-                if (iperf_tx_quit)
+                if ((iperf_tx_quit) || (get_device_connect_state() == false))
                 {
                     app_get_time(&p_tCxt->pktStats.last_time);
                     goto ERROR_2;
@@ -1455,7 +1547,7 @@ static void iperf_client_send(void *arg)
 
         do
         {
-            if (iperf_tx_quit)
+            if ((iperf_tx_quit) || (get_device_connect_state() == false))
             {
                 app_get_time(&p_tCxt->pktStats.last_time);
                 is_test_done = 1;
@@ -1476,7 +1568,7 @@ static void iperf_client_send(void *arg)
                 }
                 else
                 {
-                    IPERF_PRINTF("TX timeout\n");
+                    IPERF_PRINTF("TX timeout:%d, %s\n", errno, strerror(errno));
                     app_get_time(&p_tCxt->pktStats.last_time);
                     if(ERR_TIMEOUT == errno || ERR_OK == errno)
                     {
@@ -1609,21 +1701,31 @@ static void iperf_client_send(void *arg)
 
     /* Send endmark packet and wait for stats from server */
     // iperf_udp_tx_finish(p_tCxt, cur_packet_number,to,tolen);
-    if (p_tCxt->protocol == UDP)
+    if ((p_tCxt->protocol == UDP) && (get_device_connect_state() == true))
         iperf_udp_tx_finish(p_tCxt, cur_packet_number);
 
 ERROR_2:
-    closesocket(p_tCxt->sock_peer);
-    qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
-    iperf_stream_id[p_tCxt->iperf_stream_id] = 0;
-
-    if (p_tCxt->buffer)
-    {
-        free(p_tCxt->buffer);
-        p_tCxt->buffer = NULL;
-    }
     if (p_tCxt)
     {
+        closesocket(p_tCxt->sock_peer);
+        qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
+
+        if (p_tCxt->iperf_stream_id < MAX_STREAM)
+        {
+            iperf_stream_id[p_tCxt->iperf_stream_id] = 0;
+        }
+
+        if (p_tCxt->buffer)
+        {
+            free(p_tCxt->buffer);
+            p_tCxt->buffer = NULL;
+        }
+
+        if (p_tCxt->protocol == TCP)
+        {
+            iperf_incrs_tcp_queue_pbuf_thrsh();
+        }
+        
         free(p_tCxt);
         p_tCxt = NULL;
     }
@@ -1638,6 +1740,11 @@ ERROR_2:
 
 void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
 {
+    if (p_tCxt == NULL){
+        IPERF_PRINTF("ERROR: p_tCxt in iperf_udp_tx() is NULL\n");
+        goto ERROR_1;
+    }
+    
     struct sockaddr_in foreign_addr;
     struct sockaddr_in6 foreign_addr6;
     struct sockaddr *to;
@@ -1711,11 +1818,11 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         }
 
     }
-    if (p_tCxt->params.tx_params.is_so_unblock)
-    {
-        setsockopt(p_tCxt->sock_peer, SOL_SOCKET, O_NONBLOCK, NULL, 0);
-        IPERF_PRINTF("non-blocking mode\n");
-    }
+    // if (p_tCxt->params.tx_params.is_so_unblock)
+    // {
+    //     setsockopt(p_tCxt->sock_peer, SOL_SOCKET, O_NONBLOCK, NULL, 0);
+    //     IPERF_PRINTF("non-blocking mode\n");
+    // }
     if (p_tCxt->params.tx_params.v6 && IS_IPV6_MULTICAST(p_tCxt->params.tx_params.v6addr))
     {
         uint32_t val;
@@ -1753,7 +1860,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         goto ERROR_2;
     }
 
-    ret = nt_qurt_thread_create(iperf_client_send, "udp_client", 1024, p_tCxt, TCPIP_THREAD_PRIO, NULL);
+    ret = nt_qurt_thread_create(iperf_client_send, "udp_client", 1024, p_tCxt, IPERF_TX_THREAD_PRIO, NULL);
 
     if (ret == -1)
     {
@@ -1772,6 +1879,92 @@ ERROR_2:
     closesocket(p_tCxt->sock_peer);
 ERROR_1:
     IPERF_PRINTF(BENCH_TEST_COMPLETED);
+
+    if (p_tCxt)
+    {
+        free(p_tCxt);
+        p_tCxt = NULL;
+    }
+	
+	return;
+}
+
+void iperf_rx_show_result(void *arg)
+{
+    STATS *ppktStats = NULL;
+    uint32_t iperf_curr_time = 0;
+    uint32_t iperf_last_time = 0;
+    uint32_t iperf_display_interval;
+    THROUGHPUT_CXT *p_tCxt = (THROUGHPUT_CXT *)arg;
+
+    if (p_tCxt == NULL)
+    {
+        return;
+    }
+    
+    iperf_display_interval = p_tCxt->pktStats.iperf_display_interval * 1000; //ms
+
+    while (1)
+    {
+        qurt_thread_sleep(iperf_display_interval);
+
+        app_get_time(&iperf_curr_time);
+
+        if (p_tCxt->protocol == UDP)
+        {
+            if (p_tCxt->pktStats.first_time == 0)
+            {
+                continue;
+            }
+
+			if(p_tCxt->pktStats.last_time)
+			{
+				iperf_curr_time = p_tCxt->pktStats.last_time;
+	            iperf_last_time = p_tCxt->pktStats.prev_time;
+	            ppktStats = &p_tCxt->pktStats;  
+			}
+			else
+			{
+	            iperf_last_time = p_tCxt->pktStats.prev_time;
+	            p_tCxt->pktStats.prev_time = iperf_curr_time;
+	            ppktStats = &p_tCxt->pktStats;  
+			}
+        }
+        else if (p_tCxt->protocol == TCP)
+        {
+            bench_tcp_session_t *session = (bench_tcp_session_t *)(p_tCxt->session);
+            if (session)
+            {
+                if (session->pktStats.first_time == 0)
+                {
+                    continue;
+                }
+
+                iperf_last_time = session->iperf_display_last;
+                session->iperf_display_last = iperf_curr_time;
+                ppktStats = &session->pktStats;
+            }
+            else
+                continue;
+        }
+        else
+        {
+            break;
+        }
+        
+        if (ppktStats) 
+        {
+            iperf_result_print(ppktStats, iperf_last_time, iperf_curr_time);
+        }
+        else
+        {
+            IPERF_PRINTF("ERROR: ppktStats of p_tCxt is NULL\n");
+        }
+    }
+
+    nt_osal_thread_delete(NULL);
+    p_tCxt->rx_task_handler = NULL;
+    return;
 }
 
 /************************************************************************
@@ -1788,6 +1981,10 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
 #if IPERF_RX_THREAD
     THROUGHPUT_CXT *p_tCxt = (THROUGHPUT_CXT *)arg;
 #endif
+    if (p_tCxt == NULL){
+        IPERF_PRINTF("ERROR: p_tCxt in iperf_udp_rx() is NULL\n");
+        goto ERROR_1;
+    }
 
     int32_t received;
     struct sockaddr *addr;
@@ -1801,17 +1998,14 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     char ip_str[48];
     int family;
     uint16_t port;
-    uint32_t iperf_display_interval = 0;
-    uint32_t iperf_display_last = 0;
-    uint32_t iperf_display_next = 0;
     struct timeval tv;
     int32_t conn_sock;
     int is_test_done = 0;
+    int32_t udp_datagram_size = (int32_t)sizeof(udp_datagram);
 
     p_tCxt->iperf_stream_id = iperf_get_unused_id();
     if (p_tCxt->iperf_stream_id == MAX_STREAM)
     {
-        IPERF_PRINTF("Reach the limited streams\n");
         goto ERROR_2;
     }
     p_tCxt->pktStats.iperf_stream_id = p_tCxt->iperf_stream_id;
@@ -1902,41 +2096,45 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     IPERF_PRINTF("Server listening on UDP port %d\n", port);
     IPERF_PRINTF("------------------------------------------------------------\n");
 
-    while (!iperf_rx_quit) /* Main loop */
+    while ((!iperf_rx_quit) && (get_device_connect_state() == true)) /* Main loop */
     {
+        int id = 0;
+        fd_set read_fds;
         int32_t is_first = 1;
         stat_udp_pattern_t stat_udp;
+        struct udp_datagram *mbuf_udp = (struct udp_datagram *)p_tCxt->buffer;
 
         IPERF_PRINTF("Waiting\n");
         is_test_done = 0;
 
         iperf_common_clear_stats(p_tCxt);
         memset(ip_str, 0, sizeof(ip_str));
-        rxreorder_udp_payload_init(&stat_udp);
+        memset(&stat_udp, 0, sizeof(stat_udp_pattern_t));
+        p_tCxt->pktStats.prev_time = p_tCxt->pktStats.last_time = p_tCxt->pktStats.first_time = 0;
+
+        /* block for 500msec or until a packet is received */
+        tv.tv_sec = 0;
+        tv.tv_usec = 500000;
 
         while (!is_test_done) /* Receive loop */
         {
-            if (iperf_rx_quit)
+            if ((iperf_rx_quit) || (get_device_connect_state() == false))
             {
                 app_get_time(&p_tCxt->pktStats.last_time);
                 goto ERROR_2;
             }
             do
             {
-                fd_set read_fds;
-
-                if (iperf_rx_quit)
+                if ((iperf_rx_quit) || (get_device_connect_state() == false))
                 {
                     app_get_time(&p_tCxt->pktStats.last_time);
                     goto ERROR_3;
                 }
 
                 /* block for 500msec or until a packet is received */
-                FD_ZERO(&read_fds);
+                memset(&read_fds, 0, sizeof(fd_set));
                 FD_SET(p_tCxt->sock_local, &read_fds);
 
-                tv.tv_sec = 0;
-                tv.tv_usec = 500000;
                 conn_sock = select(p_tCxt->sock_local + 1, &read_fds, NULL, NULL, &tv);
                 if (conn_sock == A_ERROR)
                 {
@@ -1955,52 +2153,24 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
 
             if (received >= 0)
             {
-                if (received > (int32_t)sizeof(udp_datagram))
+                if (received > udp_datagram_size)
                 {
-                    struct udp_datagram *mbuf_udp = NULL;
-                    uint32_t iperf_curr_time;
-                    int id = 0;
-
                     p_tCxt->pktStats.bytes += received;
                     p_tCxt->pktStats.total_bytes += received;
                     ++p_tCxt->pktStats.pkts_recvd;
-                    mbuf_udp = (struct udp_datagram *)p_tCxt->buffer;
                     id = ntohl(mbuf_udp->id);
 
                     if (is_first)
                     {
                         app_get_time(&p_tCxt->pktStats.first_time);
-                        p_tCxt->pktStats.last_time = p_tCxt->pktStats.first_time;
-                        iperf_display_interval = p_tCxt->pktStats.iperf_display_interval;
-                        iperf_display_last = p_tCxt->pktStats.first_time;
-                        iperf_display_next = iperf_display_last + iperf_display_interval * 1000;
-
+                        p_tCxt->pktStats.prev_time = p_tCxt->pktStats.first_time;
                         is_first = 0;
-                    }
-
-                    app_get_time(&iperf_curr_time);
-                    if (iperf_curr_time >= iperf_display_next && iperf_display_interval)
-                    {
-                        iperf_result_print(&p_tCxt->pktStats, iperf_display_last, iperf_curr_time);
-                        iperf_display_last = iperf_curr_time;
-                        iperf_display_next = iperf_curr_time + iperf_display_interval * 1000;
-                        app_get_time(&p_tCxt->pktStats.last_time);
                     }
 
                     if (id < 0)
                     {
                         is_test_done = 1;
                         app_get_time(&p_tCxt->pktStats.last_time);
-                        /*
-                            When ending the test, but the time is less than 1s, will not print the result.
-                            here -100 to print the last result.
-                        */
-                        if (p_tCxt->pktStats.last_time >= iperf_display_next - 100 && iperf_display_interval)
-                        {
-                            iperf_result_print(&p_tCxt->pktStats, iperf_display_last, p_tCxt->pktStats.last_time);
-                        }
-                        // iperf_print_data(p_tCxt->buffer,received);
-                        // iperf_udp_ack_finish(p_tCxt,from,fromlen);
                     }
                 }
             }
@@ -2018,7 +2188,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                      p_tCxt->pktStats.total_bytes,
                      p_tCxt->pktStats.pkts_recvd);
 #endif
-        if (rxreorder_udp_payload_valid(&stat_udp))
+        if (stat_udp.stat_valid)
         {
             stat_udp.pkts_recvd = p_tCxt->pktStats.pkts_recvd;
             rxreorder_udp_payload_report(&stat_udp);
@@ -2035,17 +2205,44 @@ ERROR_2:
 
     closesocket(p_tCxt->sock_local);
 
-ERROR_1:
-    qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
-    iperf_stream_id[p_tCxt->iperf_stream_id] = 0;
-    if (p_tCxt->buffer)
-        free(p_tCxt->buffer);
+ERROR_1:    
     if (p_tCxt)
     {
+        if (p_tCxt->rx_task_handler)
+        {
+            IPERF_PRINTF("\n");
+            if (p_tCxt->rx_task_handler) {
+                nt_osal_thread_delete(p_tCxt->rx_task_handler);
+                p_tCxt->rx_task_handler = NULL;
+            }
+        }
+    
+        qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
+
+        for (int i = 0; i < MAX_STREAM; i++)
+        {
+            if (p_tCxt->params.rx_params.port == bench_udp_rx_port_in_use[i])
+            {
+                bench_udp_rx_port_in_use[i] = 0;
+                break;
+            }
+        }
+        
+        if (p_tCxt->iperf_stream_id < MAX_STREAM)
+        {
+            iperf_stream_id[p_tCxt->iperf_stream_id] = 0;
+        }
+        
+        if (p_tCxt->buffer)
+        {
+            free(p_tCxt->buffer);
+            p_tCxt->buffer = NULL;
+        }
+        
         free(p_tCxt);
         p_tCxt = NULL;
     }
-    bench_udp_rx_port_in_use = 0;
+  
     IPERF_PRINTF(BENCH_TEST_COMPLETED);
     #if IPERF_RX_THREAD
     nt_osal_thread_delete(NULL);
@@ -2064,6 +2261,11 @@ ERROR_1:
 
 void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
 {
+    if (p_tCxt == NULL){
+        IPERF_PRINTF("ERROR: p_tCxt in iperf_tcp_tx() is NULL\n");
+        goto ERROR_1;
+    }
+    
     struct sockaddr_in foreign_addr;
     struct sockaddr_in6 foreign_addr6;
     struct sockaddr *to;
@@ -2132,11 +2334,11 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         }
     }
     /* enable TCP TX socket non-blocking*/
-    if (p_tCxt->params.tx_params.is_so_unblock)
-    {
-        setsockopt(p_tCxt->sock_peer, SOL_SOCKET, O_NONBLOCK, NULL, 0);
-        IPERF_PRINTF("non-blocking mode\n");
-    }
+    // if (p_tCxt->params.tx_params.is_so_unblock)
+    // {
+    //     setsockopt(p_tCxt->sock_peer, SOL_SOCKET, O_NONBLOCK, NULL, 0);
+    //     IPERF_PRINTF("non-blocking mode\n");
+    // }
 
     IPERF_PRINTF("------------------------------------------------------------\n");
     IPERF_PRINTF("Client connecting to %s, TCP port %d\n", ip_str, p_tCxt->params.tx_params.port);
@@ -2158,7 +2360,7 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
     }
     IPERF_PRINTF("TCP Connected\n");
 
-    ret = nt_qurt_thread_create(iperf_client_send, "tcp_client", 1024, p_tCxt, TCPIP_THREAD_PRIO, NULL);
+    ret = nt_qurt_thread_create(iperf_client_send, "tcp_client", 1024, p_tCxt, IPERF_TX_THREAD_PRIO, NULL);
 
     if (ret == -1)
     {
@@ -2175,6 +2377,13 @@ ERROR_2:
     closesocket(p_tCxt->sock_peer);
 ERROR_1:
     IPERF_PRINTF(BENCH_TEST_COMPLETED);
+
+    if (p_tCxt)
+    {
+        free(p_tCxt);
+        p_tCxt = NULL;
+    }
+    
     return;
 }
 
@@ -2194,7 +2403,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 #endif
 
     int32_t received = 0;
-    int32_t conn_sock, printit = 1;
+    int32_t conn_sock = 0, printit = 1;
     struct sockaddr_in local_addr;
     struct sockaddr_in6 local_addr6;
     struct sockaddr *addr;
@@ -2220,8 +2429,13 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     bench_tcp_server_t *tcp_server = NULL;
     int serverId = -1;
     fd_set rd_set, rset;
-    uint32_t iperf_curr_time = 0;
+    uint32_t iperf_select_start_time = 0;
     struct timeval tv = {0};
+
+    if (p_tCxt == NULL){
+        IPERF_PRINTF("ERROR: p_tCxt in iperf_tcp_tx() is NULL\n");
+        goto tcp_rx_QUIT2;
+    }
 
     (void)local_sin_addr;
     if (serverRefCount == BENCH_TCP_MAX_SERVERS)
@@ -2255,11 +2469,10 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
     tcp_server->port = p_tCxt->params.rx_params.port;
 
-    FD_ZERO(&rd_set);
+    memset(&rd_set, 0, sizeof(fd_set));
     p_tCxt->iperf_stream_id = iperf_get_unused_id();
     if (p_tCxt->iperf_stream_id == MAX_STREAM)
     {
-        IPERF_PRINTF("Reach the limited streams\n");
         goto tcp_rx_QUIT2;
     }
     p_tCxt->pktStats.iperf_stream_id = p_tCxt->iperf_stream_id;
@@ -2312,7 +2525,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     }
 
     /* set to non-blocking mode */
-    setsockopt(tcp_server->sockfd, SOL_SOCKET, O_NONBLOCK, NULL, 0);
+    // setsockopt(tcp_server->sockfd, SOL_SOCKET, O_NONBLOCK, NULL, 0);
 
     /* Configure queue sizes */
     // bench_config_queue_size(tcp_server->sockfd);
@@ -2340,11 +2553,11 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 #if IPERF_RX_THREAD
     IPERF_PRINTF("TCP RX thread...\n");
 #endif
-    FD_ZERO(&rset);
+    memset(&rset, 0, sizeof(fd_set));
 
     do
     {
-        if (iperf_rx_quit || tcp_server->exit)
+        if (iperf_rx_quit || tcp_server->exit || (get_device_connect_state() == false))
         {
             goto tcp_rx_QUIT2;
         }
@@ -2382,7 +2595,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         // struct timeval timeout = { 0 };
 
         /* set to non-blocking mode */
-        setsockopt(sock_peer, SOL_SOCKET, O_NONBLOCK, NULL, 0);
+        //setsockopt(sock_peer, SOL_SOCKET, O_NONBLOCK, NULL, 0);
 
         /* enable TCP keepalive */
         setsockopt(sock_peer, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
@@ -2446,26 +2659,40 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
             maxfd = sock_peer + 1;
 
         session->ready = 1;
-        IPERF_PRINTF("Accepted conn from %s:%d\n",
-                     inet_ntop(family, sin_addr, ip_str, sizeof(ip_str)),
-                     ntohs(((struct sockaddr_in *)from)->sin_port));
+        const char* address_str = inet_ntop(family, sin_addr, ip_str, sizeof(ip_str));
+        if (address_str) {
+            IPERF_PRINTF("Accepted conn from %s:%d\n",
+                        *address_str,
+                        ntohs(((struct sockaddr_in *)from)->sin_port));
+        } else {
+            IPERF_PRINTF("ERR: conn is invalid\n");
+        }
 
         newSession = 0;
-        app_get_time(&session->pktStats.first_time);
-        session->pktStats.last_time = session->pktStats.first_time;
+        //app_get_time(&session->pktStats.first_time);
+        
+        session->pktStats.last_time = session->pktStats.first_time = 0;
+
+        app_get_time(&iperf_select_start_time);
+
+        p_tCxt->session = (void *)session;
+        sess = session;
+    }
+    else
+    {
+        goto tcp_rx_QUIT;
     }
 
     FD_ZERO(&rset);
 
     do
     {
+        if (iperf_rx_quit || (get_device_connect_state() == false))
+            goto tcp_rx_QUIT;
+#if 0
         tv.tv_sec = 2;
         tv.tv_usec = 0;
         rset = rd_set;
-
-        if (iperf_rx_quit)
-            goto tcp_rx_QUIT;
-
         conn_sock = select(maxfd, &rset, NULL, NULL, &tv);
 
         if (conn_sock < 0)
@@ -2478,7 +2705,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
             /* No activity. Continue with the next */
             uint32_t curtime;
             app_get_time(&curtime);
-            if ((curtime - session->pktStats.last_time) / 1000 > 20)
+            if ((curtime - iperf_select_start_time) / 1000 > 20)
             {
                 IPERF_PRINTF("select timeout %d,%s\n", errno, strerror(errno));
                 goto tcp_rx_QUIT;
@@ -2487,9 +2714,10 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         }
         else if (FD_ISSET(session->sock_peer, &rset))
         {
-            sess = session;
-            if ((sess->ctxt == p_tCxt) && sess->ready)
+            //sess = session;
+            if (sess->ctxt == p_tCxt)
             {
+#endif
                 /*Packet is available, receive it*/
                 // received = recv( sess->sock_peer, (char*)(&sess->buffer[0]), CFG_PACKET_SIZE_MAX_RX, 0);
                 received = recvfrom(sess->sock_peer, sess->buffer, CFG_PACKET_SIZE_MAX_RX, 0, from, &fromlen);
@@ -2509,20 +2737,8 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
                         sess->isFirst = 0;
 
                         sess->iperf_display_last = sess->pktStats.first_time;
-                        sess->iperf_display_next = sess->iperf_display_last + sess->pktStats.iperf_display_interval * 1000;
                     }
 
-                    if (p_tCxt->print_buf)
-                        iperf_print_buffer(sess->buffer, received, from, DUMP_DIRECTION_RX);
-
-                    app_get_time(&iperf_curr_time);
-                    if (iperf_curr_time >= sess->iperf_display_next && sess->pktStats.iperf_display_interval)
-                    {
-                        iperf_result_print(&session->pktStats, sess->iperf_display_last, iperf_curr_time);
-                        sess->iperf_display_last = iperf_curr_time;
-                        sess->pktStats.last_time = iperf_curr_time;
-                        sess->iperf_display_next = iperf_curr_time + sess->pktStats.iperf_display_interval * 1000;
-                    }
 #ifdef TCP_RX_DEBUG
                     IPERF_PRINTF("%d received= %d total=%ld , %d\n", index, received, sess->pktStats.bytes, p_tCxt->pktStats.total_bytes);
 #endif
@@ -2543,33 +2759,48 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 #endif
                     {
                         app_get_time(&sess->pktStats.last_time);
-                        app_get_time(&iperf_curr_time);
-                        if (iperf_curr_time >= sess->iperf_display_next - 100 && sess->pktStats.iperf_display_interval)
-                        {
-                            iperf_result_print(&sess->pktStats, sess->iperf_display_last, iperf_curr_time);
-                        }
+                        
                         goto tcp_rx_QUIT;
                         // goto Restart_tcp_server;
                     }
                 }
                 conn_sock--;
+#if 0                
             }
         }
+#endif
     } while (1);
 
 tcp_rx_QUIT:
-    // IPERF_PRINTF("Exiting TCP Server Id:%d,%d\n", serverId,tcp_server->sockfd);
-    iperf_tcp_CloseSession(session, &rd_set);
+    if (p_tCxt->rx_task_handler)
+    {
+        IPERF_PRINTF("\n");
+        if (p_tCxt->rx_task_handler) {
+            nt_osal_thread_delete(p_tCxt->rx_task_handler);
+            p_tCxt->rx_task_handler = NULL;
+            p_tCxt->session = NULL;
+        }
+    }
+    
+    if (session)
+    {
+        iperf_tcp_CloseSession(session, &rd_set);
+    }
 tcp_rx_QUIT2:
     if (tcp_server)
     {
         iperf_tcp_stopServer(tcp_server);
     }
     // ERROR_1:
-    qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
-    iperf_stream_id[p_tCxt->iperf_stream_id] = 0;
     if (p_tCxt)
     {
+        qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
+    
+        if (p_tCxt->iperf_stream_id < MAX_STREAM)
+        {
+            iperf_stream_id[p_tCxt->iperf_stream_id] = 0;
+        }
+    
         free(p_tCxt);
         p_tCxt = NULL;
     }

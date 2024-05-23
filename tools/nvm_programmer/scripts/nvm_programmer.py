@@ -3,10 +3,11 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #===============================================================================
 from __future__ import print_function
+import sys
+sys.path.append('.')
 from gdb_framework import hexfile
 import binascii
 import os
-import sys
 import time
 import json
 import math
@@ -16,6 +17,11 @@ from gdb_framework.gdb_framework import GDB_Framework
 
 import socket
 from socket import SOCK_DGRAM
+FW_UPGRADE_SCRIPTS_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../fw_upgrade"))
+sys.path.append(FW_UPGRADE_SCRIPTS_PATH)
+from gen_download_table import Download_Table
+import re
+import subprocess
 
 class ACCESS:
     READ_ONLY = 1
@@ -49,6 +55,9 @@ class OTP_Field(object):
   @property
   def access(self):
       return self.__access
+
+  def set_access(self, value):
+      self.__access = value
 
 access_mapping = {
     'READ_ONLY': ACCESS.READ_ONLY,
@@ -101,6 +110,15 @@ class NVM_Programmer(GDB_Framework):
 
     DEFAULT_RAM_IMAGE = '../bin/FERMION_NVM_PROGRAMMER.elf'
 
+    #READ_WRITE_PERMISSIONS
+    READ_WRITE_PERMISSIONS_OFFSET_0 = 0x30
+    READ_WRITE_PERMISSIONS_OFFSET_1 = 0x34
+
+    PBL_VERSION_ADDR = 0x200168
+    READ_WRITE_PERMISSIONS_REGION = ['READ_PERMISSION_HW_ENCRYPTION_KEY', 'WRITE_PERMISSION_READ_WRITE_PERMISIONS', 'WRITE_PERMISSION_HW_ENCRYPTION_KEY', 'WRITE_PERMISSION_PK_HASH', 'WRITE_PERMISSION_OEM_SECURE_BOOT', 'WRITE_PERMISSION_ANTI_ROLL_BACK', 'WRITE_PERMISSION_FIRMWARE', 'WRITE_PERMISSION_NPS_CONFIG' ]
+
+    OEM_SECURE_BOOT_REGION = ['TOTAL_ROT_NUM', 'MODEL_ID', 'SECURE_BOOT_ENFORCE', 'OEM_ID', 'OEM_DEBUG_DISABLE', 'DISABLE_QC_RMA', 'ROT_INDEX']
+
     def __init__(self):
         '''
         Initializes the GDB tool.
@@ -128,6 +146,9 @@ class NVM_Programmer(GDB_Framework):
         self.argparser.add_argument('-e', '--partial-erase', default=False, action='store_true', help='Partial erase the NVM(rram or flash).')
         self.argparser.add_argument('-d', '--read', default=False, action='store_true', help='Read data from the NVM(rram or flash).')
         self.argparser.add_argument('-S', '--size', type=lambda x: int(x,0), default=None, help='Indicates partial erase or read size.')
+        self.argparser.add_argument('-t', '--table', help='xml file of download table to download images to memory and earse memory')
+        self.argparser.add_argument('-P', '--partition', default=False, action='store_true', help='program file to flash together with partition table and program fdt to rram')
+        self.argparser.add_argument('-A', '--all', default=False, action='store_true', help='program fdt, sbl, partition table and app all in once, can only be used with -P')
         self.argparser.add_argument('--reset', default=False, action='store_true', help='Reset target after program, erase or read complete.')
 
         self.argparser.add_argument('-k', '--key-cfg', help='One key-value pair of OTP region to program')
@@ -152,6 +173,36 @@ class NVM_Programmer(GDB_Framework):
                 return field
         print('{} Not in otp field list!!!'.format(field_name))
         return None
+
+    def check_pbl_version(self):
+        device_type_name_buf = self.get_symbol_info('Device_Type')['address']
+        self.write_int(device_type_name_buf, NVM_Programmer.NVM_TYPE_NAME_RRAM)
+        
+        data_buf = self.get_symbol_info('JTAG_Param')
+        data_buf_addr = data_buf['address'] + NVM_Programmer.JTAG_PARAM_BUFFER_OFFSET
+        self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_ADDRESS, NVM_Programmer.PBL_VERSION_ADDR)
+        self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_SIZE, 4)
+        self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_READ)
+        self.gdb_execute('c')
+        res = self.read_int(data_buf_addr)
+        #print('PBL Ver is {}.'.format(hex(res)))
+
+        self.write_int(device_type_name_buf, NVM_Programmer.NVM_TYPE_NAME_OTP)
+        if res == 0x10020001:
+            return True
+        else:
+            return False
+
+    def reverse_bytes(self, hex_str):
+        #print('str: {}'.format(hex_str.upper()))
+        # Ensure the input is a string
+        hex_str = str(hex_str)
+        # Remove the '0x' prefix if it exists
+        if hex_str.startswith('0x'):
+            hex_str = hex_str[2:]
+        # Split the string into chunks of 8 characters (32 bits)
+        chunks = [hex_str[i:i+8] for i in range(0, len(hex_str), 8)]
+        return ''.join(''.join(reversed([chunk[i:i+2] for i in range(0, len(chunk), 2)])) for chunk in chunks)
 
     def write_otp_field(self, field, value):
         print('{}={}'.format(field.name, value.upper()))
@@ -179,6 +230,10 @@ class NVM_Programmer(GDB_Framework):
             #print(value)
         else:
             value=value[2:]
+        if field.name == 'PK_HASH':
+            if self.check_pbl_version() == True:
+                value=self.reverse_bytes(value)
+                #print('{}={}'.format(field.name, value.upper()))
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_ADDRESS, field.address)
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_SIZE, size)
         self.write_buf(self.param_buf + NVM_Programmer.JTAG_PARAM_BUFFER_OFFSET, value)
@@ -191,9 +246,34 @@ class NVM_Programmer(GDB_Framework):
             print('Write OTP {} success.'.format(field.name))
 
     def write_otp(self, key, value):
-        the_field = self.get_field(key)
-        if the_field != None:
-            self.write_otp_field(the_field, value)
+        #print('key is {}'.format(key))
+        field = self.get_field(key)
+        #check the access for write
+        if field != None :
+            if (field.access & ACCESS.WRITE_ONLY) != 0:
+                self.write_otp_field(field, value)
+                #if key in self.READ_WRITE_PERMISSIONS_REGION:
+                #    print('need to call update_permission: key={}, value={}'.format(key, value))
+                #    self.update_permission()
+            else:
+                print('ERROR: Write OTP {} is not allowed'.format(field.name))
+        else:
+            print('ERROR: OTP {} is not found'.format(key))
+        return
+
+    def read_otp(self, key):
+        field = self.get_field(key)
+        self.update_permission()
+        print('********************************************************************************')
+        print('Read OTP {} from command line.'.format(key))
+        if field != None:
+            if (field.access & ACCESS.READ_ONLY):
+                self.read_otp_field(field)
+            else:
+                print('ERROR: Read OTP {} is not allowed'.format(field.name))
+        else:
+            print('ERROR: OTP {} is not found'.format(key))
+        print('********************************************************************************')
         return
 
     def read_otp_field(self, field, flag=True):
@@ -219,10 +299,8 @@ class NVM_Programmer(GDB_Framework):
         else:
             res_hex_string='0x'+''.join([hex(int.from_bytes(x, byteorder='big'))[2:].zfill(2) for x in res])
         if flag == True:
-            print('********************************************************************************')
-            print('Read OTP from command line.')
+            #print('Read OTP from command line.')
             print('{}={}'.format(field.name, res_hex_string.upper()))
-            print('********************************************************************************')
         return res
 
     def set_bits(self, i: int, offset: int, length: int, value: int) -> int:
@@ -237,6 +315,7 @@ class NVM_Programmer(GDB_Framework):
             cfg_data=yaml.load(f, Loader=yaml.BaseLoader)
         for nvm in cfg_data.keys():
             if nvm == 'OTP':
+                self.update_permission()
                 print('********************************************************************************')
                 print('Write OTP from command line.')
                 self.write_int(device_type_name_buf, NVM_Programmer.NVM_TYPE_NAME_OTP)
@@ -252,6 +331,69 @@ class NVM_Programmer(GDB_Framework):
                     print('Flashing image:{} at {}'.format(cfg_data['RRAM']['images'][i][0], cfg_data['RRAM']['images'][i][1]))
                     self.download(cfg_data['RRAM']['images'][i][0], True, int(cfg_data['RRAM']['images'][i][1], 16))
         pass
+    def update_access(self, name, read, write):
+        field = self.get_field(name)
+        if field != None:
+            if read == 0:
+                field.set_access(field.access & ~(1<<0))
+            if write == 0:
+                field.set_access(field.access & ~(1<<1))
+        return
+
+    def update_permission(self):
+        #to read READ_WRITE_PERMISSIONS
+        #read the READ_WRITE_PERMISSIONS, then update the access to each field
+        size = 8
+        data_buf = self.get_symbol_info('JTAG_Param')
+        data_buf_addr = data_buf['address'] + NVM_Programmer.JTAG_PARAM_BUFFER_OFFSET
+        self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_ADDRESS, NVM_Programmer.READ_WRITE_PERMISSIONS_OFFSET_0)
+        self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_SIZE, size)
+        self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_OTP_READ)
+        self.gdb_execute('c')
+        res = self.read_buf(data_buf_addr, size)
+        int_value = int.from_bytes(b''.join(res), byteorder='little')
+        #debug
+        #print("0x{:016x}".format(int_value))
+        if int_value == 0:
+            return
+
+        #check the bit value and update the field.access
+        for field in self.fields:
+            #print('field.name={}'.format(field.name))
+            if field.name == 'READ_PERMISSION_HW_ENCRYPTION_KEY':
+                if (int_value >> field.offset) > 1:
+                    #update the HW_ENCRYPTION_KEY read permission
+                    self.update_access('HW_ENCRYPTION_KEY', 0, 1)
+                continue
+            if field.name == 'WRITE_PERMISSION_READ_WRITE_PERMISIONS':
+                if ((int_value >> field.offset) & 1) == 1:
+                    #update all READ_WRITE_PERMISSIONS fields's WRITE permission
+                    for region in self.READ_WRITE_PERMISSIONS_REGION:
+                        self.update_access(region, 1, 0)
+                continue
+            if field.name == 'WRITE_PERMISSION_HW_ENCRYPTION_KEY':
+                if (int_value >> field.offset) & 1:
+                    self.update_access('HW_ENCRYPTION_KEY', 1, 0)
+                continue
+            if field.name == 'WRITE_PERMISSION_PK_HASH':
+                if (int_value >> field.offset) & 1:
+                    self.update_access('PK_HASH',1,0)
+                continue
+            if field.name == 'WRITE_PERMISSION_OEM_SECURE_BOOT':
+                if ((int_value >> field.offset) & 1) == 1:
+                    #update OEM_SECURE_BOOT_REGION write permission
+                    for region in self.OEM_SECURE_BOOT_REGION:
+                        self.update_access(region, 1, 0)
+                continue
+            if field.name == 'WRITE_PERMISSION_ANTI_ROLL_BACK':
+                if ((int_value>>32)>> field.offset) & 1:
+                    self.update_access('M4_ANTI_ROLLBACK', 1, 0)
+                continue
+            if field.name == 'WRITE_PERMISSION_FIRMWARE':
+                if ((int_value>>32)>> field.offset) & 1:
+                    self.update_access('MAC_ADDRESSES', 1, 0)
+                continue
+        return
     def run(self):
         '''
         Start tool.
@@ -274,9 +416,7 @@ class NVM_Programmer(GDB_Framework):
             self.set_nvm_name()
             key=self.config['get_key']
             #print('key is {}'.format(key))
-            field = self.get_field(key)
-            if field != None:
-                self.read_otp_field(field)
+            self.read_otp(key)
 
             self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_SYSTEM_RESET)
             self.gdb_execute('c')
@@ -296,9 +436,10 @@ class NVM_Programmer(GDB_Framework):
             key, value = kv.split('=', 2)
             field = self.get_field(key)
             if field != None:
+                self.update_permission()
                 print('********************************************************************************')
                 print('Write OTP from command line.')
-                self.write_otp_field(field, value)
+                self.write_otp(key, value)
                 print('********************************************************************************')
             self.cleanup()
             return
@@ -345,7 +486,11 @@ class NVM_Programmer(GDB_Framework):
                         self.gdb_execute('c')
 
                 elif self.config['file']:
-                    self.download(self.config['file'], True, self.config['begin_address'])
+                    if self.config['partition']:
+                        self.generate_download_table()
+                        self.write_download_table(os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH, "generated_download_table.xml")))
+                    else:
+                        self.download(self.config['file'], True, self.config['begin_address'])
 
                     if self.config['reset']:
                         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_SYSTEM_RESET)
@@ -355,6 +500,10 @@ class NVM_Programmer(GDB_Framework):
                     print('Reset system.')
                     self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_SYSTEM_RESET)
                     self.gdb_execute('c')
+                    
+                elif self.config['table']:
+                    self.write_download_table(self.config['table'])
+                    
                 else:
                     raise Exception(' error: Invalid commands')
 
@@ -639,6 +788,38 @@ class NVM_Programmer(GDB_Framework):
         print('Read {} successfully, time elapsed {} seconds.'.format(self.config['nvm_name'], end_time - start_time))
         print('********************************************************************************')
 
+    def generate_download_table(self):
+        if self.config['all']:
+            cmd_string = "python " + '"' + os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH, "gen_download_table.py")) + '"' +\
+                " --app " + '"' + os.path.abspath(self.config['file']) + '"' +\
+                " --config " + '"' + os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH,"download_config.xml")) + '"' +\
+                " --all"
+        else:
+            cmd_string = "python " + '"' + os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH, "gen_download_table.py")) + '"' +\
+                " --app " + '"' + os.path.abspath(self.config['file']) + '"' +\
+                " --config " + '"' + os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH,"download_config.xml")) + '"'
+        cur_dir = os.getcwd()
+        os.chdir(FW_UPGRADE_SCRIPTS_PATH)
+        try:
+            subprocess.check_output(cmd_string)
+        except:
+            raise
+        os.chdir(cur_dir)
+
+    def write_download_table(self, xml):
+        table = []
+        download_table_parser = Download_Table()
+        table = download_table_parser.from_xml_file(xml)
+        for item in table:
+            file, begin, size, location = item
+            self.config['nvm_name'] = location
+            if file == "":
+                self.config['begin_address'] = begin
+                self.config['size'] = size
+                self.partial_erase()
+            else:
+                self.download(file, True, begin)
+        
 def main():
     '''
     Main entry point for the tool script.

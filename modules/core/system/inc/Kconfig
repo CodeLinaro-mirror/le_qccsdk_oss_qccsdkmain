@@ -1,0 +1,8 @@
+
+config PBL_PREES_GPIO_RESTORE
+	bool "Restore GPIO to reset state, so to fix pre-ES PBL wrong operation on GPIO. If ioe_PBL released, please default to n"
+	default y
+
+config PBL_PREES_RESET_FOR_DTIM
+	bool "A reset with CFG_FORCE_NPS_PD_ON is needed for Sleep function. If ioe_PBL released, please default to n"
+	default n

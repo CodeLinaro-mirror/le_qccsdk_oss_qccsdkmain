@@ -1,8 +1,11 @@
 ﻿/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #ifndef _WATCHDOG_H
 #define _WATCHDOG_H
 
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 
 

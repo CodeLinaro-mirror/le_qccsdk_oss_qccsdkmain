@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #ifndef DXE_H_
 #define DXE_H_
@@ -10,7 +12,7 @@
 #define NT_DXE_TOTAL_DESC_NO 30 //Total Desc available for all channels
 #define NT_MAX_STAGING_BUFFER_SIZE 2422 //Packet Staging buffer size (2304(NT_DPM_MAC_MTU_SIZE) + 14(ethernet_header_t) + 0x68(NT_TX_BUFFER_OFFSET))
 #define NT_MAX_STAGING_BUFFER_SIZE_BA 3839
-#define NT_MAX_STAGING_BUFFER_SIZE_AMSDU 7935
+#define NT_MAX_STAGING_BUFFER_SIZE_AMSDU 3951 //Packet Staging buffer size (3839(AMSDU max size) + 36(mac header) + 0x4C(Rx buffer offset))
 
 
 #define NT_DXE_CH_REG_SIZE        0x40

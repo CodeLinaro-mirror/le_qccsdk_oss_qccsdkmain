@@ -5,34 +5,20 @@
 GENERAL DESCRIPTION
   This header file contains the definition of
   the rollback version image set table.
-
+  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+  SPDX-License-Identifier: BSD-3-Clause-Clear
 ============================================================================*/
 
-/*===========================================================================
-
-                           EDIT HISTORY FOR FILE
-
-This section contains comments describing changes made to this file.
-Notice that changes are listed in reverse chronological order.
-
-
-when       who     what, where, why
---------   ---     ----------------------------------------------------------
-05/19/16   ck      Corrected fuse blowing issue in boot_rollback_update_fuse_version
-04/08/16   ck      Added PBL loaded image rank logic
-03/31/16   ck      Adjusted rollback fuse bit rows
-03/21/16   ck      Initial revision
-
-============================================================================*/
 /*===========================================================================
 
                            INCLUDE FILES
 
 ===========================================================================*/
+#include "pbl_auth.h"
 #include "boot_rollback_version_impl.h"
 #include <string.h>
 #include "HALhwio.h"
-#include "Fermion_seq_hwioreg.h"
+#include "../../../core/common/hwio/fermionv2/TAPEOUT_02/Fermion_seq_hwioreg.h"
 #include "boot_print.h"
 #include "nt_bl_rram_dxe.h"
 
@@ -98,7 +84,71 @@ boot_rollback_version_img_set_num = sizeof(boot_rollback_version_img_set_table) 
 
 /*===========================================================================
 
-**  Function : boot_rollback_validate_image_version
+ **  Function : boot_rollback_validate_image_version
+ **
+ ** FUNCTION DESCRIPTION
+ **     This function returns if M4F hash adress range is valid
+ ** 
+ ** DEPENDENCIES
+ **     None
+ ** 
+ ** PARAMETERS
+ **     Type     : [IN]
+ **     DataType : sec_img_auth_id_type
+ **     Param    : img_id
+ **                Image ID
+ **     Type     : [IN]
+ **     DataType : pbl_auth_state_t
+ **     Param    : sbl_auth_state
+ **                sbl image authentication state
+ **     Type     : [IN]
+ **     DataType : pbl_auth_state_t
+ **     Param    : app_auth_state
+ **                application image authentication state
+ **                
+ **
+ ** RETURN VALUE
+ **     DataType : boolean
+ **     Value    : 
+ **                TRUE - valid
+ **                
+ **
+ ** SIDE EFFECTS
+ **     None.
+ **
+ **==========================================================================*/
+boolean boot_rollback_validate_image_version(sec_img_auth_id_type app_img_id, pbl_auth_state_t *sbl_auth_state, pbl_auth_state_t *app_auth_state)
+{
+   sec_img_auth_id_type sbl_img_id = SEC_IMG_AUTH_SBL_IMG;
+   uint32 app_version = 0;
+   uint32 sbl_version = 0;
+   
+   if ((NULL == sbl_auth_state) || (NULL == app_auth_state))
+   {
+       return FALSE;
+   }
+    
+   sbl_img_id = (uint32)((sbl_auth_state->sw_id) & 0xFFFFFFFF);
+   if ((SEC_IMG_AUTH_SBL_IMG == sbl_img_id) 
+   	    && (SEC_IMG_AUTH_APP_IMG == app_img_id))
+   {
+       app_version = (app_auth_state->sw_id>>32) & 0xFFFFFFFF;
+	   sbl_version = (sbl_auth_state->sw_id>>32) & 0xFFFFFFFF;
+	   if (app_version != sbl_version)
+	   {
+	       app_auth_state->anti_rollback_unlock = FALSE;
+		   return FALSE;
+	   }
+   }
+
+   return TRUE;
+}
+
+
+
+/*===========================================================================
+
+**  Function : boot_rollback_update_fuse_version
 
 ** ==========================================================================
 */
@@ -124,170 +174,25 @@ boot_rollback_version_img_set_num = sizeof(boot_rollback_version_img_set_table) 
 *
 */
 bl_error_type
-boot_rollback_validate_image_version(sec_img_auth_id_type image_id,
-                                     const secboot_hw_ftbl_type * const secboot_hw_ftbl,
-                                     const secboot_verified_info_type * const secboot_verified_info)
-{
-  bl_error_type result = BL_ERR_NONE;
-  secboot_hw_etype secboot_result = E_SECBOOT_HW_SUCCESS;
-  uint32 secboot_enabled = 0;
-  boot_version_rollback_img_set * image_set;
-  boolean feature_enabled = FALSE;
-  uint32 fuse_version_value = 0;
-
-
-  /* Validate pointers */
-  if ((secboot_hw_ftbl == NULL) ||
-      (secboot_verified_info == NULL))
-  {
-    return BL_ERR_NULL_PTR;
-  }
-
-#if 0 //TODO
-  /* Rollback is only valid for "Current" ranked images.
-     PBL stored the rank in AON during cold boot.  Evaluate it. */
-  if (*(uint8 *)LOADED_IMAGE_RANK_ADDRESS != LOADED_IMAGE_RANK_CURRENT)
-  {
-    return BL_ERR_NONE;
-  }
-#endif
-
-  /* Find image set for image id passed from larger image table */
-  result =
-    boot_rollback_get_set_by_img_type(boot_rollback_version_img_set_table,
-                                      boot_rollback_version_img_set_num,
-                                      image_id,
-                                      &image_set);
-  if (result != BL_ERR_NONE)
-  {
-    return result;
-  }
-
-
-  /* Check if antirollback is enabled in the feature set. */
-  result =
-    boot_rollback_is_feature_enabled_on_set(image_set,
-                                            &feature_enabled);
-  if (result != BL_ERR_NONE)
-  {
-    return result;
-  }
-
-
-  /* Check if secboot is enabled. */
-  switch (image_id)
-  {
-  case SEC_IMG_AUTH_SBL_IMG:
-    secboot_result = secboot_hw_ftbl->secboot_hw_is_auth_enabled(SECBOOT_HW_M4_CODE_SEGMENT,
-                                                                 &secboot_enabled);
-    break;
-
-  case SEC_IMG_AUTH_APP_IMG:
-    secboot_result = secboot_hw_ftbl->secboot_hw_is_auth_enabled(SECBOOT_HW_M0_CODE_SEGMENT,
-                                                                 &secboot_enabled);
-    break;
-
-  default:
-    secboot_result = E_SECBOOT_HW_SUCCESS;
-    secboot_enabled = FALSE;
-    break;
-  }
-
-  if (secboot_result != E_SECBOOT_HW_SUCCESS)
-  {
-    return BL_ERR_IMG_SECURITY_FAIL;
-  }
-
-
-  /* If the feature is disabled in the image set and secboot is disabled then
-     there is nothing to validate, return success. */
-  if ((!feature_enabled) &&
-      (!secboot_enabled))
-  {
-    return BL_ERR_NONE;
-  }
-
-
-  /* Obtain version value from fuses */
-  result =
-    boot_rollback_calculate_fuse_version(image_set,
-                                         &fuse_version_value);
-  if (result != BL_ERR_NONE)
-  {
-    return result;
-  }
-
-
-  /* Compare image version and fuse version values */
-  /* Image version is the upper 32 bits of sw_id */
-  if (((secboot_verified_info->sw_id >> 32) & 0xFFFFFFFF) < fuse_version_value)
-  {
-    return BL_ERR_ROLLBACK_VERSION_VERIFY_FAIL;
-  }
-
-
-  return BL_ERR_NONE;
-}
-
-
-/*===========================================================================
-
-**  Function : boot_rollback_update_fuse_version
-
-** ==========================================================================
-*/
-/*!
-*
-* @brief
-*    This function evaluates the image version number against the version burnt
-*    into the fuses and updates the fuses if the image version is greater.
-*
-* @param[in]
-*    sec_img_auth_id_type          - Security image id
-     secboot_verified_info_type *  - Verified info from secboot auth,
-     secboot_hw_ftbl_type *        - Pointer to secboot hw function pointer table
-*
-* @par Dependencies
-*    None
-*
-* @retval
-*    bl_error_type
-*
-*
-*/
-bl_error_type
 boot_rollback_update_fuse_version(sec_img_auth_id_type image_id,
-                                  const secboot_hw_ftbl_type * const secboot_hw_ftbl,
-                                  const secboot_verified_info_type * const secboot_verified_info)
+                                  const pbl_auth_state_t * const auth_state)
 {
   bl_error_type result = BL_ERR_NONE;
-  secboot_hw_etype secboot_result = E_SECBOOT_HW_SUCCESS;
   uint32 secboot_enabled = 0;
   boot_version_rollback_img_set * image_set;
   boolean feature_enabled = FALSE;
   uint32 fuse_version_value = 0;
   uint32 sw_version = 0;
-  //uint32 fuse_base_address;
   uint64 fuse_bit_mask = 0;
   uint32 lsb_mask = 0;
   uint32 msb_mask = 0;
   uint32 i = 0;
 
   /* Validate pointers */
-  if ((secboot_hw_ftbl == NULL) ||
-      (secboot_verified_info == NULL))
+  if (auth_state == NULL)
   {
     return BL_ERR_NULL_PTR;
   }
-
-#if 0 // TODO
-  /* Rollback is only valid for "Current" ranked images.
-     PBL stored the rank in AON during cold boot.  Evaluate it. */
-  if (*(uint8 *)LOADED_IMAGE_RANK_ADDRESS != LOADED_IMAGE_RANK_CURRENT)
-  {
-    return BL_ERR_NONE;
-  }
-#endif
 
   /* Find image set for image id passed from larger image table */
   result =
@@ -310,31 +215,7 @@ boot_rollback_update_fuse_version(sec_img_auth_id_type image_id,
     return result;
   }
 
-
-  /* Check if secboot is enabled. */
-  switch (image_id)
-  {
-  case SEC_IMG_AUTH_SBL_IMG:
-    secboot_result = secboot_hw_ftbl->secboot_hw_is_auth_enabled(SECBOOT_HW_M4_CODE_SEGMENT,
-                                                                 &secboot_enabled);
-    break;
-
-  case SEC_IMG_AUTH_APP_IMG:
-    secboot_result = secboot_hw_ftbl->secboot_hw_is_auth_enabled(SECBOOT_HW_M4_CODE_SEGMENT,
-                                                                 &secboot_enabled);
-    break;
-
-  default:
-    secboot_result = E_SECBOOT_HW_SUCCESS;
-    secboot_enabled = FALSE;
-    break;
-  }
-
-  if (secboot_result != E_SECBOOT_HW_SUCCESS)
-  {
-    return BL_ERR_IMG_SECURITY_FAIL;
-  }
-
+  secboot_enabled = auth_state->auth_enabled;
 
   /* If the feature is disabled in the image set and secboot is disabled then
      there is nothing to validate, return success. */
@@ -359,12 +240,12 @@ boot_rollback_update_fuse_version(sec_img_auth_id_type image_id,
 
     /* Compare image version and fuse version values.  If equal then return. */
     /* Image version is the upper 32 bits of sw_id */
-    if (((secboot_verified_info->sw_id >> 32) & 0xFFFFFFFF) <= fuse_version_value)
+    if (((auth_state->sw_id >> 32) & 0xFFFFFFFF) <= fuse_version_value)
     {
       return BL_ERR_NONE;
     }
 
-    sw_version = (secboot_verified_info->sw_id >> 32) & 0xFFFFFFFF;
+    sw_version = (auth_state->sw_id >> 32) & 0xFFFFFFFF;
 
     if (sw_version > 64)
     {

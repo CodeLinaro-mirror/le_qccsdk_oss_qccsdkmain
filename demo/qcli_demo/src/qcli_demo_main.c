@@ -1,8 +1,13 @@
 /*
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include <string.h>
 #include <stdint.h>
+#if (CONFIG_FW_DEMO)
+#include "qapi_firmware_upgrade.h"
+#endif
 
 #ifdef FERMION_SILICON
 extern uint32_t UART_Send_direct(char *txbuf,uint32_t buflen);
@@ -17,6 +22,9 @@ void app_init(void)
 {
     UART_SEND_DIRECT("app_init entry\r\n");
     //register app console commands here if have
+#ifdef CONFIG_FWUP_DEMO
+    Initialize_FwUpgrade_Demo();
+#endif 
     UART_SEND_DIRECT("app_init over\r\n");
 }
 

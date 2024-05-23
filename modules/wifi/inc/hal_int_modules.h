@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef HAL_INT_MODULES_H
@@ -8,6 +10,9 @@
 #include "hal_int_rates.h"
 #include "hal_int_powersave.h"
 #include "nt_common.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 /*halphy_set_tx_pwr_for_rate/halphy_get_tx_pwr_for_rate defined for UFW only in phy_dev_TPCcal.h*/
 #ifdef HALMAC_UFW

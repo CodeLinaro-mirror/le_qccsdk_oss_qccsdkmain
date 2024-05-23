@@ -1,6 +1,6 @@
 /*
 */
-// $QTI_LICENSE_QDN_C$
+
 
 
 #ifndef _SIGMA_H_

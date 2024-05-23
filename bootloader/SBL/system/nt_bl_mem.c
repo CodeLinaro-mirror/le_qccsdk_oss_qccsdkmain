@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #include <stdio.h>
 #include <string.h>
@@ -12,6 +14,7 @@
 #include "nt_bl_uart.h"
 #include "nt_bl_rng.h"
 #include "nt_bl_system_init.h"
+#include "safeAPI.h"
 //#include "wifi_fw_pbl_ind_table.h"
 
 #define NT_RRAM_NRETRIES ( 5 )
@@ -107,19 +110,15 @@ uint8_t address_to_region_num_map(uint32_t address)
     uint32_t region_start_addr;
     uint32_t region_end_addr;
 
-    num_region = sizeof(g_otp_region_lock_map)/sizeof(otp_region_lock_map_t);
-    region_start_addr =  (uintptr_t)(&__OTP_region_st_addr);
-    region_end_addr = region_start_addr + g_otp_region_lock_map[0].region_size;
+    num_region = sizeof(g_otp_region_lock_map)/sizeof(otp_region_lock_map_t); 
+    region_end_addr = (uintptr_t)(&__OTP_region_st_addr);
     for(region_count = 0; region_count < num_region; region_count++)
     {
+        region_start_addr = region_end_addr;
+        region_end_addr = region_start_addr + g_otp_region_lock_map[region_count].region_size;
         if((region_start_addr <= address) && (address < region_end_addr))
         {
             break;
-        }
-        else
-        {
-             region_start_addr = region_end_addr;
-             region_end_addr = region_start_addr + g_otp_region_lock_map[region_count + 1].region_size;
         }
     }
     return(region_count);
@@ -314,7 +313,7 @@ int8_t nt_bl_rram_write(void *dst, const void *wdata,uint32_t length)
     // Read the destination RRAM block if we're not overwriting the entire block.
     if ((byte_idx > 0) || (length < RRAM_BLOCK_LEN))
     {
-      memcpy(dst_blk.byte, block_addr, sizeof(dst_blk.byte));
+      memscpy(dst_blk.byte, sizeof(dst_blk.byte), block_addr, sizeof(dst_blk.byte));
     }
 
     // Copy the data from the source for at most one block.
@@ -461,7 +460,7 @@ int8_t nt_bl_rram_read(void *address,void *rdata,uint32_t length)
 		}
 		else
 		{
-			memcpy( rdata, (uint32_t *)src_add, length );
+			memscpy( rdata, length, (uint32_t *)src_add, length );
 		}
 	}
 
@@ -604,9 +603,9 @@ int8_t nt_serial_number_write( void )
 
    if( err_count < 3 )
    {
-     memcpy( &serial_num[0], &localnum_lo, sizeof(localnum_lo));
+     memscpy( &serial_num[0], sizeof(serial_num), &localnum_lo, sizeof(localnum_lo));
 
-     memcpy( &serial_num[sizeof(localnum_lo)], &localnum_hi, sizeof(serial_num) - sizeof(localnum_lo));
+     memscpy( &serial_num[sizeof(localnum_lo)],  sizeof(serial_num) - sizeof(localnum_lo), &localnum_hi, sizeof(localnum_hi));
 
      //Serial Number write
      nt_bl_rram_write( (&nt_sn_write->pte_region.serial_num[0]), &serial_num[0], sizeof(serial_num) );

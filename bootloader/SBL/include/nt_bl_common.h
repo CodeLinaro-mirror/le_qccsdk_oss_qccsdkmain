@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef _NT_BL_COMMON_H_
@@ -219,9 +221,9 @@ typedef void (* const pHandler)(void);
 #define SYST_CSR_CLKSRC ( 1 << 2u )
 
 #define NT_DISABLE_SYSTICK(){\
-		HW_REG_WR( SYST_CSR_REG, ~(SYST_CSR_ENABLE));}
+		HW_REG_WR( SYST_CSR_REG, (HW_REG_RD(SYST_CSR_REG) & (~(SYST_CSR_ENABLE))));}
 #define NT_DISABLE_SYSTICK_INT(){\
-		HW_REG_WR( SYST_CSR_REG, ~(SYST_CSR_TICKINT));}
+		HW_REG_WR( SYST_CSR_REG, (HW_REG_RD(SYST_CSR_REG) & (~(SYST_CSR_TICKINT))));}
 
 /******************************************************************************\
  *                  Extern functions prototype declaration                     *

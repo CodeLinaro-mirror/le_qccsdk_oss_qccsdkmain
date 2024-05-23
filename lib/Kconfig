@@ -98,5 +98,9 @@ config CH12_CH13_DISABLE_XPA
 config SIGMA_TRAFFIC
     bool "enable SIGMA_TRAFFIC"
     default y
+
+config UNITTEST_SHELL
+    bool "enable unit_test commands"
+    default n
     
 endmenu

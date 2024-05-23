@@ -3,7 +3,7 @@
 
 #ifndef __SUPPL_AUTH_H__
 #define __SUPPL_AUTH_H__
-
+#include "wifi_cmn.h"
 #include "wlan_dev.h"
 #include "ieee80211_defs.h"
 //#include "nt_timer.h"

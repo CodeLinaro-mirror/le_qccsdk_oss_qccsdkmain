@@ -9,6 +9,8 @@ GENERAL DESCRIPTION
   This header file contains the definition of the public interface to
   the rollback version prevention feature.
 
+  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+  SPDX-License-Identifier: BSD-3-Clause-Clear
 ============================================================================*/
 
 /*===========================================================================
@@ -74,10 +76,7 @@ when       who     what, where, why
 *
 *
 */
-bl_error_type
-boot_rollback_validate_image_version(sec_img_auth_id_type image_id,
-                                     const secboot_hw_ftbl_type * const secboot_hw_ftbl,
-                                     const secboot_verified_info_type * const secboot_verified_info);
+boolean boot_rollback_validate_image_version(sec_img_auth_id_type app_img_id, pbl_auth_state_t *sbl_auth_state, pbl_auth_state_t *app_auth_state);
 
 
 /*===========================================================================
@@ -107,9 +106,8 @@ boot_rollback_validate_image_version(sec_img_auth_id_type image_id,
 */
 bl_error_type
 boot_rollback_update_fuse_version(sec_img_auth_id_type image_id,
-                                  const secboot_hw_ftbl_type * const secboot_hw_ftbl,
-                                  const secboot_verified_info_type * const secboot_verified_info);
-
+                                  const pbl_auth_state_t * const auth_state);
+								  
 /*===========================================================================
 
 **  Function : boot_rollback_fuse_version_save

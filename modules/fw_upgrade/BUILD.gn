@@ -1,0 +1,27 @@
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+fwupgrade_inc = []
+
+fwupgrade_src = []
+
+if (CONFIG_FW_UPGRADE) {
+    fwupgrade_inc += [
+        ".",
+        "./../../../comp/mbedtls/include/mbedtls",
+    ]
+
+    fwupgrade_src += [
+        "fw_upgrade.c",
+        "fw_upgrade_mem.c",
+    ]
+}
+
+config("_config") {
+    include_dirs = fwupgrade_inc
+}
+
+source_set("fw_upgrade") {
+    sources = fwupgrade_src
+}

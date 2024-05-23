@@ -1,4 +1,6 @@
 /*========================================================================
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 
  * @file halphy_hdl_api.h
  * @brief APIs to PHYRF service layer to access HWDevLib functions
@@ -87,7 +89,7 @@ void phyrf_dac_playback(bool enable, uint8_t tone);
 void phyrf_reset(uint16_t freq);
 void phyrf_channel_switch(uint16_t freq, uint8_t profile);
 void phyrf_forced_gain(uint8_t band, uint8_t gain_idx, int8_t dig_gain);
-void phyrf_tpc_set_finegain_offset(int8_t finegain_offset_ofdm, int8_t finegain_offset_11b);
+void phyrf_tpc_set_finegain_offset(int8_t finegain_offset_ofdm, int8_t finegain_offset_11b, bool isTpcCal);
 void phyrf_set_ed_threshold(uint8_t threshold);
 void phyrf_crx_enable(uint16_t freq, crx_param_t *crx_param);
 
@@ -96,5 +98,6 @@ void phyrf_tpc_set_finegain_offset_11b(int8_t finegain_offset, uint8_t rate);
 void phyrf_tpc_set_finegain_offset_11a(int8_t finegain_offset, uint8_t rate);
 void phyrf_tpc_set_finegain_offset_11n(int8_t finegain_offset, uint8_t rate);
 #endif
+void phyrf_enable_ceb(bool enable);
 
 #endif /* _HALPHY_HDL_API_H_ */

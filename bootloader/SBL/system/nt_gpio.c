@@ -1,5 +1,8 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #ifdef NT_GPIO_FLAG
 #include "nt_gpio_api.h"

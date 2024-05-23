@@ -3,6 +3,8 @@
 #ifndef _WLAN_QPOWER_H_
 #define _WLAN_QPOWER_H_
 
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include <stdio.h>
 #include "nt_common.h"

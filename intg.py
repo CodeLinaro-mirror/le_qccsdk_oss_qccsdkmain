@@ -23,61 +23,53 @@ args = parser.parse_args()
 cUtils = Utils(project_root, qccsdkpy_dir)
 Logger = cUtils.logger
 
-def sdk_build ():
-	cUtils.rmtree('SRC-IOE-SDK')
-	cUtils.python_script_op(script='tools/pack/pack_sdk.py')
-	cUtils.chdir('SRC-IOE-SDK')
-	#build qcc730v2_evb11_hostless
-	cUtils.python_script_op(script='qccsdk.py set -b=qcc730v2_evb11_hostless')
-	#cUtils.python_script_op(script='qccsdk.py set -S=sbl build')
-	#cUtils.python_script_op(script='qccsdk.py set -S=demo/hello_world build')
-	#cUtils.python_script_op(script='qccsdk.py set -S=demo/posix_demo build')
-	cUtils.python_script_op(script='qccsdk.py set -S=demo/qcli_demo build')
-	#build qcc730v2_evb13_hostless
-	cUtils.python_script_op(script='qccsdk.py set -b=qcc730v2_evb13_hostless')
-	#cUtils.python_script_op(script='qccsdk.py set -S=sbl build')
-	#cUtils.python_script_op(script='qccsdk.py set -S=demo/hello_world build')
-	#cUtils.python_script_op(script='qccsdk.py set -S=demo/posix_demo build')
-	cUtils.python_script_op(script='qccsdk.py set -S=demo/qcli_demo build')
-	#set default board and appdir
+def apps_build (board_name, ext_demo=False):
+        cUtils.python_script_op(script='qccsdk.py set -b=%s'%board_name)
+        cUtils.python_script_op(script='qccsdk.py set -S=sbl build')
+        cUtils.python_script_op(script='qccsdk.py set -S=prg build')
+        cUtils.python_script_op(script='qccsdk.py set -S=demo/qcli_demo build')
+        cUtils.python_script_op(script='qccsdk.py set -S=demo/hello_world build')
+        cUtils.python_script_op(script='qccsdk.py set -S=demo/posix_demo build')
+
+def set_default ():
 	cUtils.python_script_op(script='qccsdk.py set -b=qcc730v2_evb11_hostless')
 	cUtils.python_script_op(script='qccsdk.py set -S=demo/qcli_demo')
-	cUtils.chdir(cur_dir)
+
 
 cUtils.ENTER()
 
-if args.fsdk==True or (os.getenv("CRM_BUILDID")!=None):
-	if args.nzip==False:
-		cUtils.python_script_op(script='scripts/pack/pack_tgz.py --src')
+#generate package for original repo
+#if args.fsdk==True or (os.getenv("CRM_BUILDID")!=None):
+#	if args.nzip==False:
+#		cUtils.python_script_op(script='tools/pack/pack_tgz.py --src')
 
+#build repo
 if args.nrepo == False:
-	#build on qcc730v2_evb11_hostless
-	cUtils.python_script_op(script='qccsdk.py set -b=qcc730v2_evb11_hostless')
-	#cUtils.python_script_op(script='qccsdk.py set -S=sbl build')
-	cUtils.python_script_op(script='qccsdk.py set -S=prg build')
-	#cUtils.python_script_op(script='qccsdk.py set -S=ftm build')
-	cUtils.python_script_op(script='qccsdk.py set -S=demo/qcli_demo build')
+	cUtils.python_script_op(script='build.py -i FERMION_WIFI_LIB -o output/wifi_lib')
+	apps_build(board_name='qcc730v2_evb11_hostless')
 	#cUtils.python_script_op(script='qccsdk.py set -S=001lcli build')
-	#cUtils.python_script_op(script='qccsdk.py set -S=demo/hello_world build')
-	#cUtils.python_script_op(script='qccsdk.py set -S=demo/posix_demo build')
-	#build on qcc730v2_evb13_hostless
-	cUtils.python_script_op(script='qccsdk.py set -b=qcc730v2_evb13_hostless')
-	#cUtils.python_script_op(script='qccsdk.py set -S=sbl build')
-	cUtils.python_script_op(script='qccsdk.py set -S=prg build')
-	#cUtils.python_script_op(script='qccsdk.py set -S=ftm build')
-	cUtils.python_script_op(script='qccsdk.py set -S=demo/qcli_demo build')
+	#apps_build(board_name='qcc730v2_evb13_hostless')
+	#apps_build(board_name='qcc730v2_evb12_hostless')
+	#apps_build(board_name='qcc730v2_socket')
 	#if os.name=='posix':
 		#cUtils.run_cmd('echo \"fermion.ioe.1.0\" > build.log')
 		#cUtils.run_cmd('make -j8 VARIANT_NAME=FERMION_IOE_PBL BOARD_NAME=qcc730v2_evb11_hostless DFU_BUILD=ON outdir=output/qcc730v2_evb11_hostless/make clean all >> build.log 2>&1')
 		#cUtils.run_cmd('make -j8 VARIANT_NAME=FERMION_IOE_QCLI_DEMO BOARD_NAME=qcc730v2_evb11_hostless DFU_BUILD=ON outdir=output/qcc730v2_evb11_hostless/make clean all >> build.log 2>&1')
-	#set default board and appdir
-	cUtils.python_script_op(script='qccsdk.py set -b=qcc730v2_evb11_hostless')
-	cUtils.python_script_op(script='qccsdk.py set -S=demo/qcli_demo')
+	#set_default()
 
+#build sdk and generate package
 if args.fsdk==True or (os.getenv("CRM_BUILDID")!=None):
-	sdk_build()
+	cUtils.rmtree('SRC-IOE-SDK')
+	cUtils.python_script_op(script='tools/pack/pack_sdk.py')
+	cUtils.chdir('SRC-IOE-SDK')
+	apps_build(board_name='qcc730v2_evb11_hostless', ext_demo=True)
+	apps_build(board_name='qcc730v2_evb13_hostless', ext_demo=True)
+	apps_build(board_name='mqm730i')
+	apps_build(board_name='mqm730x')
+	set_default()
+	cUtils.chdir(cur_dir)
 	if args.nzip==False:
-		cUtils.python_script_op(script='scripts/pack/pack_tgz.py --sdk')
+		cUtils.python_script_op(script='tools/pack/pack_tgz.py --sdk')
 
 
 cUtils.SUCCESS()

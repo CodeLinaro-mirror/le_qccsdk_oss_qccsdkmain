@@ -78,8 +78,8 @@
  **==========================================================================*/
 uint32 sbl_image_auth
 (
-  secboot_auth_image_info_s *image_info,
-  boot_apps_shared_data_type *pbl_shared
+  secboot_auth_image_info_t *image_info,
+  boot_apps_shared_data_t *pbl_shared
 );
 
 
@@ -111,7 +111,7 @@ uint32 sbl_image_auth
  **     None.
  **
  **==========================================================================*/
-uint32 sbl_compute_verify_hash(boot_apps_shared_data_type *pbl_shared, uint32 img_rank);
+uint32 sbl_compute_verify_hash(secboot_auth_image_info_t *image_info, boot_apps_shared_data_t *pbl_shared);
 
 #endif  /* SBL_AUTH_H */
 /*=============================================================================

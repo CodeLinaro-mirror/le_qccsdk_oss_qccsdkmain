@@ -1,10 +1,14 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef _NT_SOCPM_SLEEP_H_
 #define _NT_SOCPM_SLEEP_H_
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "wifi_cmn.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include "nt_common.h"
 #include "nt_osal.h"
@@ -434,7 +438,7 @@ uint64_t nt_socpm_min_proc(int *proc_routine);
  * @param   n_nops - the number of nop used as a delay
  * @return  none
  */
-void     nt_socpm_nop_delay(int n_nops);
+void     nt_socpm_nop_delay(uint64_t n_nops);
 
 #ifdef SUPPORT_RING_IF
 /*

@@ -1,10 +1,15 @@
 
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #ifndef _IEEE80211_H_
 #define _IEEE80211_H_
 
 #include "ieee80211_defs.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 /* is 802.11 address multicast/broadcast? */

@@ -29,18 +29,35 @@ board = qccsdk['board']
 
 cUtils.ENTER()
 
+def build_action2arg (action):
+    global args
+    if action not in cUtils.CfgInternal['build']['default_actions_supported']:
+        Logger.warn_not_supported(str(action))
+        cUtils.SUCCESS('invalid parameter, skip')
+    elif action=='build':
+        args.build = True
+    elif action=='clean':
+        args.clean = True
+    elif action=='rebuild':
+        args.rebuild = True
+    elif action==None:
+        Logger.warning('Skip')
+    else:
+        Logger.warn_not_supported(str(action))
+        cUtils.SUCCESS('Skip, should be removed from default_actions_supported')    
+
 #by default, no parameter
 if len(sys.argv)==1:
     default_action = qccsdk['build']['default_action']
-    if default_action in cUtils.CfgInternal['build']['actions_supported']:
-        if default_action=='clean':
-            args.clean = True
-        elif default_action=='build':
-            args.build = True
-        elif default_action=='rebuild':
-            args.rebuild = True
+    Logger.info('No parameters, use default_action = %s'%str(default_action))
+    if default_action != None:
+        if type(default_action) == str:
+            build_action2arg(default_action)
+        elif type(default_action) == list:
+            for act in default_action:
+                build_action2arg(act)
         else:
-            Logger.warn_not_supported(default_action)
+            Logger.warn_not_supported(str(type(default_action)))
             cUtils.SUCCESS('no parameter, skip')
     else:
         cUtils.SUCCESS('no parameter, skip')
@@ -52,6 +69,8 @@ def gen_cmd(cur_cmd, img, is_clean=False):
     tmp_cmd = cur_cmd + ' --image %s '%img
     if is_clean==True:
         tmp_cmd += ' --clean '
+    elif 'sign' in qccsdk['build'] and qccsdk['build']['sign']:
+        tmp_cmd += ' --sign'
     return tmp_cmd
 
 def build(is_clean=False):

@@ -6,6 +6,7 @@
 
 #ifndef WIFI_FW_INTERNAL_API_H
 #define WIFI_FW_INTERNAL_API_H
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 
 #ifdef IMAGE_FERMION

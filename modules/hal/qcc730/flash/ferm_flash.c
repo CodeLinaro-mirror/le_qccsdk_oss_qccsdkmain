@@ -1,24 +1,25 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*-------------------------------------------------------------------------
  * Include Files
  *-----------------------------------------------------------------------*/
 
-#include <string.h>
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
-#include "ferm_flash.h"
 #include "nt_logger_api.h"
 #ifndef CONFIG_NON_OS
 #include "wifi_fw_pwr_cb_infra.h"
 #endif
-#include "task.h"
 #include "timer.h"
 #ifndef CONFIG_NON_OS
 #include "qurt_mutex.h"
 #endif
 
 #include "ferm_qspi.h"
+#include "ferm_flash.h"
 
 #ifdef CONFIG_BOARD_QCC730_QSPI_ENABLE
 /*-------------------------------------------------------------------------
@@ -27,14 +28,14 @@
  /* Flash XiP support if needed */
 //#define FLASH_XIP_SUPPORT
 
-/* Read/Write flash registers */
-#define FLASH_ACCESS_REG_SUPPORT
+/* If need, do power up operation before flash init for some flash */
+#define FLASH_POWER_UP_SUPPORT
 
 /* Enable flash high performance if neeed */
 #define FLASH_HP_MODE_SUPPORT
 
-/* If need, do power up operation before flash init for some flash */
-#define FLASH_POWER_UP_SUPPORT
+/* Read/Write flash registers */
+#define FLASH_ACCESS_REG_SUPPORT
 
 #define QSPI_TRANS_MODE          QSPI_PIO_MODE_E
 
@@ -68,6 +69,7 @@
 #define MANUFACTURER_ID_WINBOND           0xEF     /**< Winbond. */
 #define MANUFACTURER_ID_ISSI              0x9D     /**< ISSI. */
 #define MANUFACTURER_ID_GD                0xC8     /**< GD. */
+#define MANUFACTURER_ID_GT                0xC4     /**< GT. */
 
 /* Winbond SPI Command */
 #define WINBOND_READ_STATUS_2_CMD         0x35
@@ -161,97 +163,6 @@ qurt_mutex_t flash_mutex;
 
 /* default flash type. with default clock 30Mhz */
 static uint8_t default_qspi_clock = FLASH_CLOCK_30MHZ;
-flash_config_data_t flash_device_config[] =
-{
-    /* Macronix, MX25R6435F */
-    {
-            .power_up_opcode            = 0,
-            .addr_bytes                = 3,
-            .read_cmd_mode              = FLASH_RW_MODE_SDR_SINGLE,
-            .read_addr_mode             = FLASH_RW_MODE_SDR_DUAL,
-            .read_data_mode             = FLASH_RW_MODE_SDR_DUAL,
-            .read_opcode               = 0xbb,
-            .read_wait_state            = 0x4,
-
-            .write_cmd_mode             = FLASH_RW_MODE_SDR_SINGLE,
-            .write_addr_mode            = FLASH_RW_MODE_SDR_SINGLE,
-            .write_data_mode            = FLASH_RW_MODE_SDR_SINGLE,
-            .write_opcode              = 0x2,
-            .erase_4kb_opcode           = 0x20,
-            .bulk_erase_size_4kb       = 16,
-            .bulk_erase_opcode          = 0xD8,
-            .chip_erase_opcode          = 0x60,
-            .quad_enable_mode           = 2,
-            .suspend_erase_opcode       = 0xB0,
-            .suspend_program_opcode     = 0xB0,
-            .resume_erase_opcode        = 0x30,
-            .resume_program_opcode      = 0x30,
-            .erase_err_bmsk             = 0x40,
-            .erase_err_status_reg        = 0x2B,
-            .write_err_bmsk             = 0x20,
-            .write_err_status_reg        = 0x2B,
-            .high_performance_mode_bmask =0x0, //0x2,
-            .power_on_delay_in_100us      = 8,
-            .suspend_erase_delay_in_us    = 80,
-            .suspend_program_delay_in_us  = 80,
-            .resume_erase_delay_in_us     = 360,
-            .resume_program_delay_in_us   = 128,
-            .density_in_blocks          = 2048,
-            .device_id                  = 0x001728C2,
-            .write_protect_bmask        = 0xBC,
-            .clk_freq                   = FLASH_CLOCK_30MHZ,
-    },
-    /* Gigadevice, GD25WQ32E */
-    {
-            .power_up_opcode            = 0,
-            .addr_bytes                 = 3,
-            .read_cmd_mode              = FLASH_RW_MODE_SDR_SINGLE,
-            #if CONFIG_SOC_QCC730V2 && CONFIG_BOARD_QCC730_QSPI_ENABLE && CONFIG_BOARD_QCC730_QSPI_V2_QUAD_MODE
-            .read_addr_mode             = FLASH_RW_MODE_SDR_QUAD,
-            .read_data_mode             = FLASH_RW_MODE_SDR_QUAD,
-            .read_opcode                = 0xeb,
-            .read_wait_state            = 0x6,
-            .write_cmd_mode             = FLASH_RW_MODE_SDR_SINGLE,
-            .write_addr_mode            = FLASH_RW_MODE_SDR_SINGLE,
-            .write_data_mode            = FLASH_RW_MODE_SDR_QUAD,
-            .write_opcode               = 0x32,
-            #else
-            .read_addr_mode             = FLASH_RW_MODE_SDR_DUAL,
-            .read_data_mode             = FLASH_RW_MODE_SDR_DUAL,
-            .read_opcode                = 0xbb,
-            .read_wait_state            = 4,
-            .write_cmd_mode             = FLASH_RW_MODE_SDR_SINGLE,
-            .write_addr_mode            = FLASH_RW_MODE_SDR_SINGLE,
-            .write_data_mode            = FLASH_RW_MODE_SDR_SINGLE,
-            .write_opcode               = 2,
-            #endif
-            .erase_4kb_opcode           = 0x20,
-            .bulk_erase_size_4kb        = 16,
-            .bulk_erase_opcode          = 0xD8,
-            .chip_erase_opcode          = 0x60,
-            .quad_enable_mode           = 1,
-            .suspend_erase_opcode       = 0x75,
-            .suspend_program_opcode     = 0x75,
-            .resume_erase_opcode        = 0x7a,
-            .resume_program_opcode      = 0x7a,
-            .erase_err_bmsk             = 0x0,
-            .erase_err_status_reg       = 0x0,
-            .write_err_bmsk             = 0x0,
-            .write_err_status_reg       = 0x0,
-            .high_performance_mode_bmask  = 0x0,
-            .power_on_delay_in_100us      = 8,
-            .suspend_erase_delay_in_us    = 80,
-            .suspend_program_delay_in_us  = 80,
-            .resume_erase_delay_in_us     = 300,
-            .resume_program_delay_in_us   = 100,
-            .density_in_blocks          = 1024,
-            .device_id                  = 0x001665c8,
-            .write_protect_bmask        = 0x0441FC,
-            .clk_freq                   = FLASH_CLOCK_30MHZ,
-    },
-};
-
-uint32_t total_flash_products = (sizeof(flash_device_config) / sizeof(flash_device_config[0]));
 
 /*-------------------------------------------------------------------------
  * Private Function Declarations
@@ -277,14 +188,27 @@ static FLASH_STATUS drv_flash_read_reg_internal(uint8_t reg_opcode, uint8_t len,
     if (len > 0 && reg_value == NULL) {
         return FLASH_DEVICE_INVALID_PARAMETER;
     }
+#ifdef FLASH_XIP_SUPPORT
+		if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+			drv_qspi_disable_xip_mode();
+#endif
 
     (void)drv_qspi_prepare_cmd(&qspi_read_reg, reg_opcode, 0, 0,
                       QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, false);
 
     if (drv_qspi_run_cmd(&qspi_read_reg, 0, reg_value, len, QSPI_TRANS_MODE)) {
+#ifdef FLASH_XIP_SUPPORT
+    	if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+        	drv_qspi_restore_xip_mode();
+#endif
         return FLASH_DEVICE_DONE;
     }
     else {
+#ifdef FLASH_XIP_SUPPORT
+		if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+			drv_qspi_restore_xip_mode();
+#endif
+		
         return FLASH_DEVICE_FAIL;
     }
 }
@@ -771,8 +695,10 @@ static FLASH_STATUS drv_flash_clear_write_protection()
     uint8_t       flash_vid = FLASH_PID2VID(flash_context.config->device_id);
     uint32_t      wp_mask = flash_context.config->write_protect_bmask;
     FLASH_STATUS status = FLASH_DEVICE_DONE;
-
-    if(MANUFACTURER_ID_WINBOND == flash_vid || MANUFACTURER_ID_GD == flash_vid) {
+ 
+    if(MANUFACTURER_ID_WINBOND == flash_vid
+        || MANUFACTURER_ID_GD == flash_vid
+        || MANUFACTURER_ID_GT == flash_vid) {
         /* status  Register Format is as described below for Winbond Flash part.
            Winbond or GD
            status -1 Register Format:
@@ -867,11 +793,13 @@ static FLASH_STATUS drv_flash_info_init(uint32_t device_id)
 {
     FLASH_STATUS status = FLASH_DEVICE_DONE;
     uint32_t i;
+    uint32_t total_flash_products = flash_get_config_entries_count();
+    flash_config_data_t *pflash_device_config = flash_get_config_entries_struct();
 
     for (i = 0; i < total_flash_products; i++)
     {
-        if (device_id == flash_device_config[i].device_id) {
-            //NT_LOG_PRINT(SYSTEM,ERR,"found device %x\n", device_id);
+        if (device_id == pflash_device_config[i].device_id) {
+            NT_LOG_PRINT(SYSTEM,ERR,"found device %x\n", device_id);
             break;
         }
     }
@@ -881,7 +809,7 @@ static FLASH_STATUS drv_flash_info_init(uint32_t device_id)
     }
 
     memset(&flash_context, 0, sizeof(flash_context_t));
-    flash_context.config = flash_device_config+i;
+    flash_context.config = pflash_device_config+i;
     if (flash_context.config == NULL) {
         return FLASH_DEVICE_NOT_FOUND;
     }
@@ -1116,13 +1044,10 @@ FLASH_STATUS drv_flash_deinit(uint32_t dereg)
    FLASH_DEVICE_DONE -- If a blocking read completed successfully, or a negative value if there was an error.
    FLASH_DEVICE_PENDING -- Indicating a non-blocking read is ongoing.
 */
-uint32_t read_size[]={4096, 4096, 4096, 2048, 2048, 2048, 1024};
 FLASH_STATUS drv_flash_read(uint32_t address, uint32_t byte_cnt, uint8_t *buffer, flash_operation_cb_t read_cb, void *user_param)
 {
     FLASH_STATUS status = FLASH_DEVICE_DONE;
     qspi_cmd_t    qspi_read_cmd;
-    uint32_t      transfer_size = 0;
-    uint32_t      limit = flash_context.config->clk_freq < 6 ? read_size[flash_context.config->clk_freq] : 1024;
     (void)user_param;
     if (!flash_init_done) {
         return FLASH_DEVICE_FAIL;
@@ -1151,37 +1076,17 @@ FLASH_STATUS drv_flash_read(uint32_t address, uint32_t byte_cnt, uint8_t *buffer
     (void)drv_qspi_prepare_cmd(&qspi_read_cmd, flash_context.config->read_opcode, flash_context.config->addr_bytes, flash_context.config->read_wait_state,
                       (qspi_mode_t)flash_context.config->read_cmd_mode, (qspi_mode_t)flash_context.config->read_addr_mode,
                       (qspi_mode_t)flash_context.config->read_data_mode, false);
-
-    while (byte_cnt) {
-        if (address % limit) {
-            transfer_size = limit - (address % limit);
-            if (transfer_size > byte_cnt) {
-                transfer_size = byte_cnt;
-            }
+  
+    if (read_cb == NULL) {
+        if (!drv_qspi_run_cmd(&qspi_read_cmd, address, buffer, byte_cnt, QSPI_TRANS_MODE)) {
+            status = FLASH_DEVICE_FAIL;
         }
-        else {
-            transfer_size = (byte_cnt > limit) ? (limit) : (byte_cnt);
-        }
-
-        if (read_cb == NULL) {
-            if (!drv_qspi_run_cmd(&qspi_read_cmd, address, buffer, transfer_size, QSPI_TRANS_MODE)) {
-                status = FLASH_DEVICE_FAIL;
-            }
-        }
+    }
 #ifdef FLASH_NONEBLOCKING
         else {
         //TODO
         }
 #endif
-
-        if (status != FLASH_DEVICE_DONE) {
-            goto FLASH_READ_END;
-        }
-
-        address += transfer_size;
-        buffer += transfer_size;
-        byte_cnt -= transfer_size;
-    }
 
 FLASH_READ_END:
 #ifdef FLASH_XIP_SUPPORT

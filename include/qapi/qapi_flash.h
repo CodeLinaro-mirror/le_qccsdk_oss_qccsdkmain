@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /** @file qapi_flash.h
    @brief Flash Services Interface definition.
 
@@ -63,6 +67,15 @@ typedef enum
                                    It depends on the specific flash type. Here is 64Kb by default*/
     QAPI_FLASH_CHIP_ERASE_E   /**< Chip erase. */
 } qapi_FLASH_Erase_Type_t;
+
+/** Flash client device data, should be same with drv_flash_info_t */
+typedef struct flash_info_s
+{
+  uint32_t  devicd_id;                     /**< Capacity ID + Memory Type ID + Manufacturer ID */
+  uint32_t  block_count;                  /**< Number of total blocks for this partition/image */
+  uint16_t  block_size_bytes;              /**< block size in bytes */
+  uint16_t  page_size_bytes;              /**< Page size in bytes */
+}flash_info_t;
 
 /*-------------------------------------------------------------------------
  * Function Declarations
@@ -133,20 +146,7 @@ qapi_Status_t qapi_Flash_Erase(qapi_FLASH_Erase_Type_t EraseType, uint32_t Start
    QAPI_OK -- On success. \n
    Error code -- On failure.
 */
-qapi_Status_t qapi_Flash_Read_Reg(uint8_t RegOpcode, uint8_t Len, uint8_t *RegValue);
-
-/**
-   @brief Write flash registers.
-
-   @param[in] RegOpcode   Operation code.
-   @param[in] Len         The length of register value to be written.
-   @param[in] RegValue    The written value.
-
-   @return
-   QAPI_OK -- If blocking writereg completed successfully. \n
-   Error code -- If there was an error.
-*/
-qapi_Status_t qapi_Flash_Write_Reg(uint8_t RegOpcode, uint8_t Len, uint8_t *RegValue);
+qapi_Status_t qapi_Flash_Get_Info(flash_info_t *flash_info);
 
 /** @} */ /* end_addtogroup qapi_peripherals_flash */
 

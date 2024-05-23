@@ -1,4 +1,6 @@
  /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 /************************************************************************/
 /* Header file for BDF module -chip QCP5321                             */
@@ -46,19 +48,21 @@
 #define MAX_XTAL_TEMP_COMP	5
 #define TEMPERATURE_REGIONS	3
 #define BASE_BDF_HEADER_FUTURE	133
-#define TARGET_POWER_2G_FUTURE	177
-#define TARGET_POWER_5G_FUTURE	131
-#define TARGET_POWER_6G_FUTURE	131
+#define TARGET_POWER_2G_FUTURE	174	
+#define TARGET_POWER_5G_FUTURE	122	
+#define TARGET_POWER_6G_FUTURE	122	
 #define RX_GAIN_FUTURE	56
 #define XTAL_CAL_FUTURE	76
-#define FW_CONFIG_FUTURE	123
-#define TPC_DATA_OFFSET_FUTURE	10495
+#define FW_CONFIG_FUTURE	49	
+#define TPC_DATA_OFFSET_FUTURE	10455	
 #define MAX_SPUR_MIT_FUTURE	48
 #define CTL_6G_FUTURE	440
 #define AGC_ED_DET_FUTURE	34
+#define TEMPERATURE_CONFIG_FUTURE	169	
 #ifdef CONFIG_6G_BAND
-#define MAX_RESERVED_FUTURE	6294
+#define MAX_RESERVED_FUTURE	5454	
 #else
+#error "CONFIG_6G_BAND need to be recalculated"
 #define MAX_RESERVED_FUTURE	576
 #endif
 #define HALPHY_NUM_REG_DMNS	6
@@ -73,4 +77,9 @@
 #define HALPHY_NUM_CTLS_6G_HT20	(1*HALPHY_NUM_REG_DMNS)
 #define HALPHY_NUM_BANDS	3
 #define HALPHY_NUM_RATES_FOR_TEMP_BASED_TPC_ADJUSTMENT	3
+#define HALPHY_MAX_REGS_TEMP_BASED_UPDATE	15	
+#define HALPHY_NUM_PROCESS_CORNERS	3	
+#define TXPOWERMODE_NUM_5G_SUB_BANDS	3	
+#define TXPOWERMODE_NUM_6G_SUB_BANDS	3	
+#define TXPOWERMODE_NUM_2G_SUB_BANDS	2	
 #endif // _COMPONENT_BDF_DEF_H_

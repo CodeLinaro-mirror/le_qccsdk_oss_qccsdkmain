@@ -1,9 +1,9 @@
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 import("//configs_decl.gni")
 
 projects_wifi_core = [
-    "../../../comp/wifi/core/system",
-    "../../../comp/wifi/core/hostif",
     "../../../comp/wifi/core/wifi/halphy",
     "../../../comp/wifi/core/wifi/dpm",
     "../../../comp/wifi/core/wifi/hal",

@@ -26,6 +26,7 @@ typedef struct ap_dev_struct {
     uint8_t             num_sta;
     uint8_t				dtim_count;
     uint8_t				dtim_period;
+	uint8_t				hidden_ssid;
 
 #ifdef NT_FN_WMM_PS_AP
     uint8_t             apsd_enable;   /* uAPSD enable/disable */

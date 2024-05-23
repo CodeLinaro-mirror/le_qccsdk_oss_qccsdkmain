@@ -2,6 +2,8 @@
 #define __WLAN_DEFS_H__
 
 #include "if_ethersubr.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 /*
  * This file contains WLAN definitions that may be used across both

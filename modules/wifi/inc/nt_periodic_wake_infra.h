@@ -1,8 +1,12 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #ifndef CORE_WIFI_SME_INC_NT_PERIODIC_WAKE_INFRA_H_
 #define CORE_WIFI_SME_INC_NT_PERIODIC_WAKE_INFRA_H_
 
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include <stdio.h>
 #include "nt_common.h"

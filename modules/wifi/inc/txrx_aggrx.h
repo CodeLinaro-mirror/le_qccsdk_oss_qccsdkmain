@@ -16,7 +16,7 @@
 #define TXRX_AGGRX_SESSION_TIMEOUT_CFG  TXRX_AGGRX_SESSION_TIMEOUT_ENABLE
 
 #define AGGRX_BUFFER_SIZE_CFG   4
-#define AGGRX_SUPPORT_AMSDU_CFG 1
+#define AGGRX_SUPPORT_AMSDU_CFG 0
 #define AGGRX_SUPPORT_DELAYED_BA    0
 #define AGGRX_SUPPORT_IMMEDIATE_BA  1
 /* watch the block ack session. If 0, indefinite */
@@ -67,6 +67,7 @@ void TXRX_aggrx_start_rx_ba_session(devh_t *dev,
     struct ieee80211_action_ba_addbarequest *req, conn_t *co);
 void TXRX_aggrx_stop_rx_ba_session(devh_t *dev, conn_t *conn,
     uint8_t tid, uint8_t initiator, uint16_t reason, NT_BOOL tx);
+void TXRX_aggrx_amsdu_enable_update();
 
 
 #endif /*_TXRX_AGGRX_H_*/

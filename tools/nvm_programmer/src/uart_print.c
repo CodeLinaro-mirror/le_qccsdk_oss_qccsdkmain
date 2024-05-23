@@ -1,14 +1,19 @@
+/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear*/
 
  /*-------------------------------------------------------------------------
 * Include Files
 *-----------------------------------------------------------------------*/
 
+#include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include "nt_hw.h"
 #include "uart_print.h"
 #include "nvm_common.h"
+#include "nt_flags.h"
 
 /*-------------------------------------------------------------------------
  * Global Variables
@@ -76,3 +81,60 @@ void frn_printf( const char *print )
 {
     frn_uart_sent(print, strlen(print));
 }
+
+uint8_t nt_log_printf(
+		uint8_t mod_id,
+		uint8_t loglvl,
+#if( NT_FN_FUNCTION_LINE_NUM_FLAG == 1)
+		char *func_name,
+		/*@ for line number*/
+		uint16_t ln,
+#endif
+		const char *fmt,
+		uint8_t num,
+		...
+		)
+{
+#ifndef UART_PRINT_ENABLE
+    UNUSED(loglvl);
+    UNUSED(mod_id); 
+#if( NT_FN_FUNCTION_LINE_NUM_FLAG == 1)    
+    UNUSED(func_name);
+    UNUSED(ln);
+#endif
+    UNUSED(fmt);
+    UNUSED(num);
+#else
+    if(loglvl < LOG_LEVEL)
+        return 0;
+    
+    va_list argp;
+
+    snprintf(uart_print_buff,sizeof(uart_print_buff), "%ld %ld"
+                                ": "
+#if( NT_FN_FUNCTION_LINE_NUM_FLAG == 1)
+                                "(%s:%lu) "
+#endif
+                                ,(uint32_t)mod_id,
+                                (uint32_t)loglvl
+#if( NT_FN_FUNCTION_LINE_NUM_FLAG == 1)
+                                ,func_name,
+                                (uint32_t)ln
+#endif
+                            );
+
+    frn_printf(uart_print_buff);
+
+    va_start(argp, num);
+
+    vsnprintf(uart_print_buff, sizeof(uart_print_buff), fmt, argp);
+    frn_printf(uart_print_buff);
+
+    va_end(argp);
+    
+    snprintf(uart_print_buff,sizeof(uart_print_buff),"\r\n");
+    frn_printf(uart_print_buff);
+#endif
+    return 0;
+}
+

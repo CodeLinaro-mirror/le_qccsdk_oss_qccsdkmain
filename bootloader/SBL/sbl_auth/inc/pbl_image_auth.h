@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef PBL_IMAGE_AUTH_H
 #define PBL_IMAGE_AUTH_H
@@ -54,7 +58,8 @@ typedef struct secboot_auth_image_info
 {
 	boot_elf_loader * elf_loader_ptr;
 	uint32 image_id;
-} secboot_auth_image_info_s;
+	uint32 image_rank;
+} secboot_auth_image_info_t;
 
 
 /******************************************************************************
@@ -97,7 +102,7 @@ typedef struct secboot_auth_image_info
  **==========================================================================*/
 uint32 pbl_image_auth
 (
-  secboot_auth_image_info_s * image_info;
+  secboot_auth_image_info_t * image_info
 );
 
 
@@ -197,6 +202,15 @@ void pbl_write_anti_rollback_lock_sticky_bits(void);
  **
  **==========================================================================*/
 uint32 pbl_populate_share_data(void);
+
+
+typedef struct {
+	uint32 (*pbl_image_auth_pfn)(secboot_auth_image_info_t *image_info);
+	uint32 (*pbl_compute_verify_hash_pfn)(void);
+	void (*pbl_write_debug_override_sticky_bits_pfn)(void);
+	void (*pbl_write_anti_rollback_lock_sticky_bits_pfn)(void);
+	uint32 (*pbl_populate_share_data_pfn)(void);
+} pbl_image_auth_ind_t;
 
 #endif  /* PBL_IMAGE_AUTH_H */
 /*=============================================================================

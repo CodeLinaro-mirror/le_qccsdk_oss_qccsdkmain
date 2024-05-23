@@ -1,8 +1,16 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
 #
+import("//configs_decl.gni")
+
 sbl_dir = "//bootloader/SBL"
 core_dir = "//../comp/qcc730/core"
 kernel_dir = "//../comp/freertos/FreeRTOS/Source"
 qurt_dir = "//../comp/qurt/FreeRTOS/2.0"
+posix_dir = "//../comp/posix/"
+posix_fr_inc_dir ="//../comp/posix/FreeRTOS-Plus-POSIX/include"
+posix_fr_port_inc_dir ="//../comp/posix/FreeRTOS-Plus-POSIX/include/Portable"
+mbedtls_dir = "//../comp/mbedtls"
 
 inc_list = [
   "${sbl_dir}/system",
@@ -17,7 +25,12 @@ inc_list = [
   "${sbl_dir}/sbl_auth/rollback",
   "${kernel_dir}/include",
   "${kernel_dir}/portable/GCC/ARM_CM4F",
+  "${posix_dir}",
+  "${posix_fr_inc_dir}",
+  "${posix_fr_port_inc_dir}",
   "//build/freertos/common/config_files",
+  "${mbedtls_dir}/include",
+  "${mbedtls_dir}/include/mbedtls",
   "//include",
   "//lib/misc/inc",
   "//arch/arm/system/include/cmsis",
@@ -40,17 +53,21 @@ pbl_dep_src = [
 ]
 
 core_src = [
-  "//modules/hal/qcc730/qspi/ferm_qspi.c",
-  "//modules/hal/qcc730/flash/ferm_flash.c",
   "//lib/libc/source/safeAPI.c",
+]
+
+mbedtls_src = [
+  "${mbedtls_dir}/library/sha256.c",
+  "${mbedtls_dir}/library/platform_util.c",
 ]
 
 sbl_src = [
   "system/nt_bl_uart.c",
   "system/nt_bl_mem.c",
   "system/sbl_storage.c",
+  "system/sbl_flash_fwd.c",
+  "system/rram_fdt.c",
   "src/sbl_main.c",
-#"src/pbl_patch.c",
   "sbl_auth/sbl_auth.c",
   "sbl_auth/rollback/boot_rollback_version.c",
   "sbl_auth/rollback/boot_rollback_version_impl.c",
@@ -59,7 +76,13 @@ sbl_src = [
 source_set("SBL") {
     sources = pbl_dep_src
     sources += core_src
+    sources += mbedtls_src
     sources += sbl_src
+    if (CONFIG_BOARD_QCC730_QSPI_ENABLE) {
+        sources += [ "//modules/hal/qcc730/qspi/ferm_qspi.c" ]
+        sources += [ "//modules/hal/qcc730/flash/ferm_flash_config.c" ]
+        sources += [ "//modules/hal/qcc730/flash/ferm_flash.c" ]
+    }
     include_dirs = inc_list
     defines = [
         "SBL_BUILD",
@@ -67,4 +90,9 @@ source_set("SBL") {
         "CONFIG_NON_OS",
         "__LINUX_ERRNO_EXTENSIONS__",
     ]
+    if (CONFIG_FLASH_XIP_SUPPORT) {
+       defines += [
+            "FLASH_XIP_SUPPORT",
+       ]
+   }
 }

@@ -1,6 +1,6 @@
 /*
  */
-// $QTI_LICENSE_QDN_C$
+
 
 #ifdef CONFIG_SIGMA_TRAFFIC
 

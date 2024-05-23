@@ -11,6 +11,8 @@
  * Include files
  * ----------------------------------------------------------------------*/
 
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 #ifdef FERMION_CONFIG_HCF

@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "qapi_types.h"
@@ -11,6 +13,8 @@
 #include <stdio.h>
 
 #include "nt_sys_monitoring.h"
+#include "wifi_cmn.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include "qurt_internal.h"
 

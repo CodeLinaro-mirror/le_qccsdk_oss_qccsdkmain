@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 // $QTI_LICENSE_QDN_C$
 
@@ -2680,17 +2682,6 @@ qapi_Status_t qapi_WLAN_Enable (qapi_WLAN_Enable_e enable);
 
 /**
 @ingroup qapi_wlan
-get the wlan status before OM, this API has no interaction with KF.
-
-@return
-QAPI_WLAN_DISABLE_E if not enabled, QAPI_WLAN_ENABLE_E if enabled.\n
-*/
-
-int32_t qapi_WLAN_Get_OM_Status (void);
-
-
-/**
-@ingroup qapi_wlan
 Adds an interface in the Wi-Fi driver. This API has no interaction with KF.
 
 WLAN must be enabled before calling this API. A maximum of two devices are supported at this time.
@@ -2705,23 +2696,6 @@ Nonzero value -- Adding a new device (interface) failed.
 Use qapi_WLAN_Enable() to enable the Wi-Fi module before using this API.
 */
 qapi_Status_t qapi_WLAN_Add_Device (uint8_t device_ID);
-
-
-/**
-@ingroup qapi_wlan
-Removes an interface from the Wi-Fi driver.
-This API removes device but does not disable WLAN.
-
-@param[in] device_ID        Device ID.
-
-@return
-QAPI_OK -- Removing Wi-Fi interface succeeded. \n
-Nonzero value -- Removing WiFi interface failed.
-
-@dependencies
-None.
-*/
-qapi_Status_t qapi_WLAN_Remove_Device (uint8_t device_ID);
 
 
 /**
@@ -2925,154 +2899,6 @@ qapi_Status_t qapi_WLAN_Get_Param (uint8_t device_ID,
 
 /**
 @ingroup qapi_wlan
-Suspends a KF operation for a fixed duration.
-
-@param[in] suspend_Time_In_Ms   Suspend time duration in milliseconds.
-
-@return
-QAPI_OK -- Suspend operation succeeded. \n
-Nonzero value -- Suspend operation failed.
-
-@dependencies
-None.
-*/
-qapi_Status_t qapi_WLAN_Suspend_Start (uint32_t suspend_Time_In_Ms);
-
-/**
-@ingroup qapi_wlan
-Wakeup KF from suspend state.
-
-@return
-QAPI_OK -- Wakeup operation succeeded. \n
-Nonzero value -- Wakeup operation failed.
-
-@dependencies
-None.
-*/
-qapi_Status_t qapi_WLAN_Suspend_Wakeup (void);
-
-/**
-@ingroup qapi_wlan
-Sends packets over the air when the device is in the Disconnected state.
-
-@datatypes
-#qapi_WLAN_Raw_Send_Params_t
-
-@param[in] device_ID    Device ID.
-@param[in] raw_Params   Data pointer to pass information from the caller to the driver.
-
-@return
-QAPI_OK -- Requested number of raw packets sent over the air. \n
-Nonzero value -- Raw packets not sent.
-
-@dependencies
-Device must be in Maximum Performance mode to send raw packets. \n
-Device should not be in the Connected state while calling this API. \n
-Raw mode is supported only in 2.4 GHz.
-*/
-qapi_Status_t qapi_WLAN_Raw_Send (uint8_t device_ID,
-                             const qapi_WLAN_Raw_Send_Params_t  *raw_Params);
-
-/**
-@ingroup qapi_wlan
-Initiates a WPS process. It can be used in both non-AP Station mode and SoftAP mode.
-
-The connect_Action parameter specifies whether the WPS connection is to take place after the WPS handshake completes successfully.
-
-The application is responsible for starting the connection process.
-An event callback with ID QAPI_WLAN_WPS_CB_E is received asychronously when the WPS handshake completes. The application should use
-qapi_WLAN_WPS_Await_Completion to handle this event. If the handshake succeeds, the application should use qapi_WLAN_WPS_Connect() to complete
-the connection process.
-
-@datatypes
-#qapi_WLAN_WPS_Connect_Action_e \n
-#qapi_WLAN_WPS_Mode_e
-
-@param[in] device_ID         Device ID.
-@param[in] connect_Action    0: No action after WPS succeeds; 1: Connect to AP after WPS succeeds.
-@param[in] mode              WPS mode: Pushbutton/PIN.
-@param[in] pin               PIN.
-
-@return
-QAPI_OK -- WPS intiation succeeded. \n
-Nonzero value -- WPS process failed.
-
-@sa
-qapi_WLAN_Set_Param() \n
-qapi_WLAN_WPS_Await_Completion() \n
-qapi_WLAN_WPS_Connect()
-*/
-qapi_Status_t qapi_WLAN_WPS_Start (uint8_t device_ID,
-                              qapi_WLAN_WPS_Connect_Action_e connect_Action,
-                              qapi_WLAN_WPS_Mode_e mode,
-                              const char  *pin);
-
-
-/**
-@ingroup qapi_wlan
-Waits for WPS completion. Use the qapi_WLAN_WPS_Start() before calling this API to initialize a WPS connection.
-
-Use the member dont_Block in qapi_WLAN_Netparams_t to set this API as blocking or nonblocking.
-In the case of success, net_Params will give the peer the WPS device's profile, found via handshake. The applications can then use
-qapi_WLAN_WPS_Connect() to complete the WPS connection.
-
-If a nonblocking option is used and if a WPS event is not received from the target, qapi_WLAN_WPS_Await_Completion()
-returns immediately with an error. However, the error field of the input argument net_Params is set to 0.
-Applications should use both the return value and above mentioned member to decide if the API failed or an event is
-pending.
-
-In the case of a failure, the WPS handshake failed, hence the WPS connection process cannot be completed.
-It is recommended to call this API after the application receives a WPS handshake completion notification by the WLAN driver to avoid
-unnecessary blocking or polling for the notification.
-
-@datatypes
-#qapi_WLAN_Netparams_t
-
-@param[in]     device_ID     Device ID.
-@param[in,out] net_Params    Data pointer to get information from the driver regarding the initial WPS request.
-                             The dont_Block member should be set to 1 (nonblocking) or 0 (blocking) before calling this API.
-
-@return
-QAPI_OK -- Peer WPS device profile found succeeded. \n
-Nonzero value -- Peer WPS device was not found.
-
-@dependencies
-Call qapi_WLAN_WPS_Start() before this API to initiate the WPS process.
- */
-qapi_Status_t qapi_WLAN_WPS_Await_Completion(uint32_t device_ID, qapi_WLAN_Netparams_t *net_Params);
-
-
-/**
-@ingroup qapi_wlan
-This API allows user to start WPS connection on a specific device using the previously found peer WPS device profile.\n
-The device should first initiate WPS processing by calling qapi_WLAN_WPS_Start(). Then qapi_WLAN_WPS_Await_Completion() will provide
-application with the peer WPS profiles found during the initial process.\n
-Only after the first two steps, qapi_WLAN_WPS_Connect() API can successfully connect to the peer WPS device.\n
-This API may still return error in spite of first two steps succeeding.
-
-@param[in] device_ID    Device ID.
-
-@return
-QAPI_OK -- WPS handshake succeeded. \n
-Nonzero value -- WPS handshake failed.
-
-@dependencies
-The application should configure SSID, security type, authentication method, and WPS credentials before calling this API. Also, qapi_WLAN_WPS_Start()
-and qapi_WLAN_WPS_Await_Completion() should be called before this API to initiate the WPS process and get the WPS device profiles.
-
-@sa
-__QAPI_WLAN_PARAM_GROUP_SECURITY_WPS_CREDENTIALS\n
-__QAPI_WLAN_PARAM_GROUP_SECURITY_PASSPHRASE\n
-__QAPI_WLAN_PARAM_GROUP_SECURITY_PMK\n
-__QAPI_WLAN_PARAM_GROUP_SECURITY_PASSPHRASE\n
-__QAPI_WLAN_PARAM_GROUP_SECURITY_WPS_CREDENTIALS\n
-qapi_WLAN_WPS_Start\n
-qapi_WLAN_WPS_Await_Completion
-*/
-qapi_Status_t qapi_WLAN_WPS_Connect (uint8_t device_ID);
-
-/**
-@ingroup qapi_wlan
 Enum values for the FTM mode command type.
 */
 typedef enum {
@@ -3084,56 +2910,6 @@ typedef enum {
 @ingroup qapi_wlan
 Sends the TLV1 command buffer to the KF UTF.
 
-This function is used by the FTM mode; the supported command type is limited.
-
-In the Diag module, the handler of Diag packets for WLAN should call this interface after receiving packets from the QDART,
-and this interface synchronously waits for receiving the response packet from UTF.
-
-@param[in]  cmd_type        Type of the manufacture command in FTM mode.
-@param[in]  buf             Buffer of the manufacture testing packet destined to KF UTF.
-@param[in]  tx_Len          Length of the manufacture testing packet destined to KF UTF.
-@param[out] buf_Response    Buffer pointer pointing to the received response packet from KF UTF.
-@param[out] response_Len    Buffer length of the received response packet from KF UTF.
-
-@return
-QAPI_OK -- Command send succeeded. \n
-Nonzero value -- Command failed.
-
-@dependencies
-This fucntion can only be used in FTM mode for manufacture use.
-*/
-qapi_Status_t qapi_WLAN_FTM_Command_Send (qapi_WLAN_FTM_CMD_e cmd_type, uint8_t *buf,uint32_t tx_Len, uint8_t **buf_Response, uint32_t *response_Len);
-/**
-@ingroup qapi_wlan
-Offload generates packet types at independent designated intervals.
-
-@param[in] device_ID                   Device ID.
-@param[in] qapi_WLAN_Gen_Pkt_Params_t  The parameter used to create and send a packet.
-@param[out] index                      The index of generated packet. The value of 0xFF means failing to generate.
-
-@return
-QAPI_OK -- Wireless scan started.
-Nonzero value -- Generate failed.
-
-@dependencies
-The device has connected with AP.
-*/
-qapi_Status_t qapi_WLAN_Gen_Pkt_Start(uint8_t device_ID,qapi_WLAN_Gen_Pkt_Params_t *pWlanGenPkt,uint8_t *index);
-/**
-@ingroup qapi_wlan
-Let firmware stop to send generated packet.
-
-@param[in] device_ID            Device ID.
-@param[in] index 		Indicate which packet will be stopped to send. If 0xFF, stop all.
-
-@return
-QAPI_OK - Wmi command has sent to firmware.
-Nonzero value -- send failed.
-
-@dependencies
-The device has connected with AP.
-*/
-qapi_Status_t qapi_WLAN_Gen_Pkt_Stop(uint8_t device_ID, uint8_t index);
 /**
 @ingroup qapi_wlan
 Enables or disables 802.11d feature.

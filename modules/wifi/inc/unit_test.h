@@ -8,7 +8,7 @@
 #define UNIT_TEST_H
 
 
-#ifdef SUPPORT_UNIT_TEST_CMD
+//#ifdef SUPPORT_UNIT_TEST_CMD
 typedef enum UNIT_TEST_MODULE_ID{
     WLAN_MODULE_CMN = 0,
     WLAN_MODULE_RINGIF = 1,
@@ -76,6 +76,6 @@ typedef struct unit_test_func_tbl {
 } unit_test_func_tbl_t;
 
 void wmi_unit_test_cmd_handler(WMI_UNIT_TEST_CMD *cmd);
-#endif /* SUPPORT_UNIT_TEST_CMD */
+//#endif /* SUPPORT_UNIT_TEST_CMD */
 #endif /* UNIT_TEST_H */
 

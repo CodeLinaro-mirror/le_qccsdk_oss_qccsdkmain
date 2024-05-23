@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef WFM_INC_NT_SME_MLME_TASK_MANAGER_H_
@@ -23,10 +25,10 @@ void nt_wlan_task(void *pvParameters);
  * params : none
  * return : nt_pass on successful creation of task and queue, nt_fail on failure to do so.
  */
-BaseType_t nt_create_wlan_task(void);
+BaseType_t nt_create_wlan_task(uint8 is_ftm);
 
 #ifdef CONFIG_WMI_EVENT
-BaseType_t nt_create_wlan_evt_task(void);
+BaseType_t nt_create_wlan_evt_task(uint8 is_ftm);
 #endif
 
 #endif /* WFM_INC_NT_SME_MLME_TASK_MANAGER_H_ */

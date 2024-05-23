@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  * wpa3_sae.h
  *
@@ -10,6 +12,9 @@
 #define CORE_WIFI_SECURITY_INC_WPA3_SAE_H_
 
 #include <stdint.h>
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 #ifdef NT_FN_WPA3

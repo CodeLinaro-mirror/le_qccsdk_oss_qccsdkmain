@@ -9,6 +9,8 @@
 #ifndef __WLAN_BEACON_H_
 #define __WLAN_BEACON_H_
 
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "wlan_beacon_api.h"
 

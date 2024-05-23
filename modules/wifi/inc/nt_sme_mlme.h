@@ -1,8 +1,12 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #ifndef INC_NT_SME_MLME_H_
 #define INC_NT_SME_MLME_H_
+#include "wifi_cmn.h"
 
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "wlan_dev.h"
 #include "nt_wlan.h"

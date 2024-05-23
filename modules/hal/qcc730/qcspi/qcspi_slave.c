@@ -1,4 +1,6 @@
 /*========================================================================
+*Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+*SPDX-License-Identifier: BSD-3-Clause-Clear
 *
 * @brief QcSPI Slave Driver
 *========================================================================*/
@@ -9,6 +11,7 @@
 #include "HALhwio.h"
 #include "assert.h"
 #include "nt_gpio_api.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include <stdint.h>
 #include <stdbool.h>

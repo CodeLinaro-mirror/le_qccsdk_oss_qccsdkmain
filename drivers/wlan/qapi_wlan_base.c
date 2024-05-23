@@ -1,7 +1,12 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #include "wlan_drv.h"
 #include "wmi_api.h"
 #include "wlan_qapi_helper.h"
+#include "safeAPI.h"
 
 qapi_Status_t qapi_WLAN_Error (void)
 {
@@ -35,6 +40,7 @@ qapi_Status_t qapi_WLAN_Enable (qapi_WLAN_Enable_e enable)
     if (QAPI_WLAN_ENABLE_E==enable) {
         ret = wmi_on();
     } else if (QAPI_WLAN_DISABLE_E==enable) {
+    	qapi_WLAN_Disconnect(0);
         ret = wmi_off();
     } else {
         PRINT_ERR_INVALID_PARAM;
@@ -98,7 +104,9 @@ qapi_Status_t qapi_WLAN_Disconnect (uint8_t __attribute__((__unused__)) device_I
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 
     WLAN_QAPI_LOCK();
-    if (p_cxt->connected==true) {
+    if (p_cxt->connected==true 
+        || p_cxt->connect_in_progress 
+        || p_cxt->wlan_roaming_started) {
         ret = wmi_disconnect();
     }
 
@@ -162,8 +170,8 @@ qapi_Status_t qapi_WLAN_Set_Rate (qapi_WLAN_Set_Rate_Params_t *prate_para)
     qapi_Status_t ret = QAPI_WLAN_ERROR;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 
-    memcpy(&(p_cxt->rate_param), prate_para, sizeof(qapi_WLAN_Set_Rate_Params_t));
-
+    memscpy(&(p_cxt->rate_param), sizeof(p_cxt->rate_param), prate_para, sizeof(qapi_WLAN_Set_Rate_Params_t));
+    
     WLAN_QAPI_LOCK();
     ret = wmi_set_rate();
     WLAN_QAPI_UNLOCK();
@@ -175,14 +183,16 @@ qapi_Status_t qapi_WLAN_Get_Rate (qapi_WLAN_Set_Rate_Params_t *prate_para)
     qapi_Status_t ret = QAPI_WLAN_ERROR;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 
-    memcpy(&(p_cxt->rate_param), \
+    memscpy(&(p_cxt->rate_param), \
+                  sizeof(p_cxt->rate_param), \
                   prate_para, \
                   sizeof(qapi_WLAN_Set_Rate_Params_t));
 
     WLAN_QAPI_LOCK();
     ret = wmi_get_rate();
 
-    memcpy(prate_para, \
+    memscpy(prate_para, \
+                 sizeof(*prate_para),
                  &(gp_wlan_qapi_cxt->rate_param), \
                  sizeof(qapi_WLAN_Set_Rate_Params_t));
     WLAN_QAPI_UNLOCK();

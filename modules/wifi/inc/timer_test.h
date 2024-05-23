@@ -10,6 +10,8 @@
 * ----------------------------------------------------------------------*/
 #include <stdint.h>
 #include <stdbool.h>
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "timer.h"
 

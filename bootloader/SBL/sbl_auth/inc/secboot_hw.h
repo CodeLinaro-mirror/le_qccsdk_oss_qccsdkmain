@@ -6,7 +6,8 @@
 *
 * @brief API to read Security Control Fuses containing authentication
 *        information
-*
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 *
 *****************************************************************************/
 
@@ -153,7 +154,7 @@ typedef struct secboot_hw_ftbl_type
  * @see Security Control HDD and SWI for SECURE_BOOT fuses
  *
  */
-secboot_hw_etype secboot_hw_is_auth_enabled
+secboot_hw_etype secboot_HW_is_auth_enabled
 (
   uint32    code_segment,
   uint32*   auth_enabled_ptr
@@ -184,7 +185,7 @@ secboot_hw_etype secboot_hw_is_auth_enabled
  * @see Security Control HDD and SWI for SECURE_BOOT fuses
  *
  */
-secboot_hw_etype secboot_hw_get_root_of_trust
+secboot_hw_etype secboot_HW_get_root_of_trust
 (
   uint32 code_segment,
   uint8 root_of_trust[SHA256_HASH_LEN]
@@ -218,7 +219,7 @@ secboot_hw_etype secboot_hw_get_root_of_trust
  * @see Security Control HDD and SWI for SECURE_BOOT fuses
  *
  */
-secboot_hw_etype secboot_hw_get_msm_hw_id
+secboot_hw_etype secboot_HW_get_msm_hw_id
 (
   uint32        code_segment,
   const uint8   root_of_trust[SHA256_HASH_LEN],
@@ -244,7 +245,7 @@ secboot_hw_etype secboot_hw_get_msm_hw_id
  * @see Security Control HDD and SWI for SECURE_BOOT fuses
  *
  */
-secboot_hw_etype secboot_hw_get_use_serial_num
+secboot_hw_etype secboot_HW_get_use_serial_num
 (
   uint32         code_segment,
   uint32*        auth_use_serial_num_ptr
@@ -268,7 +269,7 @@ secboot_hw_etype secboot_hw_get_use_serial_num
  * @see Security Control HDD and SWI for SECURE_BOOT fuses
  *
  */
-secboot_hw_etype secboot_hw_get_serial_num
+secboot_hw_etype secboot_HW_get_serial_num
 (
   uint32*  serial_num_ptr
 );
@@ -315,7 +316,7 @@ secboot_hw_etype secboot_hw_get_ftbl(secboot_hw_ftbl_type* ftbl_ptr);
  * @see Security Control HDD for SECURE_BOOT fuses
  *
  */
-secboot_hw_etype secboot_hw_get_mrc_fuse_info
+secboot_hw_etype secboot_HW_get_mrc_fuse_info
 (
   uint32  code_segment,
   uint32* is_root_cert_enabled_ptr,
@@ -342,7 +343,7 @@ secboot_hw_etype secboot_hw_get_mrc_fuse_info
  * @see Security Control HDD for SECURE_BOOT fuses
  *
  */
-secboot_hw_etype secboot_hw_get_is_hash_in_fuse(
+secboot_hw_etype secboot_HW_get_is_hash_in_fuse(
   uint32 code_segment,
   uint32* is_hash_in_fuse_ptr
 );
@@ -368,7 +369,7 @@ secboot_hw_etype secboot_hw_get_is_hash_in_fuse(
  * @see Security Control HDD and SWI for SECURE_BOOT fuses
  *
  */
-secboot_hw_etype secboot_hw_get_soc_hw_version
+secboot_hw_etype secboot_HW_get_soc_hw_version
 (
   uint32*  soc_hw_version_ptr
 );

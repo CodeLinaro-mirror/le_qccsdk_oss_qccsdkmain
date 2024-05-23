@@ -2,26 +2,34 @@
 # Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #========================================================================
-
+import("//configs_decl.gni")
 core_dir = "//../comp/qcc730/core"
+kernel_dir = "//../comp/freertos/FreeRTOS/Source"
+qurt_dir = "//../comp/qurt/FreeRTOS/2.0"
+posix_dir = "//../comp/posix/"
+posix_fr_inc_dir ="//../comp/posix/FreeRTOS-Plus-POSIX/include"
+posix_fr_port_inc_dir ="//../comp/posix/FreeRTOS-Plus-POSIX/include/Portable"
 
 inc_list = [
     "//include",
     "//include/qapi/common",
     "//lib/misc/inc",
+    "${kernel_dir}/include",
+    "${kernel_dir}/portable/GCC/ARM_CM4F",
+  "${posix_dir}",
+  "${posix_fr_inc_dir}",
+  "${posix_fr_port_inc_dir}",
     "//build/freertos/common/config_files",
     "//include",
     "//arch/arm/system/include/cmsis",
     "//lib/libc/include",
-    "//../comp/qurt/FreeRTOS/2.0/",
-    "${core_dir}/system/inc",
+
+    "${qurt_dir}",
     "${core_dir}/wifi/mlm/include",
     "//modules/hal/qcc730/qtmr",
     "//modules/hal/qcc730/qspi",
     "//modules/hal/qcc730/flash",
     "//modules/hal/inc",
-    "//../comp/freertos/FreeRTOS/Source/include/",
-    "//../comp/freertos/FreeRTOS/Source/portable/GCC/ARM_CM4F",
 ]
 
 src_list = [
@@ -29,13 +37,16 @@ src_list = [
     "src/nvm_rram.c",
     "src/nvm_flash.c",
     "src/uart_print.c",
-    "//modules/hal/qcc730/qspi/ferm_qspi.c",
-    "//modules/hal/qcc730/flash/ferm_flash.c",
     "//lib/libc/source/safeAPI.c",
 ]
 
 source_set("nvm_programmer") {
     defines = [ "CONFIG_NON_OS", ]
     sources = src_list
+    if (CONFIG_BOARD_QCC730_QSPI_ENABLE) {
+        sources += [ "//modules/hal/qcc730/qspi/ferm_qspi.c" ]
+        sources += [ "//modules/hal/qcc730/flash/ferm_flash_config.c" ]
+        sources += [ "//modules/hal/qcc730/flash/ferm_flash.c" ]
+   }
     include_dirs = inc_list
 }

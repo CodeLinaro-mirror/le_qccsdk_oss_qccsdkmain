@@ -1,4 +1,7 @@
-
+/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef _PHY_RESET_H_
 #define _PHY_RESET_H_
 
@@ -60,8 +63,8 @@ typedef enum bit_number_s {
 #endif
 void logResetParams(PHYDEVLIB_PHY_INPUT *input, PHYDEVLIB_RESET_INPUT *resetInput);
 uint16_t phyrf_get_current_freq(uint8_t band_code);
-void phyrf_otp_trim_rfa(uint32_t board_id, uint8_t bandCode);
-void phyrf_otp_trim_rfa_by_bandcode(uint8_t bandCode);
+void phyrf_otp_trim_rfa(uint32_t board_id, uint8_t bandCode, uint16_t mhz);
+void phyrf_otp_trim_rfa_by_bandcode(uint8_t bandCode, uint16_t mhz);
 void phyrf_otp_trim_pmu(void);
 void ferm_cpr_init(void);
 void ferm_reenable_cpr(void);

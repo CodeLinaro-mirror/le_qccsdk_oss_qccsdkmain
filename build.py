@@ -1,4 +1,6 @@
 # -*- coding:utf-8 -*-
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
 import os
@@ -10,7 +12,7 @@ import shutil
 import platform
 import re
 
-image_list = [ 'FERMION_PBL','FERMION_SBL', 'FERMION', 'FERMION_QCLI_DEMO', 'FERMION_IOE_QCLI_DEMO', 'FERMION_FTM', 'FERMION_HELLO_WORLD', 'FERMION_POSIX_DEMO', 'FERMION_NVM_PROGRAMMER' ]
+image_list = [ 'FERMION_SBL', 'FERMION_IOE_QCLI_DEMO', 'FERMION_HELLO_WORLD', 'FERMION_POSIX_DEMO', 'FERMION_NVM_PROGRAMMER', 'FERMION_WIFI_LIB' ]
 proj_conf = { 'FERMION':'apps/prj.conf', 'FERMION_QCLI_DEMO':'demo/qcli_demo/prj.conf', 'FERMION_IOE_QCLI_DEMO':'demo/qcli_demo/prj.conf', 'FERMION_PBL':'demo/qcli_demo/prj.conf', 'FERMION_SBL':'demo/qcli_demo/prj.conf', 'FERMION_FTM':'demo/ftm/ftm_prj.conf',
     'FERMION_HELLO_WORLD':'demo/hello_world/prj.conf',
     'FERMION_POSIX_DEMO':'demo/posix_demo/prj.conf',
@@ -25,7 +27,12 @@ SOCKET_BOARD_CHIPV2 = 'qcc730v2_socket'
 EVB_V11_HOSTLESS = 'qcc730v2_evb11_hostless'
 EVB_V12_HOSTLESS = 'qcc730v2_evb12_hostless'
 EVB_V13_HOSTLESS = 'qcc730v2_evb13_hostless'
-DEFAULT_BOARD_NAME = SOCKET_BOARD_CHIPV1
+BOARD_MQM405X = 'mqm405x'
+BOARD_MQM405I = 'mqm405i'
+BOARD_MQM730X = 'mqm730x'
+BOARD_MQM730I = 'mqm730i'
+BOARD_NONE = 'noboard' #means not related to any board
+DEFAULT_BOARD_NAME = BOARD_NONE
 ENV_BOARD_NAME = 'QCCSDK_BOARD_NAME'
 
 log_formatter = logging.Formatter('[%(asctime)s]: %(message)s', datefmt = '%a, %d %b %Y %H:%M:%S')
@@ -76,7 +83,7 @@ def print_cmd (cmd):
     logging.info(cmd_dbg)
 
 def execute_cmd(cmd, log_file = None):
-    logging.error(cmd)
+    #logging.info(cmd)
     print_cmd(cmd)
     log_to_file = []
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -85,15 +92,24 @@ def execute_cmd(cmd, log_file = None):
             line = process.stdout.readline()
             line = line.decode('utf-8').replace('\r', '')
             if line:
-                logging.warning(line)
+                logging.info(line)
                 log_to_file.append(line)
         else:
-            break
-    line = process.stderr.readline()
-    line = line.decode('utf-8').replace('\r', '')
-    if line:
-        logging.warning(line)
-        log_to_file.append(line)
+            # to handle some last stdout is cached in linux
+            line = process.stdout.readline()
+            line = line.decode('utf-8').replace('\r', '')
+            if line:
+                logging.warning(line)
+                log_to_file.append(line)
+            else:
+                break
+
+    lines = process.stderr.readlines()
+    for line in lines:
+        line = line.decode('utf-8').replace('\r', '')
+        if line:
+            logging.warning(line)
+            log_to_file.append(line)
 
     if (log_file):
         with open(log_file, 'w') as op:
@@ -105,7 +121,7 @@ def execute_cmd(cmd, log_file = None):
         sys.exit(-1)
 
 def execute_cmd_with_log(cmd):
-    logging.error(cmd)
+    #logging.info(cmd)
     print_cmd(cmd)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stdout,stderr) = process.communicate()
@@ -116,12 +132,13 @@ def execute_cmd_with_log(cmd):
 def option_parser():
     parser = OptionParser(usage="usage: %prog [options] arguments", version="%prog 1.0")
     parser.add_option("--image", "-i", action="store", type="string", dest="image", help="Image name [FERMION, FERMION_QCLI_DEMO, FERMION_PBL]")
-    parser.add_option("--board", "-b", action="store", type="string", dest="board", help="board name, also board dir name under boards/, such as [%s, %s, %s, %s, %s]"%(SOCKET_BOARD_CHIPV1, SOCKET_BOARD_CHIPV2, EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, EVB_V13_HOSTLESS))
+    parser.add_option("--board", "-b", action="store", type="string", dest="board", help="board name, also board dir name under boards/, such as [%s, %s, %s, %s, %s, %s, %s, %s, %s, %s]"
+        %(SOCKET_BOARD_CHIPV1, SOCKET_BOARD_CHIPV2, EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, EVB_V13_HOSTLESS, BOARD_NONE, BOARD_MQM405X, BOARD_MQM405I, BOARD_MQM730X, BOARD_MQM730I))
     parser.add_option("--all", "-a", action="store_true", default=False, dest="build_all", help="To build all images")
     parser.add_option("--out", "-o", action="store", type="string", dest="out_dir", help="Output directory")
-    parser.add_option("--hint", action="store_true", default=False, dest="hint", help="Hint parameter: weak set out_dir=output/<board>, image=FERMION_QCLI_DEMO")
     parser.add_option("--clean", "-c", action="store_true", default=False, dest="clean", help="To clean the build")
     parser.add_option("--menuconfig", "-m", action="store_true", default=False, dest="menuconfig", help="To run menuconfig")
+    parser.add_option("--sign", "-s", action="store_true", default=False, dest="sign", help="Enable sign image")
     # parser.add_option("-d", action="store_true", default=True,  dest="debug", help="debug")
     return parser.parse_args()
 
@@ -139,11 +156,11 @@ def gen_bdf_obj():
         bdf_name = 'bdwlan.bin'
     elif g_val_board_name==SOCKET_BOARD_CHIPV2:
         bdf_name = 'bdwlan03.bin'
-    elif g_val_board_name==EVB_V11_HOSTLESS:
+    elif g_val_board_name in [EVB_V11_HOSTLESS, BOARD_MQM405X, BOARD_MQM730X]:
         bdf_name = 'bdwlan01.bin'
     elif g_val_board_name==EVB_V12_HOSTLESS:
         bdf_name = 'bdwlan02.bin'
-    elif g_val_board_name==EVB_V13_HOSTLESS:
+    elif g_val_board_name in [EVB_V13_HOSTLESS, BOARD_MQM405I, BOARD_MQM730I]:
         bdf_name = 'bdwlan03.bin'
     else:
         logging.warning('board=%s not supported', g_val_board_name)
@@ -240,9 +257,11 @@ def prepare_gn_args(image = 'FERMION'):
     # prepare args.gn
     is_sdk_str = 'true' if g_is_sdk_packed else 'false'
     logging.warning('is_sdk_packed: %s' % is_sdk_str)
-    if g_val_board_name==SOCKET_BOARD_CHIPV1:
+    if image == 'FERMION_WIFI_LIB': #image is not related to any board
+        CHIP_VERSION_FERMION = 2
+    elif g_val_board_name==SOCKET_BOARD_CHIPV1:
         CHIP_VERSION_FERMION = 1
-    elif g_val_board_name in [EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, SOCKET_BOARD_CHIPV2, EVB_V13_HOSTLESS]:
+    elif g_val_board_name in [EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, SOCKET_BOARD_CHIPV2, EVB_V13_HOSTLESS, BOARD_MQM405X, BOARD_MQM405I, BOARD_MQM730X, BOARD_MQM730I]:
         CHIP_VERSION_FERMION = 2
     else:
         logging.warning('board=%s not supported', g_val_board_name)
@@ -254,11 +273,12 @@ def prepare_gn_args(image = 'FERMION'):
     args_content.append('is_sdk=%s' % is_sdk_str)
     args_content.append('CHIP_VERSION_FERMION=%d' % CHIP_VERSION_FERMION)
     args_content.append('board_name="%s"'%g_val_board_name)
-    with open(gnconfig, 'r') as gncfg:
-        args = gncfg.readlines()
-        for ln in args:
-            ln = ln.split()
-            args_content.append('%s' % ln[0])
+    if image != 'FERMION_WIFI_LIB':
+        with open(gnconfig, 'r') as gncfg:
+            args = gncfg.readlines()
+            for ln in args:
+                ln = ln.split()
+                args_content.append('%s' % ln[0])
     with open(gnconfig, 'wb') as outp:
         for ln in args_content:
             outp.write((ln+'\n').encode('utf-8'))
@@ -309,12 +329,34 @@ def execute_gn_build(image = 'FERMION'):
     #    outp.write(err.encode('utf-8'))
     #if (rc != 0):
     #    sys.exit(-1)
-    cmd = [ 'ninja', '-d', 'keeprsp', '-C', build_output, '-v', 'final_target', ]
+    if image == 'FERMION_WIFI_LIB':
+        print('build wifi_lib in %s' % image)
+        cmd = [ 'ninja', '-d', 'keeprsp', '-C', build_output, '-v', 'wifi_lib', ]
+    else:
+        cmd = [ 'ninja', '-d', 'keeprsp', '-C', build_output, '-v', 'final_target', ]
     logging.warning('Run ninja ....')
     #with open(os.path.join(log_path,'build-ninja.log'), 'w') as outp:
     execute_cmd(cmd, os.path.join(log_path,'build-ninja.log'))
 
-def start_build(image = 'FERMION', out_dir = default_build_output):
+def sign_image(build_output= '',image='FERMION_IOE_QCLI_DEMO'):
+
+    image_type = 'app'
+    if image =='FERMION_SBL':
+        image_type = 'sbl'
+    else:
+        image_type = 'app'
+
+    build_output = os.path.join(build_output,'bin')
+    elf_file = os.path.join(build_output,image + '.elf')
+    elf_dir = build_output
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    sectools_path = os.path.join(current_path, './sectools')
+    cmd = [ 'python', os.path.join(sectools_path, 'sectools.py'), 'secimage', '-i', elf_file, '-c', os.path.join(sectools_path, 'config/qcc730/qcc730_secimage.xml'), '-sa', '-g', image_type, '-o', elf_dir, ]
+    logging.info('Creating App Signed Image ....')
+    logging.info(cmd)
+    execute_cmd(cmd)
+
+def start_build(image = 'FERMION_WIFI_LIB', out_dir = default_build_output):
     global build_output
     global dotconfig
     global autoconfig
@@ -333,9 +375,6 @@ def start_build(image = 'FERMION', out_dir = default_build_output):
         os.remove(full_log)
     if not os.path.exists(log_path):
         os.makedirs(log_path)
-
-    dotconfig = os.path.join(build_output, '.config')
-    autoconfig = os.path.join(build_output, 'autoconf.h')
     gnconfig = os.path.join(build_output, 'args.gn')
 
 
@@ -344,17 +383,32 @@ def start_build(image = 'FERMION', out_dir = default_build_output):
         shutil.rmtree(os.path.join(out_dir, image))
     else:
         # Start here ...
-        gen_bdf_obj()
-        gen_dot_conf(image)
-        if main_options.menuconfig:
-            print('Only Menuconfig')
-            execute_cmd('menuconfig Kconfig')
-            sys.exit(0)
-        gen_auto_conf()
-        gen_gn_main_config()
-        gen_from_xml()
-        #gen_mib_from_xml()
+        if image == 'FERMION_WIFI_LIB':
+            print('pass py in %s' % image)
+            empty_autofile = os.path.join(build_output, 'autoconf.h')
+            with open(empty_autofile, 'w') as f:
+                pass
+            gen_from_xml()
+        else:
+            gen_bdf_obj()
+            dotconfig = os.path.join(build_output, '.config')
+            autoconfig = os.path.join(build_output, 'autoconf.h')
+            gen_dot_conf(image)
+            if main_options.menuconfig:
+                print('Only Menuconfig')
+                execute_cmd('menuconfig Kconfig')
+                sys.exit(0)
+            gen_auto_conf()
+            gen_gn_main_config()
+            gen_from_xml()
+            #gen_mib_from_xml()
         execute_gn_build(image)
+        # sign image if need
+        if main_options.sign:
+            if image == 'FERMION_WIFI_LIB':
+                pass
+            else:
+                sign_image(build_output,image)
 
 def setup_env():
     global build_id
@@ -386,7 +440,8 @@ def setup_env():
         print('non-CRM build, using defaut: ' + default_build_id)
         build_id = default_build_id
     print('build id: %d' % (int(build_id)))
-    if os.path.exists('modules/wifi/qcc730/core/bin/regdb.bin'):
+    #if os.path.exists('modules/wifi/bin/regdb.bin'):
+    if os.path.exists('output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/libwifi_core.a'):
         g_is_sdk_packed = True
     else:
         g_is_sdk_packed = False
@@ -410,20 +465,14 @@ def main():
     os.environ[ENV_BOARD_NAME] = g_val_board_name
     #print('ENV_BOARD_NAME=%s, g_val_board_name=%s'%(ENV_BOARD_NAME, g_val_board_name))
     if main_options.out_dir is None:
-        if main_options.hint == True:
-            build_output_l = 'output/%s'%g_val_board_name
-        else:
-            build_output_l = default_build_output
+        build_output_l = default_build_output
     else:
         build_output_l = main_options.out_dir
     if not main_options.build_all:
         if main_options.image is None:
-            if main_options.hint == True:
-                main_options.image = 'FERMION_QCLI_DEMO'
-            else:
-                print("Error: image not provided!")
-                print(image_list)
-                sys.exit(-1)
+            print("Error: image not provided!")
+            print(image_list)
+            sys.exit(-1)
         if main_options.image not in image_list:
             print("Error: image not in list:")
             print(image_list)

@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 #===============================================================================
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
 #===============================================================================
 
 import struct
@@ -264,8 +266,8 @@ class Firmware_Descriptor_Table:
         look like:
         <fdt>
           <header signature="0x54445746"/>
-          <fde filename="FERMION_SBL_STRIPPED.elf" type="0" rank="0" fw_format="0" address="0x20A400" state="1" version="1"/>
-          <fde filename="FERMION_SBL_STRIPPED.elf" type="0" rank ="2" fw_format="0" address="0x210400" state="1" version="1"/>
+          <fde filename="FERMION_SBL_HASHED.elf" type="0" rank="0" fw_format="0" address="0x20A400" state="1" version="1"/>
+          <fde filename="FERMION_SBL_HASHED.elf" type="0" rank ="2" fw_format="0" address="0x212400" state="1" version="1"/>
           <fde filename="" type="1" rank="" address="" state="" version=""/>
         </fdt>
         '''

@@ -5,6 +5,8 @@
 #include "boot_print.h"
 #include "nt_bl_uart.h"
 
+static char boot_print_buf[BOOT_PRINT_BUF_SIZE];
+
 #ifdef P_DEBUG
 #ifdef P_DEBUG_PRINT
 
@@ -59,4 +61,20 @@ void boot_print(
 
 #endif //P_DEBUG_PRINT
 #endif //P_DEBUG
+void sbl_printf(const char *fmt, ...)
+{
+	va_list argp;
 
+	memset((uint8_t *)(boot_print_buf), 0, sizeof(boot_print_buf));
+    snprintf(boot_print_buf,5, "SBL ");
+    nt_pbl_printf(boot_print_buf);
+
+	va_start(argp, fmt);
+
+	vsnprintf(boot_print_buf, sizeof(boot_print_buf), fmt, argp);
+	nt_pbl_printf(boot_print_buf);
+
+	va_end(argp);
+
+	return;
+}

@@ -10,6 +10,8 @@
 #ifndef CORE_WIFI_DPM_INC_TEST_DPM_H_
 #define CORE_WIFI_DPM_INC_TEST_DPM_H_
 
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 #ifdef NT_RMF_TEST

@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include <stdio.h>
@@ -136,6 +138,10 @@ static qapi_Status_t bmps_enable(uint32_t Parameter_Count, QAPI_Console_Paramete
     if((Parameter_Count != 1 && Parameter_Count != 2) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
+	#ifdef FLASH_XIP_SUPPORT
+	printf("Don't support sleep in XIP mode. %u\n");
+	return QAPI_OK;
+	#endif
     if (Parameter_Count == 2) {
         if (!Parameter_List[1].Integer_Is_Valid || Parameter_List[1].Integer_Value == 0)
             return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
@@ -217,6 +223,18 @@ static qapi_Status_t slp_clk_cal_act(uint32_t Parameter_Count, QAPI_Console_Para
     return QAPI_OK;
 }
 
+static qapi_Status_t bmps_force_dtim(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint32_t *pdata = (uint32_t *)&g_lowpower_wmi;
+    if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    memset(pdata, 0, sizeof(*pdata));
+    *pdata = Parameter_List[0].Integer_Value;
+    wmi_cmd_send(WMI_SET_FORCE_DTIM, pdata, sizeof(*pdata));
+    return QAPI_OK;
+}
+
 const QAPI_Console_Command_t lowpower_shell_cmds[] =
 {
    // cmd_function    cmd_string               usage_string             description
@@ -230,6 +248,7 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
     {bmps_timing_cfg, "bmps_timing_cfg", "<preBcn in us> <bcnWait in us> <telePreBcnInc in us> <teleBcnWaitInc in us>", "Cfg BMPS timing parameters\n"},
     {imps_cfg, "imps_cfg", "<1:Enable|0:Disable> <deepsleep time in ms> <recnx timeout in ms> <cmd proc in ms> <cnx timeout in ms>", "Cfg BMPS timing parameters\n"},
     {slp_clk_cal_act, "slp_clk_cal_act", "<1/0>", "Enable/disable slp_clk_cal in active mode\n"},
+    {bmps_force_dtim, "bmps_force_dtim", "<Forced DTIM count>", "Force DTIM count\n"},
 };
 
 const QAPI_Console_Command_Group_t lowpower_shell_cmd_group = {"lowpower", sizeof(lowpower_shell_cmds) / sizeof(QAPI_Console_Command_t), lowpower_shell_cmds};

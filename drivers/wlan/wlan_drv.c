@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #include "wlan_drv.h"
 #include "wlan_qapi_helper.h"
@@ -137,8 +141,12 @@ int wlan_qapi_init (void)
     p_cxt->wlan_set_rate_block_mode = true;
 
     wmi_register_event_handler(wmi_event_relay, (void*)p_cxt);
-    p_cxt->event_payload_buf_length = QAPI_EVENT_PAYLOAD_LENGTH_MAX;
-    p_cxt->event_payload_buf = (uint8_t*)malloc(p_cxt->event_payload_buf_length);
+    p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf_length = QAPI_EVENT_LARGE_PAYLOAD_LENGTH_MAX;
+    p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf_num = QAPI_EVENT_LARGE_PAYLOAD_BUF_NUM;
+    p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf = (uint8_t*)malloc(p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf_length * p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf_num);
+    p_cxt->event_payload_buf[EVT_SMALL_PAYLOAD].buf_length = QAPI_EVENT_SMALL_PAYLOAD_LENGTH_MAX;
+    p_cxt->event_payload_buf[EVT_SMALL_PAYLOAD].buf_num = QAPI_EVENT_SMALL_PAYLOAD_BUF_NUM;
+    p_cxt->event_payload_buf[EVT_SMALL_PAYLOAD].buf = (uint8_t*)malloc(p_cxt->event_payload_buf[EVT_SMALL_PAYLOAD].buf_length * p_cxt->event_payload_buf[EVT_SMALL_PAYLOAD].buf_num);
     p_cxt->scanBssMaxCount = __QAPI_MAX_SCAN_RESULT_ENTRY;
     p_cxt->pScanOutSize = sizeof(qapi_WLAN_Scan_Comp_Evt_t) + sizeof(qapi_WLAN_BSS_Scan_Info_t)*p_cxt->scanBssMaxCount;
     p_cxt->pScanOut = malloc(p_cxt->pScanOutSize);
@@ -165,9 +173,11 @@ void wlan_qapi_exit (void)
     qurt_mutex_delete(&p_cxt->wlan_qapi_cxt_mutex);
     qurt_signal_delete(&p_cxt->wlan_cmd_done);
     qurt_mutex_delete(&p_cxt->wlan_qapi_block_mutex);
-    free(p_cxt->event_payload_buf);
+    free(p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf);
+    free(p_cxt->event_payload_buf[EVT_SMALL_PAYLOAD].buf);
     free(p_cxt->pScanOut);
-    p_cxt->event_payload_buf = NULL;
+    p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf = NULL;
+    p_cxt->event_payload_buf[EVT_SMALL_PAYLOAD].buf = NULL;
     p_cxt->pScanOut = NULL;
 }
 

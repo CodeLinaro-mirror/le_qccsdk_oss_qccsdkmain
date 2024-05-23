@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include "qapi_flash.h"
 #include "ferm_flash.h"
@@ -98,31 +102,24 @@ qapi_Status_t qapi_Flash_Erase(qapi_FLASH_Erase_Type_t EraseType, uint32_t Start
    QAPI_OK -- On success. \n
    Error code -- On failure.
 */
-qapi_Status_t qapi_Flash_Read_Reg(uint8_t RegOpcode, uint8_t Len, uint8_t *RegValue)
+qapi_Status_t qapi_Flash_Get_Info(flash_info_t *flash_info)
 {
-    FLASH_STATUS status;
+    flash_config_data_t* flash_cfg = NULL;
+    FLASH_STATUS status = QAPI_OK;
 
-    status = drv_flash_read_reg(RegOpcode, Len, RegValue);
+    if(!flash_info) {
+       return QAPI_ERR_INVALID_PARAM;
+    }
 
-    return Flash_ErrorMap(status);
-}
-
-/**
-   @brief Write flash registers.
-
-   @param[in] RegOpcode   Operation code.
-   @param[in] Len         The length of register value to be written.
-   @param[in] RegValue    The written value.
-
-   @return
-   QAPI_OK -- If blocking writereg completed successfully. \n
-   Error code -- If there was an error.
-*/
-qapi_Status_t qapi_Flash_Write_Reg(uint8_t RegOpcode, uint8_t Len, uint8_t *RegValue)
-{
-    FLASH_STATUS status;
-
-    status = drv_flash_write_reg(RegOpcode, Len, RegValue, NULL, NULL);
+    flash_cfg = drv_flash_get_config();
+    if(!flash_cfg) {
+        status = FLASH_DEVICE_NOT_FOUND;
+    } else {
+        flash_info->devicd_id = flash_cfg->device_id;
+        flash_info->block_count = flash_cfg->density_in_blocks;
+        flash_info->block_size_bytes = BLOCK_SIZE_IN_BYTES;
+        flash_info->page_size_bytes = PAGE_SIZE_IN_BYTES;
+    }
 
     return Flash_ErrorMap(status);
 }

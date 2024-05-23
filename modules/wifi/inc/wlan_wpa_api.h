@@ -3,7 +3,7 @@
 
 #ifndef __WLAN_WPA_API__
 #define __WLAN_WPA_API__
-
+#include "wifi_cmn.h"
 #include "wlan_dev.h"
 #include "ieee80211_var.h"
 

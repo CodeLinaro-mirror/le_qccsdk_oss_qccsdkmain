@@ -6,7 +6,8 @@
 *
 * @brief API to read Security Control Fuses containing authentication
 *        information
-*
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 *
 *****************************************************************************/
 
@@ -83,7 +84,7 @@ typedef enum
  * @return - 0 on success, error code SECBOOT_CRYPTO_ERR_TYPE on failure.
  *
  */
-uint32 HashInit(crypto_ctx_type* ctx, uint32 hash_algo);
+uint32 hashInit(crypto_ctx_type* ctx, uint32 hash_algo);
 
 /**
  * @brief This function will hash data into the hash context
@@ -97,7 +98,7 @@ uint32 HashInit(crypto_ctx_type* ctx, uint32 hash_algo);
  * @return - 0 on success, error code SECBOOT_CRYPTO_ERR_TYPE on failure.
  *
  */
-uint32 HashUpdate(crypto_ctx_type* ctx, const void *data, uint32 data_len);
+uint32 hashUpdate(crypto_ctx_type* ctx, const void *data, uint32 data_len);
 
 /**
  * @brief Compute the final digest hash value.
@@ -109,7 +110,7 @@ uint32 HashUpdate(crypto_ctx_type* ctx, const void *data, uint32 data_len);
  * @return - 0 on success, error code SECBOOT_CRYPTO_ERR_TYPE on failure.
  *
  */
-uint32 HashFinal(crypto_ctx_type* ctx, void* digest_ptr, uint32 digest_len);
+uint32 hashFinal(crypto_ctx_type* ctx, void* digest_ptr, uint32 digest_len);
 
 /**
  * @brief Deintialize a cipher context
@@ -119,7 +120,7 @@ uint32 HashFinal(crypto_ctx_type* ctx, void* digest_ptr, uint32 digest_len);
  * @return - 0 on success, error code SECBOOT_CRYPTO_ERR_TYPE on failure.
  *
  */
-uint32 HashDeInit(crypto_ctx_type* ctx);
+uint32 hashDeInit(crypto_ctx_type* ctx);
 
 /**
  * @brief Initialize Crypto
@@ -127,7 +128,7 @@ uint32 HashDeInit(crypto_ctx_type* ctx);
  * @return - 0 on success, error code SECBOOT_CRYPTO_ERR_TYPE on failure.
  *
  */
-uint32 CryptoInit(crypto_ctx_type* crypto_ctx);
+uint32 cryptoInit(crypto_ctx_type* crypto_ctx);
 
 
 /**

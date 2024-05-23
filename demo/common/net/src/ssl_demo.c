@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*
@@ -324,7 +326,7 @@ qapi_Status_t ssl_client_help()
 	SSL_CLIENT_PRINTF("    renegotiation %%d    default: 0 (disabled)\n");
 	SSL_CLIENT_PRINTF("    renegotiate %%d      default: 0 (disabled)\n");
 #endif
-	SSL_CLIENT_PRINTF("    exchanges=%%d        default: 1\n");
+	SSL_CLIENT_PRINTF("    exchanges %%d        default: 1\n");
 #if defined(MBEDTLS_SSL_ALPN)
 	SSL_CLIENT_PRINTF("    alpn %%s             default: \"\" (disabled)\n");
 	SSL_CLIENT_PRINTF("                        example: spdy/1,http/1.1\n");
@@ -341,7 +343,7 @@ qapi_Status_t ssl_client_help()
 	{
         SSL_CLIENT_PRINTF(" %-42s", mbedtls_ssl_get_ciphersuite_name( *list ) );
 		list++;
-
+	
         if( !*list )
             break;
         suite = mbedtls_ssl_ciphersuite_from_id(*list);
@@ -362,10 +364,10 @@ qapi_Status_t ssl_server_help()
 	SSL_CLIENT_PRINTF("    server_addr %%s      default: (all interfaces)\n");
 	SSL_CLIENT_PRINTF("    server_port %%d      default: 4433\n");
 	SSL_CLIENT_PRINTF("    debug_level %%d      default: 0 (disabled)\n");
-	SSL_CLIENT_PRINTF("    response_size=%%d    default: about 152 (basic response)\n");
-	SSL_CLIENT_PRINTF("                          (minimum: 0, max: %d)\n", MAX_REQUEST_SIZE);
+	SSL_CLIENT_PRINTF("    response_size %%d    default: about 152 (basic response)\n");
+	SSL_CLIENT_PRINTF("                          (minimum: 0, max: %d)\n", MAX_REQUEST_SIZE);    
 	SSL_CLIENT_PRINTF("    auth_mode %%s        default: (library default: none)\n");
-	SSL_CLIENT_PRINTF("    cert_req_ca_list=%%d default: 1 (send ca list)\n");
+	SSL_CLIENT_PRINTF("    cert_req_ca_list %%d default: 1 (send ca list)\n");
 	SSL_CLIENT_PRINTF("                        options: 1 (send ca list), 0 (don't send)\n");
 	SSL_CLIENT_PRINTF("    ca_file %%s          Not supported yet. Use preloaded CA.\n");
 	SSL_CLIENT_PRINTF("    crt_file %%s         Not supported yet. Use preloaded Cert.\n");
@@ -375,10 +377,10 @@ qapi_Status_t ssl_server_help()
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 	SSL_CLIENT_PRINTF("    renegotiation %%d    default: 0 (disabled)\n");
 	SSL_CLIENT_PRINTF("    renegotiate %%d      default: 0 (disabled)\n");
-	SSL_CLIENT_PRINTF("    renego_delay=%%d     default: -2 (library default)\n");
-	SSL_CLIENT_PRINTF("    renego_period=%%d    default: (2^64 - 1)\n");
+	SSL_CLIENT_PRINTF("    renego_delay %%d     default: -2 (library default)\n");
+	SSL_CLIENT_PRINTF("    renego_period %%d    default: (2^64 - 1)\n");
 #endif
-	SSL_CLIENT_PRINTF("    exchanges=%%d        default: 1\n");
+	SSL_CLIENT_PRINTF("    exchanges %%d        default: 1\n");
 #if defined(MBEDTLS_SSL_ALPN)
 	SSL_CLIENT_PRINTF("    alpn %%s             default: \"\" (disabled)\n");
 	SSL_CLIENT_PRINTF("                        example: spdy/1,http/1.1\n");
@@ -395,7 +397,7 @@ qapi_Status_t ssl_server_help()
 	{
         SSL_CLIENT_PRINTF(" %-42s", mbedtls_ssl_get_ciphersuite_name( *list ) );
 		list++;
-
+	
         if( !*list )
             break;
         suite = mbedtls_ssl_ciphersuite_from_id(*list);
@@ -822,6 +824,7 @@ qapi_Status_t ssl_client(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 	client_options * client_opt = 0;
 	ssl_stats* stats = 0;
 
+	mbedtls_net_init( &server_fd );
 	/* Memory alloc */
 	entropy = (mbedtls_entropy_context*)mbedtls_calloc( 1, sizeof(mbedtls_entropy_context) );
 	if (!entropy)
@@ -868,8 +871,7 @@ qapi_Status_t ssl_client(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 		goto exit;
 	}
 	memset(client_opt, 0, sizeof(client_options));
-
-	mbedtls_net_init( &server_fd );
+	
 	mbedtls_ssl_init( ssl );
 	mbedtls_ssl_config_init( conf );
 	mbedtls_ctr_drbg_init( ctr_drbg );
@@ -916,6 +918,12 @@ qapi_Status_t ssl_client(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 	{
         const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
         ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( client_opt->force_ciphersuite[0] );
+
+		if( ciphersuite_info == NULL )
+		{
+			SSL_CLIENT_PRINTF("cannot find ciphersuite_info for %d id\n", client_opt->force_ciphersuite[0]);
+            goto usage;
+		}
 
         if( client_opt->max_version != -1 &&
             ciphersuite_info->min_tls_version > client_opt->max_version )
@@ -1017,7 +1025,7 @@ qapi_Status_t ssl_client(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 	 * (can be skipped if client authentication is not required)
 	 */
 	SSL_CLIENT_PRINTF( "  . Loading the client cert. and key..." );
-
+	
 	ret = mbedtls_x509_crt_parse( clicert, (const unsigned char *) demo_test_ca_crt_ec,
 								sizeof(demo_test_ca_crt_ec) );
 
@@ -1026,7 +1034,7 @@ qapi_Status_t ssl_client(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 		SSL_CLIENT_PRINTF( " failed\n	!  mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
 		goto exit;
 	}
-
+	
 	ret = mbedtls_pk_parse_key( &pkey, (const unsigned char *) demo_test_ca_key_ec,
 								sizeof(demo_test_ca_key_ec), NULL, 0, mbedtls_ctr_drbg_random,  ctr_drbg);
 
@@ -1162,9 +1170,13 @@ qapi_Status_t ssl_client(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 	end_time = hres_timer_curr_time_ms();
 	SSL_CLIENT_PRINTF( "ok\n  . SSL handshake consumes %d.%d seconds\n",
 			(end_time - begin_time)/1000, (end_time - begin_time)%1000);
-	SSL_CLIENT_PRINTF( "	 [ Protocol is %s ]\n	 [ Ciphersuite is %s ]\n",
-			mbedtls_ssl_get_version( ssl ), mbedtls_ssl_get_ciphersuite( ssl ) );
-
+	const char * ciphersuite_info = mbedtls_ssl_get_ciphersuite( ssl );
+	if (ciphersuite_info) {
+		SSL_CLIENT_PRINTF( "    [ Ciphersuite is %s ]\n", ciphersuite_info );
+	} else {
+		SSL_CLIENT_PRINTF( "    [ Ciphersuite is NULL ]\n" );
+	}
+	
 	if( ( ret = mbedtls_ssl_get_record_expansion( ssl ) ) >= 0 )
 		SSL_CLIENT_PRINTF( "	 [ Record expansion is %d ]\n", ret );
 	else
@@ -1533,7 +1545,8 @@ qapi_Status_t ssl_server(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 	server_options * server_opt = 0;
 	ssl_stats* stats = 0;
 
-
+	mbedtls_net_init( &client_fd );
+    mbedtls_net_init( &listen_fd );
 	/* Memory alloc */
 	entropy = (mbedtls_entropy_context*)mbedtls_calloc( 1, sizeof(mbedtls_entropy_context) );
 	if (!entropy)
@@ -1589,8 +1602,6 @@ qapi_Status_t ssl_server(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 	/*
      * Make sure memory references are valid in case we exit early.
      */
-	mbedtls_net_init( &client_fd );
-    mbedtls_net_init( &listen_fd );
     mbedtls_ssl_init( ssl );
     mbedtls_ssl_config_init( conf );
     mbedtls_ctr_drbg_init( ctr_drbg );
@@ -1640,6 +1651,11 @@ qapi_Status_t ssl_server(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 	{
         const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
         ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( server_opt->force_ciphersuite[0] );
+
+		if (ciphersuite_info == NULL) {
+			SSL_CLIENT_PRINTF( "Fail to find ciphersuite_info from id: %d\n", server_opt->force_ciphersuite[0] );
+			goto exit;
+		}
 
         if( server_opt->max_version != -1 &&
             ciphersuite_info->min_tls_version > server_opt->max_version )
@@ -1756,7 +1772,7 @@ qapi_Status_t ssl_server(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 		SSL_CLIENT_PRINTF( " failed\n	!  mbedtls_x509_crt_parse[2] returned -0x%x\n\n", -ret );
 		goto exit;
 	}
-
+	
 	ret = mbedtls_pk_parse_key( &pkey, (const unsigned char *) demo_test_ca_key_ec,
 								sizeof(demo_test_ca_key_ec), NULL, 0, mbedtls_ctr_drbg_random, ctr_drbg );
 	if( ret != 0 )
@@ -1772,7 +1788,7 @@ qapi_Status_t ssl_server(uint32_t __attribute__((__unused__)) Parameter_Count, Q
 		SSL_CLIENT_PRINTF( " failed\n	!  mbedtls_pk_parse_key[2] returned -0x%x\n\n", -ret );
 		goto exit;
 	}
-
+	
 	SSL_CLIENT_PRINTF( " ok\n" );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
@@ -1901,8 +1917,8 @@ reset:
      * 4. Wait until a client connects
      */
     SSL_CLIENT_PRINTF( "  . Waiting for a remote connection ..." );
-	FD_ZERO(&rd_set);
-
+	memset(&rd_set, 0, sizeof(fd_set));
+	
 	do
 	{
 		if(quit_ssl)
@@ -1954,9 +1970,16 @@ handshake:
 		end_time = hres_timer_curr_time_ms();
 		SSL_CLIENT_PRINTF( " ok\n  . SSL handshake consumes %d.%d seconds\n",
 				(end_time - begin_time)/1000, (end_time - begin_time)%1000);
-
-        SSL_CLIENT_PRINTF( "    [ Protocol is %s ]\n    [ Ciphersuite is %s ]\n",
-                mbedtls_ssl_get_version( ssl ), mbedtls_ssl_get_ciphersuite( ssl ) );
+		
+        SSL_CLIENT_PRINTF( "    [ Protocol is %s ]\n", mbedtls_ssl_get_version( ssl ) );
+		
+		const char * ciphersuite_info = mbedtls_ssl_get_ciphersuite( ssl );
+		if (ciphersuite_info) {
+        	SSL_CLIENT_PRINTF( "    [ Ciphersuite is %s ]\n", ciphersuite_info );
+		} else {
+			SSL_CLIENT_PRINTF( "    [ Ciphersuite is NULL ]\n" );
+		}
+		
     }
 
     if( ( ret = mbedtls_ssl_get_record_expansion( ssl ) ) >= 0 )
@@ -2177,8 +2200,17 @@ data_exchange:
 	if (server_opt->debug_level > 0)
     	SSL_CLIENT_PRINTF( "  > Write to client:" );
 
-    len = snprintf( (char *) buf, buffer_size - 1, HTTP_RESPONSE,
-                   mbedtls_ssl_get_ciphersuite( ssl ) );
+	const char* ciphersuite_info = mbedtls_ssl_get_ciphersuite( ssl );
+	if (ciphersuite_info)
+	{
+		len = snprintf( (char *) buf, buffer_size - 1, HTTP_RESPONSE,
+					ciphersuite_info );
+	} 
+	else 
+	{
+		len = snprintf( (char *) buf, buffer_size - 1, HTTP_RESPONSE,
+					"" );
+	}
 
     /* Add padding to the response to reach opt.response_size in length */
     if( server_opt->response_size != DFL_RESPONSE_SIZE &&

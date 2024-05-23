@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef __WLAN_DRV_H__
 #define __WLAN_DRV_H__
@@ -71,11 +75,29 @@
 #define PRINT_LOG_FUNC_LINE_ENTRY       log_printf("%s %d entry\n", __FUNCTION__, __LINE__)
 #define PRINT_LOG_FUNC_LINE_EXIT        log_printf("%s %d exit\n", __FUNCTION__, __LINE__)
 
-#define QAPI_EVENT_PAYLOAD_LENGTH_MAX           1000
+#define QAPI_EVENT_LARGE_PAYLOAD_LENGTH_MAX     1000
+#define QAPI_EVENT_LARGE_PAYLOAD_BUF_NUM        3
+#define QAPI_EVENT_SMALL_PAYLOAD_LENGTH_MAX     256
+#define QAPI_EVENT_SMALL_PAYLOAD_BUF_NUM        5
 
 #ifndef DEF_AP_COUNTRY_CODE
 #define DEF_AP_COUNTRY_CODE		"US "
 #endif
+
+typedef enum {
+    EVT_LARGE_PAYLOAD,
+    EVT_SMALL_PAYLOAD,
+    EVT_PAYLOAD_MAX
+} EVT_PAYLOAD_TYPE;
+
+typedef struct {
+    uint8_t   *buf;
+    uint16_t   buf_length;
+    int16_t    buf_num;
+    int16_t    buf_used;
+    uint16_t   buf_write_pointer;
+} wlan_evt_payload_t;
+
 typedef struct wlan_qapi_cxt_s {
     qbool_t                 wlanEnabled;
     qapi_WLAN_Callback_t    qapi_event_handler;
@@ -97,13 +119,12 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t                wlan_get_rate_block_mode:1;
     qapi_Status_t           wlan_qapi_error;
     dev_common_t           *dev_common;
-    uint8_t                *event_payload_buf;
-    uint32_t                event_payload_buf_length;
-    uint32_t                event_payload_actual_length;
+    wlan_evt_payload_t      event_payload_buf[EVT_PAYLOAD_MAX];
     WMI_CONNECT_CMD         connect_cmd;
     WMI_START_SCAN_CMD      scan_cmd;
     WMI_SET_PASSPHRASE_CMD  passphrase_cmd;
     WLAN_WMI_DISCONN_t      discon_cmd;
+	WMI_SET_PDEV_PARAM_CMD  dev_param_cmd;
     qapi_WLAN_Join_Comp_Evt_t connect_result;
     qapi_WLAN_Reg_Evt_t	    reg_result;
 	uint8_t					param_id;

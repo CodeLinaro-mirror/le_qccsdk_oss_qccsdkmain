@@ -5,12 +5,15 @@
 #define _WLAN_FRAMEGEN_H_
 
 #include <stdint.h>
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 #define WLAN_TX_MGMT_FRAME_SIZE			500    //NEUTRINO FIX-ME: Earlier defined as 4096
 #define WLAN_TX_CTS_FRAME_SIZE          512    //NEUTRINO FIX-ME: define the correct length
 #define MGTBLEN        					380 /*Maximum IE len supported + IEEE80211 header len*/
-
+#define INIT_DIALOG_ID_VALUE            1
 
 typedef struct {
         uint16_t status;
@@ -298,4 +301,12 @@ uint16_t FRMGEN_create_twt_teardown(devh_t* dev, uint8_t *frm, int8_t action, in
 
 #endif		//NT_FN_TWT
 
+/**
+ *  @Func   :   FRMGEN_get_dialog_token
+ *  @Brief  :   This api gets the dialog tokens for action frame. 
+ *  @Param  :   None
+ *  @Return :   The current available dialog token. returns dialog_id between 1 to 255 
+ */
+
+uint8_t FRMGEN_get_dialog_token(devh_t* dev);
 #endif /* _WLAN_FRAMEGEN_H_ */

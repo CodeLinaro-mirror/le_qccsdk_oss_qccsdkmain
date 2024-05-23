@@ -22,6 +22,9 @@
 
 #include "osapi.h"
 #include "string.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "wpa_common.h"
 

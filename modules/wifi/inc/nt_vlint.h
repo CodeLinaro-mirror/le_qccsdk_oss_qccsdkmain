@@ -1,4 +1,6 @@
 /*========================================================================
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 * @file nt_vlint.h
 * @brief advanced wrapper for vlint.h
 *========================================================================*/
@@ -12,6 +14,8 @@
  * Include Files
  * ----------------------------------------------------------------------*/
 
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #ifdef FERMION_CONFIG_HCF
 
@@ -23,6 +27,7 @@
 #include "wlan_dev.h"
 #include "nt_devcfg_structure.h"
 #include "nt_logger_api.h"
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "nt_osal.h"
 #include <assert.h>

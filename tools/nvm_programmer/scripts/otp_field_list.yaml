@@ -5,7 +5,7 @@
   offset: '4'
   length: '1'
   access: READ_WRITE
-- name: WRITE_PERMISSION_READ_WRITE_PEMRIONS
+- name: WRITE_PERMISSION_READ_WRITE_PERMISSIONS
   address: '0x00000030'
   offset: '26'
   length: '1'
@@ -86,6 +86,11 @@
   offset: '0'
   length: '1'
   access: READ_WRITE
+- name: HASH_INTG_CHK_DISABLE
+  address: '0x000000A8'
+  offset: '2'
+  length: '1'
+  access: READ_WRITE
 - name: ROT_INDEX
   address: '0x000000A8'
   offset: '16'
@@ -95,7 +100,7 @@
 #ANTI_ROLLBACK
 - 
   name: M4_ANTI_ROLLBACK
-  address: '0x000000B4'
+  address: '0x000000B0'
   offset: '0'
   length: '64'
   access: READ_WRITE

@@ -1,6 +1,9 @@
 /**
+*Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+*SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include "safeAPI.h"
 
@@ -48,10 +51,12 @@ dxe_channel_cfg_t pcfg;
 /** Systick macros */
 #define _MEM_SYSTICK_RELOAD_ADDR    0xE000E014
 #define _MEM_SYSTICK_CTRL_ADDR      0xE000E010
+#define _MEM_SYSTICK_VAL_ADDR       0xE000E018
 
 #define _MEM_SYSTICK_RELOAD_VAL     0xFFFFFF   // ~128ms @ 60MHz
 #define _MEM_SYSTICK_CFG_VAL        0x05
 #define _MEM_SYSTICK_STOP_VAL       0x0
+#define _MEM_SYSTICK_RESET_VAL      0
 
 #define _MEM_RRAM_MAIN_ADDR_CHK(addr) ((addr >= (uintptr_t)(&__rram_region_start_addr)) && (addr < (uintptr_t)(&__rram_region_end_address)))
 #define _MEM_RRAM_OTP_ADDR_CHK(addr)  ((addr >= (uintptr_t)(&__OTP_region_st_addr)) && (addr < (uintptr_t)(&__OTP_region_end_addr)))
@@ -86,7 +91,7 @@ dxe_channel_cfg_t pcfg;
 #define NT_IMAGE_MODE_CONFIG_LENGTH ( 4 )
 
 #ifdef RRAM_WRITE_VIA_DXE
-#ifdef SUPPORT_UNIT_TEST_CMD
+#ifdef UNIT_TEST_SUPPORT
 extern uint32_t verify_write_through_read;
 #endif
 #define MAX_WRITE_TRY 3
@@ -189,18 +194,15 @@ static uint8_t address_to_region_num_map(uint32_t address)
     uint32_t region_end_addr;
 
     num_region = sizeof(g_otp_region_lock_map)/sizeof(otp_region_lock_map_t);
-    region_start_addr =  (uintptr_t)(&__OTP_region_st_addr);
-    region_end_addr = region_start_addr + g_otp_region_lock_map[0].region_size;
+	region_end_addr = (uintptr_t)(&__OTP_region_st_addr);
     for(region_count = 0; region_count < num_region; region_count++)
     {
+		region_start_addr = region_end_addr;
+		region_end_addr = region_start_addr + g_otp_region_lock_map[region_count].region_size;
+
         if((region_start_addr <= address) && (address < region_end_addr))
         {
             break;
-        }
-        else
-        {
-             region_start_addr = region_end_addr;
-             region_end_addr = region_start_addr + g_otp_region_lock_map[region_count + 1].region_size;
         }
     }
     return(region_count);
@@ -370,6 +372,11 @@ nt_rram_write(
         NT_LOG_PRINT(COMMON,ERR,"RRAM is out of range dst 0x%X length %d",dst, length);
         return (-EFAULT);
     }
+#ifdef FLASH_XIP_SUPPORT
+	uint32_t value = NT_REG_RD(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG);   //enable all D-code read data access to be cached for dv purpose only.
+		value &= ( ~(0x1 << QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_SW_CACHE_TEST_MODE_OFFSET));
+		NT_REG_WR(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG,value);
+#endif //NT_FN_QSPI_FLASH
 
     des_adr = dst;
     src_adr = (uint8_t *)wdata;
@@ -581,6 +588,11 @@ nt_rram_write(
             }
         }
     }
+#ifdef FLASH_XIP_SUPPORT
+	  value = NT_REG_RD(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG);   //enable all D-code read data access to be cached for dv purpose only.
+	  value |= ( 0x1 << QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_SW_CACHE_TEST_MODE_OFFSET);
+	  NT_REG_WR(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG,value);
+#endif //NT_FN_QSPI_FLASH
 
     return(status);
 }
@@ -712,7 +724,7 @@ nt_rram_write_per_block(
 
     }
 
-#ifdef SUPPORT_UNIT_TEST_CMD
+#ifdef UNIT_TEST_SUPPORT
     /* check the write by read back. this code can be skiped for PBL and SBL */
     if(verify_write_through_read)
     {
@@ -1037,10 +1049,9 @@ static void
 _mem_systick_timer_start(
 	void)
 {
-	uint8_t reg_value;
 	NT_REG_WR(_MEM_SYSTICK_RELOAD_ADDR, _MEM_SYSTICK_RELOAD_VAL);
-	reg_value = NT_REG_RD(_MEM_SYSTICK_CTRL_ADDR);
-	NT_REG_WR(_MEM_SYSTICK_CTRL_ADDR, reg_value | _MEM_SYSTICK_CFG_VAL);
+    NT_REG_WR(_MEM_SYSTICK_VAL_ADDR, _MEM_SYSTICK_RESET_VAL);
+	NT_REG_WR(_MEM_SYSTICK_CTRL_ADDR, _MEM_SYSTICK_CFG_VAL);
 }
 
 static void
@@ -1079,6 +1090,10 @@ nt_rram_read(
 		void *rdata,
 		uint32_t length)
 {
+#ifdef FLASH_XIP_SUPPORT
+		 uint32_t value;
+#endif //NT_FN_QSPI_FLASH
+
 #if (NT_CHIP_VERSION==2) || defined(PLATFORM_FERMION)
 	uint8_t _nt2_rram_dxe,j ;
 
@@ -1103,6 +1118,12 @@ nt_rram_read(
 	}
 	else
 	{
+#ifdef FLASH_XIP_SUPPORT
+				value = NT_REG_RD(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG);	 //enable all D-code read data access to be cached for dv purpose only.
+				value &= ( ~(0x1 << QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_SW_CACHE_TEST_MODE_OFFSET));
+				NT_REG_WR(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG,value);
+#endif //NT_FN_QSPI_FLASH
+
 		//RRAM_ADDRESS_CHECK(address, length);
 #ifdef FERMION_OTP_SUPPORT
 		if (rram_address_range_check(address, length, READ_LOCKED))
@@ -1110,6 +1131,11 @@ nt_rram_read(
 		if (rram_address_range_check(address, length))
 #endif
 		{
+#ifdef FLASH_XIP_SUPPORT
+			value = NT_REG_RD(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG);   //enable all D-code read data access to be cached for dv purpose only.
+			value |= ( 0x1 << QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_SW_CACHE_TEST_MODE_OFFSET);
+			NT_REG_WR(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG,value);
+#endif //NT_FN_QSPI_FLASH
 			#ifdef NT_DEBUG
 			nt_dbg_print("RRAM Invalid address\r\n");
 			#endif
@@ -1137,7 +1163,18 @@ nt_rram_read(
 #endif //(NT_CHIP_VERSION==2)|| defined(PLATFORM_FERMION)
 		else
 		{
-		memscpy(rdata, length, (uint32_t *)address, length);
+#ifdef FLASH_XIP_SUPPORT
+			value = NT_REG_RD(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG);   //enable all D-code read data access to be cached for dv purpose only.
+		    value &= ( ~(0x1 << QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_SW_CACHE_TEST_MODE_OFFSET));
+			NT_REG_WR(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG,value);
+#endif //#ifdef NT_FN_QSPI_FLASH		
+		memscpy( rdata, length, (uint32_t *)address, length );
+#ifdef FLASH_XIP_SUPPORT
+					value = NT_REG_RD(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG);	 //enable all D-code read data access to be cached for dv purpose only.
+					value |= ( 0x1 << QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_SW_CACHE_TEST_MODE_OFFSET);
+					NT_REG_WR(QWLAN_RRAM_CTRL_RRAM_CTRL_TEST_REG,value);
+#endif //#ifdef NT_FN_QSPI_FLASH
+
 		}
 
 	}

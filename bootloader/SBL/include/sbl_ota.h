@@ -6,7 +6,8 @@
 
 DESCRIPTION
   This header file gives the definition of OTA.
-
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 ===========================================================================*/
 
 
@@ -55,7 +56,14 @@ typedef struct {
 	fdt_entry	content;
 	uint32_t	idx;
 	uint32_t	state;
+	bl_error_type err_type;
 } sbl_ota_fde;
+
+typedef struct {
+	fdt_entry	content;
+	uint32_t	idx;
+	uint32_t	state;
+} sbl_ota_fde_es;
 
 typedef struct {
 	fdt_entry	context;
@@ -63,9 +71,20 @@ typedef struct {
 } pbl_patch_fde;
 
 typedef struct {
+	fdt_entry	content;
+	bl_error_type err_type;
+} sbl_prev_fde;
+
+typedef struct {
+	sbl_prev_fde	prev_fde;
+	uint32_t	next_fde_idx;
+} sbl_ota_context;
+
+typedef struct {
 	fdt_s			*fdt;
 	sbl_ota_fde		sbl_fde;
 	pbl_patch_fde	patch_fde;
+	sbl_ota_context	sbl_context;
 } sbl_ota_s;
 
 extern sbl_ota_s sbl_ota;
@@ -79,6 +98,8 @@ bl_error_type sbl_ota_handle_curr_fde(sbl_ota_fde *curr_fde);
 bl_error_type sbl_ota_handle_fde(sbl_ota_s *sbl_ota);
 bl_error_type sbl_ota_age_curr_fde(sbl_ota_s *sbl_ota);
 bl_error_type sbl_ota_update_fde(sbl_ota_s *sbl_ota);
+bl_error_type sbl_ota_exit_context(sbl_ota_s *sbl_ota);
+bl_error_type sbl_ota_enter_context(sbl_ota_s *sbl_ota);
 bl_error_type sbl_ota_process(sbl_ota_s *sbl_ota);
 
 typedef bl_error_type (*sbl_ota_get_fdt_t)(sbl_ota_s *sbl_ota);
@@ -90,6 +111,8 @@ typedef bl_error_type (*sbl_ota_handle_curr_fde_t)(sbl_ota_fde *curr_fde);
 typedef bl_error_type (*sbl_ota_handle_fde_t)(sbl_ota_s *sbl_ota);
 typedef bl_error_type (*sbl_ota_age_curr_fde_t)(sbl_ota_s *sbl_ota);
 typedef bl_error_type (*sbl_ota_update_fde_t)(sbl_ota_s *sbl_ota);
+typedef bl_error_type (*sbl_ota_exit_context_t)(sbl_ota_s *sbl_ota);
+typedef bl_error_type (*sbl_ota_enter_context_t)(sbl_ota_s *sbl_ota);
 typedef bl_error_type (*sbl_ota_process_t)(sbl_ota_s *sbl_ota);
 
 typedef struct {
@@ -102,6 +125,8 @@ typedef struct {
 	sbl_ota_handle_fde_t		sbl_ota_handle_fde_pfn;
 	sbl_ota_age_curr_fde_t		sbl_ota_age_curr_fde_pfn;
 	sbl_ota_update_fde_t		sbl_ota_update_fde_pfn;
+	sbl_ota_exit_context_t		sbl_ota_exit_context_pfn;
+	sbl_ota_enter_context_t		sbl_ota_enter_context_pfn;
 	sbl_ota_process_t			sbl_ota_process_pfn;
 } sbl_ota_ind_t;
 #endif

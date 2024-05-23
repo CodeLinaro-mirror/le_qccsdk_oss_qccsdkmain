@@ -11,6 +11,8 @@
 * Include Files
 * ----------------------------------------------------------------------*/
 
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #ifdef FERMION_CONFIG_HCF
 #include <limits.h>
@@ -18,6 +20,8 @@
 #include <stdint.h>
 #include <string.h>
 #include "nt_logger_api.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "nt_osal.h"
 #include <stdio.h>

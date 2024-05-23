@@ -1,4 +1,6 @@
 /*========================================================================
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  * @file halphy_bdf.h
  * @brief Function header and defines for Board Data File (BDF) framework
@@ -33,19 +35,36 @@
 #endif
 #endif
 
+#define pEeprom ((BDF_STRUCT *)pEeprom_p)
+
 typedef enum nv_sections_e
 {
     NV_IOT_RX_GAIN_TABLES = 0,
     NV_IOT_TPC_DATA = 1
 } nv_sections_e;
 
+#ifdef PLATFORM_FERMION
+typedef struct halphy_rssi_correction_s {
+    int8_t  rssi_range_0;
+    int8_t  rssi_range_1;
+    int8_t  rssi_range_2;
+    int8_t  rssi_range_3;
+    int8_t  rssi_correction_0;
+    int8_t  rssi_correction_1;
+    int8_t  rssi_correction_2;
+    int8_t  rssi_correction_3;
+    int8_t  rssi_correction_4;
+    int8_t  rssi_temp_correction;
+} halphy_rssi_correction_t;
+#endif /* PLATFORM_FERMION */
+
 /*-------------------------------------------------------------------------
  * Function Declarations and Documentation
  * ----------------------------------------------------------------------*/
 
 /* Initialize BDF */
-bool halphy_bdf_init(const uint8_t *p_bdf_data);
-void halphy_bdf_get_tx_power_mode(uint16_t freq, tx_power_mode_t *tx_power_mode);
+bool halphy_bdf_init(const uint32_t *p_bdf_data);
+uint8_t halphy_bdf_get_tx_power_mode(uint16_t freq);
 uint8_t halphy_bdf_get_lna_power_mode(uint8_t band);
 bool halphy_bdf_get_caldb_bypass(void);
 void halphy_bdf_set_caldb_bypass(uint8_t caldb_bypass);
@@ -65,4 +84,10 @@ void halphy_bdf_update_nv_section(nv_sections_e nv_section);
 void halphy_bdf_get_crx_mode(int8_t *crx_mode);
 void halphy_bdf_update_capin_capout(uint8_t capin, uint8_t capout);
 
+#ifdef PLATFORM_FERMION
+void halphy_bdf_get_rssi_correction_value(halphy_rssi_correction_t *rssi_corr, PHY_BAND band);
+void halphy_update_rssi_temp_correction_value(halphy_rssi_correction_t *rssi_corr, PHY_BAND curr_band, int16_t curr_temp);
+int8_t halphy_bdf_get_crx_rssi_correction(void);
+#endif /* PLATFORM_FERMION */
+bool halphy_bdf_get_temp_recal_support(uint8_t band);
 #endif /* _HALPHY_BDF_H_ */

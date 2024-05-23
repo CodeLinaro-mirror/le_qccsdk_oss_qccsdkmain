@@ -1,9 +1,12 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef LWIP_PING_H
 #define LWIP_PING_H
 
+#include "fwconfig_cmn.h"
 #include "nt_flags.h" /* Resolve the NT_TST_PING_TOOL & NT_TST_PERF_TOOL. */
 
 //#if NT_TST_PING_TOOL

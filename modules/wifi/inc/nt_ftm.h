@@ -1,3 +1,7 @@
+/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 /*************************Calculation of timing values from raw values******************************/
 /*
@@ -25,7 +29,9 @@
 
 #ifndef CORE_WIFI_MLM_INCLUDE_NT_FTM_H_
 #define CORE_WIFI_MLM_INCLUDE_NT_FTM_H_
+#include "wifi_cmn.h"
 
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #ifdef NT_FN_FTM
 #include <stdint.h>

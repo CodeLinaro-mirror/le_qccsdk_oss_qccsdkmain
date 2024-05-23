@@ -8,7 +8,7 @@
 
 #ifndef _WLAN_MLME_H_
 #define _WLAN_MLME_H_
-
+#include "wifi_cmn.h"
 #include "mlme_api.h"
 #include "wlan_framegen.h"
 #include "wlan_dev.h"

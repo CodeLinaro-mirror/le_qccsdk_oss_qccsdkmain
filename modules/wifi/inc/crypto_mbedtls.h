@@ -1,6 +1,11 @@
 /*
  * crypto_mbedtls.h
  */
+
+/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*
  * Wrapper functions for crypto libraries
  * Copyright (c) 2004-2017, Jouni Malinen <j@w1.fi>
@@ -23,7 +28,9 @@
 
 #ifndef CORE_WIFI_SECURITY_INC_CRYPTO_MBEDTLS_H_
 #define CORE_WIFI_SECURITY_INC_CRYPTO_MBEDTLS_H_
+#include "wifi_cmn.h"
 
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "wps_def.h"
 #include <osapi.h>

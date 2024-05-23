@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 
@@ -59,7 +61,8 @@
 
 #define BENCH_TEST_COMPLETED    "**** Throughput Test Completed ****\r\n"
 #define CFG_PACKET_SIZE_MAX_TX  (1576)
-#define CFG_PACKET_SIZE_MAX_RX  (1556)
+//#define CFG_PACKET_SIZE_MAX_RX  (1556)
+#define CFG_PACKET_SIZE_MAX_RX  (2422)
 #define DUMP_DIRECTION_TX	(0)
 #define DUMP_DIRECTION_RX	(1)
 
@@ -144,6 +147,7 @@ typedef struct receive_params
 
 typedef struct stats {
     uint32_t first_time;       /* Test start time */
+	uint32_t prev_time;
     uint32_t last_time;
     uint64_t bytes;       /* Number of bytes in one second */
     uint64_t total_bytes;  /* total bytes in current test */
@@ -183,6 +187,8 @@ typedef struct throughput_cxt
     uint8_t is_iperf:1;
     uint8_t print_buf:1;
     uint8_t echo:1;
+    void *session;
+    TaskHandle_t rx_task_handler;
 } THROUGHPUT_CXT;
 
 typedef struct {

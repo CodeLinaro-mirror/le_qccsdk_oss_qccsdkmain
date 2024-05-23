@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 #import("${root_build_dir}/mainconfig.gni")
 import("//configs_decl.gni")
@@ -10,8 +12,11 @@ qcli_demo_src = [
     "src/qcli_demo_main.c",
 ]
 
+if (CONFIG_FW_UPGRADE) {
+    defines = [ "CONFIG_FWUP_DEMO=1", ]
+}
 config("_config") {
-    if (image_name == "FERMION_QCLI_DEMO") {
+    if (image_name == "FERMION_QCLI_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO") {
         include_dirs = qcli_demo_inc
     }
 }

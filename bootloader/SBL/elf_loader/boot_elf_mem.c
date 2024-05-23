@@ -65,7 +65,7 @@ bl_error_type bl_elf_flash_read_to_ram(void *address, void *data, uint32_t bytes
 	
 	//ELF_MEM_PRINTF("flash read start bytes=%d, nvm=%d\r\n", (unsigned int)bytes, (unsigned int)nvm_add);
 	if (bytes > RRAM_READ_BUF_SIZE) {
-		while(done <= bytes) {
+		while((done <= bytes) && (bytes-done>RRAM_READ_BUF_SIZE)) {
 			status = boot_sbl_flash_read(nvm_add+done, RRAM_READ_BUF_SIZE, temp);
 			
 			if (status) {
@@ -86,10 +86,9 @@ bl_error_type bl_elf_flash_read_to_ram(void *address, void *data, uint32_t bytes
 			done += RRAM_READ_BUF_SIZE;
 		}
 
-		if (done > bytes) {
-			last_bytes = RRAM_READ_BUF_SIZE - (done - bytes);
-			done = done - RRAM_READ_BUF_SIZE;
-		}
+		/* Remaining bytes which is < RRAM_READ_BUF_SIZE*/
+        last_bytes=bytes-done;
+
 	} else {
 		last_bytes = bytes;
 	}
@@ -120,7 +119,7 @@ bl_error_type bl_elf_flash_read_to_rram_dxe(void *address, void *data, uint32_t 
 			(unsigned int)(data),(unsigned int)bytes); */
 
 	if (bytes > RRAM_READ_BUF_SIZE) {
-			while(done <= bytes) {
+			while((done <= bytes) && (bytes-done>RRAM_READ_BUF_SIZE)) {
 				memset((uint8_t *)(rram_read_buf), 0, sizeof(rram_read_buf));
 				status = boot_sbl_flash_read(nvm_add+done, RRAM_READ_BUF_SIZE, (uint8_t*)rram_read_buf);
 				
@@ -136,10 +135,9 @@ bl_error_type bl_elf_flash_read_to_rram_dxe(void *address, void *data, uint32_t 
 				done += RRAM_READ_BUF_SIZE;
 			}
 	
-			if (done > bytes) {
-				last_bytes = RRAM_READ_BUF_SIZE - (done - bytes);
-				done = done - RRAM_READ_BUF_SIZE;
-			}
+			/* Remaining bytes which is < RRAM_READ_BUF_SIZE*/
+            last_bytes=bytes-done;
+
 		} else {
 			last_bytes = bytes;
 		}

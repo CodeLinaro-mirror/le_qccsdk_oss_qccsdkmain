@@ -1,4 +1,6 @@
 /*
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 /*
@@ -132,6 +134,10 @@ _ln_RAM_*   - represents address in RAM
 /* FDT area */
 _ln_FDT_Start_Addr = ORIGIN(FDTMEM) ;
 _ln_FDT_Data_length = LENGTH(FDTMEM) ;
+
+/* SBL */
+_ln_SBL_MEM_Size = LENGTH(SBLAMEM);
+
 
 /* CAL data of the system */
 /*_ln_CAL_Start_Addr = ORIGIN(CALMEM) ;

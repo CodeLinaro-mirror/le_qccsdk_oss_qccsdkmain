@@ -1,16 +1,23 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 
 /*///////////////////////////////////////////////////////////////////////////// */
 
 #include "nt_heap_stats.h"
+#include "wifi_cmn.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include "nt_osal.h"
+#include "qccx.h"
 
 #include "FreeRTOS.h"
 #include "ExceptionHandlers.h"   // nt_global_irq_init()
-
+#if (defined(CONFIG_NT_DEMO))
+#include "UART-interrupt-driven-command-console.h"
+#endif
 
 #include "tcpip.h"     // tcpip_init()
 //#include "ping.h"      // ping_init()
@@ -103,7 +110,11 @@
 //#include "nt_mbedtls_app.h"
 #endif
 
-
+#if (defined(CONFIG_NT_DEMO))
+#ifdef NT_HOSTLESS_SDK
+#include "wifi_app.h"
+#endif
+#endif
 
 #ifdef NT_GPIO_FLAG
 #include "nt_gpio_api.h"
@@ -169,17 +180,18 @@ extern uint32_t _ln_FDT_Start_Addr;
 #define WLAN_IMG_MODE_OFFSET (0x130) /* offset with in FDT section */
 #define RRAM_APP_MODE_ADR ((uint32_t)(&_ln_FDT_Start_Addr) + WLAN_IMG_MODE_OFFSET)
 #endif
-
-#if CONFIG_BOARD_QCC730_XPA_AUTO_CTRL_ENABLE
-#include "halphy_api.h"
-#endif
-
-#include "qurt_internal.h"
-
 bool is_jtag_mode(void);
 bool nt_get_rram_app_mode(app_mode_id_t * read_app_mode);
 bool nt_set_rram_app_mode(app_mode_id_t requested_app_mode);
 #endif
+
+#if CONFIG_FTM_MODE
+//#if CONFIG_BOARD_QCC730_XPA_AUTO_CTRL_ENABLE
+#include "halphy_api.h"
+//#endif
+#endif
+
+#include "qurt_internal.h"
 
 extern uint32_t _ln_BDF_Start_Addr;
 extern uint32_t _ln_BDF_Data_length;
@@ -218,6 +230,10 @@ app_mode_id_t nt_get_app_mode(void);
 #if (CONFIG_QCCSDK_CONSOLE)
 #include "qccsdk_console.h"
 #endif
+
+#if (CONFIG_FW_UPGRADE)
+#include "qapi_firmware_upgrade.h"
+#endif
 /*******************************************************************************
  ******************************************************************************/
 
@@ -247,7 +263,7 @@ uint8_t pbl_log_buff[256];
 lfs_t lfs_init;
 #endif
 
-#ifdef BOOT_TO_FTM
+#if CONFIG_FTM_MODE
 app_mode_id_t app_mode = APP_MODE_FTM; /* default application mode in RAM */
 #else
 app_mode_id_t app_mode = APP_MODE_MM; /* default application mode in RAM */
@@ -315,18 +331,23 @@ static void shell_init (void)
 #endif
 
 #if (CONFIG_LOWPOWER_SHELL)
-    void lowpower_shell_init(void);
+    extern void lowpower_shell_init(void);
     lowpower_shell_init();
 #endif
 
 #if (CONFIG_PROF_SHELL)
-	void prof_shell_init(void);
+	extern void prof_shell_init(void);
 	prof_shell_init();
 #endif
 
 #if (CONFIG_SIGMA_TRAFFIC)
     extern void wificert_shell_init (void);
     wificert_shell_init();
+#endif
+
+#if (CONFIG_UNITTEST_SHELL)
+	extern void unittest_shell_init(void);
+	unittest_shell_init();
 #endif
 }
 #endif
@@ -353,12 +374,20 @@ int main(
     BaseType_t ret_val;
     extern int BMPS_LIST, WUR_LIST;
     BMPS_LIST =  WUR_LIST = -1;
+    uint8 is_ftm = 0;
 
+#if (CONFIG_FTM_MODE==1)
+    is_ftm = 1;
+#endif
 
     uart_init();
 
 #if defined(FTM_OVER_UART) || defined(CONFIG_RTT_VIEW_CLI)
     SEGGER_RTT_Init();
+#endif
+#if CONFIG_FTM_MODE
+    printf("Build FTM image date and time: %s - %s\n", __DATE__, __TIME__);
+    printf("crm num: %d.\n", CRM_BUILD_NUM);
 #endif
 #ifdef FTM_OVER_UART
     ftm_task_init();
@@ -367,15 +396,25 @@ int main(
     SEGGER_SYSVIEW_Conf();
     //SEGGER_SYSVIEW_Start();
 #endif
+
+  //power on SECIP
+#if CONFIG_SOC_QCC730V1
+    QCC730V1_PMU_BASE_Type *pmu = QCC730V1_PMU_BASE;
+#elif CONFIG_SOC_QCC730V2
+    QCC730V2_PMU_BASE_Type *pmu = QCC730V2_PMU_BASE;
+#endif
+    pmu->pmu.PMU_SECIP_GDSCR.bit.COLLAPSE_EN_SW = 0;
+    pmu->pmu.PMU_SECIP_GDSCR.bit.HW_CONTROL = 0;
+
 #if (CONFIG_QCCSDK_DEMO)
     #if (CONFIG_QCCSDK_CONSOLE)
         shell_init();
     #endif
 #else
-#if  (!CONFIG_FTM_MODE)
-    vUARTCommandConsoleStart();
-    vRegisterCLICommands();
-#endif
+    #if (defined(CONFIG_NT_DEMO))
+        vUARTCommandConsoleStart();
+        vRegisterCLICommands();
+	#endif
 #endif
 #endif
 
@@ -565,10 +604,8 @@ fw_logger_init();
 #if ((NT_TST_PING_TOOL) || (CONFIG_NET_SHELL))
         if(app_mode != APP_MODE_FTM)
         {
-#if (!CONFIG_FTM_MODE)
             extern void ping_init(void);
             ping_init();
-#endif
         }
 #endif
 
@@ -589,7 +626,7 @@ qcspi_slv_init();
     #endif //NT_FN_SPI
 #if (NT_CHIP_VERSION==2)
 #ifdef NT_2_FAST_QSPI
-        //nt_qspi_cfg(NT_CLOCK_MODE_0);
+        nt_qspi_cfg(NT_CLOCK_MODE_0);
         //nt_qspi_cmd_init();
 #endif //NT_2_FAST_QSPI
 #ifdef NT_2_FAST_QCSPI
@@ -599,7 +636,7 @@ qcspi_slv_init();
 #endif //(NT_CHIP_VERSION==2)
 
 
-    ret_val = nt_create_wlan_task();
+    ret_val = nt_create_wlan_task(is_ftm);
     if (ret_val == nt_fail)
     {
         NT_LOG_MLM_CRIT("wlan task/queue creation failed", 0,0,0);
@@ -607,13 +644,55 @@ qcspi_slv_init();
     }
 
 #ifdef CONFIG_WMI_EVENT
-    ret_val = nt_create_wlan_evt_task();
+    ret_val = nt_create_wlan_evt_task(is_ftm);
     if (ret_val == nt_fail)
     {
         return ret_val;
     }
 #endif
-#if (!CONFIG_QCCSDK_DEMO) && (!CONFIG_FTM_MODE)
+
+#if (defined(CONFIG_NT_DEMO))
+    ret_val = nt_create_wifi_manager_task();//nt_create_wifi_manager_task(void)
+    if (ret_val == nt_fail)
+    {
+        NT_LOG_MLM_CRIT("wfm task/queue creation failed", 0,0,0);
+        return ret_val;
+    }
+#endif
+
+#if (defined(CONFIG_NT_DEMO))
+#ifdef NT_HOSTLESS_SDK
+        ret_val = nt_app_init();
+        if (ret_val == nt_fail)
+        {
+            nt_dbg_print("wifi app task creation failed");
+            return ret_val;
+        }
+#endif
+#endif
+
+#if (defined(CONFIG_NT_DEMO))
+#ifdef NT_HOSTED_SDK
+        if(app_mode != APP_MODE_FTM)
+        {
+            AT_commands_task();
+            AT_commands_msg_queue();
+        }
+    #endif // NT_HOSTED_SDK
+#endif
+
+#if (defined(CONFIG_NT_DEMO))
+        // TCP client app
+#ifdef  NT_FN_COMMISSIONING_APP
+        if(app_mode != APP_MODE_FTM)
+        {
+            // OnboardingApp_cont_timer();
+            client_app_cli_msg_queue();
+        }
+#endif
+#endif
+
+#if (defined(CONFIG_NT_DEMO))
     if(app_mode != APP_MODE_FTM)
     {
 #ifdef NT_FN_MBEDTLS_APP
@@ -626,8 +705,7 @@ qcspi_slv_init();
      }
 #endif
 
-
-#if (!CONFIG_QCCSDK_DEMO) && (!CONFIG_FTM_MODE)
+#if (defined(CONFIG_NT_DEMO))
 #ifdef NT_FN_AWS_MQTT_CLIENT_APP
 
         mqtt_publish_cli_msg_queue();
@@ -635,8 +713,7 @@ qcspi_slv_init();
 #endif
 #endif
 
-
-#if (!CONFIG_QCCSDK_DEMO) && (!CONFIG_FTM_MODE)
+#if (defined(CONFIG_NT_DEMO))
 #ifdef NT_FN_PKCS11
         xInitializePKCS11(  );
 #endif   // NT_FN_PKCS11
@@ -648,14 +725,13 @@ qcspi_slv_init();
 #endif   // NT_FN_PKCS11
 #endif
 
-
-#if (!CONFIG_QCCSDK_DEMO) && (!CONFIG_FTM_MODE)
+#if (defined(CONFIG_NT_DEMO))
 #ifdef NT_FN_INTER_TCP_INTERVAL
         /* To create inter TCP_task if enabled through sys_config  */
         nt_app_inter_tcp_uplink_traffic();
 #endif // NT_FN_INTER_TCP_INTERVAL
 #endif
-    halphy_bdf_init((const uint8_t*)&_ln_BDF_Start_Addr);
+    halphy_bdf_init(&_ln_BDF_Start_Addr);
     if(app_mode == APP_MODE_FTM)
     {
         halphy_bdf_cached_bdf_init();
@@ -665,10 +741,10 @@ qcspi_slv_init();
     halphy_regdb_init((uint8_t *)&_ln_REGDB_Start_Addr);
 #endif /* SUPPORT_REGULATORY */
 
-#ifdef FTM_OVER_UART
-#if CONFIG_BOARD_QCC730_XPA_AUTO_CTRL_ENABLE
+#if CONFIG_FTM_MODE
+//#if CONFIG_BOARD_QCC730_XPA_AUTO_CTRL_ENABLE
     halphy_xfem_init();
-#endif
+//#endif
 #endif
 
 #ifdef HALPHY_CBC_SUPPORT
@@ -719,6 +795,11 @@ qcspi_slv_init();
     extern int wlan_qapi_init (void);
     wlan_qapi_init();
 #endif
+#if (CONFIG_FW_UPGRADE)
+    /* check active FWD to invalidate trial fwd if need */
+    extern qapi_Status_t qapi_Fw_Upgrade_Verify_FWD();
+    qapi_Fw_Upgrade_Verify_FWD();
+#endif
 #if (CONFIG_QCCSDK_DEMO)
     //create app task to call app_main()
     qccsdk_start_app_task();
@@ -737,7 +818,6 @@ static void qccsdk_start_app_main(void __attribute__((__unused__))*pvParameters)
 {
 #ifdef CONFIG_BOARD_QCC730_QSPI_ENABLE
     drv_flash_init();
-    drv_flash_deinit(1);
 #endif
 
     UART_SEND_DIRECT("qccsdk_start_app_main\r\n");

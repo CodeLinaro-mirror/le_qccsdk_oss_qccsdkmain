@@ -1,9 +1,14 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef CORE_WIFI_HAL_INC_HAL_RTT_H_
 #define CORE_WIFI_HAL_INC_HAL_RTT_H_
 #include "nt_common.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "hal_api_sys.h"
 

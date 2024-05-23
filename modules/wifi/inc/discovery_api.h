@@ -1,7 +1,14 @@
+/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef _DISCOVERY_API_H_
 #define _DISCOVERY_API_H_
 #include "discovery.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 /* Forward declarations */
 struct channel;

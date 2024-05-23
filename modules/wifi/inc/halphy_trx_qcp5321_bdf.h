@@ -1,4 +1,6 @@
 /*========================================================================
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  * @file  halphy_trx_qcp5321_bdf.h
  *
@@ -13,6 +15,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <halphy_common.h>
 #include <bdf_struct.h>
 #include <component_bdf_struct.h>
 
@@ -129,5 +132,12 @@ uint16_t phyrf_bdf_get_tpc_cal_chan(uint8_t band, uint8_t chan_idx);
 void phyrf_bdf_set_scpc_cal_result(uint8_t band, uint8_t chan_idx, bool is_ofdm, int8_t scpc_power_offset);
 
 void phyrf_bdf_get_ed_threshold(uint16_t freq, uint8_t* p_agc_ed_threshold, power_types_6g_t power_mode_6g);
+#if (FERMION_CHIP_VERSION == 2)
+int8_t phyrf_bdf_get_fine_gain_offset(int8_t offset, mod_type_t mod_type, bool isTpcCal);
+#endif
+int8_t phyrf_bdf_get_fine_gain_process_corner_offset(uint8_t chip_type, uint8_t band);
+
+bool phyrf_bdf_is_ceb_enabled(freq_band_t band);
+void phyrf_bdf_get_temp_based_update_list(PHYRF_REG_TEMP_BASED_UPDATE* p_phyrf_reg_update_list);
 
 #endif /* HALPHY_TRX_FERMION_BDF_H */

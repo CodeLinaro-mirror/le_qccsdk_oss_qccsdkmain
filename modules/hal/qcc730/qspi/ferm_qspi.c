@@ -1,4 +1,6 @@
 /*
+*Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+*SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*-------------------------------------------------------------------------
@@ -9,6 +11,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include "nt_hw.h"
 #include "nt_osal.h"
@@ -26,7 +29,8 @@
  * Preprocessor Definitions and Constants
  *-----------------------------------------------------------------------*/
 #define BLOCK_SIZE_IN_BYTES 4096
-
+#define MAX_READ_WAIT 0x20000
+#define MAX_WRITE_WAIT 0x2000
 #define INT_TO_PTR(__x__)                 ((void *)(uint32_t)(__x__))
 
 /*-------------------------------------------------------------------------
@@ -195,12 +199,12 @@ static void drv_qspi_pio_read(uint8_t *buffer, uint32_t num_bytes, uint8_t write
     hal_qspi_set_pio_transfer_control_request_count(qspi_context.hal, num_bytes);
 
     /* Poll until all data has been read from the RX FIFO. */
-    while (bytes_left && retry++ < 0x200) {
+    while (bytes_left && retry++ < MAX_READ_WAIT) {
         bytes_read = drv_qspi_service_rxfifo(ptr, bytes_left);
         bytes_left -= bytes_read;
         ptr += bytes_read;
     }
-    if(retry == 0x200)
+    if(retry == MAX_READ_WAIT)
         NT_LOG_PRINT(SYSTEM,ERR,"rx timeout");
 }
 
@@ -232,11 +236,11 @@ static void drv_qspi_pio_write(uint8_t *buffer, uint32_t num_bytes, uint8_t writ
     }
 
     while(1) {
-        if(hal_qspi_check_pio_transaction_done(qspi_context.hal) ||retry++ >= 0x200)
+        if(hal_qspi_check_pio_transaction_done(qspi_context.hal) ||retry++ >= MAX_WRITE_WAIT)
             break;
     }
 
-    if(retry == 0x200)
+    if(retry == MAX_WRITE_WAIT)
         NT_LOG_PRINT(SYSTEM,ERR,"tx timeout");
 }
 
@@ -680,18 +684,33 @@ bool drv_qspi_init(qspi_master_config_t *config)
     return false;
 #endif
     hal_qspi_mcu_enable_qspi();
-    hal_qspi_enable_qspi(enable, pads_option);
-    hal_qspi_set_clock((uint8_t)config->clk_freq);
 
-    /* disable clock gating */
-    hal_qspi_enable_clock_gating(0);
+#ifndef CONFIG_NON_OS
+    if( !hal_qspi_is_qspi_active()) {
+#endif
+        NT_LOG_PRINT(SYSTEM,ERR,"do qspi init...\n");
+        hal_qspi_enable_qspi(enable, pads_option);
+        hal_qspi_set_clock((uint8_t)config->clk_freq);
+
+        /* wait for QSPI to be powered up */
+        hal_qspi_qspi_gdscr_config();
+        while(!hal_qspi_gdscr_pwr_ready());
+
+        /* disable clock gating */
+        hal_qspi_enable_clock_gating(0);
 
     hal_qspi_set_master_config_wpn(qspi_context.hal,1);
     hal_qspi_set_master_config_holdn(qspi_context.hal,1);
 
-    /* reset registers */
-    hal_qspi_master_status_reset(qspi_context.hal);
-
+		if(!hal_qspi_xip_is_enabled(qspi_context.hal))
+		{
+	        /* reset registers */
+			/* TODO: if XIP is enabled in bootloader, we need a careful reset, now use default value.*/
+	        hal_qspi_master_status_reset(qspi_context.hal);
+		}
+#ifndef CONFIG_NON_OS
+    }
+#endif
     /* Regiter ISR callback. */
     qspi_context.isr_cb = config->isr_cb;
     qspi_context.user_param = config->user_param;
@@ -838,14 +857,9 @@ bool drv_qspi_restore_xip_mode()
 
    @return true on success or false on failure.
  */
-bool drv_qspi_xip_set_pe_state(uint8_t state)
+bool drv_qspi_xip_set_pe_state(uint8_t enable)
 {
-    /*
-        Because Fermion uses PIO mode, and disable XiP when do PIO operations.
-        So don't need this function here.
-        Keep it for building pass.
-    */
-    (void)state;
+	hal_qspi_xip_enable_program_erase_ongoing(qspi_context.hal, enable);
     return true;
 }
 
@@ -869,12 +883,15 @@ bool drv_qspi_xip_config_suspend_resume (uint16_t suspend_delay, uint8_t suspend
         Keep it for building pass.
     */
 
-    (void)suspend_delay;
-    (void)suspend_opcode;
-    (void)resume_delay;
-    (void)resume_opcode;
-
-    return true;
+    hal_qspi_xip_set_suspend_delay(qspi_context.hal, suspend_delay);
+	hal_qspi_xip_set_resume_opcode(qspi_context.hal, suspend_opcode);
+	/*QWLAN_QSPI_R_QSPI_XIP_SUSPEND_PH_CONFIG_SUSPEND_ENABLE_MASK*/
+	hal_qspi_xip_enable_suspend(qspi_context.hal, 1);
+	
+	hal_qspi_xip_set_resume_opcode(qspi_context.hal, resume_opcode);
+	hal_qspi_xip_set_resume_delay(qspi_context.hal, resume_delay);
+	hal_qspi_xip_resume_suspend(qspi_context.hal, 1);
+	return true;
 }
 
 int32_t drv_qspi_xip_config(qspi_xip_flash_region region_id, uint32_t region_size, uint32_t regigon_addr)

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 // $QTI_LICENSE_QDN_C$
 
 #ifndef __QAPI_WLAN_PARAM_GROUP_H__
@@ -639,6 +643,16 @@ to the station during a service period.
 @note1hang This parameter can only be used with qapi_WLAN_Set_Param().
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_MAX_SP_LEN                      38
+
+/**
+Command ID to set reiceive AMSDU enable or disable.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] uint32_t      Set to TRUE to enable AMSDU receive mode, FALSE otherwise.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_AMSDU_RX            39
+
 
 /**
 Command ID to set the beacon interval (in time units) when operating in SoftAP mode.

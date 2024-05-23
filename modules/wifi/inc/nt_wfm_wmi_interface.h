@@ -2,6 +2,8 @@
 #define _WFM_WMI_INTERFACE_
 
 #include "nt_event_reg.h"
+#include "wifi_cmn.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 
 //#include "wmi.h"
@@ -119,6 +121,9 @@ typedef struct
     uint8_t      ssid;
     uint8_t      num_ch;
 }WFM_BG_SCAN_CMD;
+
+#define XPA_ENABLE							   2
+#define XPA_DISABLE							   1
 #endif
 
 

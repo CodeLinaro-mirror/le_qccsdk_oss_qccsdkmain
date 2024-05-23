@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef NEUTRINO_PBL_SYSTEM_NT_BL_MEM_H_
@@ -7,6 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "nt_bl_env.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 
 extern uint32_t __OTP_region_st_addr;

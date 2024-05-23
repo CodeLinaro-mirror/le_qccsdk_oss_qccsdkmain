@@ -1,10 +1,14 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 
 #ifndef _NT_TWT_AP_H_
 #define _NT_TWT_AP_H_
+#include "wifi_cmn.h"
 
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "nt_osal.h"
 #include "nt_timer.h"

@@ -1,0 +1,198 @@
+/*
+ */
+
+/*-------------------------------------------------------------------------
+ * Include Files
+ *-----------------------------------------------------------------------*/
+
+#include <ferm_flash_config.h>
+/*
+****Supported Flash Type****
+1. Macronix, MX25R6435F
+2. Gigadevice, GD25WQ32E
+3. Giantec , GT25Q32AU_DS
+
+*/
+
+#ifdef CONFIG_BOARD_QCC730_QSPI_ENABLE
+/*-------------------------------------------------------------------------
+ * Preprocessor Definitions and Constants
+ *-----------------------------------------------------------------------*/
+
+flash_config_data_t flash_device_config[] =
+{
+    /* Macronix, MX25R6435F */
+    {
+            .addr_bytes                = 3,
+            .read_cmd_mode              = FLASH_RW_MODE_SDR_SINGLE,
+            #if CONFIG_SOC_QCC730V2 && CONFIG_BOARD_QCC730_QSPI_ENABLE && CONFIG_BOARD_QCC730_QSPI_V2_QUAD_MODE
+            .read_addr_mode             = FLASH_RW_MODE_SDR_QUAD,
+            .read_data_mode             = FLASH_RW_MODE_SDR_QUAD,
+            .read_opcode                = 0xeb,
+            .read_wait_state            = 0x6,
+            .write_cmd_mode             = FLASH_RW_MODE_SDR_SINGLE,
+            .write_addr_mode            = FLASH_RW_MODE_SDR_SINGLE,
+            .write_data_mode            = FLASH_RW_MODE_SDR_QUAD,
+            .write_opcode               = 0x32,
+            #else
+            .read_addr_mode             = FLASH_RW_MODE_SDR_DUAL,
+            .read_data_mode             = FLASH_RW_MODE_SDR_DUAL,
+            .read_opcode               = 0xbb,
+            .read_wait_state            = 0x4,
+            .write_cmd_mode             = FLASH_RW_MODE_SDR_SINGLE,
+            .write_addr_mode            = FLASH_RW_MODE_SDR_SINGLE,
+            .write_data_mode            = FLASH_RW_MODE_SDR_SINGLE,
+            .write_opcode              = 0x2,
+            #endif
+            .erase_4kb_opcode           = 0x20,
+            .bulk_erase_size_4kb       = 16,
+            .bulk_erase_opcode          = 0xD8,
+            .chip_erase_opcode          = 0x60,
+            .quad_enable_mode           = 2,
+            .suspend_erase_opcode       = 0xB0,
+            .suspend_program_opcode     = 0xB0,
+            .resume_erase_opcode        = 0x30,
+            .resume_program_opcode      = 0x30,
+            .erase_err_bmsk             = 0x40,
+            .erase_err_status_reg        = 0x2B,
+            .write_err_bmsk             = 0x20,
+            .write_err_status_reg        = 0x2B,
+            .high_performance_mode_bmask =0x0, //0x2,
+            .power_on_delay_in_us      = 8,
+            .suspend_erase_delay_in_us    = 60,
+            .suspend_program_delay_in_us  = 60,
+            .resume_erase_delay_in_us     = 0,
+            .resume_program_delay_in_us   = 0,
+            .density_in_blocks          = 2048,
+            .device_id                  = 0x001728C2,
+            .write_protect_bmask        = 0xBC,
+            .clk_freq                   = FLASH_CLOCK_30MHZ,
+    },
+    /* Gigadevice, GD25WQ32E */
+    {
+            .addr_bytes                 = 3,
+            .read_cmd_mode              = FLASH_RW_MODE_SDR_SINGLE,
+            #if CONFIG_SOC_QCC730V2 && CONFIG_BOARD_QCC730_QSPI_ENABLE && CONFIG_BOARD_QCC730_QSPI_V2_QUAD_MODE
+            .read_addr_mode             = FLASH_RW_MODE_SDR_QUAD,
+            .read_data_mode             = FLASH_RW_MODE_SDR_QUAD,
+            .read_opcode                = 0xeb,
+            .read_wait_state            = 0x6,
+            .write_cmd_mode             = FLASH_RW_MODE_SDR_SINGLE,
+            .write_addr_mode            = FLASH_RW_MODE_SDR_SINGLE,
+            .write_data_mode            = FLASH_RW_MODE_SDR_QUAD,
+            .write_opcode               = 0x32,
+            #else
+            .read_addr_mode             = FLASH_RW_MODE_SDR_DUAL,
+            .read_data_mode             = FLASH_RW_MODE_SDR_DUAL,
+            .read_opcode                = 0xbb,
+            .read_wait_state            = 4,
+            .write_cmd_mode             = FLASH_RW_MODE_SDR_SINGLE,
+            .write_addr_mode            = FLASH_RW_MODE_SDR_SINGLE,
+            .write_data_mode            = FLASH_RW_MODE_SDR_SINGLE,
+            .write_opcode               = 2,
+            #endif
+            .erase_4kb_opcode           = 0x20,
+            .bulk_erase_size_4kb        = 16,
+            .bulk_erase_opcode          = 0xD8,
+            .chip_erase_opcode          = 0x60,
+            .quad_enable_mode           = 1,
+            .suspend_erase_opcode       = 0x75,
+            .suspend_program_opcode     = 0x75,
+            .resume_erase_opcode        = 0x7a,
+            .resume_program_opcode      = 0x7a,
+            .erase_err_bmsk             = 0x0,
+            .erase_err_status_reg       = 0x0,
+            .write_err_bmsk             = 0x0,
+            .write_err_status_reg       = 0x0,
+            .high_performance_mode_bmask  = 0x0,
+            .power_on_delay_in_us      = 30,
+            .suspend_erase_delay_in_us    = 40,
+            .suspend_program_delay_in_us  = 40,
+            .resume_erase_delay_in_us     = 0,
+            .resume_program_delay_in_us   = 0,
+            .density_in_blocks          = 1024,
+            .device_id                  = 0x001665c8,
+            .write_protect_bmask        = 0x0441FC,
+            .clk_freq                   = FLASH_CLOCK_30MHZ,
+    },
+    /* Giantec , GT25Q32AU_DS */
+    {
+            .addr_bytes                 = 3,
+            .read_cmd_mode              = FLASH_RW_MODE_SDR_SINGLE,
+            #if CONFIG_SOC_QCC730V2 && CONFIG_BOARD_QCC730_QSPI_ENABLE && CONFIG_BOARD_QCC730_QSPI_V2_QUAD_MODE
+            .read_addr_mode             = FLASH_RW_MODE_SDR_QUAD,
+            .read_data_mode             = FLASH_RW_MODE_SDR_QUAD,
+            .read_opcode                = 0xeb,
+            .read_wait_state            = 0x6,
+            .write_cmd_mode             = FLASH_RW_MODE_SDR_SINGLE,
+            .write_addr_mode            = FLASH_RW_MODE_SDR_SINGLE,
+            .write_data_mode            = FLASH_RW_MODE_SDR_QUAD,
+            .write_opcode               = 0x32,
+            #else
+            .read_addr_mode             = FLASH_RW_MODE_SDR_DUAL,
+            .read_data_mode             = FLASH_RW_MODE_SDR_DUAL,
+            .read_opcode                = 0xbb,
+            .read_wait_state            = 4,
+            .write_cmd_mode             = FLASH_RW_MODE_SDR_SINGLE,
+            .write_addr_mode            = FLASH_RW_MODE_SDR_SINGLE,
+            .write_data_mode            = FLASH_RW_MODE_SDR_SINGLE,
+            .write_opcode               = 2,
+            #endif
+            .erase_4kb_opcode           = 0x20,
+            .bulk_erase_size_4kb        = 16,
+            .bulk_erase_opcode          = 0xD8,
+            .chip_erase_opcode          = 0x60,
+            .quad_enable_mode           = 1,
+            .suspend_erase_opcode       = 0x75,
+            .suspend_program_opcode     = 0x75,
+            .resume_erase_opcode        = 0x7a,
+            .resume_program_opcode      = 0x7a,
+            .erase_err_bmsk             = 0x0,
+            .erase_err_status_reg       = 0x0,
+            .write_err_bmsk             = 0x0,
+            .write_err_status_reg       = 0x0,
+            .high_performance_mode_bmask  = 0x0,
+            .power_on_delay_in_us      = 20,
+            .suspend_erase_delay_in_us    = 20,
+            .suspend_program_delay_in_us  = 20,
+            .resume_erase_delay_in_us     = 0,
+            .resume_program_delay_in_us   = 0,
+            .density_in_blocks          = 1024,
+            .device_id                  = 0x001660c4,
+            .write_protect_bmask        = 0x0441FC,
+            .clk_freq                   = FLASH_CLOCK_30MHZ,
+    },
+};
+
+/*-------------------------------------------------------------------------
+ * Function Definitions
+ *-----------------------------------------------------------------------*/
+
+/**
+   @brief get all flash configuration.
+
+   * Get the pointer to the supported NOR devices and their parameters
+   *
+   * @return void* [OUT]
+   *   Pointer to the table that contains the Flash's NOR config parameters
+   *   needed for flash operations
+*/
+void* flash_get_config_entries_struct(void)
+{
+    return (void *)&flash_device_config[0];
+}
+
+/**
+   @brief Get the number of entries in the table.
+
+   Total number of entries in the table.
+
+   @return
+   Total number of entries in the table.
+*/
+uint32_t flash_get_config_entries_count()
+{
+    return (sizeof(flash_device_config) / sizeof(flash_device_config[0]));
+}
+
+#endif //CONFIG_BOARD_QCC730_QSPI_ENABLE

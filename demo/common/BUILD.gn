@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 #import("${root_build_dir}/mainconfig.gni")
 import("//configs_decl.gni")
@@ -30,15 +32,27 @@ prof_demo_inc = [
     "//modules/wifi/qcc730/core/system/inc/"
 ]
 
+ota_demo_inc = [
+    "ota",
+    "ota/plugins/tftp",
+]
+
 flash_demo_src = [
     "peripherals/flash/flash_demo.c",
 ]
 
+ota_demo_src = [
+    "ota/ota_demo.c",
+    "ota/plugins/tftp/ota_tftp.c",
+]
 not_needed("*", [ ])
 
 config("_config") {
     if (CONFIG_PROF) {
         include_dirs = prof_demo_inc
+    }
+    if (CONFIG_FW_UPGRADE) {
+        include_dirs = ota_demo_inc
     }
 }
 
@@ -65,6 +79,10 @@ source_set("common") {
     if (CONFIG_FLASH_SHELL) {
         sources += flash_demo_src
     }
+    if (CONFIG_FW_UPGRADE) {
+        defines = [ "CONFIG_FWUP_DEMO=1", ]
+        sources += ota_demo_src
+    }    
     if (CONFIG_PLATFORM_SHELL) {
         sources += [ "platform/platform_shell.c" ]
     }
@@ -73,6 +91,17 @@ source_set("common") {
             include_dirs += ["//drivers/wlan"]
             sources += [ "wlan/wifi_shell.c"]
         }
+    }
+    if (CONFIG_UNITTEST_SHELL) {
+        sources += [
+            "unit_test/unit_test_shell.c"
+        ]
+    }
+    if (CONFIG_SIGMA_TRAFFIC) {    
+        sources += [
+            "wificert/sigma_traffic/sigma_shell.c",
+            "wificert/sigma_traffic/sigma_udp.c",
+        ]
     }
 }
 

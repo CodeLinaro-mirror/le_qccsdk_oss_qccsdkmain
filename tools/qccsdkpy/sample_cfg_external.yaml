@@ -1,6 +1,10 @@
 
 #exnternal user conigurations
 
+env:
+    #program to run python script, such as 'python' or 'py3' or 'py -3' mapping to 'python xx.py' or 'py3 xx.py' or 'py -3 xx.py'
+    python_env: python
+
 #Qualcomm internal use
 exreset: &exreset
     enable: False
@@ -15,15 +19,16 @@ flash: &flash
     interface: jtag
     #configure flash tool, support ['python' as public use, 'exe' as Qualcomm internal use].
     tool: python
-    #configure default action when not specified, support [flash, erease]
-    default_action: flash
+    #configure default action when not specified, support [flash, erease, reset, Null]
+    default_action: [flash]
 
 build: &build
-    #configure default action when not specified, support [build, clean, rebuild]
-    default_action: build
+    #configure default action when not specified, support [build, clean, rebuild, Null]
+    default_action: [build]
+    sign: false
 
 qccsdk:
-    #configure board name, support ['qcc730v1_socket', 'qcc730v2_socket', 'qcc730v2_evb11_hostless', 'qcc730v2_evb12_hostless', 'qcc730v2_evb13_hostless']
+    #configure board name, support ['qcc730v1_socket', 'qcc730v2_socket', 'qcc730v2_evb11_hostless', 'qcc730v2_evb12_hostless', 'qcc730v2_evb13_hostless', 'mqm405i', 'mqm405x', 'mqm730i', 'mqm730x']
     board: &board qcc730v2_evb11_hostless
     #configure application direcotry path
     #support [pbl, sbl, prg, ftm, 001lcli, intg, demo/qcli_demo, demo/posix_demo, demo/hello_world, <external dir>]

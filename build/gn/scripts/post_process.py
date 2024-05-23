@@ -1,4 +1,6 @@
 # -*- coding:utf-8 -*-
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
 import os
@@ -80,6 +82,20 @@ def main():
         absolute_dest_file = os.path.join(tools_bin_path, elf_base + '.elf')
         shutil.copy2(elf_file, absolute_dest_file)
 
+
+    # Generate Hashed image	
+    curr_path = os.path.dirname(os.path.abspath(__file__))
+    hash_path = os.path.join(curr_path, '../../../tools/sechash') 
+    cmd = [ 'python', os.path.join(hash_path, 'createxbl.py'), '-f', elf_file, '-a32', '-o', os.path.join(elf_dir, elf_base+'_HASHED.elf'), ]
+    dbg_print('Creating Hashed Image ....')
+    dbg_print(cmd)
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (stdout,stderr) = process.communicate()
+    dbg_print(stdout.decode('utf-8').replace('\r', ''))
+    if (process.returncode != 0):
+        dbg_print(stderr.decode('utf-8').replace('\r', ''))
+        dbg_print('Creating hashed Image failed')
+        sys.exit(-1)
 if __name__== "__main__":
     main()
     sys.exit(0)

@@ -1,0 +1,21 @@
+menu "fwupgrade setting"
+config FW_UPGRADE
+    bool "FW_UPGRADE enable"
+    default n
+    depends on BOARD_QCC730_QSPI_ENABLE
+    help
+        enable Fwupgrade
+        
+config FW_UPGRADE_FWD_SUPPORT_NUM
+    int "supported fw upgrade fwd numbers"
+    depends on FW_UPGRADE
+    default 2
+    range 2 3
+
+config FW_UPGRADE_NO_FS
+    bool "FW UPGRADE do not support FS"
+    depends on FW_UPGRADE
+    default n
+    help
+        enable Fw upgrade fs
+endmenu

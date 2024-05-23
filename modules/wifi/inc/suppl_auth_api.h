@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 //#include "nt_common.h"
+#include "wifi_cmn.h"
 #include "wmi.h"
 #include "if_ethersubr.h"
 

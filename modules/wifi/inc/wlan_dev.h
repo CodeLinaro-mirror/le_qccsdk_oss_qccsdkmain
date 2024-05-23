@@ -9,6 +9,9 @@ extern "C" {
 //#error wlan_dev called
 #include <stdint.h>
 #include "osapi.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "nt_common.h"
 #include "ieee80211.h"

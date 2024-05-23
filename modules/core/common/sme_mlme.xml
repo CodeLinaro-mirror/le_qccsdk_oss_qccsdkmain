@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<dal>
+<module name="ioe">
+<driver name="wlan">
+  <device id="0x03000004">
+      <props id="1" id_name="SYS_TUNE_WLAN_NUM_IRAM_BANKS" min="0" max="1" oem_configurable="false" helptext="Number of WLAN IRAM Banks" type="0x00000002"> 1 </props>
+      <props id="2" id_name="SYS_TUNE_WLAN_MULTI_MBOX_ENABLE" oem_configurable="false" helptext="Multiple MBOX support" type="0x00000002"> 1 </props>
+      <props id="3" id_name="SYS_TUNE_WLAN_ENABLE_FASTCHANNEL_SWITCH" oem_configurable="true" helptext="Fast Channel switch support" type="0x00000002"> 1 </props>
+      <props id="4" id_name="SYS_TUNE_WLAN_NUM_RXBUF" min="12" max="20" oem_configurable="true" helptext="Number of WLAN Rx buffers" type="0x00000002"> 16 </props>
+      <props id="5" id_name="SYS_TUNE_WLAN_NUM_TXBUF" min="12" max="20" oem_configurable="true" helptext="Number of WLAN Tx buffers" type="0x00000002"> 16 </props>
+      <props id="6" id_name="SYS_TUNE_WLAN_NUM_MGMTBUF" oem_configurable="true" helptext="Number of managment buffers" type="0x00000002"> 12 </props>
+      <props id="7" id_name="SYS_TUNE_WLAN_NUM_SOFTAP_CLIENTS" oem_configurable="true" helptext="Max Numbers of Connnection allowed in SoftAp mode" type="0x00000002"> 10 </props>
+      <props id="8" id_name="SYS_TUNE_WLAN_OOB_GPIO_INT_PIN" oem_configurable="true" helptext="WLAN OutOfBand Interrupt GPIO" type="0x00000002"> 18 </props>
+      <props id="9" id_name="SYS_TUNE_WLAN_GPIO_COEX_BTACTIVE" oem_configurable="false" helptext="Coex  BT active GPIO " type="0x00000002"> 22 </props>
+      <props id="10" id_name="SYS_TUNE_WLAN_GPIO_COEX_BTPRI_1" oem_configurable="false" helptext="Coex BT priority 1 GPIO " type="0x00000002"> 23 </props>
+      <props id="11" id_name="SYS_TUNE_WLAN_GPIO_COEX_BTPRI_2" oem_configurable="false" helptext="Coex BT priority 2 GPIO" type="0x00000002"> 24 </props>
+      <props id="12" id_name="SYS_TUNE_WLAN_GPIO_COEX_WLAN_ACTIVE" oem_configurable="false" helptext="Coex WLAN Active GPIO" type="0x00000002"> 25 </props>
+      <props id="13" id_name="SYS_TUNE_WLAN_DSET_PENDING_MAX" oem_configurable="false" helptext="Max number of Outstanding asynchronous DataSet" type="0x00000002"> 8 </props>
+      <props id="14" id_name="SYS_TUNE_WLAN_PERSISTENT_MAX_LIST_COUNT" oem_configurable="true" helptext="Max number of persistent list for p2p" type="0x00000002"> 8 </props>
+      <props id="16" id_name="SYS_TUNE_WLAN_FLOW_CONTROL_ENABLE" oem_configurable="true" helptext="WLAN FW Flow control enable/disable Flag" type="0x00000002"> 0 </props>
+      <props id="17" id_name="SYS_TUNE_WLAN_ERROR_DUMP_ENABLE" oem_configurable="true" helptext="WLAN FW error dump enable/disable flag" type="0x00000002"> 1 </props>
+      <props id="18" id_name="SYS_TUNE_NET_BRIDGE_DATABASE_SIZE" oem_configurable="true" helptext="WLAN FW bridge mode relay data base size" type="0x00000002"> 12 </props>
+      <props id="19" id_name="SYS_TUNE_NET_MAX_SOCKETS" oem_configurable="true" helptext="Max Number of Sockets supported in system" type="0x00000002"> 12 </props>
+      <props id="20" id_name="SYS_TUNE_WLAN_CLOCK_SETTLING_TIME" oem_configurable="false" helptext="WLAN Crystal settling time" type="0x00000002"> 2147487648 </props>
+      <props id="21" id_name="SYS_TUNE_WLAN_NULL_PACKET_ENABLE" oem_configurable="true" helptext="Enable Null data tx after device comes out of suspend state" type="0x00000002"> 1 </props>
+      <props id="22" id_name="SYS_TUNE_NET_MAX_DHCP_SERVER_ENTRIES" oem_configurable="true" helptext="Max number of clients supported in DHCPv4 server" type="0x00000002"> 10 </props>
+      <props id="23" id_name="SYS_TUNE_WLAN_OTP_MAC_DEVID" min="0" max="1" oem_configurable="true" helptext="Configure which device use OTP MAC address" type="0x00000002"> 1 </props>
+      <props id="24" id_name="AP_NETWORK_DEV" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 16 </props>
+      <props id="25" id_name="INFRA_NETWORK_DEV" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 1 </props>
+      <props id="26" id_name="SYS_TUNE_WLAN_FW_RESERVE6" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="27" id_name="SYS_TUNE_WLAN_FW_RESERVE7" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="28" id_name="SYS_TUNE_WLAN_FW_RESERVE8" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="29" id_name="SYS_TUNE_WLAN_FW_RESERVE9" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="30" id_name="SYS_TUNE_WLAN_FW_RESERVE10" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="31" id_name="SYS_TUNE_WLAN_FW_RESERVE11" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="32" id_name="SYS_TUNE_WLAN_FW_RESERVE12" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="33" id_name="SYS_TUNE_WLAN_FW_RESERVE13" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="34" id_name="SYS_TUNE_WLAN_FW_RESERVE14" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="35" id_name="SYS_TUNE_WLAN_FW_RESERVE15" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="36" id_name="SYS_TUNE_WLAN_FW_RESERVE16" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="37" id_name="SYS_TUNE_WLAN_FW_RESERVE17" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="38" id_name="SYS_TUNE_WLAN_FW_RESERVE18" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="39" id_name="SYS_TUNE_WLAN_FW_RESERVE19" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="40" id_name="SYS_TUNE_WLAN_FW_RESERVE20" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+  </device>
+  <device id="0x03000003">
+      <props id="1" id_name="SYS_TUNE_WLAN_DRV_NUM_OF_DEVICES" min="1" max="2" oem_configurable="true" helptext="Num of wlan devices" type="0x00000002"> 2 </props>
+      <props id="2" id_name="SYS_TUNE_WLAN_DRV_TASK_PRIORITY" oem_configurable="false" helptext="Priority of WLAN task" type="0x00000002"> 18 </props>
+      <props id="3" id_name="SYS_TUNE_WLAN_DRV_TASK_STACK_SIZE" oem_configurable="false" helptext="WLAN stack size" type="0x00000002"> 1500 </props>
+      <props id="4" id_name="SYS_TUNE_WLAN_TEMP_LPO_TRIGGER_THRESHOLD" oem_configurable="false" helptext="future use (Temparature LPO Trigger Threshold)" type="0x00000002"> 10 </props>
+      <props id="5" id_name="SYS_TUNE_WLAN_TKIP_COUNTERMEASURES_ENABLE" oem_configurable="true" helptext="TKIP counter measurement enable/disable flag" type="0x00000002"> 1 </props>
+      <props id="6" id_name="SYS_TUNE_WLAN_ENABLE_FW_ERR_COLLECT" oem_configurable="true" helptext="Collect WLAN error log through outOfBand interrupt" type="0x00000002"> 1 </props>
+      <props id="7" id_name="SYS_TUNE_WLAN_BUS_SELECT" oem_configurable="true" helptext="WLAN Host Interface 1-SDIO 0-SPI" type="0x00000002"> 1 </props>
+      <props id="8" id_name="SYS_TUNE_WLAN_ENABLE_STORERECALL" oem_configurable="false" helptext="Future use (flag to enable/disable WLAN suspend/resume feature)" type="0x00000002"> 1 </props>
+      <props id="9" id_name="SYS_TUNE_WLAN_FW_FILE_FORMAT" oem_configurable="false" helptext="WLAN FW file format method 1-ELF 2-Segmented" type="0x00000002"> 1 </props>
+      <props id="10" id_name="SYS_TUNE_WLAN_GPIO_PWD" oem_configurable="true" helptext="PWD GPIO" type="0x00000002"> 33 </props>
+      <props id="11" id_name="SYS_TUNE_WLAN_GPIO_OOB " oem_configurable="true" helptext="OutofBand GPIO" type="0x00000002"> 4 </props>
+      <props id="12" id_name="SYS_TUNE_WLAN_GPIO_SPI_INTR" oem_configurable="true" helptext="SPI Interrupt GPIO" type="0x00000002"> 37 </props>
+      <props id="13" id_name="SYS_TUNE_WLAN_GPIO_PWD_CONFIG" oem_configurable="true" helptext="PWD gpio configuration" type="0x00000002"> 3 </props>
+      <props id="14" id_name="SYS_TUNE_WLAN_GPIO_OOB_CONFIG" oem_configurable="true" helptext="OutOfBand GPIO configuration" type="0x00000002"> 2434 </props>
+      <props id="15" id_name="SYS_TUNE_WLAN_GPIO_SPI_INTR_CONFIG" oem_configurable="true" helptext="SPI interrupt GPIO configuration" type="0x00000002"> 65536 </props>
+      <props id="16" id_name="SYS_TUNE_WLAN_ENABLE_STACK_OFFLOAD" oem_configurable="true" helptext="Flag to enable Stack offlaod feature" type="0x00000002"> 1 </props>
+      <props id="17" id_name="SYS_TUNE_WLAN_BUS_CLOCK_FREQ" oem_configurable="true" helptext="Host interface SDIO/SPI bus clock frequency in Hz" type="0x00000002"> 48000000 </props>
+      <props id="18" id_name="SYS_TUNE_WLAN_SDIO_BUS_WIDTH" oem_configurable="true" helptext="Width of the SDIO BUS to operate(1 or 4 bit mode)" type="0x00000002"> 4 </props>
+      <props id="19" id_name="SYS_TUNE_WLAN_GPIO_CLK_REQ" oem_configurable="true" helptext="WLAN Shared Clock Request GPIO" type="0x00000002"> 40 </props>
+      <props id="20" id_name="SYS_TUNE_WLAN_GPIO_CLK_REQ_CONFIG" oem_configurable="false" helptext="WLAN Clock Request GPIO configuration" type="0x00000002"> 640 </props>
+      <props id="21" id_name="SYS_TUNE_WLAN_NETBUF_TXRX_POOL_SIZE" oem_configurable="true" helptext="WLAN Descriptors pool size for tx and rx" type="0x00000002"> 16 </props>
+      <props id="22" id_name="SYS_TUNE_WLAN_NETBUF_RX_THRESHOLD" oem_configurable="true" helptext="Threshold for WLAN Rx Descriptors" type="0x00000002"> 2 </props> 
+      <props id="23" id_name="SYS_TUNE_WLAN_HOST_PLATFORM_FPGA" oem_configurable="false" helptext="Platform type 1-FPGA 0-ASIC(4020)" type="0x00000002"> 0 </props>
+      <props id="24" id_name="SYS_TUNE_WLAN_DRIVER_SUSP_RESUME_ENABLE" oem_configurable="false" helptext=" Future use (WLAN Driver Suspend/Resume feature flag)" type="0x00000002"> 0 </props>
+      <props id="25" id_name="SYS_TUNE_WLAN_DRIVER_SLEEP_ENABLE" oem_configurable="true" helptext="Configuration for SDIO/SPI bus suspend/resume" type="0x00000002"> 0 </props>
+      <props id="26" id_name="SYS_TUNE_WLAN_ENABLE_KF_UART_LOGS" oem_configurable="true" helptext="Flag for enable/disabling WLAN Debug logs through Local UART" type="0x00000002"> 0 </props>
+      <props id="28" id_name="SYS_TUNE_WLAN_HOST_RESERVE3" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="29" id_name="SYS_TUNE_WLAN_HOST_RESERVE4" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="30" id_name="SYS_TUNE_WLAN_HOST_RESERVE5" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="31" id_name="SYS_TUNE_WLAN_HOST_RESERVE6" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="32" id_name="SYS_TUNE_WLAN_HOST_RESERVE7" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+  </device>
+  <device id="0x03000005">
+      <props id="1" id_name="SYS_TUNE_WLAN_RESERVE0" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="2" id_name="SYS_TUNE_WLAN_RESERVE1" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="3" id_name="SYS_TUNE_WLAN_RESERVE2" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="4" id_name="SYS_TUNE_WLAN_RESERVE3" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="5" id_name="SYS_TUNE_WLAN_RESERVE4" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="6" id_name="SYS_TUNE_WLAN_RESERVE5" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="7" id_name="SYS_TUNE_WLAN_RESERVE6" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="8" id_name="SYS_TUNE_WLAN_RESERVE7" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="9" id_name="SYS_TUNE_WLAN_RESERVE8" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+      <props id="10" id_name="SYS_TUNE_WLAN_RESERVE9" oem_configurable="true" helptext="reserved for future use" type="0x00000002"> 0 </props>
+  </device>
+</driver>
+</module>
+</dal>
+ 

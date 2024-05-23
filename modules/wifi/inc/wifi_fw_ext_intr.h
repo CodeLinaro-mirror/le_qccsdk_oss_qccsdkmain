@@ -11,6 +11,7 @@
  * Include Files
  * ----------------------------------------------------------------------*/
 
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 
 #include <stdint.h>

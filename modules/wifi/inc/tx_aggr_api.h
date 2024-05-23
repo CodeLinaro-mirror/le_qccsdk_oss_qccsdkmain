@@ -26,9 +26,9 @@ typedef struct {
 
 #define AGGR_CFG_GET_TX_BUF_SZ(_x)     ((_x)->aggr_cfg.tx_win)
 #define AGGR_CFG_GET_RX_BUF_SZ(_x)     ((_x)->aggr_cfg.rx_win)
-#ifdef SUPPORT_COEX
+
 #define AGGR_CFG_GET_SUPPORT_AMSDU(_x) ((_x)->aggr_cfg.amsdu_support)
-#endif
+
 
 #define AGGR_CFG_IS_TX_AGGR_ALLOWED(_x, _t)     ((_x)->aggr_cfg.tx_allow_aggr & (0x1 << (_t)))
 #define AGGR_CFG_IS_RX_AGGR_ALLOWED(_x, _t)     ((_x)->aggr_cfg.rx_allow_aggr & (0x1 << (_t)))
@@ -36,9 +36,7 @@ typedef struct {
 typedef struct {
     uint8_t     rx_win;     /* It will be 8 or as dictated by buf req */
     uint8_t     tx_win;     /* We will ask for 32, or some config value */
-#ifdef SUPPORT_COEX
     uint8_t     amsdu_support;
-#endif
     uint16_t    tx_allow_aggr;  /* bit maps indicating if tx/rx aggr is allowed */
     uint16_t    rx_allow_aggr;
 }AGGR_CFG;

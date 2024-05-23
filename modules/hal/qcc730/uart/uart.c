@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #include <stdio.h>
 #include <string.h>
@@ -123,7 +125,8 @@ myputs(
 	while(*s) { myputchar((unsigned int)*s++);}
 }
 
-#ifdef FTM_OVER_UART
+//#ifdef FTM_OVER_UART
+#if 0
 void ftm_diag_msg_tx(void *buf, int len)
 {
     uint8_t *ch = (uint8_t *)buf;

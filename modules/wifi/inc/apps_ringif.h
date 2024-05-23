@@ -1,4 +1,6 @@
 /*========================================================================
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 
 * @file apps_ringif.h
 * @brief Application Ring Interface header
@@ -10,6 +12,8 @@
 * ----------------------------------------------------------------------*/
 #include <stdbool.h>
 #include <com_dtypes.h>
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 #ifdef SUPPORT_RING_IF

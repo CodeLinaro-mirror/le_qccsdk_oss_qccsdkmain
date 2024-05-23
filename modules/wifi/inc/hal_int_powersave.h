@@ -1,10 +1,12 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef  _HAL_INT_POWERSAVE_H_
 #define  _HAL_INT_POWERSAVE_H_
 
-
+#include "wifi_cmn.h"
 #include "nt_common.h"
 #include "nt_sme_mlme.h"
 #include "hal_int_bcn.h"

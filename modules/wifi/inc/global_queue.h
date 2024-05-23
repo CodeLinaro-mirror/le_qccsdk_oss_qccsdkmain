@@ -1,9 +1,13 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 //#ifdef FEATURE_TX_COMPLETE
 #ifndef GLOBAL_QUEUE_H
 #define GLOBAL_QUEUE_H
 
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "hal_int_modules.h"
 #include "nt_timer.h"

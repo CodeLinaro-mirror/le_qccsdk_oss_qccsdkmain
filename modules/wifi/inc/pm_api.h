@@ -1,8 +1,10 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef _PM_API_H_
 #define _PM_API_H_
-
+#include "wifi_cmn.h"
 #include "wlan_dev.h"
 #include "nt_common.h"
 

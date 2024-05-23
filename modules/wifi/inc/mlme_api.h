@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 //
@@ -16,6 +18,9 @@
 #include "wlan_conn.h"
 #include "ieee80211_var.h"
 #include "wlan_framegen.h"
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 #ifdef NT_FN_FTM

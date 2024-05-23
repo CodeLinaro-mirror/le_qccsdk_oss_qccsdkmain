@@ -2,6 +2,7 @@
 #define  _WIFI_WMI_
 
 #include <stdbool.h>
+#include "wifi_cmn.h"
 #include "wmi.h"
 #include "wlan_dev.h"
 

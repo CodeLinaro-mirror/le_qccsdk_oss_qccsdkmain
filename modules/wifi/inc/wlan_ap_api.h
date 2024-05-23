@@ -31,6 +31,7 @@ void ap_teardown(devh_t *dev , uint8_t removeBss);
 void ap_set_phymode(devh_t *dev, uint8_t wmi_phyMode);
 void ap_wmi_disconnect_event(devh_t *dev, uint16_t info, WMI_DISCONNECT_REASON reason, uint8_t *bssid,
                                    uint8_t assocRespLen, uint8_t *assocRespBuf, uint16_t protoReasonStatus);
+void _ap_post_sta_inact_timeout_msg(TimerHandle_t thandle);
 
 /*
  * AP Authenticator callback functions

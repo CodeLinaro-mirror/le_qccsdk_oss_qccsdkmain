@@ -12,6 +12,7 @@
 #define _WLAN_CONN_H_
 
 #include <stdint.h>
+#include "wifi_cmn.h"
 #include "ieee80211.h"
 #include "wlan_defs.h"
 #include "wlan_bss.h"
@@ -127,6 +128,7 @@ typedef struct conn_s {
 #ifdef NT_FN_WPA3
    struct sae_data 				sae_data;
 #endif //NT_FN_WPA3
+   uint8_t                     dialog_id;
 #ifdef SUPPORT_COEX
    uint32_t                     backup_data_rate;
 #endif

@@ -1,3 +1,7 @@
+/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 /*
  * To enter into scan mode call the nt_hal_scan_begin.
@@ -12,6 +16,8 @@
 
 #include <stdint.h>
 #include "nt_common.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 /* types of frames that SCAN module recognizes and can send during scan begin */

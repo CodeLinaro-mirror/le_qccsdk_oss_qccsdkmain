@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef _BOOT_PBL_SHARE_H_
 #define _BOOT_PBL_SHARE_H_
 #include "boot_handler.h"
@@ -10,9 +14,19 @@ typedef struct {
 	uint32_t		pbl_version;
 	boot_reason		bt_reason;
 	sbl_ota_fde		sbl_fde;
+	sbl_prev_fde	prev_fde;
 	boot_log		*pbl_log;
 	void *secboot_data;
 } boot_pbl_share_data;
+
+typedef struct {
+	char			*cmd;
+	uint32_t		pbl_version;
+	boot_reason		bt_reason;
+	sbl_ota_fde_es	sbl_fde;
+	boot_log		*pbl_log;
+	void *secboot_data;
+} boot_pbl_share_data_es;
 
 typedef struct {
 	/* ELF load share function */
@@ -29,6 +43,11 @@ typedef struct {
 	boot_pbl_share_data		data;
 	boot_pbl_share_func		func;
 } boot_pbl_share;
+
+typedef struct {
+	boot_pbl_share_data_es	data;
+	boot_pbl_share_func		func;
+} boot_pbl_share_es;
 
 extern boot_pbl_share	pbl_share;
 

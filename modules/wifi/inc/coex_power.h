@@ -1,4 +1,6 @@
 /*========================================================================
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 *
 * @brief Coex Power function definitions
 *========================================================================*/
@@ -8,6 +10,8 @@
 #define COEX_POWER_H
 
 #include "nt_osal.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
 #if defined(SUPPORT_COEX)

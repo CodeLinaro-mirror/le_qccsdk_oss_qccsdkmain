@@ -1,9 +1,13 @@
 /*
+*Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+*SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef _WPS_DEF_H_
 #define  _WPS_DEF_H_
+#include "wifi_cmn.h"
 
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "nt_timer.h"
 #include "wlan_dev.h"

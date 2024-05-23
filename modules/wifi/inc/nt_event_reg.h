@@ -1,8 +1,10 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #ifndef NT_EVENT_DEF
 #define NT_EVENT_DEF
-
+#include "wifi_cmn.h"
 #include "wmi.h"
 #include "nt_wlan.h"
 #include "wlan_wmi.h"

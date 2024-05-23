@@ -41,12 +41,7 @@ void app_main(void)
                  mainPOSIX_DEMO_PRIORITY,
                  NULL );
 
-    vTaskStartScheduler();
 
-    if (dead_loop) {
-        UART_SEND_DIRECT("Dead loop...\r\n");
-        while(dead_loop);
-    }
     UART_SEND_DIRECT("app_main over\r\n");
 }
 

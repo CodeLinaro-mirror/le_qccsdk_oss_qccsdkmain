@@ -7,6 +7,7 @@
 #ifndef _FERM_DEBUG_INFRA_H_
 #define _FERM_DEBUG_INFRA_H_
 
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include <stdlib.h>
 #include <stdint.h>

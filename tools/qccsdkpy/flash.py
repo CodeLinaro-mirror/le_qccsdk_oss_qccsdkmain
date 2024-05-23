@@ -35,16 +35,35 @@ jtag = qccsdk['jtag']
 
 cUtils.ENTER()
 
+def flash_action2arg (action):
+    global args
+    if action not in cUtils.CfgInternal['flash']['default_actions_supported']:
+        Logger.warn_not_supported(str(action))
+        cUtils.SUCCESS('invalid parameter, skip')
+    elif action=='erase':
+        args.erase = True
+    elif action=='flash':
+        args.flash = True
+    elif action=='reset':
+        args.reset = True
+    elif action==None:
+        Logger.warning('Skip')
+    else:
+        Logger.warn_not_supported(str(action))
+        cUtils.SUCCESS('Skip, should be removed from default_actions_supported')    
+
 #by default, no parameter
 if len(sys.argv)==1:
     default_action = qccsdk['flash']['default_action']
-    if default_action in cUtils.CfgInternal['flash']['actions_supported']:
-        if default_action=='erase':
-            args.erase = True
-        elif default_action=='flash':
-            args.flash = True
+    Logger.info('No parameters, use default_action = %s'%str(default_action))
+    if default_action != None:
+        if type(default_action) == str:
+            flash_action2arg(default_action)
+        elif type(default_action) == list:
+            for act in default_action:
+                flash_action2arg(act)
         else:
-            Logger.warn_not_supported(default_action)
+            Logger.warn_not_supported(str(type(default_action)))
             cUtils.SUCCESS('no parameter, skip')
     else:
         cUtils.SUCCESS('no parameter, skip')
@@ -65,10 +84,13 @@ CMD_RRAM = 'rram'
 CMD_FLASH = 'flash'
 CMD_OTP = 'otp'
 
+ram_image_path = cUtils.appdir_2_image_path('prg')
+Logger.info(ram_image_path)
+
 nvmcmd_intf =  ' %s -s %s '%(nvm_prg_name, cmd_interface_name)
-Flash_cmd = nvmcmd_intf + ' --nvm-name %s '%CMD_FLASH
-RRAM_cmd = nvmcmd_intf + ' --nvm-name %s '%CMD_RRAM
-reset_cmd = nvmcmd_intf + ' --reset '
+Flash_cmd = nvmcmd_intf + ' --nvm-name %s -i %s'%(CMD_FLASH,ram_image_path)
+RRAM_cmd = nvmcmd_intf + ' --nvm-name %s -i %s'%(CMD_RRAM,ram_image_path)
+reset_cmd = nvmcmd_intf + ' --reset -i %s'%ram_image_path
 
 def burn_nvm_appdir (cur_appdir):
     app_nvm_entry_name = cUtils.appdir_2_nvm_entry_name(cur_appdir)
@@ -111,16 +133,14 @@ if args.erase==True:
         %(RRAM_cmd, flash_internal['erase_rram'][0], flash_internal['erase_rram'][1]-flash_internal['erase_rram'][0]))
 
 if args.flash==True:
-    #burn_nvm_appdir('pbl')
-    [fdt_offset, fdt_path] = cUtils.get_fdt_info()
-    cUtils.python_script_op(script=' %s -b 0x%x -f %s'%(RRAM_cmd, fdt_offset, fdt_path))
-    burn_nvm_appdir('sbl')
-    burn_sblB()
-    #[bdf_RRAM_offset, bdf_path] = cUtils.get_bdf_info()
-    #[regdb_RRAM_offset, regdb_path] = cUtils.get_regdb_info()
-    #cUtils.python_script_op(script=' %s -b 0x%x -f %s'%(RRAM_cmd, bdf_RRAM_offset, bdf_path))
-    #cUtils.python_script_op(script=' %s -b 0x%x -f %s'%(RRAM_cmd, regdb_RRAM_offset, regdb_path))
-    burn_nvm_appdir(appdir)
+    if cUtils.appdir_in_flash(appdir)==True:
+        cUtils.python_script_op(script=' %s -f %s -i %s -P -A'%(nvmcmd_intf, cUtils.appdir_2_image_path(appdir), ram_image_path))
+    else:
+        [fdt_offset, fdt_path] = cUtils.get_fdt_info()
+        cUtils.python_script_op(script=' %s -b 0x%x -f %s'%(RRAM_cmd, fdt_offset, fdt_path))
+        burn_nvm_appdir('sbl')
+        burn_sblB()
+        burn_nvm_appdir(appdir)
 
 if (args.reset == True):
     cUtils.python_script_op(script=reset_cmd)

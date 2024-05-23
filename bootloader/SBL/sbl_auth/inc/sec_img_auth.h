@@ -238,19 +238,19 @@ sec_img_auth_error_type sec_img_auth_get_elf_format( const  void * elf_hdr,
 typedef struct sec_img_auth_ftbl_type
 {
   uint32 version_id;  /*define ftbl version */
-  sec_img_auth_error_type (*sec_img_auth_init)
+  sec_img_auth_error_type (*secimg_auth_init)
                        (sec_img_auth_priv_t* s_img_handle);
-  sec_img_auth_error_type (*sec_img_auth_verify_metadata)
+  sec_img_auth_error_type (*secimg_auth_verify_metadata)
                        (sec_img_auth_priv_t *s_img_handle,
                         sec_img_auth_verified_info_s *v_info);
-  sec_img_auth_error_type (*sec_img_auth_hash_elf_segments)
+  sec_img_auth_error_type (*secimg_auth_hash_elf_segments)
                        (sec_img_auth_priv_t *s_img_handle,
                         sec_img_auth_verified_info_s *v_info);
-  sec_img_auth_error_type (*sec_img_auth_validate_elf)
+  sec_img_auth_error_type (*secimg_auth_validate_elf)
                        (const void* elf_hdr);
-  uint32 (*sec_img_auth_is_valid_segment)
+  uint32 (*secimg_auth_is_valid_segment)
                        (Elf_Class format, const void * entry);
-  sec_img_auth_error_type (*sec_img_auth_get_elf_format)
+  sec_img_auth_error_type (*secimg_auth_get_elf_format)
                        (const  void * elf_hdr,
                         Elf_Class *elf_format);
 }sec_img_auth_ftbl_type;

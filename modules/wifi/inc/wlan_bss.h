@@ -7,6 +7,9 @@
 
 //#error wlan_bss called
 #include <stdint.h>
+#include "wifi_cmn.h"
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "wlan_dev.h"
 #include "ieee80211_defs.h"

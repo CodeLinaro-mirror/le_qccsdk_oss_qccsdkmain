@@ -1,3 +1,5 @@
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
 import("//configs_decl.gni")
@@ -17,7 +19,7 @@ lib_inc = [
 
 lib_src = [
     "libc/source/malloc.c",
-    "libc/source/fs.c",
+#    "libc/source/fs.c",
     "libc/source/printf.c",
     "libc/source/assert.c",
     "libc/source/safeAPI.c",
@@ -33,7 +35,7 @@ config("_config") {
 
 source_set("lib") {
     sources = lib_src
-    include_dirs = []
+    include_dirs = ["../../comp/FreeRTOS-Plus-POSIX",]
     if (CONFIG_FREERTOS_PLUS_POSIX) {
         sources += [
             "../../comp/posix/FreeRTOS-Plus-POSIX/source/FreeRTOS_POSIX_clock.c",
@@ -47,12 +49,6 @@ source_set("lib") {
             "../../comp/posix/FreeRTOS-Plus-POSIX/source/FreeRTOS_POSIX_timer.c",
             "../../comp/posix/FreeRTOS-Plus-POSIX/source/FreeRTOS_POSIX_unistd.c",
             "../../comp/posix/FreeRTOS-Plus-POSIX/source/FreeRTOS_POSIX_utils.c",
-        ]
-    }
-    if (CONFIG_SIGMA_TRAFFIC) {
-        sources += [
-            "wificert/sigma_traffic/sigma_shell.c",
-            "wificert/sigma_traffic/sigma_udp.c",
         ]
     }
 }

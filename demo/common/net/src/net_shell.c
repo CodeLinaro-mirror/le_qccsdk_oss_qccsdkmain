@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include <stdio.h>
@@ -765,7 +767,6 @@ static qapi_Status_t dhcpv4s(uint32_t Parameter_Count, QAPI_Console_Parameter_t 
 	char *interface_name, *cmd;
 	char *start_ip_addr_string;
 	char *end_ip_addr_string;
-	int leasetime = 0xFFFFFFFF;   /* very very long */
 	struct dhcps_lease lease;
 
     if( Parameter_Count < 2 || Parameter_Count > 5 || !Parameter_List ){
@@ -780,7 +781,11 @@ static qapi_Status_t dhcpv4s(uint32_t Parameter_Count, QAPI_Console_Parameter_t 
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 	netif = get_netif_by_device(AP_DEVICE);
-
+    if(!netif){
+        info_printf("SoftAP is not started.\n");
+        return QAPI_ERROR;
+    }
+	
 	if (strncmp(cmd, "pool", 4) == 0)
 	{
 		start_ip_addr_string    = Parameter_List[2].String_Value;
@@ -798,23 +803,18 @@ static qapi_Status_t dhcpv4s(uint32_t Parameter_Count, QAPI_Console_Parameter_t 
 			return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 		}
 
+		lease.lease_time = 0;
+		if (Parameter_Count == 5 && Parameter_List[4].Integer_Is_Valid)
+		{
+			lease.lease_time = Parameter_List[4].Integer_Value;
+		}
+		
 		lease.enable = TRUE;
 		if(!nt_set_dhcps_lease(&lease))
 		{
 			info_printf("configure pool address fail \r\n");
 			return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
-		}
-
-		if (Parameter_Count == 5 && Parameter_List[4].Integer_Is_Valid)
-		{
-			leasetime = Parameter_List[4].Integer_Value;
-			if(!nt_set_dhcps_lease_time(leasetime))
-			{
-				info_printf("configure pool lease time fail \r\n");
-				return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
-			}
-		}
-
+		}		
 	}
 	else if(strncmp(cmd, "start", 5) == 0)
 	{
@@ -844,7 +844,7 @@ static qapi_Status_t dhcpv4s(uint32_t Parameter_Count, QAPI_Console_Parameter_t 
 	}
 	else
     {
-        QCLI_Printf("Invalid command: %s\n", cmd);
+        info_printf("Invalid command: %s\n", cmd);
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
     }
 
@@ -882,9 +882,9 @@ const QAPI_Console_Command_t net_shell_cmds[] =
 									"\nssl server command"},
 	{ssl_quit,           "ssl_quit",     "\n\nUsage: ssl_quit\n",
 									"\nssl quit"},
-#endif
-    {dhcpv4s,    "dhcpv4s",  "\n\ndhcpv4s <interface> <start|stop|pool> <start_ip> <end_ip> [<lease_time_sec>|infinite]\n",
-                                    "\nDHCPv4 Server: Set up and configure Dynamic Host Configuration Protocol v4 server"},
+#endif		
+    {dhcpv4s,    "dhcpv4s",  "\n\ndhcpv4s <interface> <start|stop|pool> <start_ip> <end_ip> [<lease_time_minute>]\n",
+                                    "\nDHCPv4 Server: Set up and configure Dynamic Host Configuration Protocol v4 server"},					
 };
 
 const QAPI_Console_Command_Group_t net_shell_cmd_group = {NET_SHELL_GROUP_NAME, sizeof(net_shell_cmds) / sizeof(QAPI_Console_Command_t), net_shell_cmds};

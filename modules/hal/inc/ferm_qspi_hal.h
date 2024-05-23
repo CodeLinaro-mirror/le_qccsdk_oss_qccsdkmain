@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /** @file hal_qspi.h
@@ -89,6 +91,20 @@ static inline void hal_qspi_enable_clock_gating(uint8_t enable)
     }
 }
 
+static inline uint8_t hal_qspi_is_qspi_active()
+{
+#if CONFIG_SOC_QCC730V1
+    QCC730V1_PMU_BASE_Type *pmu = QCC730V1_PMU_BASE;
+#elif CONFIG_SOC_QCC730V2
+    QCC730V2_PMU_BASE_Type *pmu = QCC730V2_PMU_BASE;
+#endif
+#if CONFIG_SOC_QCC730V1
+    return pmu->pmu.PMU_BOOT_STRAP_CONFIGURATION_STATUS.bit.CFG_QSPI_ENABLE0;
+#elif CONFIG_SOC_QCC730V2
+    return pmu->pmu.PMU_BOOT_STRAP_CONFIGURATION_STATUS.bit.CFG_QSPI_ENABLE;
+#endif
+}
+
 static inline void hal_qspi_set_clock(uint8_t clock)
 {
 #if CONFIG_SOC_QCC730V1
@@ -99,6 +115,32 @@ static inline void hal_qspi_set_clock(uint8_t clock)
 
     pmu->pmu.PMU_COMMON_QSPI_REF_CLK_DIV_RCGR.reg = clock;
 
+}
+
+static inline void hal_qspi_qspi_gdscr_config()
+{
+    uint32_t value;
+#if CONFIG_SOC_QCC730V1
+        QCC730V1_PMU_BASE_Type *pmu = QCC730V1_PMU_BASE;
+#elif CONFIG_SOC_QCC730V2
+        QCC730V2_PMU_BASE_Type *pmu = QCC730V2_PMU_BASE;
+#endif
+    value = pmu->pmu.PMU_QSPI_GDSCR.reg;
+    value |= (2 << QWLAN_PMU_QSPI_GDSCR_EN_REST_WAIT_OFFSET
+        |2 << QWLAN_PMU_QSPI_GDSCR_CLK_DIS_WAIT_OFFSET
+        | 2 << QWLAN_PMU_QSPI_GDSCR_EN_FEW_WAIT_OFFSET);
+    
+    pmu->pmu.PMU_QSPI_GDSCR.reg = value;
+}
+
+static inline uint32_t hal_qspi_gdscr_pwr_ready()
+{
+#if CONFIG_SOC_QCC730V1
+        QCC730V1_PMU_BASE_Type *pmu = QCC730V1_PMU_BASE;
+#elif CONFIG_SOC_QCC730V2
+        QCC730V2_PMU_BASE_Type *pmu = QCC730V2_PMU_BASE;
+#endif
+    return pmu->pmu.PMU_QSPI_GDSCR.bit.GDS_CTL_PWR_STATUS;
 }
 
 /* set qspi master configure */

@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  * @file chop_sched_api.h
  * @brief Channel manager Declarations.
@@ -17,6 +19,8 @@
 #ifndef _CHOP_SCHED_API_H_
 #define _CHOP_SCHED_API_H_
 
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #if defined(CONFIG_CHANNEL_SCHEDULER)
 /*-------------------------------------------------------------------------

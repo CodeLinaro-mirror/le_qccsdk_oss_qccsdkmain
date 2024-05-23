@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef _UART_H_
@@ -9,11 +11,10 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include "autoconf.h"
-#if (!CONFIG_QCCSDK_DEMO)
-#include "iot_wifi.h"
-#endif
 #include <stdint.h>
 #include "nt_hw.h"
+#include "wifi_cmn.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include "nt_osal.h"
 #include "nt_logger_api.h"

@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "wlan_drv.h"
@@ -20,6 +22,10 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
 {
     qapi_Status_t ret = QAPI_OK;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	if(gp_wlan_qapi_cxt->wlanEnabled == false) {
+		warn_printf("wlan is not enabled\n");
+		return QAPI_ERROR;
+	}
 
     switch (group_ID) {
     case __QAPI_WLAN_PARAM_GROUP_WIRELESS: {
@@ -56,9 +62,7 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
         }
 		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL: {
 			uint16_t channel = *((uint16_t *) data);
-			qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
 			ret = wlan_set_channel(device_ID, channel);
-			qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL */
 		}
 		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_PHY_MODE: {
@@ -83,6 +87,36 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
 				memscpy(p_cxt->country_code,3,(char *)country_code,3);
 			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_COUNTRY_CODE */
 		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_BEACON_INTERVAL_IN_TU: {
+			uint32_t beacon_interval = *((uint32_t *) data);
+			ret = wlan_set_ap_beacon_inteval(device_ID, beacon_interval);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_BEACON_INTERVAL_IN_TU */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_DTIM_INTERVAL: {
+			uint32_t dtim_period = *((uint32_t *) data);
+			ret = wlan_set_ap_dtim_period(device_ID, dtim_period);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_DTIM_INTERVAL */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_INACTIVITY_TIME_IN_MINS: {
+			uint32_t inactivity_time = *((uint32_t *) data);
+			ret = wlan_set_ap_inactivity(device_ID, inactivity_time);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_INACTIVITY_TIME_IN_MINS */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_ENABLE_HIDDEN_MODE: {
+			uint8_t hidden = *((uint8_t *) data);
+			ret = wlan_set_ap_hidden(device_ID, hidden);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_AP_ENABLE_HIDDEN_MODE */
+		}
+		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_ALLOW_TX_RX_AGGR_SET_TID: {
+            qapi_WLAN_Aggregation_Params_t *paggr = (qapi_WLAN_Aggregation_Params_t *) data;
+            ret = wlan_set_agg_cfg(device_ID, paggr->tx_TID_Mask, paggr->rx_TID_Mask);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_ALLOW_TX_RX_AGGR_SET_TID */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_AMSDU_RX: {
+            uint8_t enable = *((uint8_t *) data);
+            ret = wlan_set_amsdu_rx(device_ID, enable);
+			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_AMSDU_RX */
+		}        
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;
@@ -199,6 +233,11 @@ qapi_Status_t qapi_WLAN_Get_Param (uint8_t __attribute__((__unused__)) device_ID
 {
     qapi_Status_t ret = QAPI_OK;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+
+	if(gp_wlan_qapi_cxt->wlanEnabled == false) {
+		warn_printf("wlan is not enabled\n");
+		return QAPI_ERROR;
+	}
 
     if (!data || !length || !*length) {
         return QAPI_WLAN_ERR_EINVAL;

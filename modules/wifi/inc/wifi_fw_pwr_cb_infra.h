@@ -7,6 +7,7 @@
 #ifndef _WIFI_FW_PWR_CB_INFRA_H_
 #define _WIFI_FW_PWR_CB_INFRA_H_
 
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 
 #ifdef FEATURE_FPCI

@@ -1,9 +1,11 @@
  /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 /************************************************************************/
 /* Chip specific BDF structures                                         */
 /************************************************************************/
-// 0.0.8
+// 0.0.18
 #ifndef _COMPONENT_BDF_STRUCT_H_
 #define _COMPONENT_BDF_STRUCT_H_
 #include <stdint.h>
@@ -110,21 +112,30 @@ typedef struct {
 } __ATTRIB_PACK HT_RATES;
 
 typedef struct {
+	int8_t	rate_1_L;
+	int8_t	rate_2_L;
+	int8_t	rate_2_S;
+} __ATTRIB_PACK CEB_RATES;
+
+typedef struct {
 	CCK_RATES	cckRates;
 	LEGACY_RATES	legacyRates;
 	HT_RATES	ht20Rates;
+	CEB_RATES	cebRates;
 } __ATTRIB_PACK TARGET_POWERS_2G;
 
 typedef struct {
 	CCK_RATES	cckRates;
 	LEGACY_RATES	legacyRates;
 	HT_RATES	ht20Rates;
+	CEB_RATES	cebRates;
 } __ATTRIB_PACK TARGET_POWERS_5G;
 
 typedef struct {
 	CCK_RATES	cckRates;
 	LEGACY_RATES	legacyRates;
 	HT_RATES	ht20Rates;
+	CEB_RATES	cebRates;
 } __ATTRIB_PACK TARGET_POWERS_6G;
 
 typedef struct {
@@ -139,8 +150,8 @@ typedef struct {
 	uint8_t	rateCCK;
 	uint8_t	rateOFDM;
 	uint8_t	numChan;
-	uint8_t	InitGainCCK;
-	uint8_t	InitGainOFDM;
+	int8_t	InitGainCCK;
+	int8_t	InitGainOFDM;
 } __ATTRIB_PACK SCPC_CAL_CFG;
 
 typedef struct {
@@ -297,6 +308,14 @@ typedef struct {
 	int8_t	highThresh[HALPHY_NUM_BANDS];
 	int8_t	highThreshOffset[HALPHY_NUM_BANDS];
 } __ATTRIB_PACK SCPC_TEMP_ADJUSTMENT ;
+
+typedef struct {
+	uint32_t	address;
+	uint32_t	regMask;
+	uint32_t	lowValue[HALPHY_NUM_BANDS];
+	uint32_t	midValue[HALPHY_NUM_BANDS];
+	uint32_t	highValue[HALPHY_NUM_BANDS];
+} __ATTRIB_PACK PHYRF_REG_TEMP_BASED_UPDATE;
 
 #ifdef _MSC_VER
 #pragma pack(pop)

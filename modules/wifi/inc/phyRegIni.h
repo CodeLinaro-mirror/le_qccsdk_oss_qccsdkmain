@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef _HALPHY_INI_H_
@@ -34,13 +36,13 @@ typedef struct {
     uint32_t data;   //Data
 } ini_data_t;
 
-void phyrf_load_rx_gain_lut(uint8);
+void phyrf_load_rx_gain_lut(uint8, uint16);
 
 void phyrf_program_trim_values(void);
 bool phyrf_check_trim_status(void);
 void phyrf_CRx_Enable(void* coex_Input);
 void phyrf_CRx_Disable();
-void phyrf_init_bb(uint8_t band_code, uint8_t bSkipBandCommonTable);
+void phyrf_init_bb(uint8_t band_code, uint8_t bSkipBandCommonTable, uint16_t mhz);
 void phyrf_init_rf(uint8_t band_code, uint16_t mhz);
 
 #endif  /* _HALPHY_INI_H_ */

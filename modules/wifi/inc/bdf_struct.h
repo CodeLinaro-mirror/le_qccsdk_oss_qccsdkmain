@@ -1,9 +1,11 @@
  /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 /************************************************************************/
 /* Header file for BDF module                                           */
 /************************************************************************/
-// 0.0.8
+// 0.0.18
 #ifndef _BDF_STRUCT_H_
 #define _BDF_STRUCT_H_
 #include <stdint.h>
@@ -12,7 +14,7 @@
 #include "component_bdf_def.h"
 #define BDF_TEMPLATE_VER1 0
 #define BDF_TEMPLATE_VER2 0
-#define BDF_TEMPLATE_VER3 8
+#define BDF_TEMPLATE_VER3 18
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)
@@ -30,6 +32,7 @@
 
 #define FW_CONFIG_CUSTOMAGCREGISTERADDRESSVALUEPAIR6G_COUNT	10
 
+#define FW_CONFIG_CRX_RSSI_CORRECTION_COUNT	7
 
 typedef struct bdfStruct {
 
@@ -118,10 +121,15 @@ typedef struct bdfStruct {
 	int8_t	txPowerOffset;
 	uint8_t	hwCalEnable;
 	uint8_t	CaldbBypass;
-	uint8_t	TxPowerMode2G;
-	uint8_t	TxPowerMode5G;
-	uint8_t	TxPowerMode6G;
-	uint8_t	coexEnable;
+	uint8_t	TxPowerMode2G[TXPOWERMODE_NUM_2G_SUB_BANDS];
+	uint8_t	TxPowerMode5G[TXPOWERMODE_NUM_5G_SUB_BANDS];
+	uint8_t	TxPowerMode6G[TXPOWERMODE_NUM_6G_SUB_BANDS];
+	uint16_t	TxPowerModeFeqBoundary2G;
+	uint16_t	TxPowerModeFreqLowBoundary5G;
+	uint16_t	TxPowerModeFreqHighBoundary5G;
+	uint16_t	TxPowerModeFreqLowBoundary6G;
+	uint16_t	TxPowerModeFreqHighBoundary6G;
+	uint8_t	crxEnable;
 	uint32_t	customAGCRegisterAddressValuePair2G[FW_CONFIG_CUSTOMAGCREGISTERADDRESSVALUEPAIR2G_COUNT];
 	uint32_t	customAGCRegisterAddressValuePair5G[FW_CONFIG_CUSTOMAGCREGISTERADDRESSVALUEPAIR5G_COUNT];
 #ifdef CONFIG_6G_BAND
@@ -141,7 +149,28 @@ typedef struct bdfStruct {
 	uint32_t	rttBaseDelay5G;
 #ifdef CONFIG_6G_BAND
 	uint32_t	rttBaseDelay6G;
+	uint8_t	CEBenable;
+	int8_t	FineGainOffsetBPSK;
+	int8_t	FineGainOffsetQPSK;
+	int8_t	FineGainOffset16QAM;
 #endif
+	int8_t	rssi_range_0[HALPHY_NUM_BANDS];
+	int8_t	rssi_range_1[HALPHY_NUM_BANDS];
+	int8_t	rssi_range_2[HALPHY_NUM_BANDS];
+	int8_t	rssi_range_3[HALPHY_NUM_BANDS];
+	int8_t	rssi_correction_0[HALPHY_NUM_BANDS];
+	int8_t	rssi_correction_1[HALPHY_NUM_BANDS];
+	int8_t	rssi_correction_2[HALPHY_NUM_BANDS];
+	int8_t	rssi_correction_3[HALPHY_NUM_BANDS];
+	int8_t	rssi_correction_4[HALPHY_NUM_BANDS];
+	int8_t	rssi_temp_low;
+	int8_t	rssi_temp_high;
+	int8_t	rssi_temp_correction_low[HALPHY_NUM_BANDS];
+	int8_t	rssi_temp_correction_mid[HALPHY_NUM_BANDS];
+	int8_t	rssi_temp_correction_high[HALPHY_NUM_BANDS];
+	int8_t	crx_rssi_correction[FW_CONFIG_CRX_RSSI_CORRECTION_COUNT];
+	int8_t	scpc_offset_process_corner[HALPHY_NUM_BANDS][HALPHY_NUM_PROCESS_CORNERS];
+	uint8_t	TempBasedCBCEnable;
 	uint8_t	FwConfigFuture[FW_CONFIG_FUTURE];
 // FW_CONFIG ends
 
@@ -192,14 +221,18 @@ typedef struct bdfStruct {
 	uint16_t	PadcConverx10006G;
 #endif
 	uint8_t	ClpcDpdColdBootEnable;
-	int16_t	TempGradx10002G[TEMPERATURE_REGIONS];
-	int16_t	TempGradx10005G[TEMPERATURE_REGIONS];
+	int16_t	TempGradx10002G[TEMPERATURE_REGIONS][HALPHY_NUM_PROCESS_CORNERS];
+	int16_t	TempGradx10005G[TEMPERATURE_REGIONS][HALPHY_NUM_PROCESS_CORNERS];
 #ifdef CONFIG_6G_BAND
-	int16_t	TempGradx10006G[TEMPERATURE_REGIONS];
+	int16_t	TempGradx10006G[TEMPERATURE_REGIONS][HALPHY_NUM_PROCESS_CORNERS];
 #endif
 	SCPC_CAL_CFG	scpcCalConfig2G;
 	SCPC_CAL_CFG	scpcCalConfig5G6G;
+	int8_t	scpcCalConfig6GInitGainCCK;
+	int8_t	scpcCalConfig6GInitGainOFDM;
 	SCPC_TEMP_ADJUSTMENT 	scpcTempBasedAdj[HALPHY_NUM_RATES_FOR_TEMP_BASED_TPC_ADJUSTMENT];
+	int8_t	CalRefTemp2G;
+	int8_t	CalRefTemp5G6G;
 	uint8_t	TpcDataOffsetFuture[TPC_DATA_OFFSET_FUTURE];
 // IOT_TPC_DATA ends
 
@@ -276,7 +309,19 @@ typedef struct bdfStruct {
 	uint8_t	agcEnergyDetThrFuture[AGC_ED_DET_FUTURE];
 // IOT_AGC_ENERGY_DETECT_THRESHOLD ends
 
-// structure segment:
+// structure segment:	 
+    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    // [IOT_TEMPERATURE_CONFIGURATION]  settings                                x
+    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	NV_HEADER	nvTemperatureConfig;
+	uint8_t	num_phyrf_regs_to_update;
+	PHYRF_REG_TEMP_BASED_UPDATE	phyrf_reg_temp_based_update_list[HALPHY_MAX_REGS_TEMP_BASED_UPDATE];
+	int8_t	reg_update_temp_threshold_low;
+	int8_t	reg_update_temp_threshold_high;
+	uint8_t	temperatureConfigFuture[TEMPERATURE_CONFIG_FUTURE];
+// IOT_TEMPERATURE_CONFIGURATION ends
+
+// structure segment:	
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     // [RESERVED_NV]                                               x
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -349,14 +394,18 @@ typedef struct cachedBdfStruct{
 	uint16_t	PadcConverx10006G;
 #endif
 	uint8_t	ClpcDpdColdBootEnable;
-	int16_t	TempGradx10002G[TEMPERATURE_REGIONS];
-	int16_t	TempGradx10005G[TEMPERATURE_REGIONS];
+	int16_t	TempGradx10002G[TEMPERATURE_REGIONS][HALPHY_NUM_PROCESS_CORNERS];
+	int16_t	TempGradx10005G[TEMPERATURE_REGIONS][HALPHY_NUM_PROCESS_CORNERS];
 #ifdef CONFIG_6G_BAND
-	int16_t	TempGradx10006G[TEMPERATURE_REGIONS];
+	int16_t	TempGradx10006G[TEMPERATURE_REGIONS][HALPHY_NUM_PROCESS_CORNERS];
 #endif
 	SCPC_CAL_CFG	scpcCalConfig2G;
 	SCPC_CAL_CFG	scpcCalConfig5G6G;
+	int8_t	scpcCalConfig6GInitGainCCK;
+	int8_t	scpcCalConfig6GInitGainOFDM;
 	SCPC_TEMP_ADJUSTMENT 	scpcTempBasedAdj[HALPHY_NUM_RATES_FOR_TEMP_BASED_TPC_ADJUSTMENT];
+	int8_t	CalRefTemp2G;
+	int8_t	CalRefTemp5G6G;
 	uint8_t	TpcDataOffsetFuture[TPC_DATA_OFFSET_FUTURE];
 // IOT_TPC_DATA ends
 

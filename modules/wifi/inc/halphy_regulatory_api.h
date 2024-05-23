@@ -1,4 +1,6 @@
 /*========================================================================
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  * @file halphy_regulatory_api.h
  * @brief API for regulatory Functions and types
@@ -10,6 +12,8 @@
 /*------------------------------------------------------------------------
  * Include Files
  * ----------------------------------------------------------------------*/
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include <stdint.h>
 #include <stdbool.h>

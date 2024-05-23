@@ -1,0 +1,23 @@
+#
+
+import("//configs_decl.gni")
+#import("${root_build_dir}/mainconfig.gni")
+
+
+qcc_wifi_inc = [
+#    "//apps/WiFiManager/inc",
+#    "//core/common",
+]
+
+qcc_wifi_src = [
+    "qcc_wifi.c",
+    "network_al.c",
+]
+
+config("_config") {
+    include_dirs = qcc_wifi_inc
+}
+
+source_set("qcc_wifi") {
+    sources = qcc_wifi_src
+}

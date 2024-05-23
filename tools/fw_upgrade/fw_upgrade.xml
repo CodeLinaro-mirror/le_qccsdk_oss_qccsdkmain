@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<!--
+===============================================================================
+===============================================================================
+-->
+<!--
+-->
+
+<fw_upgrade_img_descriptor>
+      <!-- format: 1: partial upgrade, 2: full upgrade in one file -->
+      <header signature="0x54445746" version="1" format="2"/>
+      <partition filename="" signature="0x54445746" image_id="5" ver="1" size_in_kb="64" HASH_TYPE="1"/>
+      <partition filename="FERMION_SBL_HASHED.elf" signature="0x54445746" image_id="1" ver="1" size_in_kb="0" HASH_TYPE="1"/>
+      <partition filename="FERMION_IOE_QCLI_DEMO_HASHED.elf" signature="0x54445746" image_id="10" ver="1" size_in_kb="0" HASH_TYPE="1"/>
+</fw_upgrade_img_descriptor>

@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 /*
  * nt_imps.h
@@ -11,7 +13,7 @@
 
 #include "nt_osal.h"
 #include "pm_api.h" // PM_TIMER structure is used
-#include "autoconf.h"
+//#include "autoconf.h"
 
 
 #define DEFAULT_IMPS_SLEEP_TIME 120000

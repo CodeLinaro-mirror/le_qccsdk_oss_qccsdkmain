@@ -1,4 +1,7 @@
-
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef _BOOT_PBL_PATCH_TABLE_H_
 #define _BOOT_PBL_PATCH_TABLE_H_
 #include "nt_bl_eventhandler.h"
@@ -16,7 +19,8 @@
 #include "pbl_share.h"
 //#include "pbl_main.h"
 #include "binary_descriptor.h"
-
+#include "pbl_image_auth.h"
+#include "pbl_auth_indt.h"
 
 #ifndef PBL_PATCH_ENABLE
 #ifndef SBL_BUILD 
@@ -70,6 +74,8 @@ typedef struct {
 	boot_handler_ind_t			boot_handler;
     irq_handler_ext_ind_t		irq_handler_ext;
 	pbl_patch_ind_t				pbl_patch;
+	pbl_image_auth_ind_t        pbl_image_auth;
+	pbl_secboot_ind_p           pbl_secboot;	
 } func_ind_t;
 
 typedef void (*pbl_patch_glb_data_t)(void*);

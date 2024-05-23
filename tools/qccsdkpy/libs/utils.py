@@ -58,11 +58,11 @@ class Utils(object):
         self.output_path = os.path.join(project_root, qccsdk['output'])
         self.log_path = os.path.join(self.output_path, qccsdk_base['log_dir'])
         self.build_path = os.path.join(self.output_path, qccsdk['board'])
-        self.logger = Logger(logdir=self.log_path)
+        logger_set = self.CfgInternal['utils']['logger']
+        self.logger = Logger(logdir=self.log_path, stream2file=logger_set['stream2file'], logging2file=logger_set['logging2file'],
+            filename_timestamp=logger_set['filename_timestamp'], file_append=logger_set['file_append'], logging_timestamp=logger_set['logging_timestamp'])
         if enableLogDebug==True:
             self.logger.enableLogDebug()
-        self.localtime = self.logger.localtime
-        self.startDateTimeStamp = self.logger.startDateTimeStamp
         self.target_appdir_in_flash = self.appdir_in_flash(qccsdk['appdir'])
 
     def load_cfg(self, config_file):
@@ -125,7 +125,7 @@ class Utils(object):
         try:
             self.logger.debug("Execute cmd as below with check=%s enable=%s logEnable=%s logBlockMode=%s waitFinish=%s:"%(str(check), str(enable), str(logEnable), str(logBlockMode), str(waitFinish)));
             self.logger.info('%s'%cmd_string)
-            if (self.CfgCommon.CFG_RUN_CMD_ENABLE==True) and (enable==True):
+            if (self.CfgInternal['utils']['run_cmd']['run_enable']==True) and (enable==True):
                 self.logger.info('+++++++++++++++++++++++++++++++++++++++++++')
                 self.logger.reduceFormater()
                 if logEnable == True:
@@ -343,7 +343,11 @@ class Utils(object):
         if script_dir:
             cwd = os.getcwd()
             self.chdir(script_dir)
-        (ret, readBuff) = self.run_cmd('%s %s %s'%(CfgCommon.PYTHON_ENV, script, cmd))
+        if 'env' in self.CfgExternal.keys():
+            python_env = self.CfgExternal['env']['python_env']
+        else:
+            python_env = 'python' #to keep backward compatibility
+        (ret, readBuff) = self.run_cmd('%s %s %s'%(python_env, script, cmd))
         if script_dir:
             self.chdir(cwd)
         return (ret, readBuff)
@@ -403,7 +407,11 @@ class Utils(object):
 
     def appdir_2_nvm_entry_name (self, appdir):
         if appdir in self.CfgInternal['appdir_map'].keys():
-            return self.CfgInternal['appdir_map'][appdir][0]
+            appdir_nvm_entry_name = self.CfgInternal['appdir_map'][appdir][0]
+            if (appdir_nvm_entry_name!=None) and ('flash_' in appdir_nvm_entry_name) and self.CfgExternal['qccsdk']['board'] in ['qcc730v2_socket', 'qcc730v2_evb12_hostless']:
+                #todo: no flash, then just use rram
+                appdir_nvm_entry_name = 'rram_app'
+            return appdir_nvm_entry_name
         else:
             return None
 
@@ -425,16 +433,14 @@ class Utils(object):
             return None
         elif appdir=='intg':
             return None
-        elif appdir=='prg':
-            return os.path.join(self.project_root, 'tools/bin/%s.elf'%image_name)
         else:
-            if appdir=='ftm' and self.is_SDK==True:
-                dir_path = os.path.join(self.project_root, 'bin/ftm/%s'%(self.CfgExternal['qccsdk']['board']))
-            else:
-                dir_path = os.path.join(self.build_path, image_name, 'DEBUG', 'bin')
+            dir_path = os.path.join(self.build_path, image_name, 'DEBUG', 'bin')
             if appdir=='sbl' or self.appdir_in_flash(appdir):
                 #generally, elf locates in Flash, bin locates in rram, except sbl as elf in rram
-                return os.path.join(dir_path, '%s_STRIPPED.elf'%image_name)
+                return os.path.join(dir_path, '%s_HASHED.elf'%image_name)
+            elif appdir=='prg':
+                # nvm programmer as elf in ram
+                return os.path.join(dir_path, '%s.elf'%image_name)
             else:
                 return os.path.join(dir_path, '%s.bin'%image_name)
 

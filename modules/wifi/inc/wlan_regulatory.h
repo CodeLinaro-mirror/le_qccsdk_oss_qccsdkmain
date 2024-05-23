@@ -10,6 +10,8 @@
 /*------------------------------------------------------------------------
  * Include Files
  * ----------------------------------------------------------------------*/
+
+#include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #ifdef SUPPORT_REGULATORY
 #include <stdint.h>

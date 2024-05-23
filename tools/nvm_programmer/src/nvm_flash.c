@@ -1,4 +1,7 @@
-
+/*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
  /*-------------------------------------------------------------------------
  * Include Files
  *-----------------------------------------------------------------------*/
@@ -244,32 +247,6 @@ int32_t flash_read(uint32_t address, uint8_t *buffer, uint32_t length)
     status = drv_flash_read(address, length, buffer, NULL, NULL);
 #endif
     return status;
-}
-
-#define UNUSED(x) (void)(x)
-
-uint8_t nt_log_printf(
-		uint8_t mod_id,
-		uint8_t loglvl,
-#if( NT_FN_FUNCTION_LINE_NUM_FLAG == 1)
-		char *func_name,
-		/*@ for line number*/
-		uint16_t ln,
-#endif
-		const char *fmt,
-		uint8_t num,
-		...
-		)
-{
-    UNUSED(mod_id);
-    UNUSED(loglvl);
-#if( NT_FN_FUNCTION_LINE_NUM_FLAG == 1)
-    UNUSED(func_name);
-    UNUSED(ln);
-#endif
-    UNUSED(fmt);
-    UNUSED(num);
-    return 0;
 }
 
 #endif /* CONFIG_BOARD_QCC730_QSPI_ENABLE */

@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /**===========================================================================
@@ -316,7 +318,7 @@ void write_lo_coef(int32_t corr_i, int32_t corr_q, tx_dcoc_range_t dcoc_range, b
 uint32_t form_tx_gain_word(uint16_t rf_gain_word, int32_t txlo_i, int32_t txlo_q,
         uint8_t odac_range);
 void load_tx_gainlut(uint8_t band_code,uint8_t tx_gain_id, int8_t tx_dig_gain);
-void phyrf_load_rx_gain_lut(uint8_t band_code);
+void phyrf_load_rx_gain_lut(uint8_t band_code, uint16_t mhz);
 int32_t signmag2twoscomp(uint32_t data, uint8_t n_bits);
 int32_t twoscomp2signmag(int32_t data, uint8_t n_bits);
 void set_finegain_offset(uint8_t fgoffset11a, uint8_t fgoffset11b, uint8_t fgoffset11n);
@@ -383,11 +385,12 @@ typedef struct phyrf_cal_globol_flag_t
     uint32_t phyrf_bootseq_executed : 1;  // 0: False, 1: True, default is 0
 } phyrf_cal_globol_flag_t;
 
-typedef enum phyrf_chiptype_t
+typedef enum phyrf_chiptype_t 
 {
-	phyrf_chiptype_ffl=1,
-	phyrf_chiptype_tt=2,
-	phyrf_chiptype_ssh=3
+	phyrf_chiptype_ffl=0,
+	phyrf_chiptype_tt=1,
+	phyrf_chiptype_ssh=2,
+  phyrf_chiptype_unknown=3
 } phyrf_chiptype_t;
 
 #endif /* _HALPHY_CAL_UTILS_H_ */
