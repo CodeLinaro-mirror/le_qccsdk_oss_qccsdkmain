@@ -175,8 +175,7 @@ config("linker_config") {
         if (CONFIG_LIBWIFI_CORE) {
             libs += [ "wifi_core"]
             if (is_sdk) {
-                lib_dirs += [ rebase_path("modules/wifi/qcc730/core/lib/") ]
-                lib_dirs += [ "//output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib" ]
+                lib_dirs += [ "//modules/wifi/bin" ]
             }
             else {
                 lib_dirs += [ "//output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib" ]

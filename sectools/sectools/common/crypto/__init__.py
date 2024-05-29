@@ -14,9 +14,9 @@ from sectools.common.crypto.discovery import defines as modules
 # Import all the discovery implementations
 from sectools.common.crypto.discovery import openssl
 from sectools.common.crypto.discovery import m2crypto
-from sectools.common.crypto.discovery import crypto_cbc
-from sectools.common.crypto.discovery import crypto_ccm
-from sectools.common.crypto.discovery import ecies
+#from sectools.common.crypto.discovery import crypto_cbc
+#from sectools.common.crypto.discovery import crypto_ccm
+#from sectools.common.crypto.discovery import ecies
 
 # Import the functions factory
 from sectools.common.crypto import functions

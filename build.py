@@ -441,7 +441,7 @@ def setup_env():
         build_id = default_build_id
     print('build id: %d' % (int(build_id)))
     #if os.path.exists('modules/wifi/bin/regdb.bin'):
-    if os.path.exists('output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/libwifi_core.a'):
+    if os.path.exists('modules/wifi/bin/libwifi_core.a'):
         g_is_sdk_packed = True
     else:
         g_is_sdk_packed = False
