@@ -180,6 +180,11 @@ extern uint32_t _ln_FDT_Start_Addr;
 #define WLAN_IMG_MODE_OFFSET (0x130) /* offset with in FDT section */
 #define RRAM_APP_MODE_ADR ((uint32_t)(&_ln_FDT_Start_Addr) + WLAN_IMG_MODE_OFFSET)
 #endif
+#if CONFIG_FILE_SYSTEM
+#include "fs.h"
+#include "littlefs_fs.h"
+#include "fw_upgrade_mem.h"
+#endif
 bool is_jtag_mode(void);
 bool nt_get_rram_app_mode(app_mode_id_t * read_app_mode);
 bool nt_set_rram_app_mode(app_mode_id_t requested_app_mode);
@@ -348,6 +353,11 @@ static void shell_init (void)
 #if (CONFIG_UNITTEST_SHELL)
 	extern void unittest_shell_init(void);
 	unittest_shell_init();
+#endif
+
+#if (CONFIG_FS_SHELL)
+    extern void fs_shell_init(void);
+    fs_shell_init();
 #endif
 }
 #endif
@@ -799,6 +809,10 @@ qcspi_slv_init();
     /* check active FWD to invalidate trial fwd if need */
     extern qapi_Status_t qapi_Fw_Upgrade_Verify_FWD();
     qapi_Fw_Upgrade_Verify_FWD();
+#endif
+#if CONFIG_FILE_SYSTEM
+    extern int init_fs(void);
+    init_fs();
 #endif
 #if (CONFIG_QCCSDK_DEMO)
     //create app task to call app_main()

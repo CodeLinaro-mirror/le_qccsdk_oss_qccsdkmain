@@ -1,0 +1,27 @@
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
+import("//configs_decl.gni")
+
+fs_demo_inc = [
+    "src",
+    "//modules/fs",
+]
+
+fs_demo_src = [
+    "src/fs_demo.c",
+]
+
+not_needed("*", [ ])
+
+config("_config") {
+    if (image_name == "FERMION_FS_DEMO") {
+        include_dirs = fs_demo_inc
+    }
+}
+
+source_set("fs_demo") {
+    if (image_name == "FERMION_FS_DEMO") {
+        sources = fs_demo_src
+    }
+}
+

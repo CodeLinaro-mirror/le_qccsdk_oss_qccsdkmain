@@ -1,0 +1,11 @@
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
+config POSIX_FS_API
+        depends on FILE_SYSTEM
+	bool "POSIX FS API support"
+config POSIX_MAX_FDS
+        int
+        default 4
+config POSIX_MAX_OPEN_FILES
+        int
+        default 4

@@ -1,0 +1,30 @@
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
+config FILE_SYSTEM
+	bool "FS support"
+        depends on BOARD_QCC730_QSPI_ENABLE
+	help
+	  Enables file system support.
+
+if FILE_SYSTEM
+
+menu "FS Settings"
+
+config FILE_SYSTEM_MAX_TYPES
+    int
+    default 1
+
+config  MAX_DIRECTORY_DEPTH
+    int "max directory depth"
+    range 1 2
+    default 2
+rsource "Kconfig.lfs"
+rsource "Kconfig.posix_fs"
+
+config FS_SHELL
+    bool "FS Command Shell"
+    default n
+
+endmenu
+
+endif # FILE_SYSTEM

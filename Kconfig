@@ -6,5 +6,6 @@ source "soc/Kconfig"
 source "lib/Kconfig"
 source "modules/console/Kconfig"
 source "modules/fw_upgrade/Kconfig"
+source "modules/fs/Kconfig"
 
 source "../comp/wifi/core/Kconfig"

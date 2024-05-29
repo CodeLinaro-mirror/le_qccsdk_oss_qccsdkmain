@@ -12,11 +12,12 @@ import shutil
 import platform
 import re
 
-image_list = [ 'FERMION_SBL', 'FERMION_IOE_QCLI_DEMO', 'FERMION_HELLO_WORLD', 'FERMION_POSIX_DEMO', 'FERMION_NVM_PROGRAMMER', 'FERMION_WIFI_LIB' ]
-proj_conf = { 'FERMION':'apps/prj.conf', 'FERMION_QCLI_DEMO':'demo/qcli_demo/prj.conf', 'FERMION_IOE_QCLI_DEMO':'demo/qcli_demo/prj.conf', 'FERMION_PBL':'demo/qcli_demo/prj.conf', 'FERMION_SBL':'demo/qcli_demo/prj.conf', 'FERMION_FTM':'demo/ftm/ftm_prj.conf',
+image_list = [ 'FERMION_SBL', 'FERMION_IOE_QCLI_DEMO', 'FERMION_HELLO_WORLD', 'FERMION_POSIX_DEMO', 'FERMION_NVM_PROGRAMMER', 'FERMION_WIFI_LIB',  'FERMION_FS_DEMO' ]
+proj_conf = { 'FERMION_IOE_QCLI_DEMO':'demo/qcli_demo/prj.conf', 'FERMION_SBL':'demo/qcli_demo/prj.conf', 'FERMION_FTM':'demo/ftm/ftm_prj.conf',
     'FERMION_HELLO_WORLD':'demo/hello_world/prj.conf',
     'FERMION_POSIX_DEMO':'demo/posix_demo/prj.conf',
     'FERMION_NVM_PROGRAMMER':'demo/qcli_demo/prj.conf',
+    'FERMION_FS_DEMO':'demo/fs_demo/prj.conf',
 }
 default_build_output = 'build'
 gn_path = '/pkg/qct/software/ubuntu/matter_tool'

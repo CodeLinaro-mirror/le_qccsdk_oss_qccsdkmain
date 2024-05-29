@@ -3,5 +3,5 @@
 #define SBL_VERSION_BUILD
 #define SBL_VER_MAJOR 0
 #define SBL_VER_MINOR 1
-#define SBL_VER_COUNT 33
+#define SBL_VER_COUNT 37
 #endif

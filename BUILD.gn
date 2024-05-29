@@ -10,6 +10,7 @@ is_sbl = false
 is_nvm_programmer = false
 is_ftm = false
 is_ioe_qcli_demo = false
+need_fs = false
 elf_dir = "bin"
 build_type = "__DEBUG_BUILD"
 
@@ -35,6 +36,14 @@ if (image_name == "FERMION_FTM") {
 
 if (image_name == "FERMION") {
     CONFIG_LIBWIFI_CORE = false
+}
+
+if (image_name =="FERMION_FS_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO") {
+    need_fs = true
+}
+
+if (board_name == "qcc730v2_evb12_hostless") {
+    need_fs = false
 }
 
 lib_c_nano_path = exec_script("build/gn/scripts/get_arm_gcc_lib_path.py", ["c_nano"], "list lines")
@@ -76,10 +85,16 @@ projects_common = [
     "//modules/net/mbedtls",
     "//modules/net/lwip",
     "//arch/arm/system",
+    "//demo/fs_demo",
 ]
 
 projects_wifi_core = [
     "//modules/wifi",
+]
+
+
+projects_fs = [
+    "//modules/fs",
 ]
 
 not_needed("*", [ ])
@@ -130,6 +145,7 @@ config("common_inc") {
     include_dirs += [ "../comp/lwip/src/portable", ]
     include_dirs += [ "../comp/lwip/src/include/lwip", ]
     include_dirs += [ "../comp/lwip/src/include/compat/posix", ]
+    include_dirs += [ "../comp/littlefs", ]
 }
 
 config("default_config") {
@@ -212,6 +228,11 @@ executable("elf_target") {
             }
         }
     }
+
+    if (need_fs) {
+        public_deps += projects_fs
+    }
+
     output_name = "${image_name}"
     output_extension = "elf"
     output_dir = "${root_build_dir}/${elf_dir}"
