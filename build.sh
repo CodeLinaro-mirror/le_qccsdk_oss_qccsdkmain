@@ -12,4 +12,6 @@ python intg.py
 mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11
 mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11_ART
 cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/* ${SCRIPT_PATH}/../prebuilt_HY11/
+cp ${SCRIPT_PATH}/../comp/wifi/NOTICE ${SCRIPT_PATH}/../prebuilt_HY11/
 cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/* ${SCRIPT_PATH}/../prebuilt_HY11_ART/
+cp ${SCRIPT_PATH}/../comp/wifi/NOTICE ${SCRIPT_PATH}/../prebuilt_HY11_ART/
