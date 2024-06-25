@@ -11,7 +11,9 @@ export PATH=/pkg/qct/software/arm/linaro-toolchain/gcc-arm-none-eabi-8-2019-q3-u
 python intg.py
 mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11
 mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11_ART
-cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/* ${SCRIPT_PATH}/../prebuilt_HY11/
+cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/libwifi_core.a  ${SCRIPT_PATH}/../prebuilt_HY11/
 cp ${SCRIPT_PATH}/../comp/wifi/NOTICE ${SCRIPT_PATH}/../prebuilt_HY11/
-cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/* ${SCRIPT_PATH}/../prebuilt_HY11_ART/
+cp ${SCRIPT_PATH}/../comp/wifi/LICENSE.txt ${SCRIPT_PATH}/../prebuilt_HY11/
+cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/libwifi_core.a ${SCRIPT_PATH}/../prebuilt_HY11_ART/
 cp ${SCRIPT_PATH}/../comp/wifi/NOTICE ${SCRIPT_PATH}/../prebuilt_HY11_ART/
+cp ${SCRIPT_PATH}/../comp/wifi/LICENSE.txt ${SCRIPT_PATH}/../prebuilt_HY11_ART/
