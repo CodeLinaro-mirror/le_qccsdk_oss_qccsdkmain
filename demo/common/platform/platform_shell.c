@@ -9,6 +9,7 @@
 #include "qapi_heap_status.h"
 
 #include "qapi_console.h"
+#include "qapi_fatal_err.h"
 
 #include <stdio.h>
 
@@ -115,6 +116,15 @@ qapi_Status_t platform_demo_free(uint32_t Parameter_Count, QAPI_Console_Paramete
     return QAPI_OK;
 }
 
+qapi_Status_t platform_demo_watchdog_reset(__attribute__((__unused__)) uint32_t parameters_count, __attribute__((__unused__)) QAPI_Console_Parameter_t * parameters)
+{
+    //trigger watchdog rereset
+    QAPI_FATAL_ERR(0,0,0);
+	
+    return QAPI_OK;
+}
+
+
 const QAPI_Console_Command_t platform_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -125,6 +135,8 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
 #endif
     {bgtest, "bgtest", "[time_s(5)] [interval_s(1)]", "background command test\n"},
     {platform_demo_free, "free", "\n", "display the heap size and an approximation of free amount of heap bytes\n"},
+    {platform_demo_watchdog_reset, "wdrst", "\n", "trigger watchdog reset\n"},
+
 };
 
 const QAPI_Console_Command_Group_t platform_shell_cmd_group = {"platform", sizeof(platform_shell_cmds) / sizeof(QAPI_Console_Command_t), platform_shell_cmds};

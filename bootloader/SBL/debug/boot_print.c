@@ -10,7 +10,6 @@ static char boot_print_buf[BOOT_PRINT_BUF_SIZE];
 #ifdef P_DEBUG
 #ifdef P_DEBUG_PRINT
 
-static char boot_print_buf[BOOT_PRINT_BUF_SIZE];
 static const char *boot_mod_s[PBL_MOD_MAX] = {
 	"OTA SBL",
 	"FDT",

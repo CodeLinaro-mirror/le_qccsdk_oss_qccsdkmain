@@ -32,59 +32,60 @@ qccsdk_base:
     #board dir
     boards_dir: boards
     log_dir: log
-    nvm_prg_path: tools/nvm_programmer/nvm_programmer.py
+    nvm_prg_path: tools/nvm_programmer/scripts/nvm_programmer.py
 
 #structure: [board, bdf_name]
 board_map:
     fdt_name: bdwlan
     repo:
-        bdf_dir: core/wifi/halphy/phyrf_svc/tools/bdfUtils/device/bdf/qcp5321
+        bdf_dir: modules/wifi/bin
         boards_supported: [qcc730v1_socket, qcc730v2_socket, qcc730v2_evb11_hostless, qcc730v2_evb12_hostless, qcc730v2_evb13_hostless, mqm405x, mqm405i, mqm730x, mqm730i]
         qcc730v1_socket: bdwlan.bin
         qcc730v2_socket: bdwlan03.bin
         qcc730v2_evb11_hostless: bdwlan01.bin
         qcc730v2_evb12_hostless: bdwlan02.bin
         qcc730v2_evb13_hostless: bdwlan03.bin
-        mqm405x: bdwlan01.bin
-        mqm405i: bdwlan03.bin
-        mqm730x: bdwlan01.bin
-        mqm730i: bdwlan03.bin
+        mqm405x: mqm730x.bin
+        mqm405i: mqm730i.bin
+        mqm730x: mqm730x.bin
+        mqm730i: mqm730i.bin
     SDK:
         bdf_dir: bin/wlan
         boards_supported: [qcc730v2_evb11_hostless, qcc730v2_evb13_hostless, mqm405x, mqm405i, mqm730x, mqm730i]
         qcc730v1_socket: bdwlan.bin
         qcc730v2_socket: bdwlan03.bin
         qcc730v2_evb11_hostless: bdwlan01.bin
-        mqm405x: bdwlan01.bin
-        mqm405i: bdwlan03.bin
-        mqm730x: bdwlan01.bin
-        mqm730i: bdwlan03.bin
+        qcc730v2_evb13_hostless: bdwlan03.bin
+        mqm405x: mqm730x.bin
+        mqm405i: mqm730i.bin
+        mqm730x: mqm730x.bin
+        mqm730i: mqm730i.bin
 
 regdb_map:
     fdt_name: regdb
     repo:
-        regdb_path: core/wifi/halphy/phyrf_svc/tools/Regulatory/regdb.bin
+        regdb_path: modules/wifi/bin
     SDK:
-        regdb_path: bin/wlan/regdb.bin
+        regdb_path: modules/wifi/bin
 
 fdt_map:
     nvm_entry_name: rram_fdt
     repo:
-        fdt_path_app_bin: scripts/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_with_app_bin.bin
-        fdt_path_app_elf: scripts/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_default.bin
+        fdt_path_app_bin: tools/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_with_app_bin.bin
+        fdt_path_app_elf: tools/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_default.bin
     SDK:
-        fdt_path_app_bin: scripts/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_with_app_bin.bin
-        fdt_path_app_elf: scripts/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_default.bin
+        fdt_path_app_bin: tools/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_with_app_bin.bin
+        fdt_path_app_elf: tools/storage/firmware_desc_table/curr_age_fdt/frn_curr_age_default.bin
 
 #structure: [appdir, nvm_entry_name, image_name]
 appdir_map:
     repo:
         appdirs_specific_supported: [pbl, sbl, prg, ftm, intg]
-        appdirs_build_supported: [pbl, sbl, prg, ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, intg, demo/fs_demo]
-        appdirs_flash_supported: [ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, demo/fs_demo]
+        appdirs_build_supported: [pbl, sbl, prg, ftm, demo/hello_world, demo/posix_demo, intg, demo/fs_demo, demo/qcli_demo]
+        appdirs_flash_supported: [ftm, demo/hello_world, demo/posix_demo, demo/fs_demo, demo/qcli_demo]
     SDK:
         appdirs_specific_supported: [sbl, prg, ftm]
-        appdirs_build_supported: [sbl, prg, demo/qcli_demo, demo/hello_world, demo/posix_demo, intg, demo/fs_demo]
+        appdirs_build_supported: [sbl, prg, ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, intg, demo/fs_demo]
         appdirs_flash_supported: [ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, demo/fs_demo]
     pbl: [rram_pbl, FERMION_PBL]
     sbl: [rram_sbl, FERMION_SBL]
@@ -94,7 +95,7 @@ appdir_map:
     demo/hello_world: [flash_app, FERMION_HELLO_WORLD]
     demo/posix_demo: [flash_app, FERMION_POSIX_DEMO]
     demo/fs_demo: [flash_app, FERMION_FS_DEMO]
-    intg: [Null, [FERMION_NVM_PROGRAMMER, FERMION_SBL, FERMION_IOE_QCLI_DEMO, FERMION_HELLO_WORLD, FERMION_POSIX_DEMO, FERMION_FS_DEMO]]
+    intg: [Null, [FERMION_NVM_PROGRAMMER, FERMION_SBL, FERMION_FTM, FERMION_HELLO_WORLD, FERMION_POSIX_DEMO, FERMION_FS_DEMO, FERMION_IOE_QCLI_DEMO]]
 
 #structure [nvm_entry_name, offset]
 nvm_offset:
@@ -103,6 +104,7 @@ nvm_offset:
     rram_sbl: 0x20A400
     rram_sblB: 0x212400
     rram_app: 0x21A400
+    bdwlan: 0x37A000
     end: &rram_end 0x380000
     flash_app: 0
 

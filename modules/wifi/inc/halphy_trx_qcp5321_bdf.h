@@ -140,4 +140,8 @@ int8_t phyrf_bdf_get_fine_gain_process_corner_offset(uint8_t chip_type, uint8_t 
 bool phyrf_bdf_is_ceb_enabled(freq_band_t band);
 void phyrf_bdf_get_temp_based_update_list(PHYRF_REG_TEMP_BASED_UPDATE* p_phyrf_reg_update_list);
 
+#if (FERMION_CHIP_VERSION == 2)
+bool phyrf_bdf_is_dac_bo_enable(uint16_t chan);
+uint16_t phyrf_bdf_get_dac_bo_nom(uint16_t chan);
+#endif /* #if (FERMION_CHIP_VERSION == 2) */
 #endif /* HALPHY_TRX_FERMION_BDF_H */

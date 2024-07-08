@@ -1,0 +1,23 @@
+config MQTT_CLIENT
+    bool "enable MQTT client"
+    default n
+
+config MQTT_CLIENT_DEMO
+    depends on MQTT_CLIENT && FILE_SYSTEM
+    bool "enable MQTT client demo"
+    default n
+
+config MQTT_PLAINTEXT_DEMO
+    depends on MQTT_CLIENT && FILE_SYSTEM
+    bool "enable MQTT over TCP demo"
+    default n
+
+config MQTT_BASIC_TLS_DEMO
+    depends on MQTT_CLIENT && FILE_SYSTEM
+    bool "enable MQTT over SSL one way authentication demo"
+    default n
+
+config MQTT_MUTUAL_AUTH_DEMO
+    depends on MQTT_CLIENT && FILE_SYSTEM
+    bool "enable MQTT over SSL mutual authentication demo"
+    default n

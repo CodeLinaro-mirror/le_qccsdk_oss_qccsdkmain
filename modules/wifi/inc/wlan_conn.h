@@ -129,6 +129,9 @@ typedef struct conn_s {
    struct sae_data 				sae_data;
 #endif //NT_FN_WPA3
    uint8_t                     dialog_id;
+   bool xpan_sap;  /*STA connected to XPAN SAP*/
+   uint16_t                   ignore_assoc_resp_rates:1, //ignore_assoc_resp_rates
+                              reserved:15;
 #ifdef SUPPORT_COEX
    uint32_t                     backup_data_rate;
 #endif

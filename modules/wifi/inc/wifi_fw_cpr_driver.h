@@ -10,10 +10,10 @@
 
 #ifdef PLATFORM_FERMION
 
+/* CPR is enabled only when OTP >= 5.0 */
+#define CPR_OTP_TRIM_TAG_HIGH                   5
 
-#define CPR_OTP_TRIM_TAG_HIGH                   2
-
-#define CPR_CX_SLEEP_MV                       600
+#define CPR_CX_MIN_SLEEP_MV                   630
 #define CPR_OTP_TARGET_MAX                     90
 #define CPR_OTP_TARGET_MIN                     37
 #define CPR_CX_VOLTAGE_FOR_NOT_TRIMMED_CHIP   567
@@ -27,15 +27,49 @@
 /* Step size (0-7): how many vrefs (ie. 1.5mV steps) the controller will step */
 #define CPR_STEP_SIZE                           2
 #define CPR_MAX_CX_VOLTAGE                    667
-#define CPR_MIN_CX_VOLTAGE                    450
+#define CPR_MIN_CX_VOLTAGE                    490
 
 #define CPR_RO_GCNT                           0x9
-#define CPR_RO0_TARGET                        281
-#define CPR_RO2_TARGET                        172
-#define CPR_RO3_TARGET                        156
-#define CPR_RO12_TARGET                        64
-#define CPR_RO14_TARGET                       228
-#define CPR_RO15_TARGET                       102
+
+/*
+ *   UHD               |  CX  |  CX+15m  | CX+20mV | CX+25mV | CX+30mV | CX+35mV |Selection|
+ * -----------------------------------------------------------------------------------------
+ * TT/CW corner voltage| 0.57 |                     ColdT guardband                        |
+ * -----------------------------------------------------------------------------------------
+ * ro0_ro_aoi_40_lvt   |  240 |   281    |   29    |   309   |   322   |   336   |    X    |
+ * ro1_ro_aoi_40_svt   |  101 |   127    |  135    |   144   |   152   |   161   |         |
+ * ro2_ro_fa_40_ulvt   |  146 |   172    |  181    |   189   |   200   |   207   |    X    |
+ * ro3_ro_fa_40_lvt    |  132 |   156    |  164    |   172   |   180   |   188   |    X    |
+ * ro4_ro_ind_40_ulvt  |  399 |   459    |  479    |   498   |   518   |   538   |         |
+ * ro5_ro_ind_40_lvt   |  401 |   454    |  472    |   490   |   508   |   526   |         |
+ * ro6_ro_ind_40_svt   |  214 |   253    |  267    |   280   |   293   |   307   |         |
+ * ro7_ro_ind_40_hvt   |   77 |   101    |  109    |   116   |   124   |   132   |         |
+ * ro8_ro_mux4_40_ulvt |   91 |   105    |  110    |   114   |   119   |   124   |         |
+ * ro9_ro_nd3_40_ulvt  |  266 |   309    |  324    |   338   |   353   |   367   |         |
+ * ro10_ro_nd3_40_lvt  |  269 |   308    |  321    |   334   |   347   |   360   |         |
+ * ro11_ro_nd3_40_svt  |  137 |   163    |  171    |   180   |   188   |   197   |         |
+ * ro12_ro_nd3_40_hvt  |   50 |    64    |   69    |    74   |    80   |    83   |    X    |
+ * ro13_ro_nr_40_hvt   |   22 |    31    |   35    |    38   |    41   |    44   |         |
+ * ro14_ro_or_40_lvt   |  194 |   228    |  240    |   251   |   263   |   274   |    X    |
+ * ro15_ro_or_40_svt   |   82 |   102    |  109    |   116   |   125   |   130   |    X    |
+*/
+/* Target values for each ROs for CX+30mV */
+#if(FERMION_CHIP_VERSION == 1)
+#define CPR_RO0_TARGET                        322
+#define CPR_RO2_TARGET                        200
+#define CPR_RO3_TARGET                        180
+#define CPR_RO12_TARGET                        80
+#define CPR_RO14_TARGET                       263
+#define CPR_RO15_TARGET                       125
+#else
+#define CPR_RO0_TARGET                        314
+#define CPR_RO1_TARGET                        148
+#define CPR_RO7_TARGET                        216
+#define CPR_RO12_TARGET                       143
+#define CPR_RO13_TARGET                       128
+#define CPR_RO14_TARGET                       279
+#define CPR_RO15_TARGET                       134
+#endif
 
 
 /* Structure to store frequently used CPR parameters

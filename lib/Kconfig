@@ -25,6 +25,9 @@ config LOWPOWER_SHELL
 config I2CM_SHELL
     bool "enable i2c master shell"
     default n
+config GPIO_SHELL
+    bool "enable gpio shell"
+    default n
 config NET_SHELL
     bool "enable net shell"
     default n

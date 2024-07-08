@@ -1,0 +1,8 @@
+source "./modules/console/Kconfig"
+source "./modules/fw_upgrade/Kconfig"
+source "./modules/core/system/inc/Kconfig"
+source "./modules/core/system/sys_src/Kconfig"
+source "./modules/core/system/Kconfig"
+source "./modules/fs/Kconfig"
+source "./modules/net/mqtt_client/Kconfig"
+

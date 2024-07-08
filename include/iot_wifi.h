@@ -42,6 +42,7 @@
 #include "nt_socpm_sleep.h"
 #include "ieee80211_defs.h"
 #include "wmi.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 
 /**
@@ -91,9 +92,9 @@ typedef enum
 	wifi_scan_start_event_id,
 	wifi_scan_stop_fail_event_id,
 	wifi_scan_stop_pass_event_id,
-#ifdef SUPPORT_UNIT_TEST_CMD
+//#ifdef SUPPORT_UNIT_TEST_CMD
     wifi_unit_test_event_id,
-#endif
+//#endif
 #ifdef SUPPORT_TWT_STA
     wifi_twt_setup_event_id,
     wifi_twt_terminate_event_id,
@@ -205,11 +206,13 @@ typedef enum {
 }scan_type;
 
 #define DEFAULT_CHAN_NUM	1
-#ifdef SUPPORT_5GHZ
+#ifdef CONFIG_WIFILIB_6GHZ
+#define DEV_CHANNEL_NUM_MAX         76
+#elif defined(SUPPORT_5GHZ)
 #define DEV_CHANNEL_NUM_MAX         52
 #else /* SUPPORT_5GHZ */
 #define DEV_CHANNEL_NUM_MAX         11
-#endif /* SUPPORT_5GHZ */
+#endif /* CONFIG_WIFILIB_6GHZ */
 /**
  * @brief Parameters passed to the WIFI_ConnectAP API for connection.
  *
@@ -351,7 +354,7 @@ typedef struct
     roam_trigger_types trigger_type;
 	scan_type scanType;               /* scan all ssid (all)/specific ssid */
 	uint8_t numChannels;              /* no.of channels to scan */
-	uint8_t channelList[WMI_CHANNEL_NUM_MAX];    /* channels to scan */
+	uint8_t channelList[DEV_CHANNEL_NUM_MAX];    /* channels to scan */
 	WIFISecurity_t xSecurity;         /**< Wi-Fi Security. @see WIFISecurity_t. */
 	uint8_t cntprof;
 	NT_BOOL scan_only;                // Just do scan, connection not triggered

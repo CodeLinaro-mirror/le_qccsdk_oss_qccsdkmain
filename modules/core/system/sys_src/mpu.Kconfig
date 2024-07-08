@@ -1,0 +1,424 @@
+
+menu "MPU Setting"
+
+    config MPU_ENABLE
+        bool "Enable MPU Configuration."
+        default y
+
+    config MPU_DEMO
+        bool "Enable MPU Demo."
+        default n
+
+    if MPU_ENABLE
+
+        menu "Application MPU"
+    
+            config FERM_MPU_0_START
+                hex "MPU 0 start address"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config FERM_MPU_0_SIZE
+                hex "MPU 0 size"
+                depends on MPU_ENABLE 
+        	default 0x100000 
+            
+            config FERM_MPU_0_XN
+                hex "MPU 0 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x01
+        
+            config FERM_MPU_0_ACCESS
+                hex "MPU 0 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x03
+        
+            config FERM_MPU_0_SUBREGION
+                hex "MPU 0 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0xe0
+        
+            config FERM_MPU_1_START
+                hex "MPU 1 start address"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config FERM_MPU_1_SIZE
+                hex "MPU 1 size"
+                depends on MPU_ENABLE 
+        	default 0x8000 
+            
+            config FERM_MPU_1_XN
+                hex "MPU 1 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config FERM_MPU_1_ACCESS
+                hex "MPU 1 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x06
+        
+            config FERM_MPU_1_SUBREGION
+                hex "MPU 1 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config FERM_MPU_2_START
+                hex "MPU 2 start address"
+                depends on MPU_ENABLE 
+        	default 0x10000 
+        
+            config FERM_MPU_2_SIZE
+                hex "MPU 2 size"
+                depends on MPU_ENABLE 
+        	default 0x10000 
+            
+            config FERM_MPU_2_XN
+                hex "MPU 2 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config FERM_MPU_2_ACCESS
+                hex "MPU 2 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x06
+        
+            config FERM_MPU_2_SUBREGION
+                hex "MPU 2 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x1f
+        
+            config FERM_MPU_3_START
+                hex "MPU 3 start address"
+                depends on MPU_ENABLE 
+        	default 0x20000 
+        
+            config FERM_MPU_3_SIZE
+                hex "MPU 3 size"
+                depends on MPU_ENABLE 
+        	default 0x10000 
+            
+            config FERM_MPU_3_XN
+                hex "MPU 3 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config FERM_MPU_3_ACCESS
+                hex "MPU 3 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x06
+        
+            config FERM_MPU_3_SUBREGION
+                hex "MPU 3 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0xe0
+        
+            config FERM_MPU_4_START
+                hex "MPU 4 start address"
+                depends on MPU_ENABLE 
+        	default 0x200000 
+        
+            config FERM_MPU_4_SIZE
+                hex "MPU 4 size"
+                depends on MPU_ENABLE 
+        	default 0x200000 
+            
+            config FERM_MPU_4_XN
+                hex "MPU 4 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config FERM_MPU_4_ACCESS
+                hex "MPU 4 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x06
+        
+            config FERM_MPU_4_SUBREGION
+                hex "MPU 4 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0xc0
+        
+            config FERM_MPU_5_START
+                hex "MPU 5 start address"
+                depends on MPU_ENABLE 
+        	default 0x200000 
+        
+            config FERM_MPU_5_SIZE
+                hex "MPU 5 size"
+                depends on MPU_ENABLE 
+        	default 0x80000 
+            
+            config FERM_MPU_5_XN
+                hex "MPU 5 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x01
+        
+            config FERM_MPU_5_ACCESS
+                hex "MPU 5 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x03
+        
+            config FERM_MPU_5_SUBREGION
+                hex "MPU 5 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0xe0
+        
+            config FERM_MPU_6_START
+                hex "MPU 6 start address"
+                depends on MPU_ENABLE 
+        	default 0x370000 
+        
+            config FERM_MPU_6_SIZE
+                hex "MPU 6 size"
+                depends on MPU_ENABLE 
+        	default 0x10000
+            
+            config FERM_MPU_6_XN
+                hex "MPU 6 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x01
+        
+            config FERM_MPU_6_ACCESS
+                hex "MPU 6 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x03
+        
+            config FERM_MPU_6_SUBREGION
+                hex "MPU 6 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x1f
+        
+            config FERM_MPU_7_START
+                hex "MPU 7 start address"
+                depends on MPU_ENABLE 
+        	default 0x0 
+        
+            config FERM_MPU_7_SIZE
+                hex "MPU 7 size"
+                depends on MPU_ENABLE 
+        	default 0x400
+            
+            config FERM_MPU_7_XN
+                hex "MPU 7 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x01
+        
+            config FERM_MPU_7_ACCESS
+                hex "MPU 7 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x03
+        
+            config FERM_MPU_7_SUBREGION
+                hex "MPU 7 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x01
+        
+        endmenu
+
+        menu "SBL MPU"
+    
+            config SBL_MPU_0_START
+                hex "MPU 0 start address"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config SBL_MPU_0_SIZE
+                hex "MPU 0 size"
+                depends on MPU_ENABLE 
+        	default 0x100000 
+            
+            config SBL_MPU_0_XN
+                hex "MPU 0 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x01
+        
+            config SBL_MPU_0_ACCESS
+                hex "MPU 0 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x03
+        
+            config SBL_MPU_0_SUBREGION
+                hex "MPU 0 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0xe0
+        
+            config SBL_MPU_1_START
+                hex "MPU 1 start address"
+                depends on MPU_ENABLE 
+        	default 0x80000 
+        
+            config SBL_MPU_1_SIZE
+                hex "MPU 1 size"
+                depends on MPU_ENABLE 
+        	default 0x8000 
+            
+            config SBL_MPU_1_XN
+                hex "MPU 1 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config SBL_MPU_1_ACCESS
+                hex "MPU 1 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x06
+        
+            config SBL_MPU_1_SUBREGION
+                hex "MPU 1 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config SBL_MPU_2_START
+                hex "MPU 2 start address"
+                depends on MPU_ENABLE 
+        	default 0x200000 
+        
+            config SBL_MPU_2_SIZE
+                hex "MPU 2 size"
+                depends on MPU_ENABLE 
+        	default 0x200000 
+            
+            config SBL_MPU_2_XN
+                hex "MPU 2 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x01
+        
+            config SBL_MPU_2_ACCESS
+                hex "MPU 2 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x03
+        
+            config SBL_MPU_2_SUBREGION
+                hex "MPU 2 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0xc0
+        
+            config SBL_MPU_3_START
+                hex "MPU 3 start address"
+                depends on MPU_ENABLE 
+        	default 0x200000 
+        
+            config SBL_MPU_3_SIZE
+                hex "MPU 3 size"
+                depends on MPU_ENABLE 
+        	default 0x8000 
+            
+            config SBL_MPU_3_XN
+                hex "MPU 3 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config SBL_MPU_3_ACCESS
+                hex "MPU 3 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x06
+        
+            config SBL_MPU_3_SUBREGION
+                hex "MPU 3 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config SBL_MPU_4_START
+                hex "MPU 4 start address"
+                depends on MPU_ENABLE 
+        	default 0x208000 
+        
+            config SBL_MPU_4_SIZE
+                hex "MPU 4 size"
+                depends on MPU_ENABLE 
+        	default 0x2000 
+            
+            config SBL_MPU_4_XN
+                hex "MPU 4 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x00
+        
+            config SBL_MPU_4_ACCESS
+                hex "MPU 4 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x06
+        
+            config SBL_MPU_4_SUBREGION
+                hex "MPU 4 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x01
+        
+            config SBL_MPU_5_START
+                hex "MPU 5 start address"
+                depends on MPU_ENABLE 
+        	default 0x0 
+        
+            config SBL_MPU_5_SIZE
+                hex "MPU 5 size"
+                depends on MPU_ENABLE 
+        	default 0x0 
+            
+            config SBL_MPU_5_XN
+                hex "MPU 5 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config SBL_MPU_5_ACCESS
+                hex "MPU 5 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config SBL_MPU_5_SUBREGION
+                hex "MPU 5 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config SBL_MPU_6_START
+                hex "MPU 6 start address"
+                depends on MPU_ENABLE 
+        	default 0x0 
+        
+            config SBL_MPU_6_SIZE
+                hex "MPU 6 size"
+                depends on MPU_ENABLE 
+        	default 0x0 
+            
+            config SBL_MPU_6_XN
+                hex "MPU 6 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config SBL_MPU_6_ACCESS
+                hex "MPU 6 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config SBL_MPU_6_SUBREGION
+                hex "MPU 6 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config SBL_MPU_7_START
+                hex "MPU 7 start address"
+                depends on MPU_ENABLE 
+        	default 0x0 
+        
+            config SBL_MPU_7_SIZE
+                hex "MPU 7 size"
+                depends on MPU_ENABLE 
+        	default 0x0 
+            
+            config SBL_MPU_7_XN
+                hex "MPU 7 XN bit"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config SBL_MPU_7_ACCESS
+                hex "MPU 7 access permission bit"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+            config SBL_MPU_7_SUBREGION
+                hex "MPU 7 subregion mask"
+                depends on MPU_ENABLE 
+        	default 0x0
+        
+        endmenu
+    
+    endif
+
+endmenu

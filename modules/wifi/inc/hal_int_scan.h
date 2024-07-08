@@ -28,11 +28,13 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define HAL_SCAN_FRMTYPE_MAX         4
 
 /* maximum number of channel support by during switch channel*/
-#ifdef SUPPORT_5GHZ
+#ifdef CONFIG_WIFILIB_6GHZ
+#define HAL_SCAN_MAX_CHANNEL    76
+#elif defined(SUPPORT_5GHZ)
 #define HAL_SCAN_MAX_CHANNEL    52
 #else
 #define HAL_SCAN_MAX_CHANNEL    12
-#endif
+#endif /* CONFIG_WIFILIB_6GHZ */
 
 
 /* It is not defined in ht_hw have to define here */

@@ -19,13 +19,7 @@ extern SOCPM_STRUCT g_socpm_struct;
 
 /*******************************************************************************
 *  Note:
-*  The CPR functionality is divided into two part.
-*  Phase 1: CPR hardware is disabled. Only CPR OTP code and trim config is set
-*           to the PMU register.
-*  Phase 2: CPR hardware is enabled along with full CPR implementation.
-*  By default Phase 1 is enabled in the code.
-*  Phase 2 can be enabled or disabled using the INI parameter
-*  NT_DEVCFG_CPR_ENABLED.
+*  The CPR functionality can be enabled/disabled by the macro CONFIG_CPR_ENABLE.
 *******************************************************************************/
 
 /*******************************************************************************
@@ -42,28 +36,23 @@ static int32_t cpr_get_initial_mV (void)
     uint32 otp_target, initial_mV;
     otp_target = (NT_REG_RD(QWLAN_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_PTE_REGION_1_W0_REG) >> 8);  //CPR0_TARGET_VOL_MODE0
     otp_target &= 0x0000007f;
-
-    if (!otp_target) {
+    
+    if (otp_target == 0) {
         initial_mV = CPR_CX_VOLTAGE_FOR_NOT_TRIMMED_CHIP;
-    }
-
-    if (otp_target > CPR_OTP_TARGET_MAX) {
+    } else if (otp_target > CPR_OTP_TARGET_MAX) {
         initial_mV = CPR_CX_VOLTAGE_FOR_MAX_OTP_TARGET;
     } else if (otp_target < CPR_OTP_TARGET_MIN) {
         initial_mV = CPR_CX_VOLTAGE_FOR_MIN_OTP_TARGET;
     } else {
-        initial_mV = (CPR_CX_VOLTAGE_FOR_MAX_OTP_TARGET -
-                      ((CPR_OTP_TARGET_MAX - otp_target) * 3));
+        initial_mV = (CPR_CX_VOLTAGE_FOR_MAX_OTP_TARGET - ((CPR_OTP_TARGET_MAX - otp_target) * 3));
     }
-
-    if (g_socpm_struct.cpr_cfg.ini_enabled == 1) {
-        /* Calculating initial voltage / open loop voltage if CPR is enabled */
-        initial_mV = ((initial_mV + 35) * 105) / 100;
-    } else {
-        /* Need to reduce the initial voltage If CPR is disabled.
-           The open loop voltage would be too high for room temperature */
-        initial_mV = initial_mV + 20;
-    }
+    /* Calculating initial voltage / open loop voltage */
+#if(FERMION_CHIP_VERSION == 1)
+    initial_mV = ((initial_mV + 35) * 105) / 100;
+#else
+    initial_mV = ((initial_mV + 40) * 105) / 100;
+#endif
+    NT_LOG_PRINT(SOCPM, ERR, "CPR OTP Target %d, Initial Voltage: %d mV, ", otp_target, initial_mV);
 
     return initial_mV;
 }
@@ -73,11 +62,13 @@ static int32_t cpr_get_initial_mV (void)
 * @param  : mv: milli volt to convert to vref.
 * @return : vref: Converted vref from milli volt.
 */
-static uint32_t cpr_get_vref_from_mv (uint32_t mv)
+static uint32_t cpr_get_vref_from_mv (uint32_t mv) 
 {
+   /*
+   * This CPR formula is only validated for EVB boards with OTP >= 5.0
+   */
     uint32_t vref;
-    vref = mv - 338;
-    vref = vref * 1000 / 1505;
+    vref = ((mv - 249) * 1000) / 2700 ;
     return vref;
 }
 
@@ -94,47 +85,70 @@ void wifi_fw_cpr_init(void)
     if (g_socpm_struct.cpr_cfg.ini_enabled == 1) {
 #if(FERMION_CHIP_VERSION == 1)
         g_socpm_struct.cpr_cfg.otp_tag_high = HWIO_INXF(SEQ_WCSS_OTP_OFFSET,
-                                                        FERMION_V1_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_PTE_REGION_1_W3,
+                                                        FERMION_V1_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_PTE_REGION_1_W3, 
                                                         TRIM_TAG_HIGH);
 #else
         g_socpm_struct.cpr_cfg.otp_tag_high = HWIO_INXF(SEQ_WCSS_OTP_OFFSET,
-                                                        FERMION_V2_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_PTE_REGION_1_W3,
+                                                        FERMION_V2_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_PTE_REGION_1_W3, 
                                                         TRIM_TAG_HIGH);
 #endif
         if (g_socpm_struct.cpr_cfg.otp_tag_high > CPR_OTP_TRIM_TAG_HIGH) {
-            g_socpm_struct.cpr_cfg.cx_initial_mV_vref = cpr_get_vref_from_mv(cpr_get_initial_mV());
-            g_socpm_struct.cpr_cfg.cx_sleep_mV_vref = cpr_get_vref_from_mv(CPR_CX_SLEEP_MV);
+            uint32_t cx_open_loop_mv = cpr_get_initial_mV();
+            /* Referring to the experience of the V&M department, the cx 
+             * voltage may goes too low on a slow chip at low temp.
+             * So, here we set sleep mV to the maximum of CPR open loop 
+             * voltage and 630mV.
+             */
+            uint32_t cx_sleep_mv = (cx_open_loop_mv > CPR_CX_MIN_SLEEP_MV) ? cx_open_loop_mv: CPR_CX_MIN_SLEEP_MV;
+            g_socpm_struct.cpr_cfg.cx_initial_mV_vref = cpr_get_vref_from_mv(cx_open_loop_mv);
+            g_socpm_struct.cpr_cfg.cx_sleep_mV_vref = cpr_get_vref_from_mv(cx_sleep_mv);
 
             reg_val= NT_REG_RD(QWLAN_PMU_ROOT_CLK_ENABLE_REG);
-            reg_val|= (QWLAN_PMU_ROOT_CLK_ENABLE_CPR_XO_ROOT_CLK_ENABLE_MASK |
+            reg_val|= (QWLAN_PMU_ROOT_CLK_ENABLE_CPR_XO_ROOT_CLK_ENABLE_MASK | 
                        QWLAN_PMU_ROOT_CLK_ENABLE_CPR_AHB_ROOT_CLK_ENABLE_MASK);
             NT_REG_WR(QWLAN_PMU_ROOT_CLK_ENABLE_REG,reg_val);
 
             NT_REG_WR(QWLAN_PMU_CFG_PWFM_TRAGET_REG,
                       g_socpm_struct.cpr_cfg.cx_initial_mV_vref);
-            reg_val = NT_REG_RD(QWLAN_PMU_CFG_PWFM_TRAGET_REG);
-
-            reg_val = NT_REG_RD(QWLAN_RPMU_R_PMU_CORE_6_REG);
-            reg_val &= ~QWLAN_RPMU_R_PMU_CORE_6_LDO_CX_VSET_HIGH_MASK;
-            reg_val |= (g_socpm_struct.cpr_cfg.cx_initial_mV_vref <<
-                        QWLAN_RPMU_R_PMU_CORE_6_LDO_CX_VSET_HIGH_OFFSET) &
-                       QWLAN_RPMU_R_PMU_CORE_6_LDO_CX_VSET_HIGH_MASK;
-            NT_REG_WR(QWLAN_RPMU_R_PMU_CORE_6_REG, reg_val);
+            
+            reg_val = NT_REG_RD(QWLAN_RPMU_R_PMU_SMPS2_0_REG);
+            reg_val &= ~QWLAN_RPMU_R_PMU_SMPS2_0_SMPS2_VSET_HIGH_MASK;
+            reg_val |= (g_socpm_struct.cpr_cfg.cx_initial_mV_vref << 
+                        QWLAN_RPMU_R_PMU_SMPS2_0_SMPS2_VSET_HIGH_OFFSET) & 
+                       QWLAN_RPMU_R_PMU_SMPS2_0_SMPS2_VSET_HIGH_MASK;
+            NT_REG_WR(QWLAN_RPMU_R_PMU_SMPS2_0_REG, reg_val);
 
             // Only 0/2/3/12/14/15 are enabled
             // GCNT is 9
+#if(FERMION_CHIP_VERSION == 1)
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT0_REG, CPR_RO_GCNT);
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT2_REG, CPR_RO_GCNT);
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT3_REG, CPR_RO_GCNT);
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT12_REG, CPR_RO_GCNT);
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT14_REG, CPR_RO_GCNT);
-            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT15_REG, CPR_RO_GCNT);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT15_REG, CPR_RO_GCNT); 
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET0_0_0_REG, CPR_RO0_TARGET);
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET2_0_0_REG, CPR_RO2_TARGET);
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET3_0_0_REG, CPR_RO3_TARGET);
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET12_0_0_REG, CPR_RO12_TARGET);
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET14_0_0_REG, CPR_RO14_TARGET);
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET15_0_0_REG, CPR_RO15_TARGET);
+#else
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT0_REG, CPR_RO_GCNT);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT1_REG, CPR_RO_GCNT);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT7_REG, CPR_RO_GCNT);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT12_REG, CPR_RO_GCNT);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT13_REG, CPR_RO_GCNT);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT14_REG, CPR_RO_GCNT);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_GCNT15_REG, CPR_RO_GCNT);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET0_0_0_REG, CPR_RO0_TARGET);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET1_0_0_REG, CPR_RO1_TARGET);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET7_0_0_REG, CPR_RO7_TARGET);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET12_0_0_REG, CPR_RO12_TARGET);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET13_0_0_REG, CPR_RO13_TARGET);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET14_0_0_REG, CPR_RO14_TARGET);
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_TARGET15_0_0_REG, CPR_RO15_TARGET);
+#endif  //(FERMION_CHIP_VERSION == 1)
 
             NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_SENSOR_MASK_WRITE_MREG,0);
             reg_val = 0;
@@ -203,9 +217,16 @@ void wifi_fw_cpr_init(void)
                        QWLAN_PMU_CPR_CONFIG0_DELAY_VALUE_MASK;
             reg_val |= QWLAN_PMU_CPR_CONFIG0_HW_CL_ENABLE_MASK;
             reg_val |= QWLAN_PMU_CPR_CONFIG0_CPR_ENABLE_MASK;
-
             NT_REG_WR(QWLAN_PMU_CPR_CONFIG0_REG, reg_val);
-            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_MASK_THREAD__MREG, 0x2ff2);
+
+#if(FERMION_CHIP_VERSION == 1)            
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_MASK_THREAD__MREG, 0x2ff2);  // 5 RO sensors check when runtime
+#else
+            NT_REG_WR(QWLAN_CPR_WRAPPER_R_CPR_MASK_THREAD__MREG, 0x0f7c);  // 6 RO sensors check when runtime
+#endif  
+
+            NT_LOG_PRINT(SOCPM, ERR, "CPR Initialized with Step size: %d, Interval: %d", 
+                         CPR_STEP_SIZE, CPR_STEP_MEASUREMENT_PERIOD_USECS);
         }
     }
 }
@@ -221,11 +242,12 @@ void wifi_fw_cpr_reenable(void)
     if ((g_socpm_struct.cpr_cfg.ini_enabled == 1) &&
         (g_socpm_struct.cpr_cfg.otp_tag_high > CPR_OTP_TRIM_TAG_HIGH)) {
         uint32_t reg_val;
+        NT_REG_WR(QWLAN_PMU_CFG_PWFM_TRAGET_REG, 
+                  g_socpm_struct.cpr_cfg.cx_initial_mV_vref);
+
         reg_val = NT_REG_RD(QWLAN_PMU_CPR_CONFIG0_REG);
         reg_val |= QWLAN_PMU_CPR_CONFIG0_CPR_ENABLE_MASK;
         NT_REG_WR(QWLAN_PMU_CPR_CONFIG0_REG, reg_val);
-        NT_REG_WR(QWLAN_PMU_CFG_PWFM_TRAGET_REG,
-                  g_socpm_struct.cpr_cfg.cx_initial_mV_vref);
     }
 }
 
@@ -243,12 +265,13 @@ void wifi_fw_cpr_disable(void)
     if ((g_socpm_struct.cpr_cfg.ini_enabled == 1) &&
         (g_socpm_struct.cpr_cfg.otp_tag_high > CPR_OTP_TRIM_TAG_HIGH)) {
         uint32_t reg_val;
+        // Set SMPS2 voltage to sleep voltage for safety, and then controlled by CPR ULP mode
+        NT_REG_WR(QWLAN_PMU_CFG_PWFM_TRAGET_REG, 
+                  g_socpm_struct.cpr_cfg.cx_sleep_mV_vref);
+
         reg_val = NT_REG_RD(QWLAN_PMU_CPR_CONFIG0_REG);
         reg_val &= ~QWLAN_PMU_CPR_CONFIG0_CPR_ENABLE_MASK;
         NT_REG_WR(QWLAN_PMU_CPR_CONFIG0_REG, reg_val);
-        // Set CX LDO sleep voltage to 0.6V (experimental value)
-        NT_REG_WR(QWLAN_PMU_CFG_PWFM_TRAGET_REG,
-                  g_socpm_struct.cpr_cfg.cx_sleep_mV_vref);
     }
 }
 

@@ -26,16 +26,8 @@
  *  Fw_Upgrade copies files from an active image file system to a trial image file system
  *  if this flag is set
  */
-#define QAPI_FW_UPGRADE_FLAG_DUPLICATE_ACTIVE_FS    (1<<1)
-
-/**
- *  Definition used by the qapi_Fw_Upgrade() API as a flag.
- *  When Fw_Upgrade copies files from an active image file system to a trial image file system,
- *  Fw_Upgrade overwrites files if the files exist at the trial image file system if this flag is not set.
- *  Fw_Upgrade does not copy files if the files exist at the trial image file system if this flag is set.
- */
-#define QAPI_FW_UPGRADE_FLAG_DUPLICATE_KEEP_TRIAL_FS    (1<<2)
-
+#define QAPI_FW_UPGRADE_FLAG_DUPLICATE_ACTIVE_FS    (1<<1) 
+ 
 /** @name FWD Bit Definition
  *  Definition used by the qapi_Fw_Upgrade_Get_Active_FWD() API as a return
  *  to indicate the FWD bit type.

@@ -131,7 +131,7 @@
 //#define FERMION_CONFIG_HCF //Get config from INI region
 
 #define FERMION_ANI_SW_SUPPORT /* Use this flag to enable ANI SW support */
-//#define FERMION_ANI_DEBUG /* Disable this flag to disable ANI asserts /debug logs */
+#define FERMION_ANI_DEBUG /* Disable this flag to disable ANI asserts /debug logs */
 /* to enable dynamic EDCCA adaptation with NF variance, disabled as per system's team recommendation */
 //#define ANI_EDCCA_ADAPTATION
 
@@ -216,6 +216,7 @@ WAR_COEX_VIFERMION285
 /*Feature flag to support acknowlegement from hardware when a frame is sent out*/
 //#define FEATURE_TX_COMPLETE
 #define FERMION_ANI_HW_SUPPORT /* Use this flag to enable ANI HW support for Fermion */
+#define FERMION_ANI_DEBUG_STATS /* use this flag to enable additional stats collection for interference debug*/
 
 /* flag to enable the feature which will trigger the calibration in FTM in case current
    temperature goes below or above a defined value */

@@ -6,12 +6,16 @@ import("//configs_decl.gni")
 
 drivers_inc = [
     "//include/api",
+    "//include/qapi",
     "//drivers/wlan",
     "//hal/qcc730/i2c",
+    "//drivers/lowpower",
+    "//demo/common/peripherals/gpio",
 ]
 
 drivers_src = [
     "peripherals/qapi_i2c.c",
+    "peripherals/qapi_gpio.c",
 ]
 
 lowpower_src = [
@@ -36,6 +40,7 @@ source_set("drivers") {
         sources += [
             "platform/qapi_fw_info.c",
             "platform/qapi_heap_status.c",
+            "platform/qapi_fatal_err.c",
         ]
     }
     if (CONFIG_FW_UPGRADE) { 
@@ -57,5 +62,11 @@ source_set("drivers") {
             "peripherals/qapi_flash.c",
         ]
     }
+    if (CONFIG_UART_QAPI) { 
+        sources += [
+            "peripherals/qapi_uart.c",
+        ]
+    }
+        
 }
 

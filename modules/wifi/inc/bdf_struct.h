@@ -14,7 +14,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "component_bdf_def.h"
 #define BDF_TEMPLATE_VER1 0
 #define BDF_TEMPLATE_VER2 0
-#define BDF_TEMPLATE_VER3 18
+#define BDF_TEMPLATE_VER3 21
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)
@@ -171,6 +171,9 @@ typedef struct bdfStruct {
 	int8_t	crx_rssi_correction[FW_CONFIG_CRX_RSSI_CORRECTION_COUNT];
 	int8_t	scpc_offset_process_corner[HALPHY_NUM_BANDS][HALPHY_NUM_PROCESS_CORNERS];
 	uint8_t	TempBasedCBCEnable;
+	int8_t	TempBasedRecalThLo[HALPHY_NUM_BANDS];
+	int8_t	TempBasedRecalThHi[HALPHY_NUM_BANDS];
+	NON_SUPPORTED_CHANNEL_LIST_PER_COUNTRY	NonSupportedChannelsPerCountry[NUM_NON_SUPPORTED_COUNTRY];
 	uint8_t	FwConfigFuture[FW_CONFIG_FUTURE];
 // FW_CONFIG ends
 
@@ -233,6 +236,9 @@ typedef struct bdfStruct {
 	SCPC_TEMP_ADJUSTMENT 	scpcTempBasedAdj[HALPHY_NUM_RATES_FOR_TEMP_BASED_TPC_ADJUSTMENT];
 	int8_t	CalRefTemp2G;
 	int8_t	CalRefTemp5G6G;
+	int8_t	scpcTempThLo;
+	int8_t	scpcTempThHi;
+	DAC_BO_CAL_STRUCT	dacBoCalConfig;
 	uint8_t	TpcDataOffsetFuture[TPC_DATA_OFFSET_FUTURE];
 // IOT_TPC_DATA ends
 
@@ -406,6 +412,9 @@ typedef struct cachedBdfStruct{
 	SCPC_TEMP_ADJUSTMENT 	scpcTempBasedAdj[HALPHY_NUM_RATES_FOR_TEMP_BASED_TPC_ADJUSTMENT];
 	int8_t	CalRefTemp2G;
 	int8_t	CalRefTemp5G6G;
+	int8_t	scpcTempThLo;
+	int8_t	scpcTempThHi;
+	DAC_BO_CAL_STRUCT	dacBoCalConfig;
 	uint8_t	TpcDataOffsetFuture[TPC_DATA_OFFSET_FUTURE];
 // IOT_TPC_DATA ends
 

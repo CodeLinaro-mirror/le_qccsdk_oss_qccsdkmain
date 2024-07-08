@@ -23,6 +23,7 @@ inc_list = [
   "${sbl_dir}/common",
   "${sbl_dir}/sbl_auth/inc",
   "${sbl_dir}/sbl_auth/rollback",
+  "${sbl_dir}/sbl_mpu",
   "${kernel_dir}/include",
   "${kernel_dir}/portable/GCC/ARM_CM4F",
   "${posix_dir}",
@@ -73,6 +74,10 @@ sbl_src = [
   "sbl_auth/rollback/boot_rollback_version_impl.c",
 ]
 
+if (CONFIG_MPU_ENABLE)
+{
+  sbl_src += [ "${sbl_dir}/sbl_mpu/sbl_mpu.c", ]
+}
 source_set("SBL") {
     sources = pbl_dep_src
     sources += core_src

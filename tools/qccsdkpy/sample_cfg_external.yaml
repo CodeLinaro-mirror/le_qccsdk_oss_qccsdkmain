@@ -19,7 +19,9 @@ flash: &flash
     interface: jtag
     #configure flash tool, support ['python' as public use, 'exe' as Qualcomm internal use].
     tool: python
-    #configure default action when not specified, support [flash, erease, reset, Null]
+    #configure whether flash bdf, support [True, False, Null]
+    bdf: False
+    #configure default action when not specified, support [flash, erease, reset, bdf, Null]
     default_action: [flash]
 
 build: &build

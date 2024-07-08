@@ -25,6 +25,8 @@
 #define FAKE_SLEEP_WAR
 /*Feature flag to support Extended Channel Switch announcement on sta Side*/
 #define FEATURE_STA_ECSA
+/*Feature flag to support Extended Channel Switch announcement on AP Side*/
+#define FEATURE_AP_ECSA
 
 #define ENABLE_TWT_EVENT_LOGGING
 
@@ -39,6 +41,14 @@
 /* Feature flag to support Ring Interface */
 #ifdef CONFIG_RING_IF
 #define SUPPORT_RING_IF
+#endif
+
+/* Feature flag to support Ring Interface */
+#ifdef CONFIG_RING_IF_ONLY
+#define SUPPORT_RING_IF_ONLY
+//#define SUPPORT_RING_IF_DEBUG /* Use this flag for heavy logs in Ring IF */
+#define SUPPORT_RING_IF_STATS
+#define SUPPORT_QCSPI_SLAVE /*Flag to enable QcSPI Slave driver*/
 #endif
 
 #ifdef CONFIG_SAP_POWERSAVE
@@ -100,6 +110,16 @@
 #define	I2C_HAL
 #endif
 
+/* UART module support flag */
+#if defined (CONFIG_UART_SHELL) || (CONFIG_UART_QAPI)
+#define UART_SUPPORT
+#endif
+
+#ifdef UART_SUPPORT
+#define UART_QAPI
+#define	UART_DRV
+#endif
+
 #ifdef CONFIG_QTIMER
 #define QTMR_SUPPORT
 #define	QTMR_DEMO
@@ -133,8 +153,8 @@
 #define DXE_ERROR_WAR // WAR added for DXE error seen in powersave
 //#define FERMION_CONFIG_HCF //Get config from INI region
 
-// #define FERMION_ANI_SW_SUPPORT /* Use this flag to enable ANI SW support */
-//#define FERMION_ANI_DEBUG /* Disable this flag to disable ANI asserts /debug logs */
+#define FERMION_ANI_SW_SUPPORT /* Use this flag to enable ANI SW support */
+#define FERMION_ANI_DEBUG /* Disable this flag to disable ANI asserts /debug logs */
 /* to enable dynamic EDCCA adaptation with NF variance, disabled as per system's team recommendation */
 //#define ANI_EDCCA_ADAPTATION
 
@@ -207,7 +227,17 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 
 /*Feature flag to support acknowlegement from hardware when a frame is sent out*/
 //#define FEATURE_TX_COMPLETE
-// #define FERMION_ANI_HW_SUPPORT /* Use this flag to enable ANI HW support for Fermion */
+#define FERMION_ANI_HW_SUPPORT /* Use this flag to enable ANI HW support for Fermion */
+#define FERMION_ANI_DEBUG_STATS /* use this flag to enable additional stats collection for interference debug*/
+
+/* Implemented for CR3763141 to avoid collision between Null-Tx and DL data at lower RSSIs
+ * Currently disabling it as BMPS ITO enhancements will help avoiding this collision 
+ * To be revisited in case if the issue hit again */
+#if (defined(FERMION_ANI_SW_SUPPORT) && defined(FERMION_ANI_HW_SUPPORT))
+//#define HALPHY_CS20_ADAPTATION /* Done under A2NI beacon handlers */
+#endif
+
+#define HALPHY_5G_MIL_WAR /* WAR for VIFERMION-457 */
 
 /* flag to enable the feature which will trigger the calibration in FTM in case current
    temperature goes below or above a defined value */
@@ -220,6 +250,8 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 /* To Force BBPLL LOCK in Ram minimal code for all clock configurations */
 #define FORCE_BBPLL_LOCK
 
+/* This flags enables rssi brach threshold monitor in DTIM sleep and exit with the same reason to give event for host */
+#define SUPPORT_RSSI_BREACH_THRESHOLD_MONITOR 
 #ifdef NT_DEBUG
 /* To Enable JTAG debugging post MCU sleep */
 // #define FEATURE_FERMION_SLP_DBG

@@ -279,7 +279,7 @@ class GDB_Framework(object):
             symbol = self.get_symbol_info(address)
             address = symbol['address']
 
-        self.execute('inferior.write_memory(0x{:08X},{})'.format(address,bytes.fromhex(buffer)))
+        self.execute('inferior.write_memory(0x{:08X}, {})'.format(address, (buffer)))
 
     def load_elf(self, filename, vector_address=0x0):
         '''

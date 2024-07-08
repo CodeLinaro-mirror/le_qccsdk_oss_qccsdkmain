@@ -62,7 +62,7 @@ typedef enum bit_number_s {
 //#define PARAM2_COEX_EN	BIT_1
 #endif
 void logResetParams(PHYDEVLIB_PHY_INPUT *input, PHYDEVLIB_RESET_INPUT *resetInput);
-uint16_t phyrf_get_current_freq(uint8_t band_code);
+uint16_t phyrf_get_current_freq(void);
 void phyrf_otp_trim_rfa(uint32_t board_id, uint8_t bandCode, uint16_t mhz);
 void phyrf_otp_trim_rfa_by_bandcode(uint8_t bandCode, uint16_t mhz);
 void phyrf_otp_trim_pmu(void);

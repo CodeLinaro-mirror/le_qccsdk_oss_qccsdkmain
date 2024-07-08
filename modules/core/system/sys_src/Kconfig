@@ -1,3 +1,4 @@
+menu "System Setting"
 
 config PBL_PREES_GPIO_RESTORE
 	bool "Restore GPIO to reset state, so to fix pre-ES PBL wrong operation on GPIO. If ioe_PBL released, please default to n"
@@ -6,3 +7,33 @@ config PBL_PREES_GPIO_RESTORE
 config PBL_PREES_RESET_FOR_DTIM
 	bool "A reset with CFG_FORCE_NPS_PD_ON is needed for Sleep function. If ioe_PBL released, please default to n"
 	default n
+
+config RING_IF_ONLY
+        bool "Enable RingIF for hosted mode. if hostless mode, please default to n"
+        default n
+
+config QCSPI_HFC_TEST 
+        bool "Enable QCSPI Slave HFC test demo. if QCSPI HFC test demo is not needed , please default to n"
+        default n
+
+config WATCH_DOG_ENABLE
+	bool "Watch Dog function. Please default to n"
+	default n
+
+config WATCH_DOG_BARK_TIME
+	int "When this timer timeout, it will trigger the bark interrupt, in unit of seconds. Make sure to be smaller than bite timer."
+	depends on WATCH_DOG_ENABLE
+	default 4
+
+config WATCH_DOG_BITE_TIME
+	int "When this timer timeout, it will trigger the reset, in unit of seconds.  Make sure to be bigger than bark timer."
+	depends on WATCH_DOG_ENABLE
+	default 5
+
+config CPR_ENABLE
+	bool "Core Power Reduction support, please default to n"
+	default n
+
+rsource "mpu.Kconfig"
+
+endmenu

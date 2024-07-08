@@ -26,6 +26,10 @@ typedef enum {
 #define IS_MODE_11B(mode)       ((mode) == MODE_11B)
 #define IS_MODE_11G(mode)       ((mode) == MODE_11G)
 #define IS_MODE_11GN(mode)      ((mode) == MODE_11NG_HT20)
+#ifdef SUPPORT_5GHZ
+#define IS_MODE_11ABGN(mode)    ((mode) == MODE_11ABGN_HT20)
+#endif
+#define IS_11G_RATE(rs) (((rs & 0x7F) == 12) || ((rs & 0x7F) == 18) || ((rs & 0x7F) == 24) || ((rs & 0x7F) == 36) || ((rs & 0x7F) == 48))
 
 #if (defined SUPPORT_5GHZ) && (defined PLATFORM_FERMION)
 #define DEFAULT_PHYMODE MODE_11A_HT20
@@ -34,6 +38,29 @@ typedef enum {
 #define DEFAULT_PHYMODE MODE_11NG_HT20
 #define DEFAULT_FREQ 2422
 #endif
+
+#ifdef CONFIG_WIFILIB_6GHZ
+#define TOT_6GHZ_CHANNELS 24
+#else
+#define TOT_6GHZ_CHANNELS 0
+#endif /* CONFIG_WIFILIB_6GHZ */
+
+#ifdef SUPPORT_5GHZ
+#define TOT_5GHZ_CHANNELS ((33) + TOT_6GHZ_CHANNELS)
+#else
+#define TOT_5GHZ_CHANNELS   0
+#endif /* SUPPORT_5GHZ */
+
+#define TOT_2GHZ_CHANNELS 11
+
+#define TOT_2GHZ_MAX_CHANNEL_INDEX  (TOT_2GHZ_CHANNELS - (1))
+#define TOT_5GHZ_MAX_CHANNEL_INDEX   ((TOT_5GHZ_CHANNELS + TOT_2GHZ_CHANNELS) - 1)
+
+#ifdef SUPPORT_5GHZ
+#define TOT_MAX_CHANNEL_INDEX              TOT_5GHZ_MAX_CHANNEL_INDEX
+#else
+#define TOT_MAX_CHANNEL_INDEX              TOT_2GHZ_MAX_CHANNEL_INDEX
+#endif /* SUPPORT_5GHZ */
 
 #ifdef SUPPORT_5GHZ
 #define IS_MODE_11G(mode)             ((mode) == MODE_11G)
@@ -45,7 +72,6 @@ typedef enum {
                     mode == MODE_11ABGN_HT20)
 #define PHYMODE_IS_2G(mode)(mode == MODE_11B || mode == MODE_11G ||  \
                     mode == MODE_11NG_HT20 || mode == MODE_11ABGN_HT20)
-#define IS_11G_RATE(rs) (((rs & 0x7F) == 12) || ((rs & 0x7F) == 18) || ((rs & 0x7F) == 24) || ((rs & 0x7F) == 36) || ((rs & 0x7F) == 48))
 #endif /* SUPPORT_5GHZ */
 
 #endif /* __WLANDEFS_H__ */

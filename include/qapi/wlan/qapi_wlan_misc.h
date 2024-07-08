@@ -295,6 +295,8 @@ update calculation.
 #define __QAPI_WLAN_CHAN_FREQ_161          (5805)
 /** IEEE 802.11a channel 165 in MHz. */
 #define __QAPI_WLAN_CHAN_FREQ_165          (5825)
+/** 6G channel 1 in MHz. */
+#define __QAPI_WLAN_6G_CHAN_FREQ_1         (5955)
 
 /**
 Flag that indicates whether a scanned access point's authentication type is of type
@@ -311,6 +313,14 @@ This is indicated in the wpa_auth field (for WPA APs) and rsn_Auth field (for WP
 of the qapi_WLAN_BSS_Scan_Info_t structure.
 */
 #define __QAPI_WLAN_SECURITY_AUTH_1X       0x02
+
+/** 
+Flag that indicates whether the scanned access point's authentication type is of type 
+SAE.
+This is indicated in the wpa_auth field (for WPA APs) and rsn_Auth field (for WPA2 & WPA3 APs)
+of the qapi_WLAN_BSS_Scan_Info_t structure.
+*/
+#define __QAPI_WLAN_SECURITY_AUTH_SAE      0x04
 
 /** @cond */
 /** Boot parameter. */
@@ -362,7 +372,7 @@ Maximum number of scan results that the driver buffer can hold when using
 QAPI_WLAN_BUFFER_SCAN_RESULTS_BLOCKING_E and
 QAPI_WLAN_BUFFER_SCAN_RESULTS_NON_BLOCKING_E options to store WLAN scan results.
 */
-#define __QAPI_MAX_SCAN_RESULT_ENTRY 15
+#define __QAPI_MAX_SCAN_RESULT_ENTRY 40
 
 /**
 Macro to indicate the default Short Scan ratio.

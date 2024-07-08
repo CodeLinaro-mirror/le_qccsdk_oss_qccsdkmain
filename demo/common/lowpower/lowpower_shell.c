@@ -14,6 +14,7 @@
 #include "nt_socpm_sleep.h"
 #include "wlan_drv.h"
 #include "wmi_api.h"
+#include "lowpower_internal.h"
 
 
 #define TEST_SLP_TYPE_MCU       1

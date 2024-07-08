@@ -702,7 +702,7 @@ static void Command_Thread(void *Thread_Parameter)
        /* Take the mutex before modifying any global variables. */
        if(PAL_Take_Lock())
        {
-          if(Result == QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE)
+          if((Result == QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE) || (Result == QCLI_STATUS_USAGE_E))
           {
              /* Print the usage message. */
              Display_Usage(Command_Index, Command);
@@ -770,8 +770,8 @@ static void Execute_Command(uint32_t Command_Index, const QAPI_Console_Command_t
         {
            QCLI_Printf(MAIN_PRINTF_HANDLE, "Failed to re-take the mutex!\n");
         }
-
-        if(Result == QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE)
+        
+        if ((Result == QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE) || (Result == QCLI_STATUS_USAGE_E))
         {
            //Display_Usage(QCLI_Context.Parameter_List[Index - 1].Integer_Value, Find_Result.Data.Command);
            Display_Usage(Command_Index, Command);

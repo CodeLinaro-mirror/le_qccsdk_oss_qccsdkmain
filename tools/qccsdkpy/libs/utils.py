@@ -15,7 +15,8 @@ import traceback
 import yaml
 
 import cfg_common as CfgCommon
-from logger import Logger
+
+from mylogger import Logger
 
 class Utils(object):
     def __init__(self, project_root, qccsdkpy_dir, enableLogDebug=False):

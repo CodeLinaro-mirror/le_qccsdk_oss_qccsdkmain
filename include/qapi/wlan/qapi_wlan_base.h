@@ -165,7 +165,7 @@ typedef struct {
     qapi_WLAN_Evt_Hdr_t evt_hdr;  /* contains the common event header */
     uint8_t num_bss_cur; /* no of bss in current structure */
     uint8_t scan_id;
-    uint8_t reserved;  /* no of bss remained, reserved */
+    uint8_t total_bss;  /* no of bss total scaned */
     uint8_t reserved2;
     qapi_WLAN_BSS_Scan_Info_t scan_bss_info[0]; /* bss info array, count is num_bss_cur */
 } qapi_WLAN_Scan_Comp_Evt_t;
@@ -201,6 +201,14 @@ typedef struct {
     uint16_t channel_frequency;
     uint16_t reserved2;
 } qapi_WLAN_Join_Comp_Evt_t;
+
+typedef struct {
+    qapi_WLAN_Evt_Hdr_t evt_hdr;  /* contains the common event header */
+    uint8_t reason; 
+    uint16_t freq;
+    uint8_t reserved;  
+    uint8_t reserved2;
+} qapi_WLAN_Chan_Switch_Evt_t;
 
 /**
 @ingroup qapi_wlan
@@ -2625,6 +2633,14 @@ typedef struct {
     uint8_t rate_t_rate ;
 }qapi_WLAN_Set_Rate_Params_t;
 
+/**
+@ingroup qapi_wlan
+Set STA Listen interval.
+*/
+typedef struct {
+    uint32_t time;
+    uint32_t round_type;
+}qapi_WLAN_Listen_Interval_Params_t;
 
 /**
 @ingroup qapi_wlan

@@ -26,6 +26,9 @@
 #ifdef SUPPORT_QCSPI_SLAVE
 #include "qcspi_slave_api.h"
 #endif
+//#ifdef NT_FN_WATCHDOG
+#include "nt_wdt_api.h"
+//#endif // NT_FN_WATCHDOG
 
 uint32_t debug_sleep_min_enter_cnt = 0;
 
@@ -94,6 +97,7 @@ extern SOCPM_STRUCT g_socpm_struct;
 
 uint32_t load_r13[2];
 int process_routine = 0;
+int process_uart_rx_irq = 1;
 
 typedef struct _min_pair_s_ {
     uint32_t addr;
@@ -336,6 +340,8 @@ ram_minimum_code(
 
     //to enable any floating point operation in minimal code
     _min_enable_vfp();
+    // in minimum, should not process uart rx
+    process_uart_rx_irq = 0;
     _MIN_UART_INIT();
     /* Enable fault */
     NT_SOCPM_FAULT_ENABLE();
@@ -504,6 +510,8 @@ slp_switch:
 #endif /* if RMC_DISABLED_CODE */
             process_routine = 1;
             __asm volatile(" nop  \n");
+            // should place before NT_CM4_NVIC_ISER0_CLEAR_PENDING_REG since interrupt may happened after clear if not.
+            cpu_irq_disable();
 #if RMC_DISABLED_CODE
             _minprintf("wake", wkup_us, nt_socpm_slp_time_total);
 #endif /* if RMC_DISABLED_CODE */
@@ -552,12 +560,6 @@ slp_switch:
             portNVIC_SYSPRI2_REG |= portNVIC_PENDSV_PRI;
             portNVIC_SYSPRI2_REG |= portNVIC_SYSTICK_PRI;
 
-          #ifdef NT_FN_WATCHDOG
-                nt_watchdog_freeze_timer();
-                nt_watchdog_init(_WATCHDOG_BITE_TIMEOUT,_WATCHDOG_BARK_TIMEOUT);
-                nt_wdog_callback_reg (&nt_watchdog_bark_timer_reset);
-                nt_watchdog_unfreeze_timer();
-          #endif //NT_FN_WATCHDOG
             NT_REG_WR(NT_CM4_NVIC_ISER0_REG, nt_socpm_m4_regs[11]);
             NT_REG_WR(NT_CM4_NVIC_ISER1_REG, nt_socpm_m4_regs[12]);
             NT_REG_WR(NT_CM4_NVIC_ISER2_REG, nt_socpm_m4_regs[13]);
@@ -577,7 +579,12 @@ slp_switch:
 #ifdef SUPPORT_QCSPI_SLAVE
             qcspi_slv_init();
 #endif /* SUPPORT_QCSPI_SLAVE */
+
+            nt_watchdog_bark_timer_reset();
+
             g_socpm_struct.in_warm_boot = FALSE;
+            // will full wake, so start to process uart rx
+            process_uart_rx_irq = 1;
             /*restoring saved context*/
             nt_socpm_ctxt_restore();
             // should never get here

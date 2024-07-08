@@ -141,9 +141,9 @@ enum  nt_slp_dbg_unit_test_type {
 #define MCU_SLEEP_CLK_REQ_TO_MX_SUPPLY_TIMER_US    (1500)
 #define MCU_SLEEP_MX_SUPPLY_TO_XO_SETTLE_US        (1700)
 #define MCU_SLEEP_XO_SETTLE_TO_CPU_BOOT_US         (1100)
-#define MCU_SLEEP_HW_SLEEP_TRANSITION_TIME_US      (MCU_SLEEP_OFF_TO_CLK_REQ_US + MCU_SLEEP_CLK_REQ_TO_MX_SUPPLY_TIMER_US + MCU_SLEEP_MX_SUPPLY_TO_XO_SETTLE_US + MCU_SLEEP_XO_SETTLE_TO_CPU_BOOT_US)   /*W2S*/
+#define MCU_SLEEP_HW_S2W_TRANSITION_TIME_US      (MCU_SLEEP_OFF_TO_CLK_REQ_US + MCU_SLEEP_CLK_REQ_TO_MX_SUPPLY_TIMER_US + MCU_SLEEP_MX_SUPPLY_TO_XO_SETTLE_US + MCU_SLEEP_XO_SETTLE_TO_CPU_BOOT_US)   /*W2S*/
 #define MCU_SLEEP_SW_SLEEP_TRANSITION_TIME_US      (4500)
-#define MCU_SLEEP_OVERALL_SLEEP_TRANSITION_TIME_US (MCU_SLEEP_HW_SLEEP_TRANSITION_TIME_US + MCU_SLEEP_SW_SLEEP_TRANSITION_TIME_US)
+#define MCU_SLEEP_OVERALL_SLEEP_TRANSITION_TIME_US (MCU_SLEEP_HW_S2W_TRANSITION_TIME_US + MCU_SLEEP_SW_SLEEP_TRANSITION_TIME_US)
 #define CLK_GATED_SLEEP_SW_SLEEP_TRANSITION_TIME_US  (1350)
 
 /* time from CPU warm boot due to AON timerexpiry to min_cb execution */
@@ -165,6 +165,17 @@ extern uint32_t slp_exit_hw_delay_fixed;
 extern uint8_t ignore_bcmc_in_bmps;
 
 #define NT_CHECK_BIT_STATE(_value , _pos) ( _value & (1 << _pos))
+
+/* Time taken from end of min cb to context restore */
+#define MINCB_END_TO_CTXT_RESTORE_US                    70
+/* Time taken from context restore to restarting the scheduler */
+#define CTX_RESTORE_TO_SCHED_RESTART_US                 290
+
+/* Upper limit on sleep slop offset time */
+#define SLEEP_SLOP_OFFSET_UPPER_LIMIT_US        1500
+
+/* Time from CPU sleep to CLK_REQ going low, as profiled from waveforms */
+#define MCU_SLEEP_HW_W2S_TRANSITION_TIME_US        (1500)
 
 #ifdef PLATFORM_FERMION
 //Sleep modes types
@@ -286,6 +297,12 @@ typedef struct {
 #ifdef PLATFORM_FERMION
     cpr_cfg_t cpr_cfg;
 #endif /* PLATFORM_FERMION */
+    /* Parameters related to sleep slop offset:
+     * Sleep slop offset is the offset time which accounts for clock drifts
+     * between the AP and STA, to ensure that protocol wakeups occur on time.
+     */
+    uint8_t slop_step_us;       // Sleep slop offset step time per interval
+    uint8_t slop_interval_ms;   // Granular time interval to calculate sleep slop offset
 } SOCPM_STRUCT;
 extern SOCPM_STRUCT g_socpm_struct;
 

@@ -5,17 +5,19 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "wifi_cmn.h"
 #include "fwconfig_cmn.h"
 #include "nt_flags.h"
-#ifdef NT_FN_WATCHDOG
 #include <stdint.h>
 
 #include "nt_common.h"
+//#ifdef NT_FN_WATCHDOG
 #include "nt_hw.h"
 #include "nt_logger_api.h"
 #include "nt_wdt_api.h"
 #include "ferm_prof.h"
+#include "nt_timer.h"
 #if (NT_CHIP_VERSION==2) || defined (PLATFORM_FERMION)
 #include "uart.h"
 #endif //(NT_CHIP_VERSION==2) || defined (PLATFORM_FERMION)
+#if CONFIG_WATCH_DOG_ENABLE
 #define _WDT_LOAD_SECURE_VAL      0xA1A602E7
 #if (NT_CHIP_VERSION==2) || defined (PLATFORM_FERMION)
 #define RST_SUCCESS 1
@@ -23,10 +25,22 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #endif //(NT_CHIP_VERSION==2) || defined (PLATFORM_FERMION)
 #ifdef PLATFORM_FERMION
 # define QWLAN_PMU_WDOG_CTL_WDOG_UNMASKED_INT_ENABLE_MASK			0x0
+# define QWLAN_PMU_AON_WDOG_CTL_WDOG_UNMASKED_INT_ENABLE_MASK		0x0
 #endif
 uint32_t bark_time;
 uint32_t bite_time;
 static void (*_wdt_callback_fnc_ptr)(void);
+#define WDOG_TIMER_NAME "wdog_timer"
+TimerHandle_t wdt_timer_handle;
+
+#define NT_WATCH_DOG_DEBUG 0
+#if NT_WATCH_DOG_DEBUG
+char *nt_wdog_bark_str="Bark\n";
+char *nt_wdog_sw_pet_str="Pet\n";
+#endif
+extern void PAL_Console_Write(uint32_t Length, const char *Buffer);
+extern void vPortEnterCritical( void );
+extern void vPortExitCritical( void );
 
 /*-------------------------------------------------------------------------------
  * FUNCTION:    nt_watchdog_init(uint32_t _wdog_bite_timout,uint32_t _wdog_bark_timeout)
@@ -53,13 +67,6 @@ nt_watchdog_init
    	value = NT_REG_RD(QWLAN_PMU_AON_TOP_CFG_REG);                  //Read the AON top control reg
    	value |= QWLAN_PMU_AON_TOP_CFG_AON_WDOG_SLP_ROOT_CLK_ENABLE_MASK;
    	NT_REG_WR(QWLAN_PMU_AON_TOP_CFG_REG,value);                   //Enable the AON wdog slp root clk
-
-	value = NT_REG_RD(NT_NVIC_ISER1);                            //Read the watchdog interrupt
-	value |=  _WDT_INTR_ENABLE;
-	NT_REG_WR(NT_NVIC_ISER1,value);                              //Enable the watchdog interrupt
-	nt_disable_watchdog_timer ();
-
-
 
    do {
    		//Nps - when set wdog bark time is synchronizing to sleep_clk. Data value is not guaranteed until this bit is clear.
@@ -104,10 +111,6 @@ nt_enable_watchdog_timer(
 	void)
 {
 	uint32_t value;
-
-	value = NT_REG_RD(QWLAN_PMU_WDOG_CTL_REG);                       //Read the Nps watchdog timer reg
-	value |= QWLAN_PMU_WDOG_CTL_WDOG_ENABLE_MASK | QWLAN_PMU_WDOG_CTL_WDOG_UNMASKED_INT_ENABLE_MASK;
-    NT_REG_WR(QWLAN_PMU_WDOG_CTL_REG, value);                       //Enable the Nps watchdog timer and Nps unmasked IRQ or FIQ will enable wdog timer.
 
 	value = NT_REG_RD(QWLAN_PMU_AON_WDOG_CTL_REG);                   //Read the AON watchdog timer reg
 	value |= QWLAN_PMU_AON_WDOG_CTL_WDOG_ENABLE_MASK|QWLAN_PMU_AON_WDOG_CTL_WDOG_UNMASKED_INT_ENABLE_MASK;
@@ -179,15 +182,7 @@ nt_watchdog_bark_timer_reset(
 	void)
 {
 	uint32_t value;
-
-	value = NT_REG_RD(QWLAN_PMU_WDOG_CTL_REG);                         //Nps - read the watchdog control reg.
-
-	value |= QWLAN_PMU_WDOG_CTL_WDOG_RESET_MASK;
-	NT_REG_WR(QWLAN_PMU_WDOG_CTL_REG,value);                          //wirte 1 to Nps wdog ctl reg by using Nps wdog reset mask field. the microprocessor should periodically write the register to reset watch dog.
-
-	value &= (long unsigned int)(~(QWLAN_PMU_WDOG_CTL_WDOG_RESET_MASK));
-	NT_REG_WR(QWLAN_PMU_WDOG_CTL_REG,value);                          // write 0 to Nps wdog ctl reg by using wdog reset mask field
-
+    volatile int count;
 
 	value = NT_REG_RD(QWLAN_PMU_AON_WDOG_CTL_REG);                     //AON - read the watchdog control reg.
 
@@ -197,7 +192,11 @@ nt_watchdog_bark_timer_reset(
 	value &= (long unsigned int)(~(QWLAN_PMU_AON_WDOG_CTL_WDOG_RESET_MASK));
 	NT_REG_WR(QWLAN_PMU_AON_WDOG_CTL_REG,value);                      // write 0 to AON wdog ctl reg by using wdog reset mask field
 
-
+    count = NT_REG_RD(QWLAN_PMU_AON_WDOG_COUNT_REG);
+    while(0 != count)
+    {
+        count = NT_REG_RD(QWLAN_PMU_AON_WDOG_COUNT_REG);
+    }
 
 }
 /*---------------------------------------------------------------------
@@ -350,4 +349,90 @@ void nt_wdt_warm_cold_boot_status(void)
 
 #endif //NT_FN_WATCHDOG
 
+void nt_watchdog_timer_call_back()
+{
+#if NT_WATCH_DOG_DEBUG
+    PAL_Console_Write(strlen(nt_wdog_sw_pet_str), nt_wdog_sw_pet_str);
 #endif
+	vPortEnterCritical();
+    nt_watchdog_bark_timer_reset();
+	vPortExitCritical();
+}
+
+void nt_watchdog_timer_bark_call_back()
+{
+#if NT_WATCH_DOG_DEBUG
+    PAL_Console_Write(strlen(nt_wdog_bark_str), nt_wdog_bark_str);
+#endif
+}
+
+void nt_watchdog_timer_init(void)
+{
+    #if (CONFIG_WATCH_DOG_BARK_TIME >= CONFIG_WATCH_DOG_BITE_TIME) || \
+	    ((CONFIG_WATCH_DOG_BARK_TIME *1000) < CONFIG_WATCH_DOG_BARK_TIME) || \
+	    ((CONFIG_WATCH_DOG_BITE_TIME *1000) < CONFIG_WATCH_DOG_BITE_TIME) || \
+	    (CONFIG_WATCH_DOG_BARK_TIME <= 0)
+		#error "Please correct the watchdog time for the bark and bite value!" 
+	#endif
+
+    bark_time = CONFIG_WATCH_DOG_BARK_TIME*1000;
+    bite_time = CONFIG_WATCH_DOG_BITE_TIME*1000;
+	
+	wdt_timer_handle = nt_qurt_timer_create(WDOG_TIMER_NAME, NT_MS_TO_TICKS(bark_time>>1), TRUE,
+			NULL, nt_watchdog_timer_call_back);
+
+	if(!wdt_timer_handle)
+		return;
+
+	//nt_watchdog_freeze_timer();
+	nt_watchdog_init(bite_time, bark_time);
+	nt_wdog_callback_reg (&nt_watchdog_timer_bark_call_back);
+	nt_watchdog_unfreeze_timer();
+
+	qurt_timer_start(wdt_timer_handle, (TickType_t)100);
+}
+
+void nt_watchdog_timer_freeze(void)
+{
+    nt_watchdog_freeze_timer();
+
+}
+void nt_watchdog_swtimer_stop(void)
+{
+    qurt_timer_stop(wdt_timer_handle, (TickType_t)0);
+}
+
+void nt_watchdog_timer_restart(void)
+{
+    PAL_Console_Write(3, "R\r\n");
+
+    nt_watchdog_freeze_timer();
+    nt_watchdog_init(bite_time, bark_time);
+    nt_wdog_callback_reg (&nt_watchdog_timer_bark_call_back);
+    nt_watchdog_unfreeze_timer();
+    qurt_timer_start(wdt_timer_handle, (TickType_t)100);
+}
+
+#else
+void nt_watchdog_timer_init(void)
+{
+}
+
+void nt_watchdog_timer_freeze(void)
+{
+}
+
+void nt_watchdog_swtimer_stop(void)
+{
+}
+
+void nt_watchdog_timer_restart(void)
+{
+}
+
+void nt_watchdog_bark_timer_reset(void)
+{
+}
+
+#endif
+

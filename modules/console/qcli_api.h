@@ -13,6 +13,25 @@
 #include "qapi_status.h"
 #include "qapi_console.h"
 
+/*-------------------------------------------------------------------------
+ * Preprocessor Definitions and Constants
+ *-----------------------------------------------------------------------*/
+
+/*-------------------------------------------------------------------------
+ * Type Declarations
+ *-----------------------------------------------------------------------*/
+
+/**
+   Enumeration representing the valid error codes that can be returned by the
+   command functions.
+*/
+typedef enum
+{
+   QCLI_STATUS_SUCCESS_E, /**< Indicates the command executed successfully. */
+   QCLI_STATUS_ERROR_E,   /**< Indicates there was an error parsing the command. */
+   QCLI_STATUS_USAGE_E    /**< Indicates there was a usage error with one of the command's arguments. */
+} QCLI_Command_Status_t;
+
 /**
    @brief Prints a formated string to the CLI.
 

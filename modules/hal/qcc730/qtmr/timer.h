@@ -83,6 +83,13 @@ typedef enum
     TIMER_INFO_MAX,
 }timer_info_type;
 
+/* Timer msg identifier */
+enum
+{
+    TMR_CMD_ID_TIMEOUT,
+    TMR_CMD_ID_UNTIMEOUT,
+};
+
 typedef uint32_t timer_type;
 
 /** Pointer to timer structure */
@@ -136,6 +143,14 @@ typedef struct
     TimerCallbackFunction_t nt_timer_callback;
 }sleep_time_info_t;
 
+typedef struct timer_cmd_s
+{
+    bool                reload;
+    uint8_t             cmd_id;
+    time_unit_type      unit;
+    timer_ptr_type      p_handle;
+    time_timetick_type  time;
+} timer_cmd_t;
 /*-------------------------------------------------------------------------
  * Function Declarations and Documentation
  * ----------------------------------------------------------------------*/

@@ -8,14 +8,16 @@
 #include "wmi_api.h"
 #include "safeAPI.h"
 
-
-#ifdef SUPPORT_5GHZ
+#ifdef CONFIG_6GHZ
+/*11 for 2G and 30 for 5G and 24 for 6G */
+#define SCAN_LIST_NUM_CHANNELS 68
+#elif defined(SUPPORT_5GHZ)
 /*11 for 2G and 33 for 5G*/
 #define SCAN_LIST_NUM_CHANNELS 44
 #else
 /*11 for 2G*/
-#define SCAN_LIST_NUM_CHANNELS 11
-#endif
+#define SCAN_LIST_NUM_CHANNELS 11 
+#endif /* CONFIG_6GHZ */
 
 /* Should be called under protection of p_cxt->wlan_qapi_cxt_mutex */
 void wlan_clear_privacy(void)
@@ -126,11 +128,14 @@ void wlan_preset_specific_param (void)
 		p_connect_cmd->networkType = AP_NETWORK;
 	else
 		p_connect_cmd->networkType = INFRA_NETWORK;
-    p_connect_cmd->num_channels = 0;
+    p_connect_cmd->num_channels = SCAN_LIST_NUM_CHANNELS;
+	for (int i=0; i<p_connect_cmd->num_channels; i++) {
+		p_connect_cmd->channel_list[i] = i;
+	}
     p_connect_cmd->wlan_mode = MODE_11ABGN_HT20;
 }
 
-int32_t wlan_channel_to_freq(uint16_t *channel)
+int32_t wlan_channel_to_freq(uint16_t *channel, qbool_t is_6g_index)
 {
     if (NULL == channel)
     {
@@ -140,14 +145,20 @@ int32_t wlan_channel_to_freq(uint16_t *channel)
     {
       return -1;
     }
-    if (*channel < 27) {
-		if(*channel == 14)
-			*channel = __QAPI_WLAN_CHAN_FREQ_14;
-		else
-			*channel = __QAPI_WLAN_CHAN_FREQ_1 + ((*channel - 1) * 5);
-    } else {
-        *channel = (5000 + (*channel * 5));
-    }
+	if (is_6g_index) 
+	{
+		*channel = __QAPI_WLAN_6G_CHAN_FREQ_1 + ((*channel - 1)) * 5;
+	} else 
+	{
+		if (*channel < 27) {
+			if(*channel == 14)
+				*channel = __QAPI_WLAN_CHAN_FREQ_14;
+			else
+				*channel = __QAPI_WLAN_CHAN_FREQ_1 + ((*channel - 1) * 5);
+		} else {
+			*channel = (5000 + (*channel * 5));
+		}
+	}
     return 0;
 }
 
@@ -169,21 +180,26 @@ int32_t wlan_freq_to_channel(uint16_t *channel)
             *channel = (*channel / 5) + 1;
         }
     }
-    else
+    else if (*channel < 5955)
     {
         *channel -= __QAPI_WLAN_CHAN_FREQ_36;
         *channel = 36 + (*channel / 5); // since in 11a channel 36 is the starting number
     }
+	else
+	{
+        *channel -= __QAPI_WLAN_6G_CHAN_FREQ_1;
+        *channel = (*channel / 5) + 1; // since in 11ax channel 1 is the starting number			   
+	}
     return 0;
 }
 
-qapi_Status_t wlan_set_channel(uint8_t device_id, uint16_t channel)
+qapi_Status_t wlan_set_channel(uint8_t device_id, uint16_t channel, qbool_t is_6g_index)
 {
 	qapi_Status_t error = QAPI_OK;
 	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
 
-    if (0 != wlan_channel_to_freq(&channel))
+    if (0 != wlan_channel_to_freq(&channel, is_6g_index))
     {
         return QAPI_ERROR;
     }
@@ -499,3 +515,36 @@ qapi_Status_t wlan_set_amsdu_rx(uint8_t device_ID, uint8_t enable)
 	return error;
 }
 
+qapi_Status_t wlan_set_sta_slptime(uint8_t device_ID, uint16_t time, uint16_t round_type)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+	cmd->pdev_param_id = WIFI_PARAM_SET_STA_DTIM;
+	cmd->pdev_param_value = time | (round_type << 16);
+	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+	if(p_cxt->wlan_set_param_block_mode) {
+		p_cxt->param_id = WIFI_PARAM_SET_STA_DTIM;
+		qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+	} else {
+		log_printf("unblock mode, should check WMI cmd done in event cb\n");
+	}
+	error = get_wlan_qapi_error();
+	return error;
+}
+
+qapi_Status_t wlan_get_sta_slptime(uint32_t *listen_interval)
+{
+	extern devh_t *gdevp;
+	extern uint16_t wlan_get_listen_interval(devh_t *dev, uint16_t beaconInterval);
+	uint16_t ni_intval = gdevp->bss->ni_intval;
+
+	if (gdevp->ifState == IF_UP)
+		*listen_interval = (uint32_t)wlan_get_listen_interval(gdevp, ni_intval) * ni_intval;
+	else
+		*listen_interval = (uint32_t)wlan_get_listen_interval(gdevp, 100) * 100;
+	return QAPI_OK;
+}

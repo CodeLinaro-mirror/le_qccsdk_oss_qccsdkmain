@@ -158,8 +158,7 @@ myputchar(
     txbuf[0] = (char)ch;
     txbuf[1] = 0;
     SEGGER_RTT_printf(0, txbuf);
-#endif
-
+#else
 	if(nt_socpm_uart_flag_state_get(APP_MODE_SEL)){
 		__asm volatile(" nop	\n");
 		(void) ch;
@@ -173,6 +172,7 @@ myputchar(
 		while (((NT_REG_RD(QWLAN_UART_UART_LSR_REG) & QWLAN_UART_UART_LSR_TEMPT_MASK )== UART_UART_LSR_TEMPT_BUSY) && (cntr < UART_TRANS_TIME_OUT));
 		NT_REG_WR(QWLAN_UART_UART_RBR_REG,ch);
 	}//_UART_DISABLE_ALL
+#endif
 #endif
 }
 
@@ -555,7 +555,8 @@ uart_irq_handler(
 {
 	PROF_IRQ_ENTER();
 	extern int process_routine;
-	if (process_routine == 0)
+	extern int process_uart_rx_irq;
+	if (process_routine == 0 && process_uart_rx_irq)
 	{
 		UART_Recieve_buff();
 		uart_flag = 1;

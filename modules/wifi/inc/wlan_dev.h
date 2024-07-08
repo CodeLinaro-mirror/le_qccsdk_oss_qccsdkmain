@@ -150,17 +150,19 @@ extern "C" {
 #endif
 
 #ifdef SUPPORT_5GHZ
-#define DEV_CHANNEL_NUM_MAX         52
+#ifdef CONFIG_WIFILIB_6GHZ
+#define IEEE_FREQ_6GHZ_LOW_BOUND   5955
+#define IEEE_FREQ_6GHZ_HIGH_BOUND  6415
+#define IEEE_FREQ_6GHZ_OFFSET      5950
+#endif 
 #define IEEE_FREQ_5GHZ_LOW_BOUND   4900
 #define IEEE_FREQ_5GHZ_HIGH_BOUND  5920
+#define IEEE_FREQ_5GHZ_OFFSET      5000
 #define IEEE_FREQ_2GHZ_LOW_BOUND   2412
 #define IEEE_FREQ_2GHZ_HIGH_BOUND  3000
-#define IEEE_FREQ_5GHZ_OFFSET      5000
 #define CHANNEL_FREQ_INVALID        0xFFFF
 #define CHANNEL_LIST_END            0x0
 #define IEEE_CHAN_5GHZ_HIGH_BOUND  184
-#else /* SUPPORT_5GHZ */
-#define DEV_CHANNEL_NUM_MAX         11
 #endif /* SUPPORT_5GHZ */
 #define DC_CHANNEL_INDEX_INVALID    255
 #ifdef SUPPORT_EVENT_HANDLERS
@@ -202,6 +204,8 @@ typedef struct conn_profile_s {
     uint8_t                         group_cipher_len;
     uint32_t                        flags;
     uint32_t                        grp_cipher_flag; //temporary flag for decision of group-ciphers for STA
+    uint8_t                         akm_type; /* Used for WPA2 assoc to differentiate SHA1 and SHA256, 
+                                                 Be cautious when used for other AUTH type's, value may invalid */
 } conn_profile_t;
 
 #ifdef NT_FN_WMM_PS_STA
@@ -296,7 +300,13 @@ typedef struct wlan_dev_ev_handler_info dev_ev_handler_info;
 #define CHANNEL_IS_11B(ch)      ((CHANNEL_PHY_MODE(ch) == MODE_11B) || \
                                  CHANNEL_IS_11G(ch))
 #ifdef SUPPORT_5GHZ
-#define FREQ_IS_5G(freq) ((freq > IEEE_FREQ_5GHZ_LOW_BOUND) && (freq <= IEEE_FREQ_5GHZ_HIGH_BOUND))
+#ifdef CONFIG_WIFILIB_6GHZ
+#define FREQ_IS_5G(freq) (((freq > IEEE_FREQ_5GHZ_LOW_BOUND) && (freq <= IEEE_FREQ_5GHZ_HIGH_BOUND))   \
+        || ((freq >= IEEE_FREQ_6GHZ_LOW_BOUND) && (freq <= IEEE_FREQ_6GHZ_HIGH_BOUND))   \
+        )
+#else
+#define FREQ_IS_5G(freq) (((freq > IEEE_FREQ_5GHZ_LOW_BOUND) && (freq <= IEEE_FREQ_5GHZ_HIGH_BOUND)))
+#endif /* CONFIG_WIFILIB_6GHZ */
 #define FREQ_IS_2G(freq) ((freq >= IEEE_FREQ_2GHZ_LOW_BOUND) && (freq <= IEEE_FREQ_2GHZ_HIGH_BOUND))
 #define CHANNEL_IS_2GHZ(ch)     ((CHANNEL_IS_11G(ch) || CHANNEL_IS_11B(ch)) && FREQ_IS_2G((ch)->ch_freq))
 //#define CHANNEL_IS_5GHZ(ch)     (ch >= IEEE_CHAN_5GHZ_OFFSET)
@@ -462,17 +472,20 @@ typedef struct tsf_periodic_sync_ctx_s
 }tsf_periodic_sync_ctx_t;
 #endif
 
-#ifdef FEATURE_STA_ECSA
+#if defined(FEATURE_STA_ECSA) || defined(FEATURE_AP_ECSA)
 typedef struct ecsa_ctx_s
 {
-	NT_BOOL qcn_ie_added;								/*check whether qcn_ie has been sent through assoc*/
-	uint8_t state;								/*check if ecsa request is pending, 0 = stopped ,1 = pending,2 = start*/
-	//uint8_t public_action;							/*type of action frame*/
+	NT_BOOL qcn_ie_added;							/*check whether qcn_ie has been sent through assoc*/
+	uint8_t state;									/*check if ecsa request is pending, 0 = stopped ,1 = pending,2 = start*/
+	uint8_t is_dfs;                  				/*If DFS channel then TX should be enabled in new channel post beacon RX */
 	uint8_t channel_switch_mode;					/*mode 1 = No data transmission, 0 = transmission*/
 	uint8_t new_op_class;							/*new operating class to switch*/
 	uint8_t new_channel_no;							/*new channel number to swtich*/
+	uint16_t new_channel_freq;						/*new channel freq to swtich*/
 	uint8_t channel_switch_count;					/*channel switch count = 0 for immediate switch, 1 for deferred*/
 	uint32_t target_tsf;							/*lower 32 bits for target time at which channel switch should occur*/
+	uint32_t rcv_tsf;								/*lower 32 bits for time at which CSA/ECSA frame received */
+	nt_osal_timer_handle_t ecsa_timer;
 }ecsa_ctx_t;
 #endif /*FEATURE_STA_ECSA*/
 typedef struct dev_common_s {

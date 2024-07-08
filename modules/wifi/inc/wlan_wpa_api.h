@@ -46,7 +46,7 @@ NT_BOOL (*_wlan_rsn_check_mfp_cap)(devh_t *dev, conn_t *conn);
 
 //void rc4_skip(const uint8_t *key, size_t keylen, size_t skip,uint8_t *data, size_t data_len);
 
-void wpa_pmk_to_ptk(const uint8_t *pmk, size_t pmk_len,
+void wpa_pmk_to_ptk(devh_t *dev, const uint8_t *pmk, size_t pmk_len,
 			   const uint8_t *addr1, const uint8_t *addr2,
 			   const uint8_t *nonce1, const uint8_t *nonce2,
 			   uint8_t *ptk, size_t ptk_len , uint8_t auth);
