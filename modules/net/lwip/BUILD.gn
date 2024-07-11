@@ -4,10 +4,10 @@
 import("//configs_decl.gni")
 
 lwip_inc = [
-    "l./../../../comp/lwip/src/include/compat/posix",
-    "./../../../comp/lwip/src/include",
-    "./../../../comp/lwip/src/include/lwip",
-    "./../../../comp/lwip/src/portable",
+    "../../../../comp/lwip/src/include/compat/posix",
+    "../../../../comp/lwip/src/include",
+    "../../../../comp/lwip/src/include/lwip",
+    "../../../../comp/lwip/src/portable",
 ]
 
 lwip_src = [

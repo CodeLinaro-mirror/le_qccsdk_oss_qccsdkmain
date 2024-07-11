@@ -32,11 +32,7 @@
 #define WMI_PASSPHRASE_LEN    64
 #define WMI_PMK_LEN           32
 #define WMI_GMK_LEN           32
-#ifdef SUPPORT_5GHZ
-#define WMI_CHANNEL_NUM_MAX   52
-#else
-#define WMI_CHANNEL_NUM_MAX   11
-#endif
+#define WMI_CHANNEL_NUM_MAX   TOT_MAX_CHANNEL_INDEX + 1
 
 typedef PREPACK struct {
 	uint8_t *wur_buffer;
@@ -271,6 +267,8 @@ typedef enum {
     WMI_REGULATORY_EVTID,
     WMI_SET_RATE_EVTID,
     WMI_GET_RATE_EVTID,
+    WMI_CHAN_SWITCH_EVTID,
+	WMI_SCAN_RESULT_EVTID,
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
 
@@ -1684,6 +1682,13 @@ typedef PREPACK struct{
     uint8_t param_id;
 } POSTPACK SET_PDEV_PARAM_RESULT;
 
+typedef PREPACK struct {
+	uint8_t netif_id; /*Network interface id of the connected interface */
+	uint8_t status;
+	uint8_t reason;
+    uint16_t new_chan_freq;
+} POSTPACK chan_switch_event;
+
 #ifdef CONFIG_WMI_EVENT
 typedef enum {
     WIFI_PARAM_SET_PDEV_CHANNEL = 0,
@@ -1698,6 +1703,7 @@ typedef enum {
     WIFI_PARAM_SET_AP_HIDDEN = 9,
     WIFI_PARAM_SET_ALLOW_AGGR = 10,
     WIFI_PARAM_SET_AMSDU_RX = 11,
+    WIFI_PARAM_SET_STA_DTIM = 12,
 }param_id;
 enum {
     WIFI_STATUS_SUCCESS,

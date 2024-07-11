@@ -48,6 +48,10 @@
 #define BCN_INTV_OFFSET                 sizeof(struct ieee80211_frame) + BCN_TSTAMP_SIZE
 #define TIM                             5
 #define TIM_LEN                         4
+#define TIM_IE_TRAFFIC_INDICATOR_MASK   0x1
+#define TIM_IE_TRAFFIC_INDICATOR_SHIFT  0
+#define TIM_IE_BITMAP_CTL_MASK          0xFE
+#define TIM_IE_BITMAP_CTL_SHIFT         1
 
 /*
  * Data structure definitions
@@ -110,6 +114,57 @@
 
 /* Beacon tsf start from 24th octet */
 #define BCN_TSF_START_OCTET     24
+
+/* Time taken to process the event in NT wlan thread, till */
+#define SLEEP_EXIT_TO_DPM_START_TIME_US                 240
+/* Time taken to process the event in NT wlan thread and data path start */
+#define DATAPATH_START_TIME_US                          125
+/* Time taken to transmit PM null frame */
+#define PM_NULL_FRAME_TX_TIME_US                        230
+/* Time taken in HALPHY operations post sleep exit for TX readiness */
+#define HALPHY_SET_CHA_AND_RATE_TBL_RESTORE_TIME_US     980
+/* Time taken to restart background services and execute post wake CBs */
+#define POST_WAKE_BG_SERVICE_RESTART_US                 1100
+
+/* Time taken in first rri table restore */
+#define MCU_SLEEP_FIRST_RRI_RESTORE_US          150
+/* Time taken in second rri table restore */
+#define MCU_SLEEP_SEC_RRI_RESTORE_US            150
+/* Time taken in light rri table restore */
+#define LIGHT_SLEEP_RRI_RESTORE_US              450
+/* Time overhead for non polled RRI restore */
+#define NON_POLLED_RRI_OVERHEAD_US              15
+/* Time overhead for HDM rri restore for first table */
+#define HDM_RRI_FIRST_TABLE_OVERHEAD_US         12
+/* Time overhead for HDM rri restore for light table
+ * (light_sleep_restore_time - cpu_boot_to_min_cb_time) + base_hdm_rri_overhead */
+#define HDM_RRI_LIGHT_TABLE_OVERHEAD_US         125
+
+/* portion of BMPS SW W2S time from sleep registration to sleep entry  */
+#define BMPS_SW_W2S_SLPREG_TO_SLP_TIME_US  (1000)
+
+/* Time for TWT min callback excluding the time for RRI restoration */
+#define TWT_MIN_CB_NO_RRI_TIME_US          (21)
+/* Time taken for necessary processing and checks before SP start */
+#define TWT_SP_START_PROCESSING_TIME_US    (110)
+#if defined(EMULATION_BUILD)
+#define TWT_CLK_GATED_PRE_WAKE_TIME_US     (1000)
+#define TWT_MCU_SLP_PRE_WAKE_TIME_US       (6000)
+#if defined (SUPPORT_LIGHT_SLEEP_FOR_TWT)
+#define TWT_LIGHT_SLEEP_PRE_WAKE_TIME_US   (2000)
+#endif /*SUPPORT_LIGHT_SLEEP_FOR_TWT*/
+#else /* EMULATION_BUILD */
+#define TWT_CLK_GATED_PRE_WAKE_TIME_US     (2300)
+#endif /* EMULATION_BUILD */
+
+#ifdef FEATURE_PERIODIC_WAKE_SLEEP
+/* Estimated time for PTSM min callback excluding the time for RRI restoration.
+ * To be profiled and refined */
+#define PTSM_MIN_CB_NO_RRI_TIME_US                        15
+/* Estimated time for necessary processing and checks before SP start.
+ * To be profiled and refined */
+#define PTSM_SP_START_PROCESSING_TIME_US                  150
+#endif /* FEATURE_PERIODIC_WAKE_SLEEP */
 
 typedef enum{
     PM_MODE_BMPS =0,    //BMPS power save mode
@@ -215,6 +270,7 @@ typedef struct {
     uint8_t acceptable_rx_count;
     uint16_t max_bcn_rx_no_wake_limit;
     uint8_t force_dtim;
+    uint16_t round;
 } PM_INFRA_STA_CONFIG_PARAMS;
 
 /*The PM_ACTIVITY_POLICY Structure contains all other Activity policies for power saving mode*/
@@ -368,6 +424,9 @@ typedef struct {
 #ifdef FEATURE_PERIODIC_WAKE_SLEEP
 	nt_periodic_wake_struct_t periodic_wake_struct; /* periodic wake structure*/
 #endif /* FEATURE_PERIODIC_WAKE_SLEEP */
+    uint64_t last_rx_dtim_tsf;  /*last dtim rx tsf*/
+    uint32_t total_slp_bcn_recv_count;   /* number of beacons received while in mcu sleep */
+    uint32_t total_slp_bcn_miss_count; /* number of beacons missed while in mcu sleep */
     chan_activity_t chan_stats;              /* Channel activities structure for qpower feature*/
     PROTOCOL_SLP_EXIT_REASON sleep_exit_reason; /* protocol sleep exit reason */
 } PM_STRUCT;
@@ -378,9 +437,7 @@ typedef struct {
 typedef struct
 {
     IMPS_STRUCT_CTX_t imps_struct_ctx;
-#if defined(NT_FN_DEBUG_STATS) || defined(NT_FN_PRODUCTION_STATS)
     imps_stats_t imps_statistics;
-#endif
 #ifdef SUPPORT_SW_NON_POLLED_RRI
     uint8_t non_polled_rri_enable;      /* feature enable flag */
     uint64_t non_polled_rri_start_time; /* timestamp to track timeout */
@@ -714,6 +771,31 @@ void nt_pm_sync_non_polled_rri_completion(devh_t *dev);
  */
 uint8_t nt_pm_check_hdm_rri_complete(PM_STRUCT *pPmStruct);
 #endif /* SUPPORT_HDM_INITIATED_RRI */
+
+/*
+ * @brief  Compute sleep to wake overhead time to be compensated for BMPS
+ * @param  : pPmStruct -> Pointer to PM struct
+ * @return : Compensation time in microseconds  
+ */
+uint64_t bmps_compute_s2w_compensation_time(PM_STRUCT *pPmStruct);
+
+/*
+ * @brief  Compute sleep to wake overhead time to be compensated for TWT
+ * @param  : pPmStruct -> Pointer to PM struct
+ * @param  : mode -> sleep mode
+ * @return : Compensation time in microseconds  
+ */
+uint64_t twt_compute_s2w_compensation_time(PM_STRUCT *pPmStruct, sleep_mode mode);
+
+#ifdef FEATURE_PERIODIC_WAKE_SLEEP
+/*
+ * @brief  Compute sleep to wake overhead time to be compensated for PTSM
+ * @param  : pPmStruct -> Pointer to PM struct
+ * @param  : mode -> sleep mode
+ * @return : Compensation time in microseconds  
+ */
+uint64_t ptsm_compute_s2w_compensation_time(PM_STRUCT *pPmStruct, sleep_mode mode);
+#endif /* FEATURE_PERIODIC_WAKE_SLEEP */
 
 #endif // _WLAN_POWER_H_
 

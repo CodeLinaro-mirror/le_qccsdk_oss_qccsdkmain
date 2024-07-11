@@ -479,7 +479,7 @@ extern uint16_t    g_twt_event_log_tbl_index;
 
 #endif
 
-#ifndef SUPPORT_RING_IF
+#if (!defined(SUPPORT_RING_IF) && !defined(SUPPORT_RING_IF_ONLY))
 #if defined(__GNUC__)
 #define PACKSTRUCT __attribute__ ((packed))
 #else
@@ -875,6 +875,7 @@ uint16_t nt_twt_get_alignment(void);
 
 void nt_twt_set_alignment(uint8_t flag , uint16_t alignment);
 
+#if (!defined(SUPPORT_RING_IF) && !defined(SUPPORT_RING_IF_ONLY))
 #ifdef SUPPORT_TWT_STA
 nt_status_t nt_twt_setup_cmd_hdl(devh_t* dev, wlan_twt_setup_cmd_t *details);
 nt_status_t nt_twt_status_cmd_hdl(devh_t* dev, wlan_twt_status_cmd_t *details);
@@ -890,8 +891,8 @@ NT_BOOL nt_twt_sap_war_required(devh_t* dev);
 
 /* Function will return the sleep mode that is forced*/
 uint32_t nt_twt_get_forced_sleep_mode() ;
+#endif 
 #endif
-
 void nt_twt_process_eosp(devh_t *dev);
 void nt_twt_log_sp_start_time(void *pPmStruct, uint32_t start_time);
 void nt_twt_log_sp_end_time(void *pPmStruct, uint32_t end_time);

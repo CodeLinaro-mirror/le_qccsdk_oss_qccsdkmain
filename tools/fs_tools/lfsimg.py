@@ -55,6 +55,7 @@ def list_lfs_image(image_file, block_size=4096, block_count=16, verbose=True):
         print(f"Error: Image file '{image_file}' does not exist.")
         return
 
+    block_count=int(os.path.getsize(image_file)/block_size)
     cmd = ['littlefs_list', '-b', str(block_size), '-c', str(block_count), '-i', image_file]
 
     try:
@@ -103,7 +104,7 @@ def dump_first_16_bytes(file_path):
 if __name__ == "__main__":    
     parser = argparse.ArgumentParser(description='Tool to generate LFS images from a source folder or list files in a LittleFS image')
     parser.add_argument('-s', '--source', type=str,
-                    help='''Source path. 
+                    help='''Source path.
                     If provided, create a LittleFS image from the source folder.
                     If not provided, the image file(-f) must be provided for parsing.'''
                     )

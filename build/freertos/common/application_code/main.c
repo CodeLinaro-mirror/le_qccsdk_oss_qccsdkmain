@@ -20,17 +20,16 @@
 #endif
 
 #include "tcpip.h"     // tcpip_init()
-//#include "ping.h"      // ping_init()
+#include "ping.h"      // ping_init()
 
 #include "nt_socpm_sleep.h"
 #include "uart.h"
 #include "nt_logger_api.h"
 
 #include "nt_wlan_task_manager.h"
-//#include "NT_Wfm_Task_Manager.h"
-#ifdef NT_FN_LFS
+#include "NT_Wfm_Task_Manager.h"
 #include "lfs.h"
-#endif
+
 #include "nt_lfs.h"
 #include "nt_heap_stats.h"
 #include "nt_wifi_driver.h"         // nt_pdc_driver_init()
@@ -79,6 +78,10 @@
 #include "ferm_flash.h"
 #endif
 
+#ifdef CONFIG_MPU_ENABLE
+#include "ferm_mpu.h"
+#endif
+
 #include <stdio.h>
 
 // ----------------------------------------------------------------------
@@ -90,9 +93,9 @@
 #include "nt_sys_monitoring.h"
 //#include "ping.h"      // ping_init()
 
-#ifdef NT_FN_WATCHDOG
+//#ifdef NT_FN_WATCHDOG
 #include "nt_wdt_api.h"
-#endif //NT_FN_WATCHDOG
+//#endif //NT_FN_WATCHDOG
 
 #ifdef NT_FN_CC_MGMT
 #include "nt_cc_battery_driver.h"  // nt_cc_battery_mgmt_init()
@@ -123,6 +126,10 @@
 #ifdef SUPPORT_QCSPI_SLAVE
 #include "qcspi_slave_api.h"
 #endif //SUPPORT_QCSPI_SLAVE
+
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY) 
+#include "data_svc_hfc_priv.h"
+#endif
 
 #include "wifi_fw_ext_intr.h"
 
@@ -198,9 +205,6 @@ bool nt_set_rram_app_mode(app_mode_id_t requested_app_mode);
 
 #include "qurt_internal.h"
 
-extern uint32_t _ln_BDF_Start_Addr;
-extern uint32_t _ln_BDF_Data_length;
-
 #ifdef SUPPORT_REGULATORY
 extern uint32_t _ln_REGDB_Start_Addr;
 extern uint32_t _ln_REGDB_Data_length;
@@ -264,9 +268,7 @@ uint8_t sys_stats_start = 0;
 int mcu_sleep_force = 0; /*set to 1 before call sleep register to enable MCU sleep*/
 int rri_force_wakeup = 0;
 uint8_t pbl_log_buff[256];
-#ifdef NT_FN_LFS
 lfs_t lfs_init;
-#endif
 
 #if CONFIG_FTM_MODE
 app_mode_id_t app_mode = APP_MODE_FTM; /* default application mode in RAM */
@@ -323,6 +325,16 @@ static void shell_init (void)
 #if (CONFIG_I2CM_SHELL)
 	extern void i2cm_shell_init (void);
 	i2cm_shell_init();
+#endif
+
+#if (CONFIG_GPIO_SHELL)
+		extern void gpio_shell_init (void);
+		gpio_shell_init();
+#endif
+
+#if (CONFIG_UART_SHELL)
+	extern void uart_shell_init (void);
+	uart_shell_init();
 #endif
 
 #if (CONFIG_NET_SHELL)
@@ -385,12 +397,19 @@ int main(
     extern int BMPS_LIST, WUR_LIST;
     BMPS_LIST =  WUR_LIST = -1;
     uint8 is_ftm = 0;
+    extern uint32_t bdf_addr;
 
 #if (CONFIG_FTM_MODE==1)
     is_ftm = 1;
 #endif
 
-    uart_init();
+#ifdef CONFIG_MPU_ENABLE
+	ferm_mpu_config();
+#endif
+
+#ifndef CONFIG_UART_SHELL
+	uart_init();
+#endif
 
 #if defined(FTM_OVER_UART) || defined(CONFIG_RTT_VIEW_CLI)
     SEGGER_RTT_Init();
@@ -568,13 +587,9 @@ fw_logger_init();
 
 /*WDT Enable only in the production build */
 
-#ifdef NT_FN_WATCHDOG
-    nt_watchdog_init(_WATCHDOG_BITE_TIMEOUT,_WATCHDOG_BARK_TIMEOUT);
-    nt_wdog_callback_reg (&nt_watchdog_bark_timer_reset);
-    nt_watchdog_unfreeze_timer();
-#endif //NT_FN_WATCHDOG
-
-
+//#ifdef NT_FN_WATCHDOG
+    nt_watchdog_timer_init();
+//#endif //NT_FN_WATCHDOG
 
 #ifdef NT_SOPCM_CHANGE
     enum error_no reason=wifi_pdc_init();
@@ -627,6 +642,10 @@ fw_logger_init();
 #ifdef SUPPORT_QCSPI_SLAVE
 qcspi_slv_init();
 #endif //SUPPORT_QCSPI_SLAVE
+
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY) 
+qcspi_hfc_init();
+#endif
 
 #ifdef NT_FN_SPI
         nt_spi_slv_defalut_config();
@@ -741,7 +760,7 @@ qcspi_slv_init();
         nt_app_inter_tcp_uplink_traffic();
 #endif // NT_FN_INTER_TCP_INTERVAL
 #endif
-    halphy_bdf_init(&_ln_BDF_Start_Addr);
+    halphy_bdf_init((uint32_t *)bdf_addr);
     if(app_mode == APP_MODE_FTM)
     {
         halphy_bdf_cached_bdf_init();

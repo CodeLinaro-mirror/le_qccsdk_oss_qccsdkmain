@@ -61,8 +61,14 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_BSSID */
         }
 		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL: {
-			uint16_t channel = *((uint16_t *) data);
-			ret = wlan_set_channel(device_ID, channel);
+			uint16_t channel = ((uint16_t *) data)[0];
+            qbool_t is_6g_index = (qbool_t)((uint32_t *) data)[1];
+            if (is_6g_index == TRUE || is_6g_index == FALSE) {
+			    ret = wlan_set_channel(device_ID, channel, is_6g_index);
+            } else {
+                PRINT_ERR_INVALID_PARAM1("is_6g_index", is_6g_index);
+                ret = QAPI_WLAN_ERR_EINVAL;
+            }
 			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL */
 		}
 		case __QAPI_WLAN_PARAM_GROUP_WIRELESS_PHY_MODE: {
@@ -116,7 +122,12 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
             uint8_t enable = *((uint8_t *) data);
             ret = wlan_set_amsdu_rx(device_ID, enable);
 			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_AMSDU_RX */
-		}        
+		}
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU: {
+            qapi_WLAN_Listen_Interval_Params_t *listen_interval = (qapi_WLAN_Listen_Interval_Params_t *) data;
+            ret = wlan_set_sta_slptime(device_ID, listen_interval->time, listen_interval->round_type);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU */
+        }
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;
@@ -308,6 +319,14 @@ qapi_Status_t qapi_WLAN_Get_Param (uint8_t __attribute__((__unused__)) device_ID
 			ret = wlan_sta_get_rssi(device_ID, rssi);
 			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSSI */
 		}
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU: {
+            uint32_t *interval = (uint32_t *)data;
+            if (*length < sizeof(uint32_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            wlan_get_sta_slptime(interval);
+            break;
+        }
 		default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
 			PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
 			ret = QAPI_WLAN_ERR_EINVAL;

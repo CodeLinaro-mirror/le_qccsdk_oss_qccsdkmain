@@ -85,6 +85,7 @@ typedef enum {
     FDE_IMG_ID_SBL = 0,
     FDE_IMG_ID_PBL_PATCH,
     FDE_IMG_ID_APP,
+    FDE_IMG_ID_BDF,
 } fde_img_id;
 
 /* Image rank in firmware descriptor entry. */

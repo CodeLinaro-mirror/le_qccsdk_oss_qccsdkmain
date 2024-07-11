@@ -13,7 +13,7 @@ extern void wlan_set_connect_bssid (const uint8_t *bssid, uint8_t bssid_length);
 extern void wlan_set_passphrase (const uint8_t *passphrase, uint8_t passphrase_len);
 extern void wlan_set_scan_param (WMI_START_SCAN_CMD *p_cmd, const qapi_WLAN_Start_Scan_Params_t *scan_Params);
 extern void wlan_preset_specific_param (void);
-extern qapi_Status_t wlan_set_channel(uint8_t device_id, uint16_t channel);
+extern qapi_Status_t wlan_set_channel(uint8_t device_id, uint16_t channel, qbool_t is_6g_index);
 extern qapi_Status_t wlan_set_country_code(uint8_t device_id, uint8_t *country_code);
 extern qapi_Status_t wlan_set_phy_mode(uint8_t device_id, uint32_t phy_mode);
 extern int32_t wlan_set_11n_ht(uint8_t  __attribute__((__unused__)) device_id, uint8_t htconfig);
@@ -29,5 +29,7 @@ extern qapi_Status_t wlan_set_ap_inactivity(uint8_t device_ID, uint32_t inactivi
 extern qapi_Status_t wlan_set_ap_hidden(uint8_t device_ID, uint8_t hidden);
 extern qapi_Status_t wlan_set_agg_cfg(uint8_t device_ID, uint16_t tx_tid_mask, uint16_t rx_tid_mask);
 extern qapi_Status_t wlan_set_amsdu_rx(uint8_t device_ID, uint8_t enable);
+extern qapi_Status_t wlan_set_sta_slptime(uint8_t device_ID, uint16_t time, uint16_t round_type);
+extern qapi_Status_t wlan_get_sta_slptime(uint32_t *listen_interval);
 #endif //WLAN_QAPI_HELPER_H
 

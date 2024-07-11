@@ -63,6 +63,10 @@ uint32_t sigma_udp_IsPortInUse(uint16_t port)
 void sigma_udp_rx(void *sigma_context)
 {
     SIGMA_CXT *p_tCxt = (SIGMA_CXT *)sigma_context;
+    if (p_tCxt == NULL) {
+        SIGMA_PRINTF("sigma_context is NULL\n");
+        goto ERROR_1;
+    }
 
     int32_t  received;
     int32_t  conn_sock;
@@ -142,14 +146,19 @@ void sigma_udp_rx(void *sigma_context)
     SIGMA_PRINTF("****************************************************\n");
     SIGMA_PRINTF("IOT UDP RX Test\n");
     SIGMA_PRINTF("****************************************************\n");
-
-    if (p_tCxt->params.rx_params.mcEnabled)
-        SIGMA_PRINTF("Bind address: %s\n", inet_ntop(family, &(p_tCxt->params.rx_params.local_address), ip_str, sizeof(ip_str)));
-    else
-        SIGMA_PRINTF("Bind address: %s\n", inet_ntop(family, local_sin_addr, ip_str, sizeof(ip_str)));
+    
+    const char* address_str = p_tCxt->params.rx_params.mcEnabled ? \
+                            inet_ntop(family, &(p_tCxt->params.rx_params.local_address), ip_str, sizeof(ip_str)) : \
+                            inet_ntop(family, local_sin_addr, ip_str, sizeof(ip_str));
+    
+    if (address_str) {
+        SIGMA_PRINTF("Bind address: %s\n", ip_str);
+    } else {
+        SIGMA_PRINTF("Bind address: 0x0\n"); 
+    }
 
     SIGMA_PRINTF("Local port: %d\n", port);
-    SIGMA_PRINTF("Type benchquit to terminate test\n");
+    SIGMA_PRINTF("Type udpquit to terminate test\n");
     SIGMA_PRINTF("****************************************************\n");
 
     memset(&echo_stats, 0, sizeof(SIGMA_STATS));
@@ -183,7 +192,7 @@ void sigma_udp_rx(void *sigma_context)
                 }
 
                 /* block for 500msec or until a packet is received */
-                FD_ZERO(&rset);
+                memset(&rset, 0, sizeof(fd_set));
                 FD_SET(p_tCxt->sock_local, &rset);
 
                 conn_sock = select(p_tCxt->sock_local + 1, &rset, NULL, NULL, &tv);
@@ -249,10 +258,11 @@ void sigma_udp_rx(void *sigma_context)
                     SIGMA_PRINTF("send acklast_time: ms=%d rcvd=%d\n",
                             p_tCxt->pktStats.last_time, received);
 #endif
+#ifdef UDP_ENDMARK_ENABLE
 
                     /* Send throughput results to Peer so that it can display correct results*/
                     send_ack(p_tCxt, from, fromlen);
-
+#endif
                     break;
                 }
             }
@@ -264,13 +274,23 @@ void sigma_udp_rx(void *sigma_context)
         } /* receive_loop */
 
 ERROR_3:
-        SIGMA_PRINTF("Received %u bytes, Packets %u from %s:%u\n",
-                (uint32_t)p_tCxt->pktStats.bytes,
-                p_tCxt->pktStats.pkts_recvd,
-                inet_ntop(family, (void *)&((struct sockaddr_in *)from)->sin_addr.s_addr, ip_str, sizeof(ip_str)),
-                ntohs(((struct sockaddr_in *)from)->sin_port));
-
         app_get_time(&p_tCxt->pktStats.last_time);
+        
+        const char* address_str = inet_ntop(family, (void *)&((struct sockaddr_in *)from)->sin_addr.s_addr, ip_str, sizeof(ip_str));
+        if (address_str){
+           SIGMA_PRINTF("Received %u bytes, Packets %u from %s:%u\n",
+                (uint32_t)p_tCxt->pktStats.bytes, 
+                p_tCxt->pktStats.pkts_recvd,
+                *address_str,
+                ntohs(((struct sockaddr_in *)from)->sin_port));
+        } else {
+            SIGMA_PRINTF("Received %u bytes, Packets %u from %s:%u\n",
+                (uint32_t)p_tCxt->pktStats.bytes, 
+                p_tCxt->pktStats.pkts_recvd,
+                "0x0",
+                ntohs(((struct sockaddr_in *)from)->sin_port));            
+        }
+
         sigma_print_test_results(p_tCxt, &p_tCxt->pktStats);
 
         if (p_tCxt->echo)
@@ -299,15 +319,14 @@ ERROR_1:
 	sigma_udp_rx_port_in_use = 0;
 
     SIGMA_PRINTF(SIGMA_TEST_COMPLETED);
-
-    if (p_tCxt->buffer)
-    {
-        free(p_tCxt->buffer);
-        p_tCxt->buffer = NULL;
-    }
-
+    
     if (p_tCxt)
     {
+        if (p_tCxt->buffer)
+        {
+            free(p_tCxt->buffer);
+            p_tCxt->buffer = NULL;
+        }
         free(p_tCxt);
         p_tCxt = NULL;
     }
@@ -325,14 +344,15 @@ ERROR_1:
 * test results.
 * Parameters: pointer to sigma context
 ************************************************************************/
+#ifdef UDP_ENDMARK_ENABLE
 int sigma_wait_for_response(SIGMA_CXT *p_tCxt, struct sockaddr *to, uint32_t tolen, uint32_t cur_packet_number)
 {
     uint32_t received;
     int error = A_ERROR;
     struct sockaddr_in local_addr;
 
-    struct sockaddr *addr;
-    uint32_t addrlen;
+    struct sockaddr *addr = NULL;
+    uint32_t addrlen = 0;
     stat_packet_t *stat_packet, stats;
     EOT_PACKET eot_packet, *endmark;
     uint32_t retry_counter = 0;
@@ -361,7 +381,7 @@ int sigma_wait_for_response(SIGMA_CXT *p_tCxt, struct sockaddr *to, uint32_t tol
         }
 
         /* Bind */
-        if (bind(p_tCxt->sock_local, addr, addrlen) != QAPI_OK)
+        if (addr == NULL || bind(p_tCxt->sock_local, addr, addrlen) != QAPI_OK)
         {
             SIGMA_PRINTF("%s: Socket bind error\n", __func__);
             goto ERROR_2;
@@ -433,7 +453,7 @@ ERROR_2:
 ERROR_1:
     return error;
 }
-
+#endif
 /************************************************************************
 * NAME: sigma_udp_tx
 *
@@ -442,13 +462,17 @@ ERROR_1:
 void sigma_udp_tx(void *sigma_context)
 {
     SIGMA_CXT *p_tCxt = (SIGMA_CXT *)sigma_context;
+    if (p_tCxt == NULL) {
+        SIGMA_PRINTF("sigma_context is NULL\n");
+        goto ERROR_1;
+    }
 
     struct sockaddr_in foreign_addr;
 
     struct sockaddr *to;
     uint32_t tolen;
     char ip_str [48];
-    int32_t send_bytes, result;
+    int32_t send_bytes, result = QAPI_OK;
     uint32_t packet_size = p_tCxt->params.tx_params.packet_size;
     uint32_t cur_packet_number, i, n_send_ok;
 
@@ -504,14 +528,13 @@ void sigma_udp_tx(void *sigma_context)
 
     if (p_tCxt->params.tx_params.ip_tos > 0)
     {
-        SIGMA_PRINTF("IP tos:%x\n", p_tCxt->params.tx_params.ip_tos);
 	    setsockopt(p_tCxt->sock_peer, IPPROTO_IP, tos_opt, &p_tCxt->params.tx_params.ip_tos, sizeof(int));
     }
-    if (p_tCxt->params.tx_params.is_so_unblock)
-    {
-        setsockopt(p_tCxt->sock_peer, SOL_SOCKET, O_NONBLOCK, NULL, 0);
-		SIGMA_PRINTF("non-blocking mode\n");
-    }
+    // if (p_tCxt->params.tx_params.is_so_unblock)
+    // {
+    //     setsockopt(p_tCxt->sock_peer, SOL_SOCKET, O_NONBLOCK, NULL, 0);
+	// 	SIGMA_PRINTF("non-blocking mode\n");
+    // }    
 
     /* Connect to the server.*/
     SIGMA_PRINTF("Connecting\n");
@@ -664,8 +687,10 @@ void sigma_udp_tx(void *sigma_context)
     SIGMA_PRINTF("\nSent %u packets, %u bytes to %s %u (%u)\n",
         cur_packet_number, (uint32_t)p_tCxt->pktStats.bytes, ip_str, p_tCxt->params.tx_params.port, cur_packet_number - n_send_ok);
 
+#ifdef UDP_ENDMARK_ENABLE
     /* Send endmark packet and wait for stats from server */
     result = sigma_wait_for_response(p_tCxt, to, tolen, cur_packet_number);
+#endif
 
     if (result != QAPI_OK)
     {

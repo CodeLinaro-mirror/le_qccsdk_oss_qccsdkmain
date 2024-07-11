@@ -103,7 +103,10 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                 if(list[i].security_Enabled){
                     if(list[i].rsn_Auth || list[i].rsn_Cipher){
                         printf("\r\n\r");
-                        printf("RSN/WPA2= ");
+                        if((list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) || (list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK))
+                            printf("RSN/WPA2= ");
+                        if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE)
+                            printf("WPA3= ");
                     }
                     if(list[i].rsn_Auth){
                         printf(" {");
@@ -111,7 +114,10 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                              printf("802.1X ");
                         }
                         if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK){
-                             printf("PSK ");
+                            printf("PSK ");
+                        }
+                        if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE){
+                            printf("SAE");
                         }
                         printf("}");
                     }
@@ -156,10 +162,6 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                             printf("AES ");
                         }
                         printf("}");
-                    }
-                    /* it may be old-fashioned WEP this is identified by * absent wpa and rsn ciphers */
-                    if(list[i].rsn_Cipher == 0 && list[i].wpa_Cipher == 0){
-                        printf("WEP ");
                     }
                 }else{
                     printf("NONE! ");
@@ -245,6 +247,16 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
 
         break;
     }
+	case QAPI_WLAN_CHANNEL_SWITCH_CB_E: {
+		qapi_WLAN_Chan_Switch_Evt_t *ecsa = (qapi_WLAN_Chan_Switch_Evt_t *)payload;
+		if(ecsa->evt_hdr.status == QAPI_OK) {
+			p_cxt->channel_frequency = ecsa->freq;
+			info_printf("devId %d channel switch to %d success\n", p_cxt->active_device, ecsa->freq);
+		} else {
+			info_printf("devId %d channel switch fail, reason %d\n", p_cxt->active_device, ecsa->reason);
+		}
+		break;
+	}
     }
 }
 
@@ -456,7 +468,7 @@ qapi_Status_t set_active_deviceid(uint8_t deviceId)
 
 	if(deviceId >= NT_MAX_DEVICES)
 	{
-		info_printf("the maximum device ID is %d\n",NT_MAX_DEVICES);
+		info_printf("the maximum device ID is %d\n",NT_MAX_DEVICES-1);
 		return QAPI_ERROR;
 	}
 
@@ -769,27 +781,34 @@ static qapi_Status_t SetChannel(uint32_t __attribute__((__unused__)) Parameter_C
 {
 	qapi_Status_t ret= QAPI_OK;
 	uint8_t deviceId = get_active_device();
-	uint32_t channelNum = 0;
+	uint32_t channel[2] = {0, 0};
 
     if(!pg_wifi_shell_cxt->wlan_enabled) {
         info_printf("wlan is not enabled \n");
         return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
     }
 
-	if( Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+	if( Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
 		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 	}
-
-	//ret = set_channel_hint(Parameter_List[0].Integer_Value));
-	channelNum = Parameter_List[0].Integer_Value;
+	
+	channel[0] = Parameter_List[0].Integer_Value;
+    if( Parameter_Count >= 2 ) {
+#ifdef CONFIG_6GHZ
+	    channel[1] = Parameter_List[1].Integer_Value;
+#else
+        info_printf("cannot set 6g channel since 6g is not enabled \n");
+        return QAPI_WLAN_ERR_EINVAL;
+#endif
+    }
 	ret = qapi_WLAN_Set_Param(deviceId,
 								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
 								__QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL,
-								(void *) &channelNum,
-								sizeof(channelNum),
+								(void *) &channel,
+								sizeof(channel),
 								FALSE);
 	if(ret != QAPI_OK) {
-		info_printf("set channel %d fail \n",channelNum);
+		info_printf("set channel %d fail \n",channel[0]);
 	}
 	return ret;
 }
@@ -1210,6 +1229,57 @@ static qapi_Status_t GetRate(uint32_t __attribute__((__unused__)) Parameter_Coun
     return QAPI_OK;
 }
 
+static qapi_Status_t setSTAListenInterval(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    qapi_WLAN_Listen_Interval_Params_t listen_interval;
+
+    if(Parameter_Count != 2 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_List[0].Integer_Value > UINT16_MAX || Parameter_List[0].Integer_Value < 0) {
+        info_printf("listen interval need set 0-65535 TU\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    if (!(Parameter_List[1].Integer_Value == 0 || Parameter_List[1].Integer_Value == 1)) {
+        info_printf("round type need set to 0 or 1\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    listen_interval.time = (uint16_t)Parameter_List[0].Integer_Value;
+    listen_interval.round_type = (uint16_t)Parameter_List[1].Integer_Value;
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU,
+                                &listen_interval,
+                                sizeof(listen_interval),
+                                FALSE))
+    {
+        info_printf("set STA listen interval fail\r\n");
+        return -1;
+    }
+    return 0;
+    }
+
+static qapi_Status_t getSTAListenInterval(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint32_t listen_interval;
+    uint32_t length = sizeof(listen_interval);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU,
+                                &listen_interval,
+                                &length)){
+        info_printf("get listen interval fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("get listen interval: %d TU\r\n", listen_interval);
+    }
+    return 0;
+}
 
 int32_t set_ap_beacon_interval(uint32_t beacon_int_in_tu)
 {
@@ -1371,6 +1441,51 @@ static qapi_Status_t setAPInactivityPeriod(uint32_t Parameter_Count, QAPI_Consol
     return QAPI_OK;
 }
 
+extern uint8_t ecsa_ap_chan_switch(uint8_t mode,uint8_t count,uint8_t ch_no,uint8_t is_6g);
+extern void ecsa_set_type(int type);
+
+static qapi_Status_t setCSAType(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+	
+    if (Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    
+	ecsa_set_type(Parameter_List[0].Integer_Value);
+
+    return QAPI_OK;
+}
+
+static qapi_Status_t channelSwitch(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+	uint8_t mode, count, ch_no, is_6g = 0;
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+	
+    if (Parameter_Count < 3 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid || !Parameter_List[2].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+	ch_no = Parameter_List[0].Integer_Value;
+	count = Parameter_List[1].Integer_Value;
+	mode = Parameter_List[2].Integer_Value;
+
+	if(Parameter_Count > 3 && Parameter_List[0].Integer_Is_Valid)
+		is_6g = Parameter_List[3].Integer_Value;
+	
+	if(ecsa_ap_chan_switch(mode, count, ch_no, is_6g) != 0) {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+	}
+	
+    return QAPI_OK;
+}
+
 const QAPI_Console_Command_t wifi_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -1384,8 +1499,8 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { Connect,         "Connect",               "<ssid> [bssid]",        "Connect to a given ssid and given bssid(bssid option applicable to STA mode only. if AP mode connect command shouldnt take BSSID)"},
     { GetRssi,         "GetRssi",               "",                      "Get link quality indicator (SNR in dB) between AP and STA."},
     { Disconnect,      "Disconnect",            "",                      "Disconnect from AP or peer"},
-    { SetChannel,      "SetChannel",            "<channel>",             "Set a channel hint."},
-    { SetPhyMode,      "SetPhyMode",            "<mode = a|b|g|ag|gonly>","Set the wireless mode"},
+    { SetChannel,      "SetChannel",            "<channel> [<is_6g_index = 0:no, 1:yes>]",      "Set a channel hint."},
+    { SetPhyMode,      "SetPhyMode",            "<mode = a|b|g|ng|abgn>","Set the wireless mode"},
     { Set11nHTCap,     "Set11nHTCap",           "<HTCap = disable|ht20>","Set 11n HT parameter"},
     { SetOperatingMode,"SetOperatingMode",      "<ap|station> [<hidden|0> <wps|0>]",  "Set the operating mode to either Soft-AP or STA. Hidden and wps parameters only apply to AP mode."},
     { SetPowerMode,    "SetPowerMode",          "<mode = 0: Max performance, 1: Power Save>",    "Set the device power mode."},
@@ -1405,6 +1520,10 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 	{ setAPBeaconInterval,		"SetAPBeaconInterval",          "<beacon_interval_in_ms>", "Set the beacon interval in ms."},
 	{ setAPDtimPeriod,			"SetAPDtimPeriod",              "<dtim_period>",           "Set the DTIM period"},
 	{ setAPInactivityPeriod,	"SetAPInactivityPeriod",        "<inactivity_period_in_mins>",  "Set inactivity period "},
+	{ setCSAType,		"setCSAType",		"<0:csa | 1:ecsa>",	"set CSA type to CSA or ECSA"},
+	{ channelSwitch,	"channelSwitch",	"<new channel num> <switch count> <switch mode> [is 6G]",	"channel switch in AP mode"},
+	{ setSTAListenInterval,	"setSTAListenInterval",        "<listen_interval_in_TU> <0: ronud up|1: round down>",  "Set STA listen interval in TU which will round up/down to DTIM interval, 1TU=1024us"},
+	{ getSTAListenInterval,	"getSTAListenInterval",        "",  "Get STA listen interval in TU"},
 };
 
 const QAPI_Console_Command_Group_t wifi_shell_cmd_group = {WLAN_SHELL_GROUP_NAME, sizeof(wifi_shell_cmds) / sizeof(QAPI_Console_Command_t), wifi_shell_cmds};

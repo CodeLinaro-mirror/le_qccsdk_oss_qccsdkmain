@@ -48,6 +48,12 @@ WIFIReturnCode_t _nt_wdt_init (void*);
 void nt_watchdog_freeze_timer(void);
 void nt_watchdog_unfreeze_timer(void);
 
+void nt_watchdog_timer_init(void);
+void nt_watchdog_timer_freeze(void);
+void nt_watchdog_timer_restart(void);
+
+void nt_watchdog_swtimer_stop(void);
+
 
 //#if (defined __NT_2_H)
 

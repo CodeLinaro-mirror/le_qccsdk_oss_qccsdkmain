@@ -9,17 +9,12 @@ is_ioe_pbl = false
 is_sbl = false
 is_nvm_programmer = false
 is_ftm = false
-is_ioe_qcli_demo = false
 need_fs = false
 elf_dir = "bin"
 build_type = "__DEBUG_BUILD"
 
 if (image_name == "FERMION_PBL") {
     is_pbl = true
-}
-
-if (image_name == "FERMION_IOE_QCLI_DEMO") {
-    is_ioe_qcli_demo = true
 }
 
 if (image_name == "FERMION_SBL") {
@@ -38,7 +33,7 @@ if (image_name == "FERMION") {
     CONFIG_LIBWIFI_CORE = false
 }
 
-if (image_name =="FERMION_FS_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO") {
+if (image_name =="FERMION_FS_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO" || image_name == "FERMION_MQTT_DEMO") {
     need_fs = true
 }
 
@@ -50,7 +45,7 @@ lib_c_nano_path = exec_script("build/gn/scripts/get_arm_gcc_lib_path.py", ["c_na
 lib_gcc_path = exec_script("build/gn/scripts/get_arm_gcc_lib_path.py", ["gcc"], "list lines")
 #lIb_bdreg_path = exec_script("build/freertos/eclipse-gcc/Scripts/frn_generate_regdb_bdwlan_lib.py", [rebase_path("."), board_name], "list lines")
 
-print(string_join("", ["Board is: ",getenv("QCCSDK_BOARD_NAME")]))
+
 
 projects_pbl = [
     "//fermion_pbl",
@@ -86,6 +81,7 @@ projects_common = [
     "//modules/net/lwip",
     "//arch/arm/system",
     "//demo/fs_demo",
+    "//demo/mqtt_demo",
 ]
 
 projects_wifi_core = [
@@ -146,6 +142,11 @@ config("common_inc") {
     include_dirs += [ "../comp/lwip/src/include/lwip", ]
     include_dirs += [ "../comp/lwip/src/include/compat/posix", ]
     include_dirs += [ "../comp/littlefs", ]
+    include_dirs += [ "../comp/mqtt/source/include", ]
+    include_dirs += [ "../comp/mqtt/source/interface", ]
+    include_dirs += [ "../comp/backoffAlgorithm/source/include",]
+    include_dirs += [ "//demo/common/net/src",]
+    include_dirs += [ "//drivers/lowpower",]
 }
 
 config("default_config") {
@@ -187,7 +188,7 @@ config("linker_config") {
         else {
             ldflags += [ "-Tfrn_ioe_wlan_sys_image.ld" ]
         }
-        ldflags += [ "--start-group", "bdwlan.o", "regdb.o", "--end-group" ]
+        ldflags += [ "--start-group", "regdb.o", "--end-group" ]
         if (CONFIG_LIBWIFI_CORE) {
             libs += [ "wifi_core"]
             if (is_sdk) {

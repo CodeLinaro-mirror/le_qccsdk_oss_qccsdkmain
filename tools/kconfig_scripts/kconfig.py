@@ -42,10 +42,11 @@ def main():
         kconf.warn_assign_redun = False
 
     # Load configuration files
-    print(kconf.load_config(args.configs_in[0]))
-    for config in args.configs_in[1:]:
-        # replace=False creates a merged configuration
-        print(kconf.load_config(config, replace=False))
+    if args.configs_in:
+        print(kconf.load_config(args.configs_in[0]))
+        for config in args.configs_in[1:]:
+            # replace=False creates a merged configuration
+            print(kconf.load_config(config, replace=False))
 
     if args.handwritten_input_configs:
         # Check that there are no assignments to promptless symbols, which
@@ -268,7 +269,7 @@ def parse_args():
                         help="Output header file")
     parser.add_argument("kconfig_list_out",
                         help="Output file for list of parsed Kconfig files")
-    parser.add_argument("configs_in",
+    parser.add_argument("--configs_in",
                         nargs="+",
                         help="Input configuration fragments. Will be merged "
                              "together.")

@@ -16,19 +16,6 @@
 #include "wmi_api.h"
 
 
-typedef union {
-    WMI_IMPS_CFG imps_cfg;
-    struct {
-        WMI_BMPS_IDLE_TIME bmps_idle_time;
-        WMI_BMPS_ENABLE bmps_enable;
-    } bmps_cfg;
-    WMI_BMPS_IGNORE_BCMC bmps_ignore_bcmc;
-    WMI_BMPS_TIMING_CFG bmps_timing;
-    WMI_SLP_CLK_CAL_CFG slp_clk_cal;
-    WMI_SLP_CLK_CAL_ACT slp_clk_cal_act;
-} lpr_wmi_t;
-
-
 /**
    @brief Enable/Disable system power management.
 

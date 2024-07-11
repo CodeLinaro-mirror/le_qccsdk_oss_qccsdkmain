@@ -12,12 +12,25 @@ import shutil
 import platform
 import re
 
-image_list = [ 'FERMION_SBL', 'FERMION_IOE_QCLI_DEMO', 'FERMION_HELLO_WORLD', 'FERMION_POSIX_DEMO', 'FERMION_NVM_PROGRAMMER', 'FERMION_WIFI_LIB',  'FERMION_FS_DEMO' ]
-proj_conf = { 'FERMION_IOE_QCLI_DEMO':'demo/qcli_demo/prj.conf', 'FERMION_SBL':'demo/qcli_demo/prj.conf', 'FERMION_FTM':'demo/ftm/ftm_prj.conf',
+image_list = [ 
+    'FERMION_SBL',
+    'FERMION_IOE_QCLI_DEMO',
+    'FERMION_FTM',
+    'FERMION_HELLO_WORLD',
+    'FERMION_POSIX_DEMO',
+    'FERMION_NVM_PROGRAMMER',
+    'FERMION_WIFI_LIB',
+    'FERMION_FS_DEMO',
+    'FERMION_MQTT_DEMO']
+proj_conf = { 
+    'FERMION_IOE_QCLI_DEMO':'demo/qcli_demo/prj.conf',
+    'FERMION_SBL':'demo/qcli_demo/prj.conf',
+    'FERMION_FTM':'demo/ftm/ftm_prj.conf',
     'FERMION_HELLO_WORLD':'demo/hello_world/prj.conf',
     'FERMION_POSIX_DEMO':'demo/posix_demo/prj.conf',
     'FERMION_NVM_PROGRAMMER':'demo/qcli_demo/prj.conf',
     'FERMION_FS_DEMO':'demo/fs_demo/prj.conf',
+    'FERMION_MQTT_DEMO':'demo/mqtt_demo/prj.conf',
 }
 default_build_output = 'build'
 gn_path = '/pkg/qct/software/ubuntu/matter_tool'
@@ -153,6 +166,7 @@ def gen_bdf_obj():
     logging.info('Gen regdb obj ....')
     os.system('%s --rename-section .data=.regdb %s %s'%(cmd, regdb_path, os.path.join(build_output, 'regdb.o')))
     #generate bdwlan.o
+    """
     if g_val_board_name==SOCKET_BOARD_CHIPV1:
         bdf_name = 'bdwlan.bin'
     elif g_val_board_name==SOCKET_BOARD_CHIPV2:
@@ -168,21 +182,27 @@ def gen_bdf_obj():
         sys.exit(-1)
     logging.info('Gen bdf obj ....')
     os.system('%s --rename-section .data=.bdf %s %s'%(cmd, os.path.join(bdf_dir, bdf_name), os.path.join(build_output, 'bdwlan.o')))
+    """
 
 @log_to_file_deco(True)
 def gen_dot_conf(image = 'fermion_legacy'):
     global g_val_board_name
     # python tools/kconfig_scripts/kconfig.py --handwritten-input-configs Kconfig build/output/.config build/output/include/autoconf.h build/output/kconfig-files-list.log demo/qcli_demo/prj.conf
-    prj_conf = proj_conf[image]
     Kconfig_logfile = os.path.join(build_output, 'kconfig-files-list.log')
-    board_defconfig = 'boards/%s/%s_defconfig'%(g_val_board_name, g_val_board_name)
+    if image == 'FERMION_WIFI_LIB':
+        Kconfig_file = '../comp/wifi/core/wifi/Kconfig.lib'
+    else:
+        prj_conf = proj_conf[image]
+        board_defconfig = 'boards/%s/%s_defconfig'%(g_val_board_name, g_val_board_name)
+        Kconfig_file = 'Kconfig'
     cmd = [ 'python', 'tools/kconfig_scripts/kconfig.py',
-        '--handwritten-input-configs', 'Kconfig', dotconfig,
+        '--handwritten-input-configs', Kconfig_file, 
+        dotconfig,
         autoconfig,
         Kconfig_logfile,
-        board_defconfig,
-        prj_conf,
     ]
+    if image != 'FERMION_WIFI_LIB':
+        cmd += [ '--configs_in', board_defconfig, prj_conf, ]
     logging.info('Gen dot config ....')
     execute_cmd(cmd)
 
@@ -191,9 +211,11 @@ def gen_auto_conf():
     # python tools/kconfig_scripts/kconfig.py Kconfig .config build/output/include/autoconf.h build/output/kconfig-files-list.log .config
     Kconfig_logfile = os.path.join(build_output, 'kconfig-files-list.log')
     cmd = [ 'python', 'tools/kconfig_scripts/kconfig.py',
-        'Kconfig', dotconfig,
+        'Kconfig',
+        dotconfig,
         autoconfig,
         Kconfig_logfile,
+        '--configs_in',
         dotconfig,
     ]
     logging.info('Gen auto config ....')
@@ -241,7 +263,7 @@ def pre_build_script(variant_name = 'FERMION_QCLI_DEMO', variant_image_id = 'MM'
 @log_to_file_deco(True, False)
 def gen_mib_from_xml():
     # python core/wifi/config_ini/mib/xml_gen_from_xml.py tools/Target_tools/dev_cfg/export/master_xml.xml > core/wifi/config_ini/mib/mib.xml
-    cmd = [ 'python', 'core/wifi/config_ini/mib/xml_gen_from_xml.py',
+    cmd = [ 'python', '../comp/wifi/core/wifi/config_ini/mib/xml_gen_from_xml.py',
         'tools/Target_tools/dev_cfg/export/master_xml.xml',
     ]
     logging.info('Gen mib ....')
@@ -250,7 +272,7 @@ def gen_mib_from_xml():
     if (rc != 0):
         logging.warning('mib_gen_from_xml failed')
         sys.exit(-1)
-    with open('core/wifi/config_ini/mib/mib.xml', 'wb') as outp:
+    with open('../comp/wifi/core/wifi/config_ini/mib/mib.xml', 'wb') as outp:
         outp.write(out.encode('utf-8'))
 
 def prepare_gn_args(image = 'FERMION'):
@@ -384,16 +406,13 @@ def start_build(image = 'FERMION_WIFI_LIB', out_dir = default_build_output):
         shutil.rmtree(os.path.join(out_dir, image))
     else:
         # Start here ...
+        dotconfig = os.path.join(build_output, '.config')
+        autoconfig = os.path.join(build_output, 'autoconf.h')
         if image == 'FERMION_WIFI_LIB':
-            print('pass py in %s' % image)
-            empty_autofile = os.path.join(build_output, 'autoconf.h')
-            with open(empty_autofile, 'w') as f:
-                pass
+            gen_dot_conf(image)
             gen_from_xml()
         else:
             gen_bdf_obj()
-            dotconfig = os.path.join(build_output, '.config')
-            autoconfig = os.path.join(build_output, 'autoconf.h')
             gen_dot_conf(image)
             if main_options.menuconfig:
                 print('Only Menuconfig')
@@ -402,7 +421,7 @@ def start_build(image = 'FERMION_WIFI_LIB', out_dir = default_build_output):
             gen_auto_conf()
             gen_gn_main_config()
             gen_from_xml()
-            #gen_mib_from_xml()
+            gen_mib_from_xml()
         execute_gn_build(image)
         # sign image if need
         if main_options.sign:
@@ -441,7 +460,6 @@ def setup_env():
         print('non-CRM build, using defaut: ' + default_build_id)
         build_id = default_build_id
     print('build id: %d' % (int(build_id)))
-    #if os.path.exists('modules/wifi/bin/regdb.bin'):
     if os.path.exists('modules/wifi/bin/libwifi_core.a'):
         g_is_sdk_packed = True
     else:

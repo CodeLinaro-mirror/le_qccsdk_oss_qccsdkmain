@@ -20,6 +20,7 @@ parser.add_argument('--verify', required=False, action='store_true', help='flash
 parser.add_argument('--reset', required=False, action='store_true', help='reset board after flash')
 parser.add_argument('--erase', required=False, action='store_true', help='erase all RRAM and Flash')
 parser.add_argument('--dump', required=False, action='store_true', help='dump all RRAM and Flash. NOT SUPPORT YET')
+parser.add_argument('--bdf', required=False, action='store_true', help='flash bdf')
 parser.add_argument('--debug', '--verbose', '-v', required=False, action='store_true', help='enalbe output debug info on console')
 args = parser.parse_args()
 
@@ -46,6 +47,8 @@ def flash_action2arg (action):
         args.flash = True
     elif action=='reset':
         args.reset = True
+    elif action=='bdf':
+        args.bdf = True
     elif action==None:
         Logger.warning('Skip')
     else:
@@ -80,6 +83,7 @@ nvm_prg_path = os.path.join(project_root, cUtils.CfgInternal['qccsdk_base']['nvm
 nvm_prg_dir = os.path.dirname(nvm_prg_path)
 nvm_prg_name = os.path.basename(nvm_prg_path)
 cmd_interface_name = flash_internal[jtag]
+bool_bdf = flash['bdf']
 CMD_RRAM = 'rram'
 CMD_FLASH = 'flash'
 CMD_OTP = 'otp'
@@ -122,6 +126,10 @@ def power_reset ():
     #dut power up
     power_flip()
 
+def bdf_flash ():
+    image_offset, image_path = cUtils.get_bdf_info()
+    cUtils.python_script_op(script=' %s -b 0x%x -f %s'%(RRAM_cmd, image_offset, image_path))
+
 if exreset['enable']==True:
     power_reset()
 
@@ -141,6 +149,11 @@ if args.flash==True:
         burn_nvm_appdir('sbl')
         burn_sblB()
         burn_nvm_appdir(appdir)
+
+if args.bdf==True:
+    bdf_flash()
+elif args.flash==True and bool_bdf==True:
+    bdf_flash()
 
 if (args.reset == True):
     cUtils.python_script_op(script=reset_cmd)

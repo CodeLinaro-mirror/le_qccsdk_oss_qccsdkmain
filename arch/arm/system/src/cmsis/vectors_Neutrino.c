@@ -122,6 +122,7 @@ void aon_cmnss_ulpm_outoff_min_max_range_int(void);
 extern unsigned int _estack;
 //extern unsigned int _vStackTop;
 extern void uart_irq_handler(void);
+extern void UART_irq_handler(void);
 #if defined(SUPPORT_HIGH_RES_TIMER)
 #ifndef QTMR_DRV
 extern void qtmr_0_irq_handler(void);
@@ -147,6 +148,7 @@ extern void vPortSVCHandler( void ) __attribute__ (( naked ));
 extern void nt_spi_slv_interrupt (void);
 extern void nt_cpr_isr_handler(void);
 extern void nt_gpio_interrupt_enable(void);
+extern void GPIO_IntHandler(void);
 
 #ifdef PLATFORM_FERMION
 #ifdef SUPPORT_COEX
@@ -212,7 +214,11 @@ pHandler __isr_vectors[] =
 		CTI_INTISR_0,                  				// Device specific 0
 		CTI_INTISR_1,         			         	// Device specific 1
 		I2C_irq_handler,                        	// I2C Interrupt Handler
+#if defined(UART_DRV)
+		UART_irq_handler,
+#else
 		uart_irq_handler,                  			// UART Interrupt Handler
+#endif
 #if defined(SUPPORT_HIGH_RES_TIMER)
 #ifndef QTMR_DRV
 		qtmr_0_irq_handler,                  		// QTMR Frame 0 Interrupt Handler
@@ -273,7 +279,7 @@ pHandler __isr_vectors[] =
 		rram_interrupt_handler,                  	// Device specific 45
 		DeviceInterrupt_Handler,                  	// Device specific 46
 		DeviceInterrupt_Handler,                  	// Device specific 47
-		nt_gpio_interrupt_enable,                   // GPIO interrupt 48
+		GPIO_IntHandler,                            // GPIO interrupt 48
 		o_xpu2_non_secure_intr,                 	// Device specific 49
 		kdf_m4f_intr,                  				// Device specific 50
 		ecc_core_m4f_intr,                 			// Device specific 51
@@ -415,7 +421,11 @@ pHandler __stack_ptr[] =
 		CTI_INTISR_0,                  				// Device specific 0
 		CTI_INTISR_1,			                  	// Device specific 1
 		I2C_irq_handler,                        	// I2C Interrupt Handler
+#if defined(UART_DRV)
+		UART_irq_handler,
+#else
 		uart_irq_handler,                  			// UART Interrupt Handler
+#endif
 #if defined(SUPPORT_HIGH_RES_TIMER)
 #ifndef QTMR_DRV
 		qtmr_0_irq_handler,                  		// QTMR Frame 0 Interrupt Handler
@@ -476,7 +486,7 @@ pHandler __stack_ptr[] =
 		rram_interrupt_handler,                  	// Device specific 45
 		DeviceInterrupt_Handler,                  	// Device specific 46
 		DeviceInterrupt_Handler,                  	// Device specific 47
-		nt_gpio_interrupt_enable,                   // GPIO interrupt 48
+		GPIO_IntHandler,                            // GPIO interrupt 48
 		o_xpu2_non_secure_intr,                 	// Device specific 49
 		kdf_m4f_intr,                  				// Device specific 50
 		ecc_core_m4f_intr,                 			// Device specific 51

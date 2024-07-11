@@ -14,7 +14,7 @@
       <props id="9" id_name="NT_DEVCFG_PERIODIC_WAKE_ITO_STEPS" helptext="To set the ITO for period wake infra" type="0x00000002"> 4 </props>
       <props id="10" id_name="NT_DEVCFG_PERIODIC_WAKE_START_TIME_MS" helptext="To set the period traffic start time" type="0x00000002"> 200 </props>
 	  <props id="11" id_name="NT_DEVCFG_PERIODIC_WAKE_IDLE_MODE_WAKE_TIME_MS" helptext="To set the idle mode wake time in periodic wake infra" type="0x00000002"> 500 </props>
-      <props id="12" id_name="NT_DEVCFG_CPR_ENABLED" helptext="To enable CPR: 0-disable, 1-enable" type="0x00000002"> 0 </props>
+      <props id=" " id_name=" " helptext=" " type=" ">  </props>
       <props id=" " id_name=" " helptext=" " type=" ">  </props>
       <props id="14" id_name="NT_DEVCFG_ADAPTIVE_ITO_FEATURE_ENABLE" min="0" max="1" helptext="To enable adaptive ito feature: 0-disable, 1-enable" type="0x00000002"> 0 </props>
       <props id="15" id_name="NT_DEVCFG_SPECULATIVE_WAKE_FEATURE_ENABLE" min="0" max="1" helptext="To enable speculative wake feature: 0-disable, 1-enable" type="0x00000002"> 0 </props>

@@ -9,6 +9,7 @@ net_demo_src = [
     "net/src/iperf.c",
     "net/src/ssl_demo.c",
     "net/src/ping.c",
+    "//modules/net/rvr_lite/src/rvr_lite.c",
 ]
 
 i2c_demo_src = [
@@ -61,10 +62,15 @@ source_set("common") {
     include_dirs = []
     if (CONFIG_NET) {
         if (CONFIG_NET_SHELL) {
+            include_dirs += [
+                "//modules/net/rvr_lite/inc",
+                "//demo/common/net/src",
+            ]
             sources += net_demo_src
         }
     }
     if (CONFIG_I2CM_SHELL) {
+        include_dirs += ["//modules/hal/qcc730/qtmr"]
         sources += i2c_demo_src
     }
     if (CONFIG_QTIMER) {
@@ -79,10 +85,6 @@ source_set("common") {
     if (CONFIG_FLASH_SHELL) {
         sources += flash_demo_src
     }
-    if (CONFIG_FW_UPGRADE) {
-        defines = [ "CONFIG_FWUP_DEMO=1", ]
-        sources += ota_demo_src
-    }    
     if (CONFIG_PLATFORM_SHELL) {
         sources += [ "platform/platform_shell.c" ]
     }
@@ -102,6 +104,37 @@ source_set("common") {
             "wificert/sigma_traffic/sigma_shell.c",
             "wificert/sigma_traffic/sigma_udp.c",
         ]
+    }
+
+    if (CONFIG_UART_SHELL) {
+        sources += [
+            "peripherals/uart/uart_shell.c",
+        ]
+    }
+
+    if (CONFIG_QCSPI_HFC_TEST) {
+        include_dirs += ["hfc"]
+        sources += ["hfc/hfc_demo.c"]
+    }
+
+    include_dirs += ["mpu"]
+
+    if (defined(CONFIG_FWUP_DEMO)) {
+        defines = [ "CONFIG_FWUP_DEMO=1", ]
+        include_dirs += [
+            "ota",
+            "ota/plugins/tftp",
+        ]
+        sources += [
+            "ota/ota_demo.c",
+            "ota/plugins/tftp/ota_tftp.c",
+        ]
+    }
+
+    if (CONFIG_MPU_DEMO) {
+        if (image_name == "FERMION_IOE_QCLI_DEMO") {
+            sources += ["mpu/mpu_demo.c"]
+        }
     }
 }
 

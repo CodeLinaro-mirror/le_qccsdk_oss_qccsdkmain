@@ -23541,10 +23541,10 @@ typedef struct {
   */
 typedef struct {
   union {
-    __IM  uint32_t reg;                         /*!< UART_UART_RBR                                                             */
-
+    __IOM  uint32_t reg;                         /*!< UART_UART_RBR                                                             */
+    
     struct {
-      __IM  uint32_t VALUE      : 8;            /*!< VALUE                                                                     */
+      __IOM  uint32_t VALUE      : 8;            /*!< VALUE                                                                     */
             uint32_t            : 24;
     } bit;
   } UART_UART_RBR;
@@ -23559,12 +23559,12 @@ typedef struct {
   } UART_UART_DLH;
 
   union {
-    __IM  uint32_t reg;                         /*!< UART_UART_IIR                                                             */
-
+    __IOM  uint32_t reg;                         /*!< UART_UART_IIR                                                             */
+    
     struct {
-      __IM  uint32_t ID         : 4;            /*!< ID                                                                        */
+      __IOM  uint32_t ID         : 4;            /*!< ID                                                                        */
             uint32_t            : 2;
-      __IM  uint32_t FEN        : 2;            /*!< FEN                                                                       */
+      __IOM  uint32_t FEN        : 2;            /*!< FEN                                                                       */
             uint32_t            : 24;
     } bit;
   } UART_UART_IIR;

@@ -5,9 +5,11 @@
 
 #include "qapi_lowpower.h"
 #include "nt_socpm_sleep.h"
+#include "lowpower_internal.h"
 
 
 lpr_wmi_t g_lowpower_wmi;
+extern void nt_watchdog_timer_freeze(void);
 
 
 /**
@@ -45,6 +47,8 @@ qapi_Status_t qapi_deepsleep_enter(uint8_t wkup_src, uint64_t sleep_time)
     if (wkup_src == 1) {
         if (sleep_time == 0)
             return QAPI_ERR_INVALID_PARAM;
+
+        nt_watchdog_timer_freeze();
         nt_enable_standby(sleep_time);
     } else if (wkup_src == 2) {
         return QAPI_ERR_NOT_SUPPORTED;

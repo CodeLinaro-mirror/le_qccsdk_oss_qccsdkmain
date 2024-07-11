@@ -56,6 +56,9 @@ enum ieee80211_authmode {
  * 802.11 protocol crypto-related definitions.
  */
 
+/* 802.11 HE IE info for 6G */
+#define IEEE80211_HE_6G_INFO_PRESENT 0x20000
+
 #define    IEEE80211_KEYBUF_SIZE    16
 #define    IEEE80211_TX_MICKEY_LEN  8
 #define    IEEE80211_RX_MICKEY_LEN  8
@@ -590,6 +593,7 @@ enum {
 	IEEE80211_ELEMID_TIMEOUTINTRVL = 56,	/*802.11w Timeout Interval ID */
     IEEE80211_ELEMID_APCHANREP  = 51,
     IEEE80211_ELEMID_NEIGHBORREP= 52,
+    IEEE80211_ELEMID_EXTCHANSWITCH = 60,
     IEEE80211_ELEMID_HTINFO_ANA = 61,
     IEEE80211_ELEMID_SEC_CHANID = 62,
     IEEE80211_ELEMID_WAPI       = 68,
@@ -615,7 +619,9 @@ enum {
 
 /*Element ID Extension (EID 255) values*/
 enum {
-	IEEE80211_ELEMID_EXT_PASSWORD_IDENTIFIER = 33
+    IEEE80211_ELEMID_EXT_PASSWORD_IDENTIFIER = 33,
+    IEEE80211_ELEMID_EXT_HE_CAP_ELEMENT      = 35,
+    IEEE80211_ELEMID_EXT_HE_OP_ELEMENT       = 36
 };
 
 #define IEEE80211_SSID_MAXLEN   32
@@ -699,9 +705,14 @@ typedef struct neighbor_report_s {
 #define IEEE80211_CSA_IE_LEN            3
 #define IEEE80211_RADAR_11HCOUNT        5
 struct ieee80211_csa_ie {
-    uint8_t id;
-    uint8_t len;
     uint8_t chswitch_mode;
+    uint8_t new_ch;
+    uint8_t chswitch_count;
+} __ATTRIB_PACK;
+
+struct ieee80211_ecsa_ie {
+    uint8_t chswitch_mode;
+    uint8_t new_operating_class;
     uint8_t new_ch;
     uint8_t chswitch_count;
 } __ATTRIB_PACK;

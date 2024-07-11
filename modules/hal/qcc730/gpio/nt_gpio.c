@@ -10,6 +10,8 @@
 #include "nt_hw.h"
 #include "ferm_prof.h"
 
+GPIO_Config_t gpio_config;
+
 /**
  * @Function: nt_gpio_init
  * @Description: root clock enabled in Init API.
@@ -178,17 +180,44 @@ void nt_gpio_preset(void)
 	NT_REG_WR(QWLAN_PMU_SOFT_RESET_REG,value);
 
 #if !defined(NT_HOSTED_SDK)
-/* - IOPAD configuration - */
-	uint32_t regval = NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PU_REG); // pu
-	NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, regval & 0xF9F80000); //0-18,25,26 : no pu
+    if(gpio_config.saved)
+    {
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_DS_REG, gpio_config.ds);
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, gpio_config.pu);
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG, gpio_config.pd);
 
-#if CONFIG_PBL_PREES_GPIO_RESTORE
-	regval = NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PD_REG);
-	NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG, ((regval & (~ 0x0002C000)) | 0x06053FFF) & (~0x5) ); //1,3,4-18,25,26 : pd, 0/2/14/15/17: no pd;
-#endif
-	regval = NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PU_REG); // pu
-	NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, regval | 0x0002C000); //0-18,25,26 : no pu, 14/15/17: pd
-#ifndef FERMION_SILICON
+        NT_REG_WR(QWLAN_GPIO_GPIO_LS_SYNC_REG, gpio_config.ls_sync);
+        NT_REG_WR(QWLAN_GPIO_GPIO_SWPORTA_DR_REG, gpio_config.dr);
+        NT_REG_WR(QWLAN_GPIO_GPIO_SWPORTA_DDR_REG , gpio_config.ddr);
+        NT_REG_WR(QWLAN_GPIO_GPIO_INTTYPE_LEVEL_REG, gpio_config.int_level);
+        NT_REG_WR(QWLAN_GPIO_GPIO_INR_POLARITY_REG, gpio_config.int_polar);
+        NT_REG_WR(QWLAN_GPIO_GPIO_INTEN_REG, gpio_config.int_en);
+
+        gpio_config.saved = 0;
+    }
+    else
+    {
+        /* - IOPAD configuration - */
+        #if CONFIG_BOARD_QCC730_UART_GPIO_OPTION == 3
+        /* UART: GPIO1 GPIO3*/
+        uint32_t regval = NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PU_REG); // pu
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, regval & 0xF9F80000); //0-18,25,26 : no pu
+    
+        #if CONFIG_PBL_PREES_GPIO_RESTORE
+        regval = NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PD_REG);
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG, ((regval & (~ 0x0002C000)) | 0x06053FFF) & (~0x5) ); //1,3,4-18,25,26 : pd, 0/2/14/15/17: no pd;
+        #endif	
+        regval = NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PU_REG); // pu
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, regval | 0x0002C000); //0-18,25,26 : no pu, 14/15/17: pd
+        #endif
+        #if CONFIG_BOARD_QCC730_UART_GPIO_OPTION == 1
+        /* UART: GPIO13 GPIO14*/
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG,  0xAEB0A); 
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG,  0x1514F0); 
+        #endif
+    }
+        
+    #ifndef FERMION_SILICON
     NT_REG_WR(QWLAN_PMU_CFG_IO_RET_CNTL_REG, QWLAN_PMU_CFG_IO_RET_CNTL_AON_IORET_CNTL_MASK);
 #else
 	NT_REG_WR(QWLAN_PMU_CFG_IO_RET_CNTL_REG, 0); // Making retention 0, to enable GPIO toggling
@@ -205,7 +234,7 @@ void nt_gpio_preset(void)
  * @Return :    NULL
  */
 
-void nt_gpio_interrupt_config(gpio_register_t* GPIOx,uint8_t Pin,uint8_t sensitive_status,uint8_t active_status)
+void nt_gpio_interrupt_config(gpio_register_t* GPIOx,uint32_t Pin,uint8_t sensitive_status,uint8_t active_status)
 {
 
 	uint32_t value = 0;
@@ -213,10 +242,10 @@ void nt_gpio_interrupt_config(gpio_register_t* GPIOx,uint8_t Pin,uint8_t sensiti
 
 	if(GPIOx == NT_GPIOA)
 	{
+		//system clock enable
+		NT_REG_WR(QWLAN_GPIO_GPIO_LS_SYNC_REG,QWLAN_GPIO_GPIO_LS_SYNC_VALUE_MASK);
 		if(sensitive_status == NT_LEVEL_SENSITIVE)
 		{
-			//system clock enable
-			NT_REG_WR(QWLAN_GPIO_GPIO_LS_SYNC_REG,QWLAN_GPIO_GPIO_LS_SYNC_VALUE_MASK);
 			//reading  interrupt type register
 			value = NT_REG_RD(QWLAN_GPIO_GPIO_INTTYPE_LEVEL_REG);
 			value &= (~(Pin));
@@ -260,6 +289,52 @@ void nt_gpio_interrupt_config(gpio_register_t* GPIOx,uint8_t Pin,uint8_t sensiti
 }
 
 /**
+ * @Function: nt_gpio_pin_interrupt_enable
+ * @Description: gpio pin interrupt service enable.
+ * @parm:      NULL
+ * @Return :    NULL
+ */
+void nt_gpio_pin_interrupt_enable(uint8_t Pin, uint8_t en)
+{
+
+	//PROF_IRQ_ENTER();	
+	uint32_t value = 0;
+	// enable the interrupt for GPIO
+	value = NT_REG_RD(QWLAN_GPIO_GPIO_INTEN_REG);
+	if(en)
+	{
+		value |= (1 << Pin);
+	}
+	else
+	{
+		value &= ~(1 << Pin);
+	}
+	NT_REG_WR(QWLAN_GPIO_GPIO_INTEN_REG,value);
+
+	//PROF_IRQ_EXIT();	
+}
+
+void nt_gpio_isr_enable(uint8_t en)
+{
+
+	PROF_IRQ_ENTER();	
+	uint32_t value = 0;
+
+	//enable the interrupt from Interrupt service enable register
+	value = NT_REG_RD(NT_NVIC_ISER1);
+	if(en)
+	{
+		value |= ( 1 << NT_GPIO_INT_PIN);
+	}
+	else
+	{
+		value &= ~( 1 << NT_GPIO_INT_PIN);
+	}
+	NT_REG_WR(NT_NVIC_ISER1,value);
+	PROF_IRQ_EXIT();	
+}
+
+/**
  * @Function: nt_gpio_interrupt_enable
  * @Description: interrupt service routine.
  * @parm:      NULL
@@ -279,4 +354,7 @@ void nt_gpio_interrupt_enable(void)
 	}
 	PROF_IRQ_EXIT();
 }
+
+void GPIO_IntHandler(void) __attribute__ ((weak,alias("nt_gpio_interrupt_enable")));
+
 #endif //NT_GPIO_FLAG

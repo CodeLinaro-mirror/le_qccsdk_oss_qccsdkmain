@@ -97,6 +97,7 @@ class NVM_Programmer(GDB_Framework):
     JTAG_PARAM_SIZE				= 0x14
     JTAG_PARAM_COMMAND 			= 0x1C
     JTAG_PARAM_BUFFER_OFFSET	= 0x20
+    JTAG_PARAM_READ_BUFFER_OFFSET	= 0x4020
     JTAG_PARAM_CRC_RESULT		= 0x18
     JTAG_PARAM_STATUS			= 0x1C
 
@@ -215,28 +216,26 @@ class NVM_Programmer(GDB_Framework):
             if int(value,16) > mask:
                 print('The value of {} should not greater than {}. Please check the value again.'.format(field.name, hex(mask)))
                 return
-            mask = ((1 << length) - 1) << offset
             #need to read OTP first
             res = self.read_otp_field(field, False)
             # set the value
             int_value = int.from_bytes(b''.join(res), byteorder='little')
-            #print('OTP value is {}'.format(hex(int_value)))
-            #print('value is {}'.format(hex(int(value,16))))
             int_value = self.set_bits(int_value, field.offset, field.length, int(value,16))
-            #print('After set_bits is {}'.format(hex(int_value)))
             size = 4
             bytes_value = int_value.to_bytes(4, 'little')
-            value = ''.join(f'{b:02x}' for b in bytes_value)
-            #print(value)
         else:
             value=value[2:]
+            if len(value)%2:
+                print('Length of the input value is wrong, it should be even number, but now it is {}'.format(len(value)))
+                return
+            bytes_value=bytes.fromhex(value)
         if field.name == 'PK_HASH':
             if self.check_pbl_version() == True:
-                value=self.reverse_bytes(value)
-                #print('{}={}'.format(field.name, value.upper()))
+                str_value=self.reverse_bytes(value)
+                bytes_value=bytes.fromhex(str_value)
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_ADDRESS, field.address)
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_SIZE, size)
-        self.write_buf(self.param_buf + NVM_Programmer.JTAG_PARAM_BUFFER_OFFSET, value)
+        self.write_buf(self.param_buf + NVM_Programmer.JTAG_PARAM_BUFFER_OFFSET, bytes_value)
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_OTP_WRITE)
         self.gdb_execute('c')
         write_result = self.read_int(self.result_buf + NVM_Programmer.JTAG_PARAM_STATUS)
@@ -284,7 +283,7 @@ class NVM_Programmer(GDB_Framework):
         if size < 4:
             size = 4
         data_buf = self.get_symbol_info('JTAG_Param')
-        data_buf_addr = data_buf['address'] + NVM_Programmer.JTAG_PARAM_BUFFER_OFFSET
+        data_buf_addr = data_buf['address'] + NVM_Programmer.JTAG_PARAM_READ_BUFFER_OFFSET
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_ADDRESS, field.address)
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_SIZE, size)
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_OTP_READ)
@@ -299,7 +298,6 @@ class NVM_Programmer(GDB_Framework):
         else:
             res_hex_string='0x'+''.join([hex(int.from_bytes(x, byteorder='big'))[2:].zfill(2) for x in res])
         if flag == True:
-            #print('Read OTP from command line.')
             print('{}={}'.format(field.name, res_hex_string.upper()))
         return res
 
@@ -345,7 +343,7 @@ class NVM_Programmer(GDB_Framework):
         #read the READ_WRITE_PERMISSIONS, then update the access to each field
         size = 8
         data_buf = self.get_symbol_info('JTAG_Param')
-        data_buf_addr = data_buf['address'] + NVM_Programmer.JTAG_PARAM_BUFFER_OFFSET
+        data_buf_addr = data_buf['address'] + NVM_Programmer.JTAG_PARAM_READ_BUFFER_OFFSET
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_ADDRESS, NVM_Programmer.READ_WRITE_PERMISSIONS_OFFSET_0)
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_SIZE, size)
         self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_OTP_READ)
@@ -361,7 +359,7 @@ class NVM_Programmer(GDB_Framework):
         for field in self.fields:
             #print('field.name={}'.format(field.name))
             if field.name == 'READ_PERMISSION_HW_ENCRYPTION_KEY':
-                if (int_value >> field.offset) > 1:
+                if (int_value >> field.offset) & 1:
                     #update the HW_ENCRYPTION_KEY read permission
                     self.update_access('HW_ENCRYPTION_KEY', 0, 1)
                 continue
@@ -781,9 +779,32 @@ class NVM_Programmer(GDB_Framework):
 
         if print_to_console == True:
           with open(DEFAULT_FILE, 'rb') as f:
-            content=f.read()
+            #content=f.read()
             print('Value:')
-            print(content.hex().upper())
+            #print(content.hex().upper())
+            cnt = 0
+            format_str = ""
+            while True:
+                byte = f.read(1)
+                str = byte.hex().upper()
+                if not byte:
+                    break
+                cnt = cnt + 1
+                mid_line = cnt % 8
+                end_line = cnt % 16
+
+                if mid_line != 0:
+                    format_str += f"{str} "
+                else:
+                    if end_line != 0:
+                        format_str += f"{str}  "
+                    else:
+                        format_str += f"{str}"
+                        print (format_str)
+                        format_str = ""
+
+            if format_str != "":
+                print (format_str)
 
         print('Read {} successfully, time elapsed {} seconds.'.format(self.config['nvm_name'], end_time - start_time))
         print('********************************************************************************')

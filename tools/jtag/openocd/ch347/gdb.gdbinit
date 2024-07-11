@@ -28,7 +28,7 @@ set remotetimeout unlimited
 #Load RAM symbols
 symbol-file FERMION_IOE_QCLI_DEMO.elf
 
-hb drv_flash_read
+#hb drv_flash_read
 
 
 

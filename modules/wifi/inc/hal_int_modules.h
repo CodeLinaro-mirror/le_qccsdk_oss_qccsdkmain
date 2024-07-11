@@ -97,7 +97,7 @@ extern uint8_t hal_staid;
 extern uint8_t delstaidx;
 
 //table index for RMF updation
-#define TBLIDX_AP_RMF_UPDATE		-1
+#define TBLIDX_AP_RMF_UPDATE		-2
 #define TBLIDX_STA_RMF_UPDATE		 2
 
 #define MTU_TXP_DELAY_LIMIT ((QWLAN_MTU_SW_MTU_MISC_LIMITS_SW_MTU_TXP_DELAY_LIMIT_DEFAULT>>QWLAN_MTU_SW_MTU_MISC_LIMITS_SW_MTU_TXP_DELAY_LIMIT_OFFSET)/2)

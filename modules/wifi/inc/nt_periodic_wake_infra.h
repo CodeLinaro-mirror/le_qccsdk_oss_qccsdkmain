@@ -39,12 +39,12 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 /* Sleep to wake sw delay in mcu sleep */
 #define MCU_SLEEP_S2W_SW_DELAY_IN_US    (MCU_SLEEP_FIRST_RRI_RESTORE_US + MCU_SLEEP_SEC_RRI_RESTORE_US + PM_NULL_FRAME_TX_TIME_US + \
-                                         HALPHY_SET_CHA_AND_RATE_TBL_RESTORE_TIME_US + CTX_RESTORE_TO_SW_TASK_TIME_US + DEBUG_LOG_PRINT_TIME_US + \
+                                         HALPHY_SET_CHA_AND_RATE_TBL_RESTORE_TIME_US + CTX_RESTORE_TO_SCHED_RESTART_US + DEBUG_LOG_PRINT_TIME_US + \
                                          SLEEP_EXIT_TO_DPM_START_TIME_US)
-/* Sleep to wake sw delay in light sleep */
+/* Sleep to wake sw delay in light sleep */                                                         
 #define LIGHT_SLEEP_S2W_SW_DELAY_IN_US  (LIGHT_SLEEP_RRI_RESTORE_US + PM_NULL_FRAME_TX_TIME_US + HALPHY_SET_CHA_AND_RATE_TBL_RESTORE_TIME_US + \
-                                         CTX_RESTORE_TO_SW_TASK_TIME_US + DEBUG_LOG_PRINT_TIME_US + SLEEP_EXIT_TO_DPM_START_TIME_US)
-/* Sleep to wake sw delay in clk gated sleep */
+                                         CTX_RESTORE_TO_SCHED_RESTART_US + DEBUG_LOG_PRINT_TIME_US + SLEEP_EXIT_TO_DPM_START_TIME_US)
+/* Sleep to wake sw delay in clk gated sleep */                                                         
 #define CLK_GTK_SLEEP_S2W_SW_DELAY_IN_US (CLK_GTK_SLEEP_MIN_CB_TO_SLEEP_EXIT_US + PM_NULL_FRAME_TX_TIME_US + SLEEP_EXIT_TO_DPM_START_TIME_US + \
                                           HALPHY_DEBUG_LOG_TIME_US)
 

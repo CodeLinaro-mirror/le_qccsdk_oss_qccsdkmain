@@ -53,8 +53,8 @@ static void sigma_help()
     SIGMA_PRINTF("  -l, --length    #         message length to transmit (default %d bytes)\n", SIGMA_TRAFFIC_DEFAULT_PACKET_SIZE);
     SIGMA_PRINTF("  -i, --interval  #         delay in milliseconds between packets (default 1 millisecond)\n");
     SIGMA_PRINTF("  -S, --tos       #         set the IP type of service, 0-255. (default 0)\n");
-    SIGMA_PRINTF("                            The usual prefixes for octal and hex can be used,\n");
-    SIGMA_PRINTF("                            i.e. 52, 064 and 0x34 all specify the same value.\n");
+    SIGMA_PRINTF("                            The usual prefixes hex can be used,\n");
+    SIGMA_PRINTF("                            i.e. 52 and 0x34 specify the same value.\n");
     SIGMA_PRINTF("Examples:\n");
     SIGMA_PRINTF("udp -s -B 224.2.2.5 -e -p 7001\n");
     SIGMA_PRINTF("udp -c 224.2.2.5 -l 1500 -i 1 -t 20 -B 192.168.1.101\n");                     

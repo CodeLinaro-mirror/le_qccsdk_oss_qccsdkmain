@@ -317,6 +317,23 @@ typedef struct {
 	uint32_t	highValue[HALPHY_NUM_BANDS];
 } __ATTRIB_PACK PHYRF_REG_TEMP_BASED_UPDATE;
 
+typedef struct {
+	uint16_t	CountryCode;
+	uint16_t	ChannelList[NUM_NON_SUPPORTED_CHANNELS];
+} __ATTRIB_PACK NON_SUPPORTED_CHANNEL_LIST_PER_COUNTRY;
+
+typedef struct {
+	uint16_t	DAC_BO_NOM_2G;
+	uint16_t	DAC_BO_NOM_2G2H;
+	uint16_t	DAC_BO_NOM_5G_freq1;
+	uint16_t	DAC_BO_NOM_5G_freq2;
+	uint16_t	DAC_BO_NOM_5G_freq3;
+	uint16_t	DAC_BO_NOM_6G_freq1;
+	uint16_t	DAC_BO_NOM_6G_freq2;
+	uint16_t	DAC_BO_NOM_6G_freq3;
+	uint8_t	DAC_BO_Enable;
+} __ATTRIB_PACK DAC_BO_CAL_STRUCT;
+
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif

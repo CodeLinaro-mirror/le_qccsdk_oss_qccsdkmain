@@ -65,6 +65,7 @@ typedef struct gpio_reg
 #define GPIO_PIN_11                ((uint16_t)0x800)  //pin 11
 #define GPIO_PIN_12                ((uint16_t)0x1000) //pin 12
 #define GPIO_PIN_13                ((uint16_t)0x2000)  //pin 13
+#define GPIO_PIN_14                ((uint16_t)0x4000)  //pin 14
 //pin mask
 #define GPIO_PIN_MASK              (0x0000FFFFU)
 
@@ -104,6 +105,21 @@ typedef enum
 	HIGH
 
 }GPIO_PinState;
+
+typedef struct
+{
+    uint32_t saved;
+    uint32_t ds;
+    uint32_t pu;
+    uint32_t pd;
+    
+    uint32_t ls_sync;
+    uint32_t dr;
+    uint32_t ddr;
+    uint32_t int_level;
+    uint32_t int_polar;
+    uint32_t int_en;
+}GPIO_Config_t;
 
 /**
  * @Function: nt_gpio_init
@@ -178,7 +194,7 @@ void nt_gpio_preset(void);
  * @Return :    NULL
  */
 
-void nt_gpio_interrupt_config(gpio_register_t* GPIOx,uint8_t Pin,uint8_t sensitive_status,uint8_t active_status);
+void nt_gpio_interrupt_config(gpio_register_t* GPIOx,uint32_t Pin,uint8_t sensitive_status,uint8_t active_status);
 
 /**
  * @Function: nt_gpio_pin_read_mode
@@ -189,6 +205,16 @@ void nt_gpio_interrupt_config(gpio_register_t* GPIOx,uint8_t Pin,uint8_t sensiti
  */
 
 uint32_t nt_gpio_pin_read_mode(gpio_register_t* GPIOx);
+
+/**
+ * @Function: nt_gpio_pin_interrupt_enable
+ * @Description: gpio pin interrupt service enable.
+ * @parm:      NULL
+ * @Return :    NULL
+ */
+ 
+void nt_gpio_pin_interrupt_enable(uint8_t Pin, uint8_t en);
+
 /**
  * @Function: nt_gpio_interrupt_enable
  * @Description: interrupt service routine.

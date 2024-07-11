@@ -272,5 +272,7 @@ void InitTarget(void)
   // DIS_RRAM_128BIT (bit 17) needs to be set, for N2
   JLINK_MEM_WriteU32(0x0119F000, 0x20022728);
 
+  JLINK_MEM_WriteU32(0x011AF8E0, 0x0);
+ 
   JLINK_ExecCommand("SetResetType = 0");
 }

@@ -89,7 +89,8 @@ qapi_Status_t wlan_drv_roaming_start(void)
 
     if ((p_cxt) && \
         (p_cxt->roaming_timer) && \
-        (p_cxt->wlan_roaming_started == 0)) {
+        (p_cxt->wlan_roaming_started == 0) && \
+		(p_cxt->connect_cmd.ssidLength != 0)) {
         p_cxt->wlan_roaming_started = 1;
         p_cxt->roaming_time_out = WLAN_ROAMING_TIMER_PERIOD_DEFAULT;
         nt_timer_change_time_period(p_cxt->roaming_timer, NT_MS_TO_TICKS(p_cxt->roaming_time_out));

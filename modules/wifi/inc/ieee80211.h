@@ -329,6 +329,7 @@ typedef uint8_t *ieee80211_mgt_beacon_t;
 #define RSN_ASE_NONE       	 		0x00
 #define RSN_ASE_8021X_UNSPEC    	0x01
 #define RSN_ASE_8021X_PSK   		0x02
+#define RSN_ASE_8021X_SHA256        0x05
 #define RSN_ASE_8021X_PSK_SHA256    0x06
 #define RSN_ASE_SAE					0x08
 

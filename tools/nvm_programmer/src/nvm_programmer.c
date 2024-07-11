@@ -72,6 +72,7 @@ typedef union JTAG_Param_u
       uint32_t  Timing;              /**< Frequency in kHz. */
       uint32_t  Command;             /**< Command as defined by JTAG_COMMAND_*. */
       uint8_t   Buffer[BUFFER_SIZE]; /**< Data Buffer. */
+      uint8_t   ReadBuffer[BUFFER_SIZE]; /**< OTP Read Data Buffer. */
    } Param;
 
    /**
@@ -349,10 +350,10 @@ void JTAG_Run(void)
             break;
 
         case JTAG_COMMAND_OTP_READ:
+            memset((void*)(JTAG_Param.Param.ReadBuffer),0x0,BUFFER_SIZE);
             Address = JTAG_Param.Param.Address + JTAG_Param.Param.Offset + OTP_START;
             Size    = JTAG_Param.Param.Size;
-            Result = NVM_Read(Address, (uint8_t *)JTAG_Param.Param.Buffer, Size);
-            UART_PRINT("Read: Address = 0x%lx Size = %ld Result = %ld Buffer=0x%x Buffer[1]=0x%x \r\n", Address, Size, Result, JTAG_Param.Param.Buffer[0], JTAG_Param.Param.Buffer[1]);
+            Result = NVM_Read(Address, (uint8_t *)JTAG_Param.Param.ReadBuffer, Size);
 
             JTAG_Param.Return.Status = (Result == 0) ? JTAG_STATUS_NO_ERROR : JTAG_STATUS_PROGRAM_ERROR;
             break;

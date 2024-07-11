@@ -16,7 +16,7 @@
 
 #ifdef IMAGE_FERMION
 #include "timer_test.h"
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 #include "ring_svc_api.h"
 #include "wifi_fw_table_api.h"
 #endif
@@ -38,7 +38,7 @@
 #define NOP_CALIB 7
 #define FERM_F2A_DEFAULT_PULSE_WIDTH_US 2
 #define FERM_MULTIUSE_DEFAULT_PULSE_WIDTH_US 20
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 static uint32_t f2a_delay = FERM_F2A_DEFAULT_PULSE_WIDTH_US;
 #endif
 static uint32_t multiuse_delay = FERM_MULTIUSE_DEFAULT_PULSE_WIDTH_US;
@@ -55,7 +55,7 @@ static uint32_t multiuse_delay = FERM_MULTIUSE_DEFAULT_PULSE_WIDTH_US;
  * Global Data Definitions
  * ----------------------------------------------------------------------*/
 /* Table holding the ring configurations exposed to apps */
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 static wifi_fw_defaults_t g_fw_defaults_table;
 #endif
 static bool g_fw_in_hosted_mode = FALSE;
@@ -79,7 +79,7 @@ extern volatile size_t g_SPI_host_read_pos;
  * @return         : NONE
  *
  */
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 static void wifi_fw_defaults_table_init(void)
 {
     /* Table that is to be exposed to Apps systems to be initialized here */
@@ -92,7 +92,7 @@ static void wifi_fw_defaults_table_init(void)
     g_fw_defaults_table.wifi_fw_maj_ver = WIFI_FW_MAJOR_VER;
     g_fw_defaults_table.wifi_fw_min_ver = WIFI_FW_MINOR_VER;
 
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
     g_fw_defaults_table.num_a2f_rings = ringif_max_num_a2f_rings();
     g_fw_defaults_table.num_f2a_rings = ringif_max_num_f2a_rings();
     g_fw_defaults_table.reserved2 = 0;
@@ -109,6 +109,20 @@ static void wifi_fw_defaults_table_init(void)
 
     g_fw_defaults_table.p_a2f_ring0_base = ringif_a2f_ring_addr(A2F_RING_ID_CONFIG);
     g_fw_defaults_table.p_f2a_ring0_base = ringif_f2a_ring_addr(F2A_RING_ID_CONFIG);
+
+    /* Data Ring */
+    g_fw_defaults_table.a2f_ring1_elem_size = ringif_a2f_elem_size(A2F_RING_ID_DATA);
+    g_fw_defaults_table.f2a_ring1_elem_size = ringif_f2a_elem_size(F2A_RING_ID_DATA);
+    g_fw_defaults_table.a2f_ring1_num_elems = ringif_a2f_num_ring_elems(A2F_RING_ID_DATA);
+    g_fw_defaults_table.f2a_ring1_num_elems = ringif_f2a_num_ring_elems(F2A_RING_ID_DATA);
+
+    g_fw_defaults_table.p_a2f_ring1_read_idx = ringif_a2f_rd_idx_array()+1;
+    g_fw_defaults_table.p_f2a_ring1_write_idx = ringif_f2a_wr_idx_array()+1;
+    g_fw_defaults_table.p_f2a_ring1_read_idx = ringif_f2a_rd_idx_array()+1;
+    g_fw_defaults_table.p_a2f_ring1_write_idx = ringif_a2f_wr_idx_array()+1;
+
+    g_fw_defaults_table.p_a2f_ring1_base = ringif_a2f_ring_addr(A2F_RING_ID_DATA);
+    g_fw_defaults_table.p_f2a_ring1_base = ringif_f2a_ring_addr(F2A_RING_ID_DATA);	
 #endif
 
 #ifdef SUPPORT_FERMION_LOGGER
@@ -162,7 +176,7 @@ static void wifi_fw_defaults_table_init(void)
                       (uint32_t)g_fw_defaults_table.wifi_fw_maj_ver,
                       (uint32_t)g_fw_defaults_table.wifi_fw_min_ver);
 
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
     FERM_INIT_LOG_INFO("FermTbl A2F_Params: num_rings:%d, r0_num_elems:%d r0_elem_size:%d  ",
                        (uint32_t)g_fw_defaults_table.num_a2f_rings,
                        (uint32_t)g_fw_defaults_table.a2f_ring0_num_elems,
@@ -183,10 +197,30 @@ static void wifi_fw_defaults_table_init(void)
                        (uint32_t)g_fw_defaults_table.p_f2a_ring0_read_idx,
                        (uint32_t)g_fw_defaults_table.p_f2a_ring0_write_idx);
 
+    FERM_INIT_LOG_INFO("FermTbl A2F_Params: num_rings:%d, r1_num_elems:%d r1_elem_size:%d  ",
+                       (uint32_t)g_fw_defaults_table.num_a2f_rings,
+                       (uint32_t)g_fw_defaults_table.a2f_ring1_num_elems,
+                       (uint32_t)g_fw_defaults_table.a2f_ring1_elem_size);
+
+    FERM_INIT_LOG_INFO("FermTbl A2F_Params: r1_base:%x r1_rd:%x,r1_wt:%x ",
+                       (uint32_t)g_fw_defaults_table.p_a2f_ring1_base,
+                       (uint32_t)g_fw_defaults_table.p_a2f_ring1_read_idx,
+                       (uint32_t)g_fw_defaults_table.p_a2f_ring1_write_idx);
+
+    FERM_INIT_LOG_INFO("FermTbl F2A_Params: num_rings:%d, r1_num_elems:%d r1_elem_size:%d ",
+                       (uint32_t)g_fw_defaults_table.num_f2a_rings,
+                       (uint32_t)g_fw_defaults_table.f2a_ring1_num_elems,
+                       (uint32_t)g_fw_defaults_table.f2a_ring1_elem_size);
+
+    FERM_INIT_LOG_INFO("FermTbl F2A_Params: r1_base:%x r1_rd:%x,r1_wt:%x \n\r",
+                       (uint32_t)g_fw_defaults_table.p_f2a_ring1_base,
+                       (uint32_t)g_fw_defaults_table.p_f2a_ring0_read_idx,
+                       (uint32_t)g_fw_defaults_table.p_f2a_ring1_write_idx);
+
     FERM_INIT_LOG_INFO("FermTbl F2A_Params: Debug_Buffer_addr:%x Write_ptr:%x, Read_ptr:%x, Size:%d Bytes",
                        (uint32_t)g_fw_defaults_table.p_wifi_fw_log_buf,
                        (uint32_t)g_fw_defaults_table.p_wifi_fw_log_write_idx,
-                       (uint32_t)g_fw_defaults_table.p_wifi_fw_log_read_idx(uint32_t) g_fw_defaults_table.wifi_fw_log_entry_size);
+                       (uint32_t)g_fw_defaults_table.p_wifi_fw_log_read_idx, (uint32_t) g_fw_defaults_table.wifi_fw_log_entry_size);
 #endif
 }
 #endif
@@ -209,7 +243,7 @@ void wifi_fw_module_init(void)
 #endif
 #endif
 
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
     /* Initialize the ring interface */
     ringif_init();
 
@@ -222,7 +256,7 @@ void wifi_fw_module_init(void)
 #endif
 }
 
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 /* @brief This function tells the caller, of table init state
  * @param          : NONE
  * @return         : True, if Table is initialized
@@ -265,7 +299,7 @@ void wifi_fw_set_ext_multiuse_pulse_width(uint32_t input)
 #endif // FERMION_SILICON
 #ifndef FIRMWARE_APPS_INFORMED_WAKE
 // For PLATFORM_FERMION, this functionality is supported by FIRMWARE_APPS_INFORMED_WAKE
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 /*
  * @brief  Fermion specific GPIO initialization
  * @param          : NONE
