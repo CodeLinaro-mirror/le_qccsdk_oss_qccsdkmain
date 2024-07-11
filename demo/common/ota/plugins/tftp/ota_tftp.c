@@ -284,7 +284,7 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
         goto recv_end;
     }
 
-    FD_ZERO(&master);
+    memset(&master, 0, sizeof(fd_set));
     FD_SET(ota_tftp_sess->sock, &master);
 
     tv.tv_sec = TFTP_RECV_TIMEOUT;
