@@ -1,0 +1,10 @@
+menu "wapp setting"
+config NT_DEVCFG_WIFI_ON_ENABLE
+    int "enables and disable the wifi on command at boot time"
+    range 0 1
+    default 0
+config NT_DEVCFG_XPA_ENABLE
+    int "enables and disables the external PA"
+    range 0 1
+    default 0
+endmenu
