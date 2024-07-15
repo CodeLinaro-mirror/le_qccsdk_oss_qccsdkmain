@@ -190,7 +190,7 @@ def gen_dot_conf(image = 'fermion_legacy'):
     # python tools/kconfig_scripts/kconfig.py --handwritten-input-configs Kconfig build/output/.config build/output/include/autoconf.h build/output/kconfig-files-list.log demo/qcli_demo/prj.conf
     Kconfig_logfile = os.path.join(build_output, 'kconfig-files-list.log')
     if image == 'FERMION_WIFI_LIB':
-        Kconfig_file = '../comp/wifi/core/wifi/Kconfig.lib'
+        Kconfig_file = './modules/wifi/Kconfig.lib'
     else:
         prj_conf = proj_conf[image]
         board_defconfig = 'boards/%s/%s_defconfig'%(g_val_board_name, g_val_board_name)

@@ -1,0 +1,62 @@
+menu "rtt setting"
+config NT_DEVCFG_LOCATION_TYPE
+    int "location_type"
+    default 1
+    range 0 2
+config NT_DEVCFG_LOCATION
+    int "location"
+    default 0
+    range 0 1
+config NT_DEVCFG_FTM_MODE
+    int "ftm_mode"
+    default 1
+
+config NT_DEVCFG_ASAP
+    int "asap"
+    default 1
+
+config NT_DEVCFG_FTM_PER_BURST
+    int "ftms_per_burst"
+    default 2
+
+config NT_DEVCFG_NO_OF_BUR_EXP
+    int "no_of_bur_exp"
+    default 2
+
+config NT_DEVCFG_FTM_MIN_DELTA_RESP
+    int "delta time btw two sucessive ftm frames in 100us uints"
+    default 1
+
+config NT_DEVCFG_FTM_BURST_DURATION_RESP
+    int "code value of burst duration" 
+    default 10
+
+config NT_DEVCFG_FTM_BURST_PERIOD_RESP
+    int "burst period value in 100ms uints"
+    default 40
+
+config NT_DEVCFG_FORMAT_AND_BANDWIDTH
+    int "code value for format and bandwidth TABLE 9-257"
+    default 0
+
+config NT_DEVCFG_PARTIAL_TSF_TIME_OFFSET_RESP
+    int "DTSF value in ms"
+    default 5
+
+config NT_DEVCFG_PARTIAL_TSF_TIMER_NO_PREFERENCE_INITIATOR
+    int "indicates the preference of partial TSF field value- 1(not prefered)"
+    default 1
+
+config NT_DEVCFG_FTM_MIN_DELTA_INITIATOR
+    int "delta time btw two sucessive frames"
+    default 0
+
+config NT_DEVCFG_FTM_BURST_DURATION_INITIATOR
+    int "code value of burst duration at the initiator"
+    default 15
+
+config NT_DEVCFG_FTM_BURST_PERIOD_INITIATOR
+    int "burst period value in 100ms uints at the initiator"
+    default 0
+
+endmenu

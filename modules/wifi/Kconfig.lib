@@ -1,0 +1,7 @@
+menu "wifi lib setting"
+
+config WIFILIB_6GHZ
+    bool "enable 6G support in wifi lib"
+    default y
+
+endmenu
