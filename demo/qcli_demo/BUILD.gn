@@ -12,9 +12,6 @@ qcli_demo_src = [
     "src/qcli_demo_main.c",
 ]
 
-if (CONFIG_FW_UPGRADE) {
-    defines = [ "CONFIG_FWUP_DEMO=1", ]
-}
 config("_config") {
     if (image_name == "FERMION_QCLI_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO") {
         include_dirs = qcli_demo_inc

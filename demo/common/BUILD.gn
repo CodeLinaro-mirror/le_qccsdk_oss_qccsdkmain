@@ -117,7 +117,6 @@ source_set("common") {
         sources += ["hfc/hfc_demo.c"]
     }
 
-    include_dirs += ["mpu"]
 
     if (defined(CONFIG_FWUP_DEMO)) {
         defines = [ "CONFIG_FWUP_DEMO=1", ]
@@ -128,6 +127,21 @@ source_set("common") {
         sources += [
             "ota/ota_demo.c",
             "ota/plugins/tftp/ota_tftp.c",
+        ]
+    }
+    if (CONFIG_QCSPI_HFC_TEST) {
+        qcli_demo_inc += [
+            "//demo/common/hfc",
+        ]
+        
+        qcli_demo_src += [
+            "//demo/common/hfc/hfc_demo.c",
+        ]
+    }
+    if (CONFIG_MPU_DEMO) {
+        include_dirs += ["mpu"]
+        qcli_demo_src += [
+            "//demo/common/mpu/mpu_demo.c",
         ]
     }
 
