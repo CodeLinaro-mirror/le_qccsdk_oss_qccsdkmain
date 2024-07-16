@@ -38,7 +38,5 @@ config CPR_ENABLE
 	bool "Core Power Reduction support, please default to n"
 	default n
 
-rsource "mpu.Kconfig"
-
 endmenu
 endmenu

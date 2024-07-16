@@ -30,6 +30,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -102,6 +104,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -175,6 +179,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -248,6 +254,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -318,6 +326,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -391,6 +401,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",

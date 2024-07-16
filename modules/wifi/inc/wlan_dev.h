@@ -638,7 +638,7 @@ typedef struct devh_s {
 #ifdef SUPPORT_PERIODIC_TSF_SYNC
     tsf_periodic_sync_ctx_t tsf_sync_ctx;
 #endif /*SUPPORT_PERIODIC_TSF_SYNC*/
-#ifdef FEATURE_STA_ECSA
+#if defined(FEATURE_STA_ECSA) || defined(FEATURE_AP_ECSA)
  	ecsa_ctx_t *ecsa_ctx;
 #endif
 

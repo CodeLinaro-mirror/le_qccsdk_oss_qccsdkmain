@@ -160,7 +160,7 @@ loader_start( void* arg){
 	uint32_t start_addr = APP_IMAGE_START_ADDRESS;
 	uint32_t app_load_addr = APP_IMAGE_FLASH_ADDRESS; //default virtual flash addr, 0 is invalid.
 	boot_elf_load_type type;
-    fdt_s       *fdt;	
+    fdt_s       *fdt = NULL;	
     fdt_entry   fde, tempfde;
 
 	memset(&fde, 0, sizeof(fdt_entry));

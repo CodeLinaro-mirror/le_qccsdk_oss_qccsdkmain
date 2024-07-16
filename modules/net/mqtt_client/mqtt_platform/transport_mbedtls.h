@@ -91,6 +91,7 @@ extern void vLoggingPrintf( const char * pcFormatString,
 
 
 #define MQTT_ALPN_LIST_SIZE  1
+#define SSL_TLS_HANDSHAKE_TIMEOUT  5000
 
 /**
  * @brief Secured connection context.

@@ -1,0 +1,5 @@
+
+config BOARD_CQM730X
+	bool "BOARD CQM730X as QCC730V2 MP board on xPA"
+	select SOC_QCC730V2
+	default n

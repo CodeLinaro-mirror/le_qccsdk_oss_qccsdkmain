@@ -96,7 +96,15 @@ void wifi_fw_program_pmic_and_aon_otp_trim(void)
          * Quoted from Senpeng Sheng : Change the default value of ULP_BG_IPT62P5N_TRIM for register RPMU_R_PMU_ULPBG_6 from 4 to 0
          * The bias current to the oscillator of 32kHz clock is halved with this change
          */
-        HWIO_OUTXF(SEQ_WCSS_RPMU_OFFSET, RPMU_RPMU_R_PMU_ULPBG_6, ULP_BG_IPT62P5N_TRIM, 0x0);
+        if (otp_tag_high >= 6)// for OTP >= v6
+        {
+            HWIO_OUTXF(SEQ_WCSS_RPMU_OFFSET, RPMU_RPMU_R_PMU_ULPBG_6, ULP_BG_IPT62P5N_TRIM, 0x4);
+        }
+        else
+        {
+            HWIO_OUTXF(SEQ_WCSS_RPMU_OFFSET, RPMU_RPMU_R_PMU_ULPBG_6, ULP_BG_IPT62P5N_TRIM, 0x0);
+        }
+       
         if (otp_tag_high >= 3)// for OTP >= v3 
         {
             // VIFERMION-435

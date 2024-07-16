@@ -39,7 +39,7 @@ board_map:
     fdt_name: bdwlan
     repo:
         bdf_dir: modules/wifi/bin
-        boards_supported: [qcc730v1_socket, qcc730v2_socket, qcc730v2_evb11_hostless, qcc730v2_evb12_hostless, qcc730v2_evb13_hostless, mqm405x, mqm405i, mqm730x, mqm730i]
+        boards_supported: [qcc730v1_socket, qcc730v2_socket, qcc730v2_evb11_hostless, qcc730v2_evb12_hostless, qcc730v2_evb13_hostless, mqm405x, mqm405i, mqm730x, mqm730i, cqm730x, cqm730i]
         qcc730v1_socket: bdwlan.bin
         qcc730v2_socket: bdwlan03.bin
         qcc730v2_evb11_hostless: bdwlan01.bin
@@ -49,9 +49,11 @@ board_map:
         mqm405i: mqm730i.bin
         mqm730x: mqm730x.bin
         mqm730i: mqm730i.bin
+        cqm730x: mqm730x.bin
+        cqm730i: mqm730i.bin
     SDK:
         bdf_dir: bin/wlan
-        boards_supported: [qcc730v2_evb11_hostless, qcc730v2_evb13_hostless, mqm405x, mqm405i, mqm730x, mqm730i]
+        boards_supported: [qcc730v2_evb11_hostless, qcc730v2_evb13_hostless, mqm405x, mqm405i, mqm730x, mqm730i, cqm730x, cqm730i]
         qcc730v1_socket: bdwlan.bin
         qcc730v2_socket: bdwlan03.bin
         qcc730v2_evb11_hostless: bdwlan01.bin
@@ -60,6 +62,8 @@ board_map:
         mqm405i: mqm730i.bin
         mqm730x: mqm730x.bin
         mqm730i: mqm730i.bin
+        cqm730x: mqm730x.bin
+        cqm730i: mqm730i.bin
 
 regdb_map:
     fdt_name: regdb

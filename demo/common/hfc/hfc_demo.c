@@ -46,18 +46,11 @@ int qcspi_hfc_process_test_data(hfc_msg_t* msg)
 #ifdef HFC_TEST_PRINT_ENABLE
 		uint8_t* p = msg->data;
 #endif
-		for (i=0; i<5; i++)
+		if (msg->len >= 10)
 		{
-			HFC_TEST_PRINT("%02x", *(p+i));
+		    i=msg->len-5;
+		    HFC_TEST_PRINT("%02x%02x%02x%02x%02x...%02x%02x%02x%02x%02x\r\n", *(p+0), *(p+1), *(p+2), *(p+3), *(p+4), *(p+i), *(p+i+1), *(p+i+2), *(p+i+3), *(p+i+4));
 		}
-		
-		HFC_TEST_PRINT(" ... ");
-		
-		for (i=msg->len-5; i<msg->len; i++)
-		{
-			HFC_TEST_PRINT("%02x", *(p+i));
-		}	
-		HFC_TEST_PRINT("\r\n"); 
 	}  
 
 	return 0;
@@ -161,43 +154,44 @@ int qcspi_hfc_send_test_data(uint16_t pkt_count, uint16_t pkt_size, uint16_t msg
 static void qcspi_hfc_test_thread(void *arg)
 {
     (void)(arg);
-    hfc_msg_t msg;  
-    uint16_t num_msgs = 0;
-    int i;
+    hfc_msg_t msg;
     
     while (1) 
     {
-        /* wait for a message, timeouts are processed while waiting */	
-      	num_msgs = uxQueueMessagesWaiting(qcspi_hfc_test_queue);
-      	for(i=0; i<num_msgs; i++) 
-      	{
-      		if (nt_osal_queue_msg_receive(qcspi_hfc_test_queue, &msg, portMAX_DELAY) == NT_QUEUE_SUCCESS) 
-      		{
-      		    HFC_TEST_PRINT("RingIf: hfc msg type %d id %d (p_buf: %x len:%d data:%x) \r\n", msg.type, msg.id, (uint32_t)msg.buf, msg.len, (uint32_t)msg.data);
-                if (HFC_DATA_MSG == msg.type)
-                {
-                    qcspi_hfc_process_test_data(&msg);
-					if (HFC_DATA_TEST_LOOP_BACK == hfc_data_test_result.mode)
+		if (nt_osal_queue_msg_receive(qcspi_hfc_test_queue, &msg, portMAX_DELAY) == NT_QUEUE_SUCCESS) 
+		{
+			HFC_TEST_PRINT("RingIf: hfc msg type %d id %d (p_buf: %x len:%d data:%x) \r\n", msg.type, msg.id, (uint32_t)msg.buf, msg.len, (uint32_t)msg.data);
+			if (HFC_DATA_MSG == msg.type)
+			{
+			    qcspi_hfc_process_test_data(&msg);
+				if (HFC_DATA_TEST_LOOP_BACK == hfc_data_test_result.mode)
+				{
+			    	if (QAPI_OK== qapi_hfc_sendto_host_data_pkt(msg.buf, msg.data, msg.len, msg.id))
+			    	{
+					   hfc_data_test_result.send_bytes+= msg.len;
+					    HFC_TEST_PRINT("send data %x len %d.\r\n", (uint32_t)msg.data, msg.len);
+			    	}
+					else
 					{
-                    	qapi_hfc_sendto_host_data_pkt(msg.buf, msg.data, msg.len, msg.id);
-						hfc_data_test_result.send_bytes+= msg.len;
-						HFC_TEST_PRINT("send data %x len %d.\r\n\r\n", (uint32_t)msg.data, msg.len);						
-					} 
-					else if(HFC_DATA_TEST_TX == hfc_data_test_result.mode)
-					{
+					    HFC_TEST_PRINT("loop back send fail\r\n", (uint32_t)msg.data, msg.len);
 					    nt_osal_free_memory(msg.buf);
 					}
-                }
-                else if (HFC_CTRL_MSG == msg.type)
-                {
-                    qcspi_hfc_process_test_config(&msg);
-					if ((HFC_TEST_DATA_START == msg.id) && (HFC_DATA_TEST_RX == hfc_data_test_result.mode))
-					{
-					    qcspi_hfc_send_test_data(hfc_data_test_result.f2a_pkt_count, hfc_data_test_result.f2a_pkt_size, HFC_TEST_DEMO_DATA);
-					}
-                }
-            }
-        }
+				} 
+				else if(HFC_DATA_TEST_TX == hfc_data_test_result.mode)
+				{
+				    nt_osal_free_memory(msg.buf);
+				}
+			}
+			else if (HFC_CTRL_MSG == msg.type)
+			{
+			    qcspi_hfc_process_test_config(&msg);
+				if ((HFC_TEST_DATA_START == msg.id) && (HFC_DATA_TEST_RX == hfc_data_test_result.mode))
+				{
+				    qcspi_hfc_send_test_data(hfc_data_test_result.f2a_pkt_count, hfc_data_test_result.f2a_pkt_size, HFC_TEST_DEMO_DATA);
+				}
+			}
+		}
+	
     } 
 }
 

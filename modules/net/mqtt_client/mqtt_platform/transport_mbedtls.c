@@ -736,7 +736,7 @@ TlsTransportStatus_t TLS_FreeRTOS_Connect( NetworkContext_t * pNetworkContext,
     if( returnStatus == TLS_TRANSPORT_SUCCESS )
     {
         returnStatus = tlsSetup( pNetworkContext, pHostName, pNetworkCredentials );
-        mbedtls_ssl_conf_read_timeout( &( pTlsTransportParams->sslContext.config), receiveTimeoutMs );
+        mbedtls_ssl_conf_read_timeout( &( pTlsTransportParams->sslContext.config), SSL_TLS_HANDSHAKE_TIMEOUT );
     }
 
     /* Perform TLS handshake. */
@@ -761,14 +761,17 @@ TlsTransportStatus_t TLS_FreeRTOS_Connect( NetworkContext_t * pNetworkContext,
         {
             mbedtls_net_free( &( pTlsTransportParams->tcpSocket) );
         }
-
-        pTlsTransportParams->tcpSocket.fd = -1;
+        if(pTlsTransportParams)
+        {
+            pTlsTransportParams->tcpSocket.fd = -1;
+        }
     }
     else
     {
         LogInfo( ( "(Network connection %p) Connection to %s established.",
                    pNetworkContext,
                    pHostName ) );
+        mbedtls_ssl_conf_read_timeout( &( pTlsTransportParams->sslContext.config), receiveTimeoutMs );
     }
 
     return returnStatus;

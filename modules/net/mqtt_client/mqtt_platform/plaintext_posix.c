@@ -134,7 +134,7 @@ int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
     pPlaintextParams = pNetworkContext->pParams;
 
     /* Initialize the file descriptor. */
-    FD_ZERO(&read_fds);
+    memset(&read_fds, 0, sizeof(read_fds));
     /* Set the file descriptor for select. */
     FD_SET(pPlaintextParams->socketDescriptor, &read_fds);
     struct timeval tv; 
@@ -203,7 +203,7 @@ int32_t Plaintext_Send( NetworkContext_t * pNetworkContext,
     pPlaintextParams = pNetworkContext->pParams;
 
     /* Initialize the file descriptor. */
-    FD_ZERO(&write_fds);
+    memset(&write_fds, 0, sizeof(write_fds));
     /* Set the file descriptor for select. */
     FD_SET(pPlaintextParams->socketDescriptor, &write_fds);
     struct timeval tv; 

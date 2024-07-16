@@ -130,7 +130,7 @@
 /**
  * @brief Timeout for receiving CONNACK packet in milli seconds.
  */
-#define CONNACK_RECV_TIMEOUT_MS                  ( 1000U )
+#define CONNACK_RECV_TIMEOUT_MS                  ( 5000U )
 
 #define CLIENT_IDENTIFIER                           ( "testclient" )                                           /**< @brief Client identifier. */
 #define CLIENT_IDENTIFIER_LENGTH                    ( ( uint16_t ) ( sizeof( CLIENT_IDENTIFIER ) - 1 ) ) /**< @brief Length of client identifier. */
@@ -155,7 +155,7 @@
 
 
 /* Check that transport timeout for transport send and receive is defined. */
-#define TRANSPORT_SEND_RECV_TIMEOUT_MS    ( 1000 )
+#define TRANSPORT_SEND_RECV_TIMEOUT_MS    ( 10 )
 
 /* Ping response timeout max time, otherwise will reconnect*/
 #define MQTT_PING_RESP_TIMEOUT_MAX_TIMES    (3)
@@ -1253,12 +1253,7 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
 
             if (pMqttClientSess->mqttState == MQTT_CONNECTED)
             {
-                do
-                {
-                    mqttStatus = MQTT_ProcessLoop(&pMqttClientSess->mqttContext);
-                }
-                while (pMqttClientSess == MQTTSuccess);
-
+                mqttStatus = MQTT_ProcessLoop(&pMqttClientSess->mqttContext);
 
                 if (mqttStatus == MQTTKeepAliveTimeout)
                 {

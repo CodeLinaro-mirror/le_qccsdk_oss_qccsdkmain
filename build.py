@@ -45,6 +45,8 @@ BOARD_MQM405X = 'mqm405x'
 BOARD_MQM405I = 'mqm405i'
 BOARD_MQM730X = 'mqm730x'
 BOARD_MQM730I = 'mqm730i'
+BOARD_CQM730X = 'cqm730x'
+BOARD_CQM730I = 'cqm730i'
 BOARD_NONE = 'noboard' #means not related to any board
 DEFAULT_BOARD_NAME = BOARD_NONE
 ENV_BOARD_NAME = 'QCCSDK_BOARD_NAME'
@@ -146,8 +148,8 @@ def execute_cmd_with_log(cmd):
 def option_parser():
     parser = OptionParser(usage="usage: %prog [options] arguments", version="%prog 1.0")
     parser.add_option("--image", "-i", action="store", type="string", dest="image", help="Image name [FERMION, FERMION_QCLI_DEMO, FERMION_PBL]")
-    parser.add_option("--board", "-b", action="store", type="string", dest="board", help="board name, also board dir name under boards/, such as [%s, %s, %s, %s, %s, %s, %s, %s, %s, %s]"
-        %(SOCKET_BOARD_CHIPV1, SOCKET_BOARD_CHIPV2, EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, EVB_V13_HOSTLESS, BOARD_NONE, BOARD_MQM405X, BOARD_MQM405I, BOARD_MQM730X, BOARD_MQM730I))
+    parser.add_option("--board", "-b", action="store", type="string", dest="board", help="board name, also board dir name under boards/, such as [%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s]"
+        %(SOCKET_BOARD_CHIPV1, SOCKET_BOARD_CHIPV2, EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, EVB_V13_HOSTLESS, BOARD_NONE, BOARD_MQM405X, BOARD_MQM405I, BOARD_MQM730X, BOARD_MQM730I,BOARD_CQM730X, BOARD_CQM730I))
     parser.add_option("--all", "-a", action="store_true", default=False, dest="build_all", help="To build all images")
     parser.add_option("--out", "-o", action="store", type="string", dest="out_dir", help="Output directory")
     parser.add_option("--clean", "-c", action="store_true", default=False, dest="clean", help="To clean the build")
@@ -284,7 +286,7 @@ def prepare_gn_args(image = 'FERMION'):
         CHIP_VERSION_FERMION = 2
     elif g_val_board_name==SOCKET_BOARD_CHIPV1:
         CHIP_VERSION_FERMION = 1
-    elif g_val_board_name in [EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, SOCKET_BOARD_CHIPV2, EVB_V13_HOSTLESS, BOARD_MQM405X, BOARD_MQM405I, BOARD_MQM730X, BOARD_MQM730I]:
+    elif g_val_board_name in [EVB_V11_HOSTLESS, EVB_V12_HOSTLESS, SOCKET_BOARD_CHIPV2, EVB_V13_HOSTLESS, BOARD_MQM405X, BOARD_MQM405I, BOARD_MQM730X, BOARD_MQM730I, BOARD_CQM730X, BOARD_CQM730I]:
         CHIP_VERSION_FERMION = 2
     else:
         logging.warning('board=%s not supported', g_val_board_name)

@@ -236,20 +236,13 @@ static void qcspi_hfc_thread(void *arg)
   
     while (1) 
     {
-        uint16_t num_msgs = 0;
-        int i;
-        /* wait for a message, timeouts are processed while waiting */	
-        num_msgs = uxQueueMessagesWaiting(qcspi_hfc_data_queue);
-        for(i=0; i<num_msgs; i++) 
-        {
-        	if (nt_osal_queue_msg_receive(qcspi_hfc_data_queue, &msg, portMAX_DELAY) == NT_QUEUE_SUCCESS) 
-        	{
-        	    if (NULL != msg.fun)
-            	{
-                    msg.fun(msg.ctx);
-            	}  
-        	}
-        }
+		if (nt_osal_queue_msg_receive(qcspi_hfc_data_queue, &msg, portMAX_DELAY) == NT_QUEUE_SUCCESS) 
+		{
+		    if (NULL != msg.fun)
+	    	{
+	            msg.fun(msg.ctx);
+	    	}  
+		}
     }
 }
 

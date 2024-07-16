@@ -2104,25 +2104,33 @@ _socpm_get_sleep_slop_adjusted_sleep_time(uint64_t sleep_time_us)
 
     uint64_t sleep_slop_offset_us = 0;
     uint64_t sleep_time_ms = US_TO_MS(sleep_time_us);
-
-    if(sleep_time_ms < g_socpm_struct.slop_interval_ms)
+    if(gdevp)
     {
-        sleep_slop_offset_us = 0;
-    }
-    else
-    {
-        sleep_slop_offset_us =
-            ((sleep_time_ms/g_socpm_struct.slop_interval_ms))
-            * g_socpm_struct.slop_step_us;
+        PM_STRUCT *pPmStruct = (PM_STRUCT*)gdevp->pPmStruct;
+        // Fixed pre sleep time accounting for HW delays and base early rx
+        uint32_t bmps_s2w_compensation = bmps_compute_s2w_compensation_time(pPmStruct)
+            + SLP_TIME_CALC_TO_AON_PRGM_US;
+        // _minprintf("s2w", bmps_s2w_compensation , (unsigned int) bmps_s2w_compensation);
+        uint64_t bcn_pre_wake = bmps_s2w_compensation  + nt_pm_get_bmps_beacon_early_rx(gdevp);
+        if(sleep_time_ms < g_socpm_struct.slop_interval_ms )
+        {
+            sleep_slop_offset_us = 100;
+        }
+        else
+        {
+            sleep_slop_offset_us =
+                (((sleep_time_ms+ US_TO_MS(bcn_pre_wake))/g_socpm_struct.slop_interval_ms))
+                * g_socpm_struct.slop_step_us;
+        }
+
+        /* Cap sleep slop offset to upper limit */
+        if(sleep_slop_offset_us > SLEEP_SLOP_OFFSET_UPPER_LIMIT_US)
+        {
+            sleep_slop_offset_us = SLEEP_SLOP_OFFSET_UPPER_LIMIT_US; 
+        }
     }
 
-    /* Cap sleep slop offset to upper limit */
-    if(sleep_slop_offset_us > SLEEP_SLOP_OFFSET_UPPER_LIMIT_US)
-    {
-        sleep_slop_offset_us = SLEEP_SLOP_OFFSET_UPPER_LIMIT_US; 
-    }
-
-    return (sleep_time_us - sleep_slop_offset_us);
+    return ((sleep_time_us > sleep_slop_offset_us)?(sleep_time_us - sleep_slop_offset_us ):0);
 }
 
 static void

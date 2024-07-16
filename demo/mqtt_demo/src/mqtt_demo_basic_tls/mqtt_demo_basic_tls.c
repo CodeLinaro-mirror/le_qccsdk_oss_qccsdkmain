@@ -220,6 +220,8 @@ typedef struct PublishPackets
     MQTTPublishInfo_t pubInfo;
 } PublishPackets_t;
 
+static NetworkCredentials_t tlsCredentials; 
+
 /*-----------------------------------------------------------*/
 
 /* Function for obtaining a timestamp. */
@@ -501,6 +503,15 @@ static int initCredentials(NetworkCredentials_t * pTlsCredentials)
     return EXIT_SUCCESS;
 }
 
+static void cleanupCredentials(NetworkCredentials_t * pTlsCredentials)
+{
+    if (pTlsCredentials->pRootCa != NULL)
+    {
+        free((void *)pTlsCredentials->pRootCa);
+        pTlsCredentials->pRootCa = NULL;
+    }
+}
+
 /*-----------------------------------------------------------*/
 static int connectToServerWithBackoffRetries( NetworkContext_t * pNetworkContext )
 {
@@ -509,7 +520,6 @@ static int connectToServerWithBackoffRetries( NetworkContext_t * pNetworkContext
     TlsTransportStatus_t tlsStatus = TLS_TRANSPORT_SUCCESS;
     BackoffAlgorithmContext_t reconnectParams;
     ServerInfo_t serverInfo = { 0 };
-    NetworkCredentials_t tlsCredentials;
     uint16_t nextRetryBackOff;
 
     /* Initialize information to connect to the MQTT broker. */
@@ -517,9 +527,6 @@ static int connectToServerWithBackoffRetries( NetworkContext_t * pNetworkContext
     serverInfo.hostNameLength = BROKER_ENDPOINT_LENGTH;
     serverInfo.port = BROKER_PORT;
 
-    /* Initialize credentials for establishing TLS session. */
-    memset( &tlsCredentials, 0, sizeof( NetworkCredentials_t ) );
-    returnStatus = initCredentials(&tlsCredentials);
     if( returnStatus != EXIT_SUCCESS )
     {
         LogError( ( "Initialize credentials fail.\n" ) );
@@ -1448,6 +1455,10 @@ int mqtt_basic_tls_demo()
     networkContext.pParams = &tlsContext;
     returnStatus = initializeMqtt( &mqttContext, &networkContext );
 
+    /* Initialize credentials for establishing TLS session. */
+    memset( &tlsCredentials, 0, sizeof( NetworkCredentials_t ) );
+    returnStatus = initCredentials(&tlsCredentials);
+
     if( returnStatus == EXIT_SUCCESS )
     {
         for( ; ; )
@@ -1485,6 +1496,7 @@ int mqtt_basic_tls_demo()
         }
     }
 
+    cleanupCredentials(&tlsCredentials);
     return returnStatus;
 }
 
