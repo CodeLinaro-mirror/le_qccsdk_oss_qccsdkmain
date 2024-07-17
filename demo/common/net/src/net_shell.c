@@ -32,6 +32,7 @@
 #include "iperf.h"
 #include "safeAPI.h"
 #include "ssl_demo.h"
+#include "httpc_demo.h"
 
 static ip_addr_t default_ip_address[MAX_ROLE];
 static ip_addr_t default_netmask[MAX_ROLE];
@@ -885,6 +886,13 @@ const QAPI_Console_Command_t net_shell_cmds[] =
 #endif		
     {dhcpv4s,    "dhcpv4s",  "\n\ndhcpv4s <interface> <start|stop|pool> <start_ip> <end_ip> [<lease_time_minute>]\n",
                                     "\nDHCPv4 Server: Set up and configure Dynamic Host Configuration Protocol v4 server"},					
+
+#ifdef CONFIG_HTTP_CLIENT_DEMO
+        {httpc_command_handler,         "httpc",     "\n\nhttpc [start|stop]\n"
+                                        "httpc [connect|disconnect|get|post|put|patch] <...>\n",
+                                        "\nHTTP Client: Perform Hypertext Transport protocol client operations.\n"
+                                        "Type command name to get more info on usage. For example \"httpc get\".\n"},
+#endif
 };
 
 const QAPI_Console_Command_Group_t net_shell_cmd_group = {NET_SHELL_GROUP_NAME, sizeof(net_shell_cmds) / sizeof(QAPI_Console_Command_t), net_shell_cmds};

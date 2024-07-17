@@ -109,5 +109,8 @@ declare_args() {
     CONFIG_MQTT_BASIC_TLS_DEMO = false
     CONFIG_MQTT_MUTUAL_AUTH_DEMO = false
 
+    CONFIG_HTTP_CLIENT = false
+    CONFIG_HTTP_CLIENT_DEMO = false
+
     CONFIG_CPR_ENABLE = true
 }

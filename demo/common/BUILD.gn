@@ -150,5 +150,12 @@ source_set("common") {
             sources += ["mpu/mpu_demo.c"]
         }
     }
+
+    if (CONFIG_HTTP_CLIENT_DEMO) {    
+        include_dirs += ["//include/qapi", "net/src"]
+        sources += [
+            "net/src/httpc_demo.c",
+        ]
+    }
 }
 
