@@ -11,7 +11,21 @@ qcli_demo_inc = [
 qcli_demo_src = [
     "src/qcli_demo_main.c",
 ]
+if (CONFIG_MGMT_FILTER_DEMO) {
+    qcli_demo_inc += [
+        "src/mgmtfilter",
+    ]
+    
+    qcli_demo_src += [
+        "src/mgmtfilter/mgmt_filter_demo.c",
+    ]
+}
 
+if (CONFIG_MPU_DEMO) {
+    qcli_demo_inc += [
+        "//demo/common/mpu",
+    ]
+}
 config("_config") {
     if (image_name == "FERMION_QCLI_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO") {
         include_dirs = qcli_demo_inc

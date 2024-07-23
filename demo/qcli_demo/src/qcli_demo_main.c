@@ -11,6 +11,9 @@
 #if CONFIG_MPU_DEMO
 #include "mpu_demo.h"
 #endif
+#ifdef CONFIG_MGMT_FILTER_DEMO
+#include "mgmt_filter_demo.h"
+#endif
 
 #ifdef FERMION_SILICON
 extern uint32_t UART_Send_direct(char *txbuf,uint32_t buflen);
@@ -34,6 +37,9 @@ void app_init(void)
 #endif
 #if CONFIG_MPU_DEMO
 	Initialize_MPU_Demo();
+#endif
+#ifdef CONFIG_MGMT_FILTER_DEMO
+	Initialize_Mgmt_Filter_Demo();
 #endif
     UART_SEND_DIRECT("app_init over\r\n");
 }

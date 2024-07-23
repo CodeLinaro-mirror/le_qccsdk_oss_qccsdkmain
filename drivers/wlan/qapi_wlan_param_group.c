@@ -128,6 +128,11 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
             ret = wlan_set_sta_slptime(device_ID, listen_interval->time, listen_interval->round_type);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU */
         }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_APP_IE: {
+            qapi_WLAN_App_Ie_Params_t *ie_param = (qapi_WLAN_App_Ie_Params_t *) data;
+            ret = wlan_set_appie(ie_param);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_APP_IE */
+        }
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;
@@ -177,6 +182,10 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
                 case QAPI_WLAN_AUTH_WPA2_PSK_E:
                     p_cmd->dot11AuthMode = OPEN_AUTH;
                     p_cmd->authMode = WMI_WPA2_PSK_AUTH;
+					break;
+                case QAPI_WLAN_AUTH_WPA3_SAE_E:
+                    p_cmd->dot11AuthMode = SAE_AUTH;
+                    p_cmd->authMode = WMI_WPA3_SHA256_AUTH;
                     break;
                 default:
                     PRINT_ERR_INVALID_PARAM1("e_wpa_ver", e_wpa_ver);

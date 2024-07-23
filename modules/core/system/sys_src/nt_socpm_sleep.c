@@ -212,6 +212,8 @@ static void _socpm_slp_fn_process(sleep_mode mode);
 static void _socpm_list_search(void);
 static void _socpm_slpcfg_sby(void);
 static void _socpm_slpcfg_mcuslp(void);
+static void socpm_enter_deepsleep();
+
 #if defined(PLATFORM_FERMION)
 static void _socpm_slpcfg_light(void);
 #endif /*PLATFORM_FERMION*/
@@ -3426,7 +3428,23 @@ static void _socpm_slpcfg_light(void)
 
 #endif /*PLATFORM_FERMION*/
 
-static void __attribute__((used)) socpm_enter_deepsleep()
+
+void nt_enable_indef_deepsleep( uint64_t sleep_time )
+{
+#ifdef CONFIG_BOARD_QCC730_QSPI_ENABLE
+    drv_flash_deinit(0);
+#endif
+
+#ifdef PLATFORM_FERMION
+    wifi_fw_pmic_pre_sleep_config(Standby);
+#endif /* PLATFORM_FERMION */
+
+    //nt_socpm_slp_tmr_set(sleep_time);
+    socpm_enter_deepsleep();
+}
+
+//static void __attribute__((used)) socpm_enter_deepsleep()
+static void socpm_enter_deepsleep()
 {
     uint32_t reg_val;
     __asm volatile("cpsid i \n");
@@ -4003,7 +4021,15 @@ void nt_enable_standby(
 #ifdef PLATFORM_FERMION
     wifi_fw_pmic_pre_sleep_config(Standby);
 #endif /* PLATFORM_FERMION */
+#ifdef FEATURE_INDEF_DEEP_SLP
+    /* Avoid configuring the sleep timer while indefinite deep sleep is enabled */
+    if (!g_socpm_struct.socpm_indef_deep_sleep_en)
+    {
+        nt_socpm_slp_tmr_set(sleep_time);
+    }
+#else
     nt_socpm_slp_tmr_set(sleep_time);
+#endif /* FEATURE_INDEF_DEEP_SLP */
     _socpm_slpcfg_sby();
 }
 
@@ -4903,7 +4929,7 @@ void nt_enable_beacon_miss_log(bool enable)
  * @param : None
  * @return : None
  */
-void nt_socpm_status(void)
+uint32_t nt_socpm_status(void)
 {
     if (nt_socpm_slp_time_min > 0)
     {
@@ -4913,6 +4939,7 @@ void nt_socpm_status(void)
     {
         NT_LOG_PRINT(SOCPM, ERR, "socpm status: disabled");
     }
+	return nt_socpm_slp_time_min;
 }
 
 /*

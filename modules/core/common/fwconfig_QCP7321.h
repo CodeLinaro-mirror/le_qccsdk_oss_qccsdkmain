@@ -287,7 +287,7 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 
 /* Feature flag to co-ordinate with host for wake up and sleep using A2F and F2A signals
  * Supported only on PLATFORM_FERMION */
-//#define FIRMWARE_APPS_INFORMED_WAKE
+#define FIRMWARE_APPS_INFORMED_WAKE
 
 /* Basic light sleep soc and hal mac receipes are not under any flag
 * its enabled by default */

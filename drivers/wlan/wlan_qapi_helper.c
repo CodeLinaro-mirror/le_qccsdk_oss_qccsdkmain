@@ -548,3 +548,111 @@ qapi_Status_t wlan_get_sta_slptime(uint32_t *listen_interval)
 		*listen_interval = (uint32_t)wlan_get_listen_interval(gdevp, 100) * 100;
 	return QAPI_OK;
 }
+
+qapi_Status_t wlan_clear_mgmt_frame_queue(void)
+{
+	WMI_MGMT_FRAME_RECV_MSG mgmt_frame;
+	WMI_MGMT_FRAME_FILTER *p_mgmt_filter = &(gp_wlan_qapi_cxt->mgmt_filter);
+	
+
+	if (NULL == p_mgmt_filter->recv_queue)
+	{
+	    return QAPI_OK;
+	}
+    
+	while (qurt_pipe_receive_timed(p_mgmt_filter->recv_queue, &mgmt_frame, 0) == NT_QUEUE_SUCCESS)
+	{
+		nt_osal_free_memory(mgmt_frame.frame);
+	}
+
+    
+    return QAPI_OK;
+}
+
+qapi_Status_t wlan_recv_mgmt_frame(uint8_t *buffer, uint32_t buffer_len, uint32_t *frame_len, uint32_t timeout)
+{    
+    qapi_Status_t ret = QAPI_WLAN_ERROR;
+	WMI_MGMT_FRAME_RECV_MSG mgmt_frame;
+	WMI_MGMT_FRAME_FILTER *p_mgmt_filter = &(gp_wlan_qapi_cxt->mgmt_filter);
+	
+	if (qurt_pipe_receive_timed(p_mgmt_filter->recv_queue, &mgmt_frame, timeout) == NT_QUEUE_SUCCESS)
+	{
+		memscpy(buffer, buffer_len, mgmt_frame.frame, mgmt_frame.frame_len);
+		*frame_len = mgmt_frame.frame_len;
+		nt_osal_free_memory(mgmt_frame.frame);
+		ret = QAPI_OK;
+	}
+	else
+	{
+	    ret = QAPI_WLAN_ERR_QOSAL_EVENT_TIMEOUT;
+	}
+    
+    return ret;
+}
+
+qapi_Status_t wlan_set_appie(qapi_WLAN_App_Ie_Params_t *ie_params)
+{
+    qapi_Status_t error = QAPI_OK;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+
+    WMI_SET_APPIE_CMD *cmd = &p_cxt->appie_cmd;
+    if(cmd == NULL)
+    {
+        return QAPI_ERROR;
+    }
+    memset(cmd, 0, sizeof(WMI_SET_APPIE_CMD));
+
+    /* Application IE is a hex number starting with 0xdd.
+     * Hex number 0xdd of length 1 will remove the already added IE. */
+    if((ie_params->ie_Len < 1) || (ie_params->ie_Len > WMI_MAX_APP_IE_LEN) || !ie_params->ie_Info)
+    {
+        log_printf("%s:%d: IE length %d is out of the range of 1 and 64.\n", __func__, __LINE__, ie_params->ie_Len);
+        return QAPI_ERROR;
+    }
+    /* The length must be not less than 5 as a valid application information element
+     * at least has element ID, length and OUI per 802.11 spec.
+     */
+    if((ie_params->ie_Len > 1) && (ie_params->ie_Len < 5))
+    {
+        log_printf("%s:%d: IE length %d is less than 5 bytes.\n", __func__, __LINE__, ie_params->ie_Len);
+        return QAPI_ERROR;
+    }
+
+    if (ie_params->ie_Info[0] != 0xdd)
+    {
+        log_printf("%s:%d: Application specified information element must start with 'dd'.\n", __func__, __LINE__);
+        return QAPI_ERROR;
+    }
+
+	/* The length in application information element should be the length of OUI and Vendor-specific content*/
+	if ((ie_params->ie_Len > 1) &&(ie_params->ie_Info[1] != (ie_params->ie_Len -2)))
+    {
+        log_printf("%s:%d: The length in application information element is not correct.\n", __func__, __LINE__);
+        return QAPI_ERROR;
+    }
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    cmd->mgmtFrmType = ie_params->mgmt_Frame_Type;
+    cmd->ieLen = ie_params->ie_Len;
+     
+    memscpy(cmd->ieInfo, ie_params->ie_Len, ie_params->ie_Info, ie_params->ie_Len);
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+
+    wmi_cmd_send(WMI_SET_APPIE_CMDID, cmd, sizeof(WMI_SET_APPIE_CMD));
+
+    if (p_cxt->wlan_set_param_block_mode) 
+    {
+        p_cxt->param_id = WIFI_PARAM_SET_APP_IE;
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+        log_printf("set appie: block mode, WMI cmd done\n");
+    } 
+    else 
+    {
+        log_printf("set appie: unblock mode, should check WMI cmd done in event cb\n");
+    }
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    error = get_wlan_qapi_error();
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+
+    return error;  
+}

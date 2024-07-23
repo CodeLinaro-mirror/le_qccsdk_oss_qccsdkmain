@@ -31,5 +31,8 @@ extern qapi_Status_t wlan_set_agg_cfg(uint8_t device_ID, uint16_t tx_tid_mask, u
 extern qapi_Status_t wlan_set_amsdu_rx(uint8_t device_ID, uint8_t enable);
 extern qapi_Status_t wlan_set_sta_slptime(uint8_t device_ID, uint16_t time, uint16_t round_type);
 extern qapi_Status_t wlan_get_sta_slptime(uint32_t *listen_interval);
+extern qapi_Status_t wlan_clear_mgmt_frame_queue(void);
+extern qapi_Status_t wlan_recv_mgmt_frame(uint8_t *buffer, uint32_t buffer_len, uint32_t *frame_len, uint32_t timeout);
+extern qapi_Status_t wlan_set_appie(qapi_WLAN_App_Ie_Params_t *ie_params);
 #endif //WLAN_QAPI_HELPER_H
 

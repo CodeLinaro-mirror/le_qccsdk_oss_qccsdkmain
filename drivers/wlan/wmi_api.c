@@ -567,6 +567,20 @@ static void wmi_get_rate_event(void *msg)
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
 
+static void wmi_set_mgmt_filter_event(void *msg)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    int ret = *(int *)msg;
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+
+    if (p_cxt->wlan_set_mgmt_filter_block_mode) {
+        qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_MGMT_FILTER);
+    }
+
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+}
+
 static void wmi_chan_switch_event(void *msg)
 {
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
@@ -591,6 +605,21 @@ static void wmi_chan_switch_event(void *msg)
         p_cxt->qapi_event_handler(p_cxt->network_id, QAPI_WLAN_CHANNEL_SWITCH_CB_E, p_cxt->event_application_Context, &qapi_chan_switch_evt, sizeof(qapi_chan_switch_evt));
     }
 
+}
+
+static void wmi_send_raw_event(void *msg)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	int ret = *(int *)msg;
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+
+	set_wlan_qapi_error((ret == 1) ? QAPI_OK : QAPI_ERROR);
+    if (p_cxt->wlan_disable_block_mode) {
+        qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SEND_RAW);
+    }
+
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
 
 static void wmi_event_dispatch(event_t event_id, void *data)
@@ -648,6 +677,12 @@ static void wmi_event_dispatch(event_t event_id, void *data)
             break;
 		case WMI_CHAN_SWITCH_EVTID:
 			wmi_chan_switch_event(data);
+			break;
+		case WMI_SEND_RAW_FRAME_EVTID:
+			wmi_send_raw_event(data);
+			break;
+		case WMI_MGMT_FRAME_FILTER_EVTID:
+			wmi_set_mgmt_filter_event(data);
         default:
             break;
     }
@@ -726,7 +761,7 @@ static void wmi_cmd_result(void *msg)
 
 static void wmi_event_notify(WIFIReturnCode_t return_type, event_t event_id, void* data)
 {
-    log_printf("wlan_qapi_event: return_type=%d event_id=%d data=0x%x\n", return_type, event_id, data);
+    log_printf("wlan_qapi_event: return_type=%d event_id=%d data=0x%x %d\n", return_type, event_id, data, *(int*)data);
 
     wmi_msg_struct_t wlan_result = {0};
     if(event_id >= invalid_app_event_id || event_id < aws_app_event_id) {
@@ -1102,4 +1137,37 @@ qapi_Status_t wmi_get_rate (void)
     ret = get_wlan_qapi_error();
     return ret;
 }
+
+qapi_Status_t wmi_send_raw()
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_Status_t ret = QAPI_WLAN_ERROR;
+
+    wmi_cmd_send(WMI_SEND_RAW, (void *)(&(p_cxt->raw_pkt_frame)), sizeof(SEND_RAW_FRAME));
+    if (p_cxt->wlan_send_raw_block_mode) {
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SEND_RAW, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+
+    ret = get_wlan_qapi_error();
+    return ret;
+}
+
+qapi_Status_t wmi_set_mgmt_filter (void)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_Status_t ret = QAPI_OK;
+
+    wmi_cmd_send(WMI_SET_MGMT_FILTER_CMDID, (void *)(&(p_cxt->mgmt_filter)), sizeof(WMI_MGMT_FRAME_FILTER));
+    if (p_cxt->wlan_set_mgmt_filter_block_mode) {
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_MGMT_FILTER, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+	
+    ret = get_wlan_qapi_error();
+    return ret;
+}
+
 

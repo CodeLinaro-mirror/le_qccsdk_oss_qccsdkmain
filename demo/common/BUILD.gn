@@ -46,6 +46,15 @@ ota_demo_src = [
     "ota/ota_demo.c",
     "ota/plugins/tftp/ota_tftp.c",
 ]
+
+gpio_demo_src = [
+    "peripherals/gpio/gpio_demo.c"
+]
+
+mpu_demo_src = [
+    "mpu/mpu_demo.c"
+]
+
 not_needed("*", [ ])
 
 config("_config") {
@@ -129,26 +138,15 @@ source_set("common") {
             "ota/plugins/tftp/ota_tftp.c",
         ]
     }
-    if (CONFIG_QCSPI_HFC_TEST) {
-        qcli_demo_inc += [
-            "//demo/common/hfc",
-        ]
-        
-        qcli_demo_src += [
-            "//demo/common/hfc/hfc_demo.c",
-        ]
-    }
-    if (CONFIG_MPU_DEMO) {
-        include_dirs += ["mpu"]
-        qcli_demo_src += [
-            "//demo/common/mpu/mpu_demo.c",
-        ]
-    }
 
     if (CONFIG_MPU_DEMO) {
-        if (image_name == "FERMION_IOE_QCLI_DEMO") {
-            sources += ["mpu/mpu_demo.c"]
-        }
+        include_dirs += ["mpu"]
+        sources += mpu_demo_src
+    }
+    
+    if (CONFIG_GPIO_SHELL) {
+        include_dirs += ["peripherals/gpio", "peripherals/i2c", "//modules/console"]
+        sources += gpio_demo_src
     }
 
     if (CONFIG_HTTP_CLIENT_DEMO) {    

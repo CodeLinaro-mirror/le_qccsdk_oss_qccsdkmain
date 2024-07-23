@@ -1254,6 +1254,20 @@ qapi_WLAN_DEV_Mode_e
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONCURRENCY_MODE				82
 
+
+/**
+Command ID to set/get the filter of management frames which will be sent to application in the WLAN subsystem.
+
+@note1hang This parameter can be used with qapi_WLAN_Enable_Mgmt_Filter() and qapi_WLAN_Disable_Mgmt_Filter().
+
+@param[in,out] management frame type of the variable type qapi_WLAN_MGMT_FRAME_e
+
+@sa
+qapi_WLAN_MGMT_FRAME_e
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_MGMT_FRAME_FILTER				83
+
+
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE                0
 
 /**

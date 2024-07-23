@@ -232,6 +232,7 @@ typedef enum {
 #endif /* SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP */
     EXIT_REASON_CSA,	    /*When CSA bit is set in DTIM bcn*/
     EXIT_REASON_NEGATIVE_SLP_TIME,   /*Negative slp time on attempt to slp back*/
+	EXIT_REASON_EXT_INT,	    /*External wakeup by interrupt*/
     EXIT_REASON_LIMIT,
 }  PROTOCOL_SLP_EXIT_REASON;
 

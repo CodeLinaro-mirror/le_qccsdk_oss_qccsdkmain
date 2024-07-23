@@ -17,3 +17,5 @@ cp ${SCRIPT_PATH}/../comp/wifi/LICENSE.txt ${SCRIPT_PATH}/../prebuilt_HY11/
 cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/libwifi_core.a ${SCRIPT_PATH}/../prebuilt_HY11_ART/
 cp ${SCRIPT_PATH}/../comp/wifi/NOTICE ${SCRIPT_PATH}/../prebuilt_HY11_ART/
 cp ${SCRIPT_PATH}/../comp/wifi/LICENSE.txt ${SCRIPT_PATH}/../prebuilt_HY11_ART/
+tar -cvf qccsdk_pkg.tar  ${SCRIPT_PATH}/../
+mv qccsdk_pkg.tar ${SCRIPT_PATH}/../

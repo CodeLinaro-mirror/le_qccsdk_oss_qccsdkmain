@@ -104,13 +104,12 @@ static qapi_Status_t deepsleep(uint32_t Parameter_Count, QAPI_Console_Parameter_
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
     if (Parameter_List[0].Integer_Value == DEEP_SLP_WKUP_EXT) {
-        printf("Ext wakeup not supported yet");
-        return QAPI_ERR_NOT_SUPPORTED;
-        //nt_socpm_en_indef_deep_sleep(TRUE);
+        printf("Ext wakeup indefinite deepsleep supported");
+        nt_socpm_en_indef_deep_sleep(TRUE);
     }
     uint64_t slp_time = (uint64_t)Parameter_List[1].Integer_Value;
     qapi_pm_enable(1);
-    return qapi_deepsleep_enter(1, slp_time);
+    return qapi_deepsleep_enter(Parameter_List[0].Integer_Value, slp_time);
 }
 
 static qapi_Status_t slp_clk_cal_cfg(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)

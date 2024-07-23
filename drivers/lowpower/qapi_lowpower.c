@@ -51,7 +51,8 @@ qapi_Status_t qapi_deepsleep_enter(uint8_t wkup_src, uint64_t sleep_time)
         nt_watchdog_timer_freeze();
         nt_enable_standby(sleep_time);
     } else if (wkup_src == 2) {
-        return QAPI_ERR_NOT_SUPPORTED;
+		nt_watchdog_timer_freeze();
+        nt_enable_indef_deepsleep(0);
     } else {
         return QAPI_ERR_INVALID_PARAM;
     }

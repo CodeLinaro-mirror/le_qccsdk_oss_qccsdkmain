@@ -4,4 +4,8 @@ config WIFILIB_6GHZ
     bool "enable 6G support in wifi lib"
     default y
 
+config MGMT_FILTER_DEMO 
+    bool "enable management frames filter DEMO"
+    default n 
+
 endmenu

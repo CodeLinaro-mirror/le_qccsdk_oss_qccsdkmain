@@ -131,5 +131,7 @@ void wlan_wmi_delba( void *msg);
 
 void wmi_scan_reset_parameter(devh_t *dev, uint32_t act_dur, uint32_t pas_dur, uint32_t intv);
 void wmi_scan_restore_parameter(devh_t *dev);
-    
+
+void send_mgmt_frame_to_app(devh_t *dev, uint32_t subtype, uint8_t *bufPtr, uint32_t bufLen);
+
 #endif //_WIFI_WMI_

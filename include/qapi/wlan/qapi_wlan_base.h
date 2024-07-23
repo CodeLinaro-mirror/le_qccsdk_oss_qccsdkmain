@@ -1680,37 +1680,45 @@ Enumeration of a list of supported 802.11 header types for a Raw mode transmissi
 */
 typedef enum
 {
-    QAPI_WLAN_RAW_MODE_HDR_TYPE_BEACON_E         = 0,
+    QAPI_WLAN_RAW_MODE_HDR_TYPE_BEACON_E         = 0, 
           /**< Raw mode frame header is of type beacon. */
-    QAPI_WLAN_RAW_MODE_HDR_TYPE_QOS_DATA_E       = 1,
+	QAPI_WLAN_RAW_MODE_HDR_TYPE_PROBE_REQ_DATA_E = 1, 
+		  /**< Raw mode frame header is of type probe request. */
+    QAPI_WLAN_RAW_MODE_HDR_TYPE_QOS_DATA_E       = 2, 
           /**< Raw mode frame header is of type QOS data. */
-    QAPI_WLAN_RAW_MODE_HDR_TYPE_FOUR_ADDR_DATA_E = 2
+    QAPI_WLAN_RAW_MODE_HDR_TYPE_FOUR_ADDR_DATA_E = 3 , 
           /**< Raw mode frame header is of type 4 address data. */
+	QAPI_WLAN_RAW_MODE_HDR_TYPE_USER_DEFINED_E 	 = 0xff  
+          /**< Raw mode frame header is of type self-defined. */
 } qapi_WLAN_Raw_Mode_Header_Type_e;
 
 /**
 @ingroup qapi_wlan
-Data structure that the application is to pass when invoking qapi_WLAN_Raw_Send()
+Data structure that the application is to pass when invoking qapi_WLAN_Raw_Send() 
 to transmit a raw frame.
 */
 typedef struct //qapi_WLAN_Raw_Send_Params_s
 {
-    uint8_t                           rate_Index;
+    uint8_t                           rate_Index;  
           /**< 0: 1 Mbps, 1: 2 Mbps, 2: 5.5 Mbps, etc. */
-    uint8_t                           num_Tries;
+		  /**< Note that this value will not take effect if connected  */
+    uint8_t                           num_Tries; 
           /**< Packet transmission count: 1 to 14. */
     uint32_t                          payload_Size; /**< Payload size: 0 to 1400. */
-    uint32_t                          channel;
+    uint32_t                          channel;  
           /**< Channel; 0 to 11. 0: Send on the current channel. */
-    qapi_WLAN_Raw_Mode_Header_Type_e  header_Type;
-          /**< 0: Beacon frame, 1: QoS data frame, 2: Four addresses data frame. */
-    uint16_t                          seq;
+		  /**< Note that this value will not take effect if connected  */
+    qapi_WLAN_Raw_Mode_Header_Type_e  header_Type; 
+          /**< 0: Beacon frame, 1: Probe Request frame, 2: QoS data frame, 3: Four addresses data frame, 0xff: Self Defined frame*/
+		  /**< If use Self Defined Header, the frame will be considered as an MGMT frame.>*/
+    uint16_t                          seq;  
           /**< Sequence number to be filled in the 802.11 header. */
     uint8_t                           addr1[__QAPI_WLAN_MAC_LEN];  /**< Address 1. */
     uint8_t                           addr2[__QAPI_WLAN_MAC_LEN];  /**< Address 2. */
     uint8_t                           addr3[__QAPI_WLAN_MAC_LEN];  /**< Address 3. */
     uint8_t                           addr4[__QAPI_WLAN_MAC_LEN];  /**< Address 4. */
-    uint32_t                          data_Length;
+		  /**< Note that address will not take effect when using self-defined frame  */
+    uint32_t                          data_Length;   
           /**< Size of the data to be transmitted. */
     uint8_t                           *data;   /**< Data. */
 } qapi_WLAN_Raw_Send_Params_t;
@@ -2566,6 +2574,17 @@ typedef enum
 } qapi_WLAN_Wpa3_Enable_e;
 
 /**
+@ingroup qapi_wlan_mgmt_frame_type
+Identifies the management frame type.
+*/
+typedef enum
+{
+    QAPI_WLAN_MGMT_NONE_E  = 0x0, /**< None. */
+    QAPI_WLAN_MGMT_ASSOC_RESP_E  = 0x1, /**< Association response. */
+    QAPI_WLAN_MGMT_PROBE_RESP_E  = 0x2,  /**< Probe response. */
+} qapi_WLAN_MGMT_FRAME_e;
+
+/**
 @ingroup qapi_wlan
 Macro definitions for packet generation.
 */
@@ -3018,6 +3037,49 @@ Nonzero value -- Set rate failed.
 None.
 */
 qapi_Status_t qapi_WLAN_Get_Rate (qapi_WLAN_Set_Rate_Params_t *prate_para);
+
+/**
+@ingroup qapi_wlan
+Send raw frame.
+
+@param[in] device_ID raw_Params config. 
+
+@return
+QAPI_OK -- Send frame successfully. \n
+Nonzero value -- Send frame failed.
+
+@dependencies
+None.
+*/
+qapi_Status_t qapi_WLAN_Raw_Send(qapi_WLAN_Raw_Send_Params_t *raw_para); 
+
+/**
+@brief  API to be used to enable wlan management frame filter
+@param[in]  device_id        Device ID.
+@param[in]  mgmt_filter      WLAN management frames filter. Now only support association response and probe response frames.
+
+@return qapi_Status_t        QAPI_OK on success, other error code on failure.
+*/
+qapi_Status_t qapi_WLAN_Enable_Mgmt_Filter (uint8_t device_ID, uint32_t mgmt_filter);
+
+/**
+@brief  API to be used to disable wlan management frame filter
+@param[in]  device_id        Device ID.
+
+@return qapi_Status_t        QAPI_OK on success, other error code on failure.
+*/
+qapi_Status_t qapi_WLAN_Disable_Mgmt_Filter (uint8_t device_ID);
+
+/**
+@brief  API to be used to recieve wlan management frames which are in filter.
+@param[out]  buffer          Pointer to output buffer for management frames .
+@param[in]   buffer_len      Buffer lenght in bytes.
+@param[out]  frame_len       lenght of management frames.
+@param[in]   timeout         timeout in millisecond when receive management frames .
+
+@return qapi_Status_t    QAPI_OK on success, other error code on failure.
+*/
+qapi_Status_t qapi_WLAN_Recv_Mgmt_Frames (uint8_t *buffer, uint32_t buffer_len, uint32_t *frame_len, uint32_t timeout);
 
 _STRUCT_4BYTE_ALLIGN_CHECK(qapi_WLAN_Evt_Hdr_t)
 _STRUCT_4BYTE_ALLIGN_CHECK(qapi_WLAN_Enable_Evt_t)

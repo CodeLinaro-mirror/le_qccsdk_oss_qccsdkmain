@@ -13,6 +13,9 @@
 #include "qurt_mutex.h"
 
 #include "safeAPI.h"
+#ifdef CONFIG_MGMT_FILTER_DEMO
+#include "mgmt_filter_demo.h"
+#endif
 
 #define WIFI_SHELL_INFO 1
 #define WIFI_SHELL_LOG  0
@@ -626,6 +629,8 @@ static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Param
         e_wpa_ver = QAPI_WLAN_AUTH_WPA_PSK_E;
     } else if (!strcmp(wpaVer,"WPA2")) {
         e_wpa_ver = QAPI_WLAN_AUTH_WPA2_PSK_E;
+	} else if (!strcmp(wpaVer, "SAE")) {
+        e_wpa_ver = QAPI_WLAN_AUTH_WPA3_SAE_E;
     } else {
         info_printf("invalid wpa ver =%s\n", wpaVer);
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
@@ -1281,6 +1286,67 @@ static qapi_Status_t getSTAListenInterval(uint32_t __attribute__((__unused__)) P
     return 0;
 }
 
+#ifdef CONFIG_MGMT_FILTER_DEMO
+static void print_mgmt_frames(void)
+{
+    uint32_t i, j;
+
+	for (i=0; i<10; i++)
+	{
+	    if (mgmt_frame_recv_buf[i].len == 0)
+	    {
+	        continue;
+	    }
+		
+	    printf("Recv Frame len %d: ", mgmt_frame_recv_buf[i].len);
+      	for (j=0; j<mgmt_frame_recv_buf[i].len; j++)
+      	{
+            if (j%16 == 0)
+			{
+				printf("\r\n");
+			}
+      	    printf("%02x", *(mgmt_frame_recv_buf[i].data+j));
+      	}		
+		printf("\r\n\r\n");
+	}
+}
+
+
+static qapi_Status_t setMgmtFilter(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_List[0].Integer_Value == -1)
+    {
+		print_mgmt_frames();
+		return QAPI_OK;
+    }
+	
+    if ((Parameter_List[0].Integer_Value != QAPI_WLAN_MGMT_NONE_E)
+		  && (Parameter_List[0].Integer_Value != QAPI_WLAN_MGMT_ASSOC_RESP_E) 
+		  && (Parameter_List[0].Integer_Value != QAPI_WLAN_MGMT_PROBE_RESP_E)
+		  && ((Parameter_List[0].Integer_Value != (QAPI_WLAN_MGMT_ASSOC_RESP_E | QAPI_WLAN_MGMT_PROBE_RESP_E)))) {
+        info_printf("management frame type need set 0, 1, 2, 3 or -1\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+	mgmt_frame_recv_filter = Parameter_List[0].Integer_Value;
+
+	if (mgmt_frame_recv_filter != QAPI_WLAN_MGMT_NONE_E)
+	{
+		mgmt_frame_recv_enabled = 1;		
+        qurt_signal_set(&mgmt_filter_start, MGMT_FILTER_MASK_START);
+	}
+	else
+	{
+		mgmt_frame_recv_enabled = 0;
+	}
+    return QAPI_OK;
+}
+#endif
+
 int32_t set_ap_beacon_interval(uint32_t beacon_int_in_tu)
 {
 	uint32_t length = sizeof(qapi_WLAN_DEV_Mode_e);
@@ -1485,6 +1551,271 @@ static qapi_Status_t channelSwitch(uint32_t Parameter_Count, QAPI_Console_Parame
 	
     return QAPI_OK;
 }
+static qapi_Status_t sendRawFrame(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint8_t rate_index = 0, tries = 0, header_type = 0;
+	//uint8_t deviceId = get_active_device();
+    uint32_t i = 0, chan = 0, size = 0;
+    int32_t status = -1;
+    uint8_t addr[4][6];
+    qapi_WLAN_Raw_Send_Params_t rawSendParams;
+	
+	/*Only for test of self-defined frame*/
+	uint8_t probe_req_str[70]={ 
+						/*FC*/
+						0x40, 0x00,
+						/*Duration*/
+						0x00, 0x00,
+						/*Addr1*/
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+						/*Addr2*/
+						0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 
+						/*Addr3*/
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+						/*SEQ*/
+						0x00, 0x00,
+						/*SSID */
+						0x00,0x00,
+						/*supported rates*/
+						0x01, 0x08, 0x02, 0x04 ,0x0b, 0x16, 0x8c, 0x92, 0x98, 0xa4,
+						/*extended supported Rates*/
+						0x32 ,0xC8, 0x5C ,0x9B ,0x31, 0xB6, 0x16, 0x0D ,0xFC, 0xB2, 
+						0xC0, 0x8B, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00 ,0x00 ,0x98 ,
+						0x0D ,0x00 ,0x00 ,0x00 ,0x00 ,0x00 ,0xC0 ,0x06 ,0x00 ,0x88 ,0x01,0x66,0x15,0x0B 
+			};
+  
+
+    if((Parameter_Count < 5) || (Parameter_Count > 9)){
+      goto raw_usage;
+    }
+
+    rate_index = Parameter_List[0].Integer_Value;
+    tries = Parameter_List[1].Integer_Value;
+    size = Parameter_List[2].Integer_Value;
+    chan = Parameter_List[3].Integer_Value;
+    header_type = (uint8_t)strtol((const char *)Parameter_List[4].String_Value, NULL, 16);
+    memset (addr, 0, sizeof(addr));
+	
+	if(header_type == 0xff){
+		rawSendParams.data = malloc(sizeof(probe_req_str));
+		memcpy(rawSendParams.data, probe_req_str, sizeof(probe_req_str));
+    	rawSendParams.data_Length = sizeof(probe_req_str);
+	}
+	else{
+		rawSendParams.data = NULL;
+    	rawSendParams.data_Length = 0;
+	}
+	
+    for(i = 0; i < (Parameter_Count-5);i++) {
+        if(ether_aton((const char *)Parameter_List[5+i].String_Value, &(addr[i][0])))
+        {
+            info_printf("ERROR: MAC address translation failed.\r\n");
+            return status;
+        }
+    }
+
+    if( Parameter_Count == 5 )
+    {
+            addr[0][0] = 0xff;
+            addr[0][1] = 0xff;
+            addr[0][2] = 0xff;
+            addr[0][3] = 0xff;
+            addr[0][4] = 0xff;
+            addr[0][5] = 0xff;
+            addr[1][0] = 0x00;
+            addr[1][1] = 0x03;
+            addr[1][2] = 0x7f;
+            addr[1][3] = 0xdd;
+            addr[1][4] = 0xdd;
+            addr[1][5] = 0xdd;
+            addr[2][0] = 0x00;
+            addr[2][1] = 0x03;
+            addr[2][2] = 0x7f;
+            addr[2][3] = 0xdd;
+            addr[2][4] = 0xdd;
+            addr[2][5] = 0xdd;
+            addr[3][0] = 0x00;
+            addr[3][1] = 0x03;
+            addr[3][2] = 0x7f;
+            addr[3][3] = 0xee;
+            addr[3][4] = 0xee;
+            addr[3][5] = 0xee;
+            if(header_type == 2) {
+                memcpy(&addr[0][0], &addr[1][0], __QAPI_WLAN_MAC_LEN);
+                //change destination address
+                addr[2][3] = 0xaa;
+                addr[2][4] = 0xaa;
+                addr[2][5] = 0xaa;
+            }
+    }
+
+    rawSendParams.rate_Index = rate_index;
+    rawSendParams.num_Tries = tries;
+    rawSendParams.payload_Size = size;
+    rawSendParams.channel = chan;
+    rawSendParams.header_Type = header_type;
+    rawSendParams.seq = 0;
+    memcpy(&rawSendParams.addr1[0], addr[0], __QAPI_WLAN_MAC_LEN);
+    memcpy(&rawSendParams.addr2[0], addr[1], __QAPI_WLAN_MAC_LEN);
+    memcpy(&rawSendParams.addr3[0], addr[2], __QAPI_WLAN_MAC_LEN);
+    memcpy(&rawSendParams.addr4[0], addr[3], __QAPI_WLAN_MAC_LEN);
+    
+
+    status = qapi_WLAN_Raw_Send(&rawSendParams);
+    if( status == QAPI_WLAN_ERROR)
+    {
+raw_usage:
+       info_printf("raw input error\r\n");
+       info_printf("usage = WLAN SendRawFrame rate num_tries num_bytes channel header_type [addr1 [addr2 [addr3 [addr4]]]]\r\n");
+	   info_printf("example = sendrawframe 1 10 30 11 1 00:03:7f:cc:cc:cc 00:03:7f:dd:dd:dd 00:03:7f:dd:dd:dd 00:aa:bb:28:43:91 \r\n");
+	   info_printf("NOTICE: 1. if the addr not given, will use default addr; 2. broadcast frame will only be sent once\r\n");
+       info_printf("rate = rate index where 0==1mbps; 1==2mbps; 2==5.5mbps etc(this value will not take effect when connected)\r\n");
+       info_printf("num_tries = number of transmits 1 - 14(broadcast frames will be sent only once)\r\n");
+       info_printf("num_bytes = payload size 0 to 1400\r\n");
+       info_printf("channel = 0 - 11 for 2g; 36- for 5g (this value will not take effect when connected)\r\n");
+       info_printf("header_type = 0==beacon frame; 1== Probe Request; 2==QOS data frame; 3==4 address data framel; ff==self-defined frame\r\n");
+       info_printf("addr1 = mac address xx:xx:xx:xx:xx:xx, default ff:ff:ff:ff:ff:ff\r\n");
+       info_printf("addr2 = mac address xx:xx:xx:xx:xx:xx, default 00:03:7f:dd:dd:dd\r\n");
+       info_printf("addr3 = mac address xx:xx:xx:xx:xx:xx, default 00:03:7f:dd:dd:dd, QoS changed to 00:03:7f:aa:aa:aa\r\n");
+       info_printf("addr4 = mac address xx:xx:xx:xx:xx:xx, default 00:03:7f:ee:ee:ee\r\n");              
+    }
+
+	if((header_type == 0xff) 
+		&& (rawSendParams.data != NULL))
+	{	
+		free(rawSendParams.data);
+	}
+    
+    return status;
+}
+
+uint8_t ascii_to_hex(char val)
+{
+    if('0' <= val && '9' >= val)
+    {
+        return (uint8_t)(val - '0');
+    }
+    else if('a' <= val && 'f' >= val)
+    {
+        return (uint8_t)((val - 'a') + 0x0a);
+    }
+    else if('A' <= val && 'F' >= val)
+    {
+        return (uint8_t)((val - 'A') + 0x0a);
+    }
+    return 0xff;/* Error */
+}
+
+int32_t set_app_ie(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t enet_device = get_active_device();
+    uint32_t dataLen = sizeof(qapi_WLAN_DEV_Mode_e);
+    qapi_WLAN_DEV_Mode_e wifimode;
+    int32_t return_code = 0;
+    uint32_t length = 0, i = 0;
+    uint8 tmpvalue1 = 0, tmpvalue2 = 0;
+    qapi_WLAN_App_Ie_Params_t ie_params;
+
+    if(QAPI_OK != qapi_WLAN_Get_Param (enet_device, 
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+                                &wifimode,
+                                &dataLen)){
+        info_printf("get operation mode fail for device %d\n", enet_device);
+        return -1;
+    }
+
+    ie_params.mgmt_Frame_Type = Parameter_List[0].Integer_Value;
+
+    if ((wifimode == DEV_MODE_STATION_E) && (ie_params.mgmt_Frame_Type != QAPI_WLAN_FRAME_ASSOC_REQ_E))
+    {
+        info_printf("In station mode, application specified information element can be added only in association request frames\r\n");
+        return -1;
+    }
+
+    if ((wifimode == DEV_MODE_AP_E) &&
+        ((ie_params.mgmt_Frame_Type != QAPI_WLAN_FRAME_BEACON_E) && (ie_params.mgmt_Frame_Type != QAPI_WLAN_FRAME_PROBE_RESP_E)))
+    {
+        info_printf("In soft-AP mode, application specified information element can be added only in beacon and probe response frames\r\n");
+        return -1;
+    }
+
+    length= strlen((char *)Parameter_List[1].String_Value);
+    if (length < 2)
+    {
+        info_printf("Invalid application specified information element length. Application specified information element must start with 'dd'\r\n");
+        return -1;
+    }
+
+    if (length % 2 !=0)
+    {
+        info_printf("Invalid application specified information element length. The length must be a multiple of two.\r\n");
+        return -1;
+    }
+
+    /* The length must be not less than 10 as every two input characters are converted into a hex number 
+     * and a valid application information element at least has element ID, length and OUI per 802.11 spec.
+     */
+    if(length > 2 && length < 10)
+    {
+        info_printf("The input characters cannot be converted into a valid application element information.\r\n");
+        info_printf("The input characters should follow the format:Element ID(1 byte)|Length(1 byte)|OUI(3 bytes)|Vendor-specific content((Length-3)bytes).\r\n");
+        return -1;
+    }
+
+    ie_params.ie_Len = length/2;
+	
+    if ((strncmp((char *)(Parameter_List[1].String_Value), "dd", 2) != 0))
+    {
+        info_printf("Application specified information element must start with 'dd'\r\n");
+        return -1;
+    }
+
+    ie_params.ie_Info = (uint8_t *)malloc(ie_params.ie_Len + 1);
+    for(i = 0; i < ie_params.ie_Len; i++)
+    {
+        tmpvalue1 = ascii_to_hex(Parameter_List[1].String_Value[2*i]);
+        tmpvalue2 = ascii_to_hex(Parameter_List[1].String_Value[2*i+1]);
+        if(tmpvalue1 == 0xff ||tmpvalue2 == 0xff)
+        {
+            free(ie_params.ie_Info);
+            info_printf("The characters of Application specified information element only be '0-9', 'a-f' and 'A-F'.\r\n");
+            return -1;
+        }
+        ie_params.ie_Info[i] = ((tmpvalue1<<4)&0xf0)|(tmpvalue2&0xf);
+    }
+
+    /* The length in application information element should be the length of OUI + vendor-specific content*/
+    if((ie_params.ie_Len > 1) && (ie_params.ie_Info[1] != (ie_params.ie_Len -2)))
+    {	
+        free(ie_params.ie_Info);
+        info_printf("The length in application information element is not correct, it should be the length of OUI + vendor-specific content. \r\n");
+        return -1;
+    }
+	
+    ie_params.ie_Info[ie_params.ie_Len] = '\0';
+    return_code = qapi_WLAN_Set_Param (enet_device,
+                                       __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                       __QAPI_WLAN_PARAM_GROUP_WIRELESS_APP_IE,
+                                       &ie_params,
+                                       sizeof(qapi_WLAN_App_Ie_Params_t),
+                                       FALSE);
+    free(ie_params.ie_Info);
+    return return_code;
+}
+
+static qapi_Status_t setApplicationIe(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    if(Parameter_Count < 2 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid)
+    {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    if (0 == set_app_ie(Parameter_Count, Parameter_List))
+    {
+       return QAPI_OK;
+    }
+    return QAPI_ERROR;
+}
 
 const QAPI_Console_Command_t wifi_shell_cmds[] =
 {
@@ -1524,6 +1855,11 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 	{ channelSwitch,	"channelSwitch",	"<new channel num> <switch count> <switch mode> [is 6G]",	"channel switch in AP mode"},
 	{ setSTAListenInterval,	"setSTAListenInterval",        "<listen_interval_in_TU> <0: ronud up|1: round down>",  "Set STA listen interval in TU which will round up/down to DTIM interval, 1TU=1024us"},
 	{ getSTAListenInterval,	"getSTAListenInterval",        "",  "Get STA listen interval in TU"},
+	{ sendRawFrame,	"sendRawFrame",        "",  "<rate_index> <num_tries = 1-14> <num_bytes = 0-1400> <channel: 1-11 or 36-> <type = 0:Beacon, 1:Probe Request, 2: QoS Data, 3: 4-addr data, ff:self-defined> [addr1 [addr2 [addr3 [addr4]]]]"},
+#ifdef CONFIG_MGMT_FILTER_DEMO	
+	{ setMgmtFilter,	"setMgmtFilter",        "0:None, 1:Asso Resp, 2:Probe Resp, 3:Asso and Probe Resp, -1:print mgmt frames",  "Set management frames filter"},
+#endif	
+    { setApplicationIe, "setApplicationIe", "<0:beacon/1:probe request/2:probe response/3:asssociation request> <IE starting with dd>",  "Set application specified IE in specified management frame. Every input character is a nibble which means every 2 character is a byte, two characters are converted into a hex number before putting it in the frame. The length of application specified IE should be multiple of 2. if user has single digit value he need to prepend with 0 for ex: 0x5 should be 0x05. To remove IE, input only 'dd'"},
 };
 
 const QAPI_Console_Command_Group_t wifi_shell_cmd_group = {WLAN_SHELL_GROUP_NAME, sizeof(wifi_shell_cmds) / sizeof(QAPI_Console_Command_t), wifi_shell_cmds};

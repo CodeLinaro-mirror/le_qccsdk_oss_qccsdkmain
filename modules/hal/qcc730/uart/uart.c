@@ -63,6 +63,7 @@ void nt_nop_delay( uint32_t n )
 #define SYS_UART_FAR    ( QWLAN_UART_UART_FAR_REG )
 #define SYS_UART_IIR    ( QWLAN_UART_UART_IIR_REG )
 #define SYS_UART_MCR    ( QWLAN_UART_UART_MCR_REG )
+#define SYS_UART_USR    ( QWLAN_UART_UART_USR_REG )
 
 #define UART_ERDA_INTTERUPT_DISABLE     0x00
 #define UART_ERDA_INTTERUPT_ENABLE 		0x01
@@ -502,6 +503,8 @@ UART_Recieve_buff(
     extern TaskHandle_t QCLI_Task_handle;
 #endif
 #endif
+    /* WR: Case for external wakup from deepsleep */
+    HW_REG_RD(QWLAN_UART_UART_USR_REG);
 	//read THR register
 	data = (char)NT_HW_RD(QWLAN_UART_UART_RBR_REG);
 #ifdef FTM_OVER_UART

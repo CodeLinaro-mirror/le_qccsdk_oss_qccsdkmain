@@ -117,6 +117,8 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t                wlan_roaming_started:1;
     uint32_t                wlan_set_rate_block_mode:1;
     uint32_t                wlan_get_rate_block_mode:1;
+	uint32_t                wlan_send_raw_block_mode:1;
+    uint32_t                wlan_set_mgmt_filter_block_mode:1;
     qapi_Status_t           wlan_qapi_error;
     dev_common_t           *dev_common;
     wlan_evt_payload_t      event_payload_buf[EVT_PAYLOAD_MAX];
@@ -143,7 +145,11 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t                roaming_time_out;
     TimerHandle_t           roaming_timer;
     char					country_code[3];
+	uint8_t					frame_queued_flag;
     qapi_WLAN_Set_Rate_Params_t rate_param;
+	qapi_WLAN_Raw_Send_Params_t raw_pkt_frame;
+	WMI_MGMT_FRAME_FILTER mgmt_filter;
+    WMI_SET_APPIE_CMD       appie_cmd;
 } wlan_qapi_cxt_t;
 
 extern wlan_qapi_cxt_t *gp_wlan_qapi_cxt;

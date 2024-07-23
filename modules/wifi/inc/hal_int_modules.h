@@ -909,6 +909,7 @@ void hal_phy_power_switch_to_cfg();
 void hal_phy_power_switch_to_listen();
 void hal_mac_sw_powerup();
 void hal_mac_hw_ctrl();
+void nt_hal_tpe_retry_threshold_set(uint8_t staid, uint8_t retry_bit, uint8_t retry_threshold0, uint8_t retry_threshold1, uint8_t retry_threshold2);
 
 #ifdef PHY_POWER_SWITCH
 void hal_phy_power_switch_to_cfg(void);

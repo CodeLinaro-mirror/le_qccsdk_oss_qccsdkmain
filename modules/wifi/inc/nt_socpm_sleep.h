@@ -479,6 +479,12 @@ void     nt_socpm_glob_restore(void);
 * @return none
 */
 void nt_enable_standby(uint64_t sleep_time);
+/*
+* @brief: This function used to config and enable indefinite deepsleep
+* @param 
+* @return none
+*/
+void nt_enable_indef_deepsleep( uint64_t sleep_time );
 
 /*
 * @brief: This function is used to get last slept time in us
@@ -702,9 +708,9 @@ bool nt_bcn_logs_is_enabled(void);
 /*
  * @brief : This function is used to get socpm status
  * @param : None
- * @return : None
+ * @return : the value of socpm status 0:disable other: enable
  */
-void nt_socpm_status(void);
+uint32_t nt_socpm_status(void);
 
 /*
  * @brief : This function is used to add dummy sleep list node handle in slp list
