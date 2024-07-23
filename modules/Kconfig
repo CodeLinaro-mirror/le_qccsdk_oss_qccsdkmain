@@ -6,5 +6,6 @@ source "./modules/core/system/Kconfig"
 source "./modules/fs/Kconfig"
 source "./modules/net/mqtt_client/Kconfig"
 source "./modules/net/httpc/Kconfig"
+source "./modules/net/mbedtls/Kconfig"
 source "./modules/wifi/Kconfig"
 

@@ -31,6 +31,7 @@ void app_init(void)
 #ifdef CONFIG_FWUP_DEMO
     Initialize_FwUpgrade_Demo();
 #endif 
+    Initialize_Crypto_Demo();
 #ifdef CONFIG_QCSPI_HFC_TEST
 	extern void Initialize_qcspi_hfc_Demo(void);
 	Initialize_qcspi_hfc_Demo();

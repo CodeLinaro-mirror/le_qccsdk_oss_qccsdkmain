@@ -1,0 +1,10 @@
+menu "mbedTLS setting"
+config MBEDTLS_USE_PKA
+    bool "enable PKA for MbedTLS"
+    default y
+
+config MBEDTLS_PKA_TEST
+    bool "enable test for Mbedtls PKA"
+    depends on MBEDTLS_USE_PKA
+    default y
+endmenu

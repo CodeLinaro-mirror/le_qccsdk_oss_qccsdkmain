@@ -243,6 +243,9 @@ app_mode_id_t nt_get_app_mode(void);
 #if (CONFIG_FW_UPGRADE)
 #include "qapi_firmware_upgrade.h"
 #endif
+
+#include "pka.h"
+
 /*******************************************************************************
  ******************************************************************************/
 
@@ -434,6 +437,8 @@ int main(
 #endif
     pmu->pmu.PMU_SECIP_GDSCR.bit.COLLAPSE_EN_SW = 0;
     pmu->pmu.PMU_SECIP_GDSCR.bit.HW_CONTROL = 0;
+
+    pka_init(&g_pka_ctxt);
 
 #if (CONFIG_QCCSDK_DEMO)
     #if (CONFIG_QCCSDK_CONSOLE)

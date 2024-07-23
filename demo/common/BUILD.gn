@@ -55,6 +55,10 @@ mpu_demo_src = [
     "mpu/mpu_demo.c"
 ]
 
+crypto_demo_src = [
+    "crypto/crypto_demo.c",
+]
+
 not_needed("*", [ ])
 
 config("_config") {
@@ -69,6 +73,10 @@ config("_config") {
 source_set("common") {
     sources = []
     include_dirs = []
+
+    sources += crypto_demo_src
+    include_dirs += ["//demo/common/crypto"]
+
     if (CONFIG_NET) {
         if (CONFIG_NET_SHELL) {
             include_dirs += [

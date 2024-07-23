@@ -1,8 +1,10 @@
-#
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
 
 import("//configs_decl.gni")
 
 mbedtls_inc = [
+    "../../../../comp/mbedtls/library",
     "../../../../comp/mbedtls/include",
     "../../../../comp/mbedtls/port/include",
 ]
@@ -26,12 +28,8 @@ mbedtls_src = [
     "../../../../comp/mbedtls/library/ctr_drbg.c",
     "../../../../comp/mbedtls/library/debug.c",
     "../../../../comp/mbedtls/library/des.c",
-    "../../../../comp/mbedtls/library/dhm.c",
     "../../../../comp/mbedtls/library/ecdh.c",
-    "../../../../comp/mbedtls/library/ecdsa.c",
     "../../../../comp/mbedtls/library/ecjpake.c",
-    "../../../../comp/mbedtls/library/ecp.c",
-    "../../../../comp/mbedtls/library/ecp_curves.c",
     "../../../../comp/mbedtls/library/entropy.c",
     "../../../../comp/mbedtls/library/entropy_poll.c",
     "../../../../comp/mbedtls/library/error.c",
@@ -54,7 +52,6 @@ mbedtls_src = [
     "../../../../comp/mbedtls/library/platform.c",
     "../../../../comp/mbedtls/library/platform_util.c",
     "../../../../comp/mbedtls/library/ripemd160.c",
-    "../../../../comp/mbedtls/library/rsa.c",
     "../../../../comp/mbedtls/library/rsa_alt_helpers.c",
     "../../../../comp/mbedtls/library/sha1.c",
     "../../../../comp/mbedtls/library/sha3.c",
@@ -84,6 +81,26 @@ mbedtls_src = [
     "../../../../comp/mbedtls/library/x509write_crt.c",
     "../../../../comp/mbedtls/library/x509write_csr.c",
 ]
+
+if (CONFIG_MBEDTLS_USE_PKA) {
+    mbedtls_src += [
+        "../../../../comp/mbedtls/port/bignum_alt.c",
+        "../../../../comp/mbedtls/port/dhm_alt.c",
+        "../../../../comp/mbedtls/port/ecdsa_alt.c",
+        "../../../../comp/mbedtls/port/ecp_alt.c",
+        "../../../../comp/mbedtls/port/ecp_curves_alt.c",
+        "../../../../comp/mbedtls/port/rsa_alt.c",
+    ]
+}
+else {
+    mbedtls_src += [
+        "../../../../comp/mbedtls/library/dhm.c",
+        "../../../../comp/mbedtls/library/ecdsa.c",
+        "../../../../comp/mbedtls/library/ecp.c",
+        "../../../../comp/mbedtls/library/ecp_curves.c",
+        "../../../../comp/mbedtls/library/rsa.c",
+    ]
+}
 
 config("_config") {
     include_dirs = mbedtls_inc
