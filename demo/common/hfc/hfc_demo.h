@@ -22,17 +22,18 @@ typedef enum {
 
 typedef struct {
 	hfc_msg_hdr hdr;
-	uint16_t f2a_pkt_count;
-	uint16_t f2a_pkt_size;	
     uint8_t mode;
     uint8_t reserved[3];
+	uint32_t f2a_pkt_count;
+	uint32_t f2a_pkt_size;	
 }hfc_data_test_ctrl;
 
 typedef struct {
 	hfc_msg_hdr hdr;	
-	uint32_t mode;
-	uint16_t f2a_pkt_count;
-	uint16_t f2a_pkt_size;
+    uint8_t mode;
+    uint8_t reserved[3];
+	uint32_t f2a_pkt_count;
+	uint32_t f2a_pkt_size;
 	uint32_t recv_bytes;
 	uint32_t send_bytes;
 }hfc_data_test_stats;

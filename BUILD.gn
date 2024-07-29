@@ -70,6 +70,7 @@ projects_common = [
     "//drivers",
     "//lib",
     "//modules/console",
+    "//modules/core/hostif",
     "//demo/qcli_demo",
     "//demo/hello_world",
     "//demo/posix_demo",

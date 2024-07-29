@@ -77,6 +77,12 @@ source_set("drivers") {
             "//modules/net/httpc/qcom_http_client.c",
         ]
     }
-        
+    
+    if (CONFIG_QCSPI_HFC_TEST) {
+        sources += [
+             "hfc/qapi_hfc.c",
+        ]
+    }
+                                    
 }
 

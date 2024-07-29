@@ -304,18 +304,18 @@ uint8_t ringif_f2a_num_elems_to_clear(ring_ctx_t *p_ring_ctx)
 
     if(NULL == p_ring_ctx) {
         RINGIF_PRINT_LOG_ERR("RingIF_Err: p_ring_ctx NULL\r\n");
-        return TRUE;
+        return 0;
     }
 
     if(NULL == p_ring_ctx->p_read_idx){
         RINGIF_PRINT_LOG_ERR("RingIF_Err: Ring read ptr NULL for ring_id: %d\r\n", p_ring_ctx->ring_id);
-        return TRUE;
+        return 0;
     }
 
     if(*p_ring_ctx->p_read_idx >= p_ring_ctx->ring_num_elem){
         RINGIF_PRINT_LOG_ERR("RingIF_Err: Corrupted Read index:%d >= num_elem:%d for ring_id:%d\r\n", 
                    *p_ring_ctx->p_read_idx, p_ring_ctx->ring_num_elem,p_ring_ctx->ring_id);
-        return TRUE;
+        return 0;
     }
     
     ring_rd_idx = *p_ring_ctx->p_read_idx;

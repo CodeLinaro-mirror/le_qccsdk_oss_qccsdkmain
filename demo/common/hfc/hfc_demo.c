@@ -18,7 +18,7 @@
 
 #define QCSPI_HFC_TEST_THREAD_STACKSIZE          1024
 #define QCSPI_HFC_TEST_THREAD_PRIO               6
-#define HFC_SEND_MAX_RETRY_COUNT                 10
+#define HFC_SEND_MAX_RETRY_COUNT                 200
 #define HFC_TEST_PRINT_ENABLE 1
 #ifdef HFC_TEST_PRINT_ENABLE
 #define HFC_TEST_PRINT(...) printf( __VA_ARGS__) 
@@ -103,12 +103,12 @@ int qcspi_hfc_send_test_end_event(void)
 	return 0;
 }
 
-int qcspi_hfc_send_test_data(uint16_t pkt_count, uint16_t pkt_size, uint16_t msg_id)
+int qcspi_hfc_send_test_data(uint32_t pkt_count, uint32_t pkt_size, uint16_t msg_id)
 {
 	uint8_t *buf = NULL;
 	int retry_cnt = 0;
 	qapi_Status_t ret = QAPI_OK;
-    int i;
+    uint32_t i;
 	
     HFC_TEST_PRINT("f2a send pkt_count %d pkt_size %d\r\n", pkt_count, pkt_size);
 
@@ -121,6 +121,7 @@ int qcspi_hfc_send_test_data(uint16_t pkt_count, uint16_t pkt_size, uint16_t msg
 			continue;
 		}
 		
+		retry_cnt = 0;
 		memset(buf, i%256, pkt_size);
 		while (retry_cnt < HFC_SEND_MAX_RETRY_COUNT)
 		{
@@ -129,7 +130,6 @@ int qcspi_hfc_send_test_data(uint16_t pkt_count, uint16_t pkt_size, uint16_t msg
     		{
 				HFC_TEST_PRINT("qcspi_hfc_send_test_data send pkt num %d\r\n", i+1);
     		    hfc_data_test_result.send_bytes+= pkt_size;
-				retry_cnt = 0;
 			    break;
 			} 
 
@@ -137,8 +137,12 @@ int qcspi_hfc_send_test_data(uint16_t pkt_count, uint16_t pkt_size, uint16_t msg
 			{
 				/* Temp way to wait for the free elment, which
 				 * could be optimized to improve the speed. */
-    		    nt_osal_delay(100); 
+    		    nt_osal_delay(10); 
 				retry_cnt++;
+				if (retry_cnt >= HFC_SEND_MAX_RETRY_COUNT)
+				{
+				    nt_osal_free_memory(buf);
+				}
     		}
 			else
 			{
