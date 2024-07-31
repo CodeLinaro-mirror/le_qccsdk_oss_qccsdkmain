@@ -173,7 +173,8 @@ int nt_osal_get_expiry_time(nt_osal_timer_handle_t timer_handle);
 int nt_osal_timer_stop(nt_osal_timer_handle_t timer_handle , nt_osal_tick_type_t block_time);
 int nt_osal_delete_timer(nt_osal_timer_handle_t timer_handle , nt_osal_tick_type_t block_time);
 int nt_osal_timer_period_change(nt_osal_timer_handle_t timer_handle , nt_osal_tick_type_t timer_period, nt_osal_tick_type_t block_time);
-nt_osal_tick_type_t nt_osal_get_ticks(void);
+#define nt_osal_get_ticks() \
+		xTaskGetTickCount()
 size_t  strnscat(char  *dst, size_t  dst_size, const char  *src, size_t src_size);
 size_t  memscpy(void *dst,size_t dst_size,const void *src,size_t src_size);
 #else

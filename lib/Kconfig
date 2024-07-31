@@ -146,4 +146,7 @@ config MQTT_MUTUAL_AUTH_DEMO
     depends on MQTT_CLIENT && FILE_SYSTEM
     bool "enable MQTT over SSL mutual authentication demo"
     default n
+config RNG_TEST
+    bool "enable RNG test"
+    default n
 endmenu

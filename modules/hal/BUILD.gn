@@ -42,6 +42,8 @@ source_set("hal") {
         "qcc730/security/elppka.c",
         "qcc730/security/pka.c",
         "qcc730/security/pka_target.c",
+        "qcc730/security/nt_security_ip.c",
+        "qcc730/security/nt_prng.c",
     ]
     if (CONFIG_QTIMER) {
         sources += [ "qcc730/qtmr/ferm_qtmr.c" ]

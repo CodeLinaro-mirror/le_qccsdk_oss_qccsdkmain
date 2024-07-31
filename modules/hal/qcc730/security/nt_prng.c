@@ -6,6 +6,8 @@
 #include "nt_hw.h"
 #include "hal_int_sys.h"
 #include "nt_osal.h"
+#include "safeAPI.h"
+#include <stdio.h>
 
 
 int8_t nt_prng_init(void)
@@ -73,16 +75,26 @@ uint32_t nt_pget_rng( void )
 
 NT_BOOL nt_wlan_hw_prng_get(uint8_t *ptr, uint16_t len) {
 
-	uint32_t returned_data= 0;
-	returned_data = nt_pget_rng();
+    //printf("prng_get len:%d\r\n",len);
 
-	memcpy(ptr,&returned_data,len) ;
+    volatile uint32 tmp_iv;
+    uint32_t i;
+    const uint32_t unit_random_len = 4;
 
-	if(ptr == NULL)
-	{
-		return FALSE;
-	}
-	return TRUE;
+    if (!ptr || (0==len)){
+        return FALSE;
+    }
+
+    for (i=0; i<(len/unit_random_len); i++) {
+        tmp_iv = nt_pget_rng();
+        memscpy((void*)ptr, 4, (void*)&tmp_iv, 4);
+        ptr += 4;
+    }
+    if(len%4){
+        tmp_iv = nt_pget_rng();
+        memscpy((void*)ptr, len%4, (void*)&tmp_iv, len%4);
+    }
+    return TRUE;
 }
 
 

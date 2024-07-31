@@ -374,6 +374,10 @@ static void shell_init (void)
     extern void fs_shell_init(void);
     fs_shell_init();
 #endif
+#if (CONFIG_RNG_TEST)
+    extern void rng_shell_init(void);
+    rng_shell_init();
+#endif
 }
 #endif
 
@@ -429,15 +433,6 @@ int main(
     //SEGGER_SYSVIEW_Start();
 #endif
 
-  //power on SECIP
-#if CONFIG_SOC_QCC730V1
-    QCC730V1_PMU_BASE_Type *pmu = QCC730V1_PMU_BASE;
-#elif CONFIG_SOC_QCC730V2
-    QCC730V2_PMU_BASE_Type *pmu = QCC730V2_PMU_BASE;
-#endif
-    pmu->pmu.PMU_SECIP_GDSCR.bit.COLLAPSE_EN_SW = 0;
-    pmu->pmu.PMU_SECIP_GDSCR.bit.HW_CONTROL = 0;
-
     pka_init(&g_pka_ctxt);
 
 #if (CONFIG_QCCSDK_DEMO)
@@ -456,6 +451,15 @@ int main(
 fw_logger_init();
 #endif //SUPPORT_FERMION_LOGGER
 
+#ifdef NT_FN_HW_CRYPTO
+#ifndef CONFIG_FTM_MODE
+    if(app_mode != APP_MODE_FTM){
+        nt_secure_ip_pwr_status();
+        nt_enable_device_irq(CC_intr);
+        nt_prng_init();
+    }
+#endif
+#endif //NT_FN_HW_CRYPTO
 #ifdef FTM_MM_MODE_SWITCH_ENABLED
 #ifndef BOOT_TO_FTM
     bool status;
@@ -576,13 +580,6 @@ fw_logger_init();
     HW_REG_WR(QWLAN_PMU_DIG_TOP_CFG_REG,get_val);
 #endif
 
-#ifdef NT_FN_HW_CRYPTO
-    if(app_mode != APP_MODE_FTM){
-        nt_secure_ip_pwr_status();
-        nt_enable_device_irq(CC_intr);
-        nt_prng_init();
-    }
-#endif //NT_FN_HW_CRYPTO
 
 
 #ifdef NT_TU_HEAP_STATS

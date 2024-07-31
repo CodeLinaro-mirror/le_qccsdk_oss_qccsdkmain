@@ -114,4 +114,5 @@ declare_args() {
     CONFIG_HTTP_CLIENT_DEMO = false
 
     CONFIG_CPR_ENABLE = true
+    CONFIG_RNG_TEST = false
 }

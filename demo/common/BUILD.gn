@@ -163,5 +163,10 @@ source_set("common") {
             "net/src/httpc_demo.c",
         ]
     }
+
+    if (CONFIG_RNG_TEST) {
+        sources += ["platform/rng_shell.c"]
+    }
+
 }
 

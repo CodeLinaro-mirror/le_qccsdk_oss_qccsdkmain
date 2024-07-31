@@ -12,6 +12,7 @@
 
 nt_osal_semaphore_handle_t SecipPdHandle = NULL;
 
+#if 0
 #if defined(WIFI_HW_AES) || defined(WIFI_HW_AES_CCM) || defined(NT_FN_HW_CRYPTO)
 
 typedef struct crypto_security_s
@@ -86,6 +87,7 @@ void wifi_crypto_svc_hw_init()
     g_crypto_sec.crypto_hw_power_request = 0;
 }
 
+#endif
 #endif
 
 #ifdef NT_FN_HW_CRYPTO
