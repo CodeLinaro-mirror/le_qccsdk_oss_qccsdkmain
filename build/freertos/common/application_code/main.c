@@ -890,6 +890,17 @@ void qccsdk_start_app_task (void)
     }
 
 #ifndef CONFIG_HEAP_STATISTIC
+#ifdef DEBUG_MEM_LEAK
+void * pvPortCallocWrapper(size_t xNum, size_t xSize, const char *caller){
+    void *ptr = pvPortCalloc(xNum,xSize );
+    if (ptr != NULL) {
+      char pcWriteBuffer[200];
+      snprintf((char *)pcWriteBuffer,sizeof(pcWriteBuffer)-strlen(pcWriteBuffer),"Allocated %u bytes from %s\r\n",xNum * xSize,caller);
+        nt_dbg_print(pcWriteBuffer);
+    }
+    return ptr;
+}
+#endif  
     void *
     pvPortCalloc(
             size_t xNum,
