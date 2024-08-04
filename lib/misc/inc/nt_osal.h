@@ -23,6 +23,9 @@
 
 #ifndef CONFIG_HEAP_STATISTIC
 extern void * pvPortCalloc(size_t xNum, size_t xSize);
+#ifdef DEBUG_MEM_LEAK
+extern void * pvPortCallocWrapper(size_t xNum, size_t xSize, const char *caller);
+#endif
 #endif
 
 
@@ -231,17 +234,31 @@ extern void *__pvPortCalloc( size_t xNum, size_t xSize );
 #endif
 
 /*allocating heap memory*/
+#ifndef DEBUG_MEM_LEAK
 #define nt_osal_allocate_memory(size) \
 		pvPortMalloc(size)
+#else
+#define nt_osal_allocate_memory(size) \
+		pvPortMallocWrapper(size, __FUNCTION__)
+#endif
 
 /*Release allocated memory*/
+#ifndef DEBUG_MEM_LEAK
 #define nt_osal_free_memory(ptr) \
 		vPortFree(ptr)
+#else
+#define nt_osal_free_memory(ptr) \
+		pvPortFreeWrapper(ptr,__FUNCTION__)
+#endif
 
 /* Calloc */
+#ifndef DEBUG_MEM_LEAK
 #define nt_osal_calloc(count, size) \
 		pvPortCalloc(count, size)
-
+#else
+#define nt_osal_calloc(count, size) \
+		pvPortCallocWrapper(count, size,__FUNCTION__)
+#endif
 
 
 
