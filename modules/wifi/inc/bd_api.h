@@ -10,7 +10,7 @@
 __attribute__ ((section(".perf_nc_txt"))) void nt_dpm_prefill_bd_mgmt(p_ndpA ad);
 __attribute__ ((section(".perf_nc_txt"))) void nt_dpm_prefill_bd_data(p_ndpA ad);
 __attribute__ ((section(".perf_tx_txt"))) p_dpm_bd_tx_template nt_nwlan_dpm_get_prefilled_bd(p_ndpA ad, e_bd_template_type_t bd_type);
-__attribute__ ((section(".perf_nc_txt"))) uint32_t nt_append_bd_to_eap_frame(void *frame, uint32_t length, void **ret_frame);
+__attribute__ ((section(".perf_nc_txt"))) uint32_t nt_append_bd_to_eap_frame(void *frame, uint32_t length, void **ret_frame, uint8_t rate);
 __attribute__ ((section(".perf_nc_txt"))) uint32_t nt_get_pdu_from_rcvd_packet(void *frame, void **ret_frame);
 #ifdef FEATURE_TX_COMPLETE
 __attribute__ ((section(".perf_nc_txt"))) uint32_t nt_append_bd_to_data_frame(void *frame, uint32_t length, void **ret_frame, NT_BOOL tx_enabled);
@@ -42,7 +42,7 @@ uint32_t nt_append_bd_to_frame(void *frame, uint32_t length, void **ret_frame, u
 uint32_t nt_append_bd_to_frame_test(void *frame, uint32_t length, void **ret_frame, uint8_t testvar);
 #endif
 
-uint32_t nt_append_bd_to_eap_frame(void *frame, uint32_t length, void **ret_frame);
+uint32_t nt_append_bd_to_eap_frame(void *frame, uint32_t length, void **ret_frame, uint8_t rate);
 uint32_t nt_get_pdu_from_rcvd_packet(void *frame, void **ret_frame);
 #endif
 
