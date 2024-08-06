@@ -74,6 +74,9 @@ void pka_power_state_change_cb(uint8_t evt, void *p_args)
 {
     (void)p_args;
 	
+    if (evt == PWR_EVT_WMAC_PRE_SLEEP) {
+        pka_deinit(&g_pka_ctxt);
+    }
     if ((evt == PWR_EVT_WMAC_POST_AWAKE) || (evt == PWR_EVT_WMAC_SLEEP_ABORT)) {
         pka_init(&g_pka_ctxt);
     }
@@ -123,11 +126,20 @@ int pka_init(pka_state_t * ctxt)
     qurt_mutex_create(&ctxt->mutex);
 
 	fpci_evt_cb_reg((ps_evt_cb_t)&pka_power_state_change_cb, 
-        PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, 10, NULL);
+        PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, 10, NULL);
 	
     return 0;
 }
 
+int pka_deinit(pka_state_t * ctxt)
+{
+    if (ctxt->mutex)
+    {
+        qurt_mutex_delete( &ctxt->mutex );
+        ctxt->mutex = 0;
+    }
+    return 0;
+}
 
 int pka_lock(pka_state_t * ctxt, pka_operand_endianness_t pka_operand_endianness)
 {

@@ -28,6 +28,7 @@ typedef enum {
 
 
 int pka_init(pka_state_t * ctxt);
+int pka_deinit(pka_state_t * ctxt);
 int pka_lock(pka_state_t * ctxt, pka_operand_endianness_t pka_operand_endianness);
 int pka_unlock(pka_state_t * ctxt);
 int pka_set_endianess(pka_state_t * ctxt, pka_operand_endianness_t pka_operand_endianness);
