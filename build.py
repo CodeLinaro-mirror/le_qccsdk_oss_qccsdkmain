@@ -264,8 +264,8 @@ def pre_build_script(variant_name = 'FERMION_QCLI_DEMO', variant_image_id = 'MM'
 
 @log_to_file_deco(True, False)
 def gen_mib_from_xml():
-    # python core/wifi/config_ini/mib/xml_gen_from_xml.py tools/Target_tools/dev_cfg/export/master_xml.xml > core/wifi/config_ini/mib/mib.xml
-    cmd = [ 'python', '../comp/wifi/core/wifi/config_ini/mib/xml_gen_from_xml.py',
+    # python modules/wifi/config_ini/mib/xml_gen_from_xml.py tools/Target_tools/dev_cfg/export/master_xml.xml > modules/wifi/config_ini/mib/mib.xml
+    cmd = [ 'python', 'modules/wifi/config_ini/mib/xml_gen_from_xml.py',
         'tools/Target_tools/dev_cfg/export/master_xml.xml',
     ]
     logging.info('Gen mib ....')
@@ -274,7 +274,7 @@ def gen_mib_from_xml():
     if (rc != 0):
         logging.warning('mib_gen_from_xml failed')
         sys.exit(-1)
-    with open('../comp/wifi/core/wifi/config_ini/mib/mib.xml', 'wb') as outp:
+    with open('modules/wifi/config_ini/mib/mib.xml', 'wb') as outp:
         outp.write(out.encode('utf-8'))
 
 def prepare_gn_args(image = 'FERMION'):
