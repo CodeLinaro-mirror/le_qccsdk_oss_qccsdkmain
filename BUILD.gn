@@ -98,7 +98,7 @@ not_needed("*", [ ])
 
 config("common_define") {
     defines = [ "SCALE_INCLUDES", "CRM_BUILD_NUM=${build_id}", "IMAGE_FERMION",
-        "CONFIG_WLAN=1", "CONFIG_NET=1",
+        "CONFIG_WLAN=1", "CONFIG_NET=1", "CONFIG_FWUP_DEMO=1",
     ]
 
     defines += [ "DFU_BUILD", "PLATFORM_FERMION", "PHYDEVLIB_PRODUCT_FERMION", "PHYDEVLIB_IOT", "FERMION_SILICON"]
