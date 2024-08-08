@@ -186,6 +186,9 @@ config("linker_config") {
         if (CONFIG_FLASH_XIP_SUPPORT) {
             ldflags += [ "-Tfrn_ioe_wlan_sys_image-flashxip.ld" ]
         }
+        else if (!CONFIG_MPU_ENABLE) {
+            ldflags += [ "-Tfrn_ioe_wlan_sys_image_no_mpu.ld" ]
+        }
         else {
             ldflags += [ "-Tfrn_ioe_wlan_sys_image.ld" ]
         }
