@@ -37,14 +37,12 @@ MEMORY
 
   RAM (xrw) : ORIGIN = 0x00000000, LENGTH = 0x000A0000
   /* 
-   * RAM region is divided into 4 regions, namely PS_RO, PS_RW, RAM_RO, RAM_RW
-   * The origin and length of the 4 regions are consistent with MPU configuration
-   * Don't modify the value of the 4 regions, otherwise the MPU should be reconfigured
+   * RAM region is divided into 2 regions, namely RAM_RO, RAM_RW
+   * The origin and length of the 2 regions are consistent with MPU configuration
+   * Don't modify the value of the 2 regions, otherwise the MPU should be reconfigured
    */
-  PS_RO (xrw) : ORIGIN = 0x00000000, LENGTH = 0x00008000
-  PS_RW (xrw) : ORIGIN = 0x00008000, LENGTH = 0x00010000
-  RAM_RO (xrw) : ORIGIN = 0x00018000, LENGTH = 0x0000E000
-  RAM_RW (xrw) : ORIGIN = 0x00026000, LENGTH = 0x0007A000
+  RAM_RO (xrw) : ORIGIN = 0x00000000, LENGTH = 0x00016000
+  RAM_RW (xrw) : ORIGIN = 0x00016000, LENGTH = 0x0008A000
   PBL_RAM (xrw) : ORIGIN = 0x00000000, LENGTH = 0x00008000
   SBL_RAM (xrw) : ORIGIN = 0x00088000, LENGTH = 0x00008000
   CONFIG_TABLE (rw) : ORIGIN = 0x00090000, LENGTH = 0x00010000
@@ -324,7 +322,7 @@ SECTIONS
         *(.__sect_ps_txt)
 
         . = ALIGN(4);
-    } >PS_RO AT> RRAM_RW
+    } >RAM_RO AT> RRAM_RW
     
     _ln_ps_txt_size__ = SIZEOF(.__sect_ps_txt) ; 
 
@@ -345,7 +343,7 @@ SECTIONS
         *(.__sect_ps_data)                 /* includes RRI table, HW descriptors, Packet Memory(beacon), Statistics, Logs */
          
         . = ALIGN(4) ; 
-    } >PS_RW AT> RRAM_RW
+    } >RAM_RW AT> RRAM_RW
     
     _ln_ps_data_size__ = SIZEOF(.__sect_ps_data) ; 
     
@@ -357,7 +355,7 @@ SECTIONS
     {
         . += __Main_Stack_Size ;        /* 3KB Memory reserved */
         _ln_RAM_stack_start_addr = ABSOLUTE(.) ;
-    } >PS_RW 
+    } >RAM_RW 
           
     _ln_system_stack_size__ = SIZEOF(.system_stack);
 
@@ -377,7 +375,7 @@ SECTIONS
         . = ALIGN(4);
         _ln_bss_end__ = .;        /* standard newlib definition */
       
-    } >PS_RW
+    } >RAM_RW
     
     _ln_sect_sleep_data_retention_size__ = SIZEOF(.__sect_sleep_data_retention) ;
 

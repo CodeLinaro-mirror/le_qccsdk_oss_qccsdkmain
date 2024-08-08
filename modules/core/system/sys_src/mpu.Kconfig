@@ -46,7 +46,7 @@ menu "MPU Setting"
             config FERM_MPU_1_SIZE
                 hex "MPU 1 size"
                 depends on MPU_ENABLE 
-        	default 0x8000 
+        	default 0x10000 
             
             config FERM_MPU_1_XN
                 hex "MPU 1 XN bit"
@@ -71,7 +71,7 @@ menu "MPU Setting"
             config FERM_MPU_2_SIZE
                 hex "MPU 2 size"
                 depends on MPU_ENABLE 
-        	default 0x10000 
+        	default 0x8000 
             
             config FERM_MPU_2_XN
                 hex "MPU 2 XN bit"
@@ -86,32 +86,32 @@ menu "MPU Setting"
             config FERM_MPU_2_SUBREGION
                 hex "MPU 2 subregion mask"
                 depends on MPU_ENABLE 
-        	default 0x0f
+        	default 0xc0
         
             config FERM_MPU_3_START
                 hex "MPU 3 start address"
                 depends on MPU_ENABLE 
-        	default 0x20000 
+        	default 0x0
         
             config FERM_MPU_3_SIZE
                 hex "MPU 3 size"
                 depends on MPU_ENABLE 
-        	default 0x10000 
+        	default 0x0
             
             config FERM_MPU_3_XN
                 hex "MPU 3 XN bit"
                 depends on MPU_ENABLE 
-        	default 0x00
+        	default 0x0
         
             config FERM_MPU_3_ACCESS
                 hex "MPU 3 access permission bit"
                 depends on MPU_ENABLE 
-        	default 0x06
+        	default 0x0
         
             config FERM_MPU_3_SUBREGION
                 hex "MPU 3 subregion mask"
                 depends on MPU_ENABLE 
-        	default 0xf8
+        	default 0x0
         
             config FERM_MPU_4_START
                 hex "MPU 4 start address"
