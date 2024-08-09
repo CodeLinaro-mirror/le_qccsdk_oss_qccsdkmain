@@ -83,6 +83,7 @@ projects_common = [
     "//arch/arm/system",
     "//demo/fs_demo",
     "//demo/mqtt_demo",
+    "//modules/net/mqtt_client",
 ]
 
 projects_wifi_core = [

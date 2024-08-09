@@ -34,6 +34,10 @@
 #include "ssl_demo.h"
 #include "httpc_demo.h"
 
+#ifdef CONFIG_MQTT_CLIENT_DEMO
+#include "mqtt_client_demo.h"
+#endif
+
 static ip_addr_t default_ip_address[MAX_ROLE];
 static ip_addr_t default_netmask[MAX_ROLE];
 static ip_addr_t default_gw[MAX_ROLE];
@@ -893,6 +897,12 @@ const QAPI_Console_Command_t net_shell_cmds[] =
                                         "\nHTTP Client: Perform Hypertext Transport protocol client operations.\n"
                                         "Type command name to get more info on usage. For example \"httpc get\".\n"},
 #endif
+
+#ifdef CONFIG_MQTT_CLIENT_DEMO
+    {mqttc_demo, "mqttc",    "\n\nType \"mqttc\" to get more info on usage\n",
+                                    "\nMQTT Client: Set up and configure MQ Telemetry Transport client"},
+#endif
+
 };
 
 const QAPI_Console_Command_Group_t net_shell_cmd_group = {NET_SHELL_GROUP_NAME, sizeof(net_shell_cmds) / sizeof(QAPI_Console_Command_t), net_shell_cmds};

@@ -4,6 +4,7 @@ import("//configs_decl.gni")
 
 mqtt_demo_inc = [
     "src",
+    "//modules/net/mqtt_client/mqtt_platform",
 ]
 
 mqtt_demo_src = [
