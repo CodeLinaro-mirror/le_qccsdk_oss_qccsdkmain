@@ -41,8 +41,13 @@ extern QAPI_Console_Group_Handle_t net_shell_cmd_group_handle;              /* H
 #define IPV6_MC_LPBK_DIS 0 /**< Disable loopback behavior for multicast packets. */
 #define IPV6_MC_LPBK_EN 1  /**< Enable loopback behavior for multicast packets. */
 #define IPERF_TX_THREAD_PRIO   5
-#define IPERF_RX_THREAD_PRIO   7
+#define IPERF_RX_THREAD_PRIO   6
 #define IPERF_RESULT_THREAD_PRIO   3
+
+#define MAX_IPERF_RX_THREAD_COUNTE    4
+UBaseType_t iperf_rx_thread_priority = IPERF_RX_THREAD_PRIO;
+TaskHandle_t iperf_rx_thread_handle[MAX_IPERF_RX_THREAD_COUNTE]={0};
+uint8_t iperf_rx_thread_handle_sum = 0;
 
 #if TO_CHECK
 void iperf3_make_cookie(char *str, int len);
@@ -163,6 +168,85 @@ static void iperf_common_clear_stats(THROUGHPUT_CXT *p_tCxt)
     p_tCxt->pktStats.sent_bytes = 0;
     p_tCxt->pktStats.pkts_recvd = 0;
 }
+
+static int iperf_get_unused_rx_thread_index(void)
+{
+    uint8_t thread_index;
+    for( thread_index = 0; thread_index < MAX_IPERF_RX_THREAD_COUNTE; thread_index++) 
+    {
+        if(iperf_rx_thread_handle[thread_index] == NULL)
+        {
+           return thread_index;
+        }
+
+    }
+    if( thread_index >= MAX_IPERF_RX_THREAD_COUNTE)
+    {
+        return -1;
+    }
+
+    return -1;
+}
+
+static void iperf_upgrade_rx_thread_priority(void)
+{
+    uint8_t thread_index;
+    for( thread_index = 0; thread_index < MAX_IPERF_RX_THREAD_COUNTE; thread_index++) 
+    {
+        if(iperf_rx_thread_handle[thread_index] != NULL)
+        {
+            nt_qurt_thread_set_priority(iperf_rx_thread_handle[thread_index], iperf_rx_thread_priority+1); /*increase udp rx thread priority in multi-thread context*/
+        }
+		printf("Toby: rx thread upgraded\r\n");
+    }
+
+    return;
+}
+
+static void iperf_resume_rx_thread_priority(void)
+{
+    uint8_t thread_index;
+    for( thread_index = 0; thread_index < MAX_IPERF_RX_THREAD_COUNTE; thread_index++) 
+    {
+        if(iperf_rx_thread_handle[thread_index] != NULL)
+        {
+            nt_qurt_thread_set_priority(iperf_rx_thread_handle[thread_index], iperf_rx_thread_priority); /*increase udp rx thread priority in multi-thread context*/
+        }
+
+    }
+
+    return;
+}
+
+static int iperf_remove_rx_thread_based_on_id(TaskHandle_t rx_thread_id)
+{
+    uint8_t thread_index;
+    
+    for(thread_index = 0; thread_index < MAX_IPERF_RX_THREAD_COUNTE; thread_index++) 
+    {
+        if(iperf_rx_thread_handle[thread_index] == rx_thread_id)
+        {
+            iperf_rx_thread_handle[thread_index] = NULL; 
+            iperf_rx_thread_handle_sum--;
+            break;
+        }
+
+    }
+    if( thread_index >= MAX_IPERF_RX_THREAD_COUNTE)
+    {
+         IPERF_PRINTF("remove_rx_thread error!\r\n",thread_index,rx_thread_id);
+         return -1;
+    }
+    
+    if(iperf_rx_thread_handle_sum == 1 )
+    {
+        iperf_resume_rx_thread_priority();
+    }
+
+    return 0;
+}
+
+
 
 /************************************************************************
  * NAME: iperf_common_check_test_time
@@ -998,20 +1082,41 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             tCxt->pktStats.iperf_display_interval = interval;
 
 #if IPERF_RX_THREAD
-    err_t ret;
-    ret = nt_qurt_thread_create(iperf_udp_rx, "udp_rx", 3072, tCxt, IPERF_RX_THREAD_PRIO, NULL);
+        err_t ret;
+        int unused_thread_index = -1;
 
-    if (ret == -1)
-    {
-        IPERF_PRINTF("UDP server task creation failed\r\n");
-        if(tCxt)
+        unused_thread_index = iperf_get_unused_rx_thread_index();
+        if(unused_thread_index == -1)
         {
-            free(tCxt);
-            tCxt = NULL;
+            IPERF_PRINTF("UDP server get unused thread index failed!\r\n");
+            if(tCxt)
+            {
+                free(tCxt);
+                tCxt = NULL;
+            }
+            goto RET_OK;
         }
+        ret = nt_qurt_thread_create(iperf_udp_rx, "udp_rx", 3072, tCxt, iperf_rx_thread_priority, &(iperf_rx_thread_handle[unused_thread_index]));
+        if (ret == -1)
+        {
+            IPERF_PRINTF("UDP server task creation failed\r\n");
+            if(tCxt)
+            {
+                free(tCxt);
+                tCxt = NULL;
+            }
 
-        goto RET_OK;
-    }
+            goto RET_OK;
+        }
+        else
+        {
+            iperf_rx_thread_handle_sum++;
+        }
+        if( iperf_rx_thread_handle_sum > 1 )
+        {   
+            iperf_upgrade_rx_thread_priority();
+            
+        }
 #else
             iperf_udp_rx(tCxt);
 #endif
@@ -1036,20 +1141,43 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             tCxt->test_type = RX;
             tCxt->pktStats.iperf_display_interval = interval;
 #if IPERF_RX_THREAD
-    err_t ret;
-    ret = nt_qurt_thread_create(iperf_tcp_rx, "tcp_rx", 3072, tCxt, IPERF_RX_THREAD_PRIO, NULL);
+            err_t ret;
+            int unused_thread_index = -1;
 
-    if (ret == -1)
-    {
-        IPERF_PRINTF("TCP server task creation failed\r\n");
-        if(tCxt)
-        {
-            free(tCxt);
-            tCxt = NULL;
-        }
+            unused_thread_index = iperf_get_unused_rx_thread_index();
+            if(unused_thread_index == -1)
+            {
+                IPERF_PRINTF("UDP server get unused thread index failed!\r\n");
+                if(tCxt)
+                {
+                    free(tCxt);
+                    tCxt = NULL;
+                }
+                goto RET_OK;
+            }
+            ret = nt_qurt_thread_create(iperf_tcp_rx, "tcp_rx", 3072, tCxt, iperf_rx_thread_priority, &(iperf_rx_thread_handle[unused_thread_index]));
+            if (ret == -1)
+            {
+                IPERF_PRINTF("TCP server task creation failed\r\n");
+                if(tCxt)
+                {
+                    free(tCxt);
+                    tCxt = NULL;
+                }
 
-        goto RET_OK;
-    }
+                goto RET_OK;
+            }
+            else
+            {
+                iperf_rx_thread_handle_sum++;
+            }
+            
+            if( iperf_rx_thread_handle_sum > 1 )
+            {   
+                iperf_upgrade_rx_thread_priority();
+                
+            }
+   
     //return;
 #else
             iperf_tcp_rx(tCxt);
@@ -1104,8 +1232,8 @@ void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur)
         throughput_Kbps = (pCxtPara->bytes / (msInterval / 8));
 
         bytes = pCxtPara->bytes;
-        sec_val1 = pCxtPara->iperf_time_sec;
-        sec_val2 = pCxtPara->iperf_time_sec + pCxtPara->iperf_display_interval;
+        sec_val1 = (prev - pCxtPara->first_time)/1000;
+        sec_val2 = (cur - pCxtPara->first_time)/1000;
 
         if (bytes > BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE)
         {
@@ -1568,7 +1696,9 @@ static void iperf_client_send(void *arg)
                 }
                 else
                 {
-                    IPERF_PRINTF("TX timeout:%d, %s\n", errno, strerror(errno));
+                    IPERF_PRINTF("TX err:%d\n", errno);
+                    if(EAGAIN == errno)
+                        break;
                     app_get_time(&p_tCxt->pktStats.last_time);
                     if(ERR_TIMEOUT == errno || ERR_OK == errno)
                     {
@@ -2002,6 +2132,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     int32_t conn_sock;
     int is_test_done = 0;
     int32_t udp_datagram_size = (int32_t)sizeof(udp_datagram);
+    int ret =0;
 
     p_tCxt->iperf_stream_id = iperf_get_unused_id();
     if (p_tCxt->iperf_stream_id == MAX_STREAM)
@@ -2244,9 +2375,15 @@ ERROR_1:
     }
   
     IPERF_PRINTF(BENCH_TEST_COMPLETED);
-    #if IPERF_RX_THREAD
-    nt_osal_thread_delete(NULL);
-    #endif
+#if IPERF_RX_THREAD
+    ret = iperf_remove_rx_thread_based_on_id(nt_qurt_thread_get_id());
+    if(ret == -1)
+    {
+        IPERF_PRINTF("remove_rx_thread error!\r\n");
+    }
+    nt_osal_thread_delete(NULL);    
+#endif
+
     return;
 }
 
@@ -2415,7 +2552,8 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     void *sin_addr;
     void *local_sin_addr = NULL;
     char ip_str[48];
-
+    int ret=0;
+    
 #ifdef TCP_RX_RETRY_AFTER_FIN
     uint32_t retry = 20;
 #endif
@@ -2640,6 +2778,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         if ((session->buffer = malloc(CFG_PACKET_SIZE_MAX_RX)) == NULL)
         {
             IPERF_PRINTF("Out of memory error\n");
+            session->sock_peer = sock_peer;
             iperf_tcp_CloseSession(session, &rd_set);
             newSession = 0;
             // continue;
@@ -2689,7 +2828,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     {
         if (iperf_rx_quit || (get_device_connect_state() == false))
             goto tcp_rx_QUIT;
-#if 0
+#if 1
         tv.tv_sec = 2;
         tv.tv_usec = 0;
         rset = rd_set;
@@ -2765,7 +2904,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
                     }
                 }
                 conn_sock--;
-#if 0                
+#if 1                
             }
         }
 #endif
@@ -2807,6 +2946,12 @@ tcp_rx_QUIT2:
 
     IPERF_PRINTF(BENCH_TEST_COMPLETED);
     #if IPERF_RX_THREAD
+    ret = iperf_remove_rx_thread_based_on_id(nt_qurt_thread_get_id());
+    if(ret == -1)
+    {
+        IPERF_PRINTF("remove_rx_thread error!\r\n");
+    }
+    
     nt_osal_thread_delete(NULL);
     #endif
     return;
