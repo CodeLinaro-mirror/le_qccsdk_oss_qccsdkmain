@@ -226,8 +226,9 @@ nt_show_ip(void)
                         } else if(ip6_addr_isipv4mappedipv6(ip_2_ip6(ip_addr))){
                             strlcpy(addr_type, "v4mapped-v6",strlen("v4mapped-v6"));
                         }
-                    } else{
+                    } else
 #endif
+                    {
                         if(ip_type == IPADDR_TYPE_V4){
                             if(i == IPv4_IP_IDX){
                                 strlcpy(addr_type, "IPv4 Address", sizeof("IPv4 Address"));
@@ -746,6 +747,7 @@ static void nt_dpm_netif_dhcp_hdlr(struct netif* p_netif)
                 NT_LOG_PRINT(COMMON, ERR,"DHCP v4 indication, dhcp state:%d\r\n",dhcp->state);
             }
         }
+#if LWIP_IPV6_DHCP6
         else if ((netif_dhcp6_data(p_netif) != NULL))
         {
             //handle dhcp6 IP
@@ -772,6 +774,7 @@ static void nt_dpm_netif_dhcp_hdlr(struct netif* p_netif)
                 NT_LOG_PRINT(COMMON, ERR,"DHCP v6 indication FAIL\r\n");
             }
         }
+#endif
 
         //check for ipv4 link local address
 #if LWIP_AUTOIP
@@ -790,6 +793,7 @@ static void nt_dpm_netif_dhcp_hdlr(struct netif* p_netif)
         else
 #endif
         {
+#if LWIP_IPV6
             //link local address for ipv6 is allways stored in index 0
             uint8_t netif_id;
             const ip6_addr_t* p_ipv6;
@@ -798,6 +802,7 @@ static void nt_dpm_netif_dhcp_hdlr(struct netif* p_netif)
 
             nt_dpm_ip_addr_ready_ind(netif_id, NETIF_IP_TYPE_LOCAL, NETIF_IP_VER_V6, 0, p_ipv6->addr);
             return;
+#endif
         }
     }
 }
