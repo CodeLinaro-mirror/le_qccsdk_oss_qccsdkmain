@@ -168,5 +168,9 @@ source_set("common") {
         sources += ["platform/rng_shell.c"]
     }
 
+    if (CONFIG_MQTT_CLIENT_DEMO) {
+        include_dirs += ["//modules/net/mqtt_client"]
+    }
+
 }
 

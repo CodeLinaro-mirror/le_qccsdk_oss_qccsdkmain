@@ -10,6 +10,7 @@ mqtt_inc = [
     "./mqtt_platform",
 ]
 
+mqtt_src = {}
 mqtt_src = [
     "./mqtt_platform/transport_mbedtls.c",
     "./mqtt_platform/plaintext_posix.c",
@@ -24,7 +25,7 @@ config("_config") {
     include_dirs = mqtt_inc
 }
 
-source_set("mqtt") {
+source_set("mqtt_client") {
     sources = []
     if (CONFIG_MQTT_CLIENT) {
         sources += mqtt_src
