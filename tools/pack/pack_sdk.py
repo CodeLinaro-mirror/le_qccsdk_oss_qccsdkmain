@@ -35,6 +35,7 @@ def pack_sdk(build_root_path, ignore_errors=False):
     sdk_pack_list.append(PackOpCopyFolder(source_path='lib', dest_path='lib',include_subfolders=True, file_exclusion_list=['makefile.mk', 'Osal.h']))
     sdk_pack_list.append(PackOpCopyFolder(source_path='modules', dest_path='modules',include_subfolders=True,folder_exclusion_list=['wifi']))
     sdk_pack_list.append(PackOpCopyFolder(source_path='modules/wifi', dest_path='modules/wifi/qcc730/core/inc',include_subfolders=True, file_exclusion_list=['BUILD.gn'], extension_inclusion_list=['.h'], flatten_subfolders=True))
+    sdk_pack_list.append(PackOpCopyFolder(source_path='modules/core/qcc_wifi', dest_path='modules/core/qcc_wifi',include_subfolders=True))
     sdk_pack_list.append(PackOpCopyFolder(source_path='os', dest_path='os',include_subfolders=True,folder_exclusion_list=['demos', 'abstractions', 'c_sdk','freertos_plus','pkcs11', 'ports','aws_demos', 'Neutrino', 'uart_cli'], file_exclusion_list=['Osal.h', 'Timer.h', '.travis.yml', 'README_DEVICE.txt']))
     sdk_pack_list.append(PackOpCopyFolder(source_path='soc', dest_path='soc',include_subfolders=True))
     sdk_pack_list.append(PackOpCopyFolder(source_path='subsys', dest_path='subsys',include_subfolders=True))

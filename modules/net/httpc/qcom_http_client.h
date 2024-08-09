@@ -229,7 +229,7 @@ typedef struct httpclient_sess_s {
     HTTPCLIENT_STATE    hcs_state;
     int32_t 		    hcs_socket;
     uint32_t 		    hcs_flags;
-    struct ip_addr      hcs_addr;
+    ip_addr_t      		hcs_addr;
     uint16_t 		    hcs_port;       /* TCP port for HTTP or HTTPS */
     uint8_t 		    hcs_host[HTTPCLIENT_MAX_HOST_LENGTH + 1]; /* hostname of webserver or proxy, e.g. "www.example.com" or "192.168.2.100" */
     uint8_t 		    hcs_url[HTTPCLIENT_MAX_URL_LENGTH + 1]; /* request-URL e.g. "/path/index.html" if hcs_host is an origin server or

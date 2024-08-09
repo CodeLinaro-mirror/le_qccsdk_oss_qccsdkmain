@@ -10,6 +10,7 @@ qcc_wifi_inc = [
 ]
 
 qcc_wifi_src = [
+    "ethernetif.c",
     "qcc_wifi.c",
     "network_al.c",
 ]

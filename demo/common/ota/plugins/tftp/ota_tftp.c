@@ -160,8 +160,13 @@ static int32_t ota_tftp_pkt_rrq(const char *file_name)
 
     if (ota_tftp_sess->foreign_addr.ss_family == AF_INET) {
         tolen = sizeof(struct sockaddr_in);
-    } else {
+    }
+	else {
+#if LWIP_IPV6
         tolen = sizeof(struct sockaddr_in6);
+#else
+		return -1;
+#endif
     }
 
     ota_tftp_sess->send_time = hres_timer_curr_time_ms();
@@ -324,13 +329,16 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
                                 sizeof(((struct sockaddr_in *)&from)->sin_addr)) == 0) {
                                 addr_match = 1;
                             }
-                        } else {
+                        }
+#if LWIP_IPV6
+						else {
                             if (memcmp(&(((struct sockaddr_in6 *)&from)->sin6_addr),
                                 &(((struct sockaddr_in6 *)&ota_tftp_sess->foreign_addr)->sin6_addr),
                                 sizeof(((struct sockaddr_in6 *)&from)->sin6_addr)) == 0) {
                                 addr_match = 1;
                             }
                         }
+#endif
                     }
                     if (addr_match == 0) {
                         if (cur_time - ota_tftp_sess->send_time >= TFTP_TIMEOUT) {
@@ -551,10 +559,14 @@ qapi_Status_t plugin_tftp_init(const char* interface_name, const char *url, void
     char *ptr;
     char ip_addr[32];
     int family;
+#if LWIP_IPV4
     struct sockaddr_in *foreign_addr;
     struct sockaddr_in local_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 *foreign_addr6;
     struct sockaddr_in6 local_addr6;
+#endif
     struct sockaddr *addr;
     uint32_t addrlen;
     uint32_t set_signal;
@@ -602,6 +614,7 @@ qapi_Status_t plugin_tftp_init(const char* interface_name, const char *url, void
 
     ptr = strchr((char *)ip_addr, ':');
     if (ptr != NULL) { //IPV6
+#if LWIP_IPV6
         family = AF_INET6;
         foreign_addr6 = (struct sockaddr_in6*)(&ota_tftp_sess->foreign_addr);
         if (inet_pton(family, ip_addr, &foreign_addr6->sin6_addr) != 1) {
@@ -617,8 +630,12 @@ qapi_Status_t plugin_tftp_init(const char* interface_name, const char *url, void
         local_addr6.sin6_family = family;
         addr = (struct sockaddr *)&local_addr6;
         addrlen = sizeof(struct sockaddr_in6);
-
+#else
+		ret = QAPI_FW_UPGRADE_ERR_TFTP_URL_FORMAT;
+		goto tftp_init_end;
+#endif
     } else {
+#if LWIP_IPV4
         family = AF_INET;
         foreign_addr = (struct sockaddr_in*)(&ota_tftp_sess->foreign_addr);
         if (inet_pton(family, ip_addr, &foreign_addr->sin_addr) != 1) {
@@ -633,6 +650,10 @@ qapi_Status_t plugin_tftp_init(const char* interface_name, const char *url, void
         local_addr.sin_family = family;
         addr = (struct sockaddr *)&local_addr;
         addrlen = sizeof(struct sockaddr_in);
+#else
+		ret = QAPI_FW_UPGRADE_ERR_TFTP_URL_FORMAT;
+		goto tftp_init_end;
+#endif
     }
 
     if ((ota_tftp_sess->sock = socket(family, SOCK_DGRAM, 0)) == -1) {

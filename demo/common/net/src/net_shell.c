@@ -480,9 +480,10 @@ static void net_show_info(struct netif *netif)
                             addr = NULL;
                         }
                     }
-                } else{
+                } else
 #endif
-                    if(ip_type == IPADDR_TYPE_V4){
+				{
+					if(ip_type == IPADDR_TYPE_V4){
                         if(i == IPv4_IP_IDX){
                             info_printf("IPv4: %s ", ipaddr_ntoa(ip_addr));
                         } else if(i == IPv4_NETMASK_IDX){

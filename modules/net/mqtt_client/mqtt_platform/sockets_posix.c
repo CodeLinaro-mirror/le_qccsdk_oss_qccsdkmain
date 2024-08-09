@@ -154,7 +154,11 @@ static SocketStatus_t connectToAddress( struct sockaddr * pAddrInfo,
 {
     SocketStatus_t returnStatus = SOCKETS_SUCCESS;
     int32_t connectStatus = 0;
+#if LWIP_IPV6
     char resolvedIpAddr[ INET6_ADDRSTRLEN ];
+#else
+	char resolvedIpAddr[ INET_ADDRSTRLEN ];
+#endif
     socklen_t addrInfoLength;
     uint16_t netPort = 0;
     struct sockaddr_in * pIpv4Address;
@@ -169,6 +173,7 @@ static SocketStatus_t connectToAddress( struct sockaddr * pAddrInfo,
 
     if( pAddrInfo->sa_family == ( sa_family_t ) AF_INET )
     {
+#if LWIP_IPV4
         /* MISRA Rule 11.3 flags the following line for casting a pointer of
          * a object type to a pointer of a different object type. This rule
          * is suppressed because casting from a struct sockaddr pointer to
@@ -183,9 +188,14 @@ static SocketStatus_t connectToAddress( struct sockaddr * pAddrInfo,
                             &pIpv4Address->sin_addr,
                             resolvedIpAddr,
                             ( socklen_t ) sizeof( resolvedIpAddr ) );
+#else
+		( void ) closesocket( tcpSocket );
+        return SOCKETS_CONNECT_FAILURE;	
+#endif
     }
     else
     {
+#if LWIP_IPV6
         /* MISRA Rule 11.3 flags the following line for casting a pointer of
          * a object type to a pointer of a different object type. This rule
          * is suppressed because casting from a struct sockaddr pointer to
@@ -200,6 +210,10 @@ static SocketStatus_t connectToAddress( struct sockaddr * pAddrInfo,
                             &pIpv6Address->sin6_addr,
                             resolvedIpAddr,
                             ( socklen_t ) sizeof( resolvedIpAddr ) );
+#else
+		( void ) closesocket( tcpSocket );
+        return SOCKETS_CONNECT_FAILURE;
+#endif
     }
 
     LogDebug( ( "Attempting to connect to server using the resolved IP address:"

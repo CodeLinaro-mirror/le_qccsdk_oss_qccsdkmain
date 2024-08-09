@@ -316,24 +316,42 @@ int http_client_resolve(httpclient_sess *sess)
     if (!sess->hcs_port) {
         sess->hcs_port = 80;
     }
+#if LWIP_IPV4
     /* Check whether it is IPv4 address */
+#if LWIP_IPV6
     if ((inet_pton(AF_INET, (char *)sess->hcs_host, (void *)&(sess->hcs_addr.u_addr.ip4))) == 1)
+#else
+	if ((inet_pton(AF_INET, (char *)sess->hcs_host, (void *)&(sess->hcs_addr))) == 1)
+#endif
     {
         /* Success */
+#if LWIP_IPV6
         htdbgprintf("%s() IPv4 Addr: 0x%08x\n", __func__, sess->hcs_addr.u_addr.ip4);
         sess->hcs_addr.type = AF_INET;
+#else
+		htdbgprintf("%s() IPv4 Addr: 0x%08x\n", __func__, sess->hcs_addr);
+#endif
         return HTTPC_OK;
     }
+#endif
 
+#if LWIP_IPV6
     /* Check whether it is IPv6 address */
+#if LWIP_IPV4
     if ((inet_pton(AF_INET6, (char *)sess->hcs_host, (void *)&(sess->hcs_addr.u_addr.ip6))) == 1)
+#else
+	if ((inet_pton(AF_INET6, (char *)sess->hcs_host, (void *)&(sess->hcs_addr))) == 1)
+#endif
     {
         //char temp[40];
         /* Success */
         //htdbgprintf("%s() IPv6 Addr:%s\n", __func__, inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.a.addr6), temp,sizeof(temp)));
-        sess->hcs_addr.type = AF_INET6;
+#if LWIP_IPV4
+		sess->hcs_addr.type = AF_INET6;
+#endif
         return HTTPC_OK;
     }
+#endif
     /* We will try to use IPV4 dns server if present
      * Only if IPv6 DNS server is alone there, use IPv6 DNS server
      */
@@ -347,6 +365,7 @@ int http_client_resolve(httpclient_sess *sess)
     }
     if(g_httpc_dns_found == 1)
     {
+#if LWIP_IPV4 && LWIP_IPV6
         if (ipaddr.type == LWIP_DNS_ADDRTYPE_IPV4)
         {
             sess->hcs_addr.type = AF_INET;
@@ -357,7 +376,10 @@ int http_client_resolve(httpclient_sess *sess)
             sess->hcs_addr.type = AF_INET6;
             memcpy(&sess->hcs_addr.u_addr.ip6, &ipaddr.u_addr.ip6, sizeof(ip6_addr_t));
         }
-
+#else
+		sess->hcs_addr = ipaddr; /* in network order */
+#endif
+        
         return HTTPC_OK;
     }
 
@@ -604,8 +626,12 @@ int http_client_freesess(httpclient_sess *sess)
 int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port)
 {
     int32_t error = HTTPC_OK;
+#if LWIP_IPV4
     struct sockaddr_in s_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 s_addr6;
+#endif
     struct sockaddr *to;
     uint32_t tolen;
     int32_t sock;
@@ -629,7 +655,13 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         goto ERROR;
     }
 
+#if LWIP_IPV4 && LWIP_IPV6
     family = sess->hcs_addr.type;
+#elif LWIP_IPV4
+	family = AF_INET;
+#elif LWIP_IPV6
+	family = AF_INET6;
+#endif
     /* Create a socket if it is not created already */
     if (sess->hcs_socket == INVALID_SOCKET)
     {
@@ -647,11 +679,20 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
     sock = sess->hcs_socket;
     setsockopt(sess->hcs_socket, SOL_SOCKET, O_NONBLOCK, NULL, 0);
 
+#if LWIP_IPV4
     if (AF_INET == family)
     {
+#if LWIP_IPV6
         htdbgprintf("%s() Addr 0x%08x port %u\n", __func__, sess->hcs_addr.u_addr.ip4, sess->hcs_port);
+#else
+		htdbgprintf("%s() Addr 0x%08x port %u\n", __func__, sess->hcs_addr, sess->hcs_port);
+#endif
         memset(&s_addr, 0, sizeof(struct sockaddr_in));
+#if LWIP_IPV6
         s_addr.sin_addr.s_addr = sess->hcs_addr.u_addr.ip4.addr;
+#else
+		s_addr.sin_addr.s_addr = sess->hcs_addr.addr;
+#endif
         s_addr.sin_port = htons(sess->hcs_port);
         s_addr.sin_family = family;
         s_addr.sin_len = sizeof(struct sockaddr_in);
@@ -659,14 +700,20 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         tolen = sizeof(s_addr);
 
     }
-    else if (AF_INET6 == family)
+#endif
+#if LWIP_IPV6
+    if (AF_INET6 == family)
     {
         memset(&s_addr6, 0, sizeof(struct sockaddr_in6));
         s_addr6.sin6_family = family;
-        memscpy(&s_addr6.sin6_addr, sizeof(ip6_addr_t), &sess->hcs_addr.u_addr.ip6, sizeof(ip6_addr_t));
-        if ( IS_IPV6_LINK_LOCAL(s_addr6.sin6_addr.un.u8_addr) )
-        {
-            /* if this is a link local address, then the interface must be specified after % */
+#if LWIP_IPV4
+        memscpy(&s_addr6.sin6_addr, sizeof(struct in6_addr), &sess->hcs_addr.u_addr.ip6, sizeof(ip6_addr_t));
+#else
+		memscpy(&s_addr6.sin6_addr, sizeof(struct in6_addr), &sess->hcs_addr, sizeof(ip6_addr_t));
+#endif
+	    if ( IS_IPV6_LINK_LOCAL(s_addr6.sin6_addr.un.u8_addr) )
+	    {
+	        /* if this is a link local address, then the interface must be specified after % */
 
             char * interface_name_with_percent_char = strchr(server, '%');
             char * interface_name = NULL;
@@ -689,6 +736,7 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         tolen = sizeof(s_addr6);
         //htdbgprintf("%s() %d IPv6 Addr:%s port %u\n", __func__, __LINE__, inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.a.addr6), temp,sizeof(temp)), sess->hcs_port);
     }
+#endif
     else
     {
         htdbgprintf("%s():%d fatal error on index[%d]\n", __func__,__LINE__,sess->index);

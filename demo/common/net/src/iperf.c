@@ -1744,9 +1744,13 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         IPERF_PRINTF("ERROR: p_tCxt in iperf_udp_tx() is NULL\n");
         goto ERROR_1;
     }
-    
+
+#if LWIP_IPV4
     struct sockaddr_in foreign_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 foreign_addr6;
+#endif
     struct sockaddr *to;
     uint32_t tolen;
     char ip_str[48];
@@ -1757,6 +1761,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
 
     if (p_tCxt->params.tx_params.v6)
     {
+#if LWIP_IPV6
         family = AF_INET6;
         inet_ntop(family, p_tCxt->params.tx_params.v6addr, ip_str, sizeof(ip_str));
 
@@ -1769,9 +1774,13 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         to = (struct sockaddr *)&foreign_addr6;
         tolen = sizeof(foreign_addr6);
         tos_opt = IPV6_TCLASS;
+#else
+		goto ERROR_1;
+#endif
     }
     else
     {
+#if LWIP_IPV4
         family = AF_INET;
         inet_ntop(family, &p_tCxt->params.tx_params.ip_address, ip_str, sizeof(ip_str));
 
@@ -1787,6 +1796,9 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         to = (struct sockaddr *)&foreign_addr;
         tolen = sizeof(foreign_addr);
         tos_opt = IP_TOS;
+#else
+		goto ERROR_1;
+#endif
     }
 
     IPERF_PRINTF("------------------------------------------------------------\n");
@@ -1825,6 +1837,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
     // }
     if (p_tCxt->params.tx_params.v6 && IS_IPV6_MULTICAST(p_tCxt->params.tx_params.v6addr))
     {
+#if LWIP_IPV6
         uint32_t val;
 
         /* Configure value to be used in the Hop Limit field in IPv6 header of
@@ -1849,6 +1862,9 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         {
             goto ERROR_2;
         }
+#else
+		goto ERROR_2;
+#endif
     }
 
     /* Connect to the server.*/
@@ -1991,10 +2007,14 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     int addrlen;
     uint32_t fromlen;
     struct sockaddr *from;
+#if LWIP_IPV4
     struct sockaddr_in local_addr;
+	struct sockaddr_in foreign_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 local_addr6;
-    struct sockaddr_in foreign_addr;
-    struct sockaddr_in6 foreign_addr6;
+	struct sockaddr_in6 foreign_addr6;
+#endif
     char ip_str[48];
     int family;
     uint16_t port;
@@ -2020,6 +2040,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
 
     if (p_tCxt->params.rx_params.v6)
     {
+#if LWIP_IPV6
         family = AF_INET6;
         from = (struct sockaddr *)&foreign_addr6;
         addr = (struct sockaddr *)&local_addr6;
@@ -2030,9 +2051,13 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
         local_addr6.sin6_port = htons(port);
         local_addr6.sin6_family = family;
         memscpy(&local_addr6.sin6_addr, sizeof(struct ip6_addr), p_tCxt->params.rx_params.local_v6addr, sizeof(struct ip6_addr));
-    }
+#else
+		goto ERROR_1;
+#endif
+	}
     else
     {
+#if LWIP_IPV4
         family = AF_INET;
         from = (struct sockaddr *)&foreign_addr;
         addr = (struct sockaddr *)&local_addr;
@@ -2043,7 +2068,10 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
         local_addr.sin_port = htons(port);
         local_addr.sin_family = family;
         local_addr.sin_addr.s_addr = p_tCxt->params.rx_params.local_address;
-    }
+#else
+		goto ERROR_1;
+#endif
+	}
 
     /* Open socket */
     if ((p_tCxt->sock_local = socket(family, SOCK_DGRAM, 0)) == A_ERROR)
@@ -2063,6 +2091,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     {
         if (p_tCxt->params.rx_params.v6)
         {
+#if LWIP_IPV6
             struct ipv6_mreq group6;
             memscpy(&group6.ipv6mr_multiaddr, sizeof(struct ip6_addr), p_tCxt->params.rx_params.mcIpv6addr, sizeof(struct ip6_addr));
             group6.ipv6mr_interface = p_tCxt->params.rx_params.scope_id;
@@ -2071,6 +2100,9 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                 IPERF_PRINTF("ERROR: Socket set option failure.\n");
                 goto ERROR_2;
             }
+#else
+			goto ERROR_2;
+#endif
         }
         else
         {
@@ -2265,9 +2297,13 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         IPERF_PRINTF("ERROR: p_tCxt in iperf_tcp_tx() is NULL\n");
         goto ERROR_1;
     }
-    
+
+#if LWIP_IPV4
     struct sockaddr_in foreign_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 foreign_addr6;
+#endif
     struct sockaddr *to;
     uint32_t tolen;
     char ip_str[48];
@@ -2291,6 +2327,7 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
 
     if (p_tCxt->params.tx_params.v6)
     {
+#if LWIP_IPV6
         family = AF_INET6;
         inet_ntop(family, &p_tCxt->params.tx_params.v6addr[0], ip_str, sizeof(ip_str));
 
@@ -2303,9 +2340,13 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         to = (struct sockaddr *)&foreign_addr6;
         tolen = sizeof(foreign_addr6);
         tos_opt = IPV6_TCLASS;
+#else
+		goto ERROR_1;
+#endif
     }
     else
     {
+#if LWIP_IPV4
         family = AF_INET;
         inet_ntop(family, &p_tCxt->params.tx_params.ip_address, ip_str, sizeof(ip_str));
 
@@ -2317,6 +2358,9 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         to = (struct sockaddr *)&foreign_addr;
         tolen = sizeof(foreign_addr);
         tos_opt = IP_TOS;
+#else
+		goto ERROR_1;
+#endif
     }
 
     /* Create socket */
@@ -2404,12 +2448,16 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
     int32_t received = 0;
     int32_t conn_sock = 0, printit = 1;
+#if LWIP_IPV4
     struct sockaddr_in local_addr;
+	struct sockaddr_in foreign_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 local_addr6;
+	struct sockaddr_in6 foreign_addr6;
+#endif
     struct sockaddr *addr;
     uint32_t addrlen;
-    struct sockaddr_in foreign_addr;
-    struct sockaddr_in6 foreign_addr6;
     struct sockaddr *from;
     uint32_t fromlen;
     void *sin_addr;
@@ -2479,6 +2527,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
     if (p_tCxt->params.rx_params.v6)
     {
+#if LWIP_IPV6
         family = AF_INET6;
 
         memset(&local_addr6, 0, sizeof(local_addr6));
@@ -2492,9 +2541,13 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         from = (struct sockaddr *)&foreign_addr6;
         fromlen = sizeof(struct sockaddr_in6);
         sin_addr = &foreign_addr6.sin6_addr;
+#else
+		goto tcp_rx_QUIT;
+#endif
     }
     else
     {
+#if LWIP_IPV4    
         family = AF_INET;
 
         memset(&local_addr, 0, sizeof(local_addr));
@@ -2508,6 +2561,9 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         from = (struct sockaddr *)&foreign_addr;
         fromlen = sizeof(struct sockaddr_in);
         sin_addr = &foreign_addr.sin_addr;
+#else
+		goto tcp_rx_QUIT;
+#endif
     }
 
     /* Create listen socket */
