@@ -84,7 +84,7 @@ void ferm_mpu_config(void)
 	{
 		if (Fermion_MPU_Region[i].region_size == 0)
 		{
-			break;
+			continue;
 		}
 
 		/* Select the region number in RNR */
