@@ -85,7 +85,7 @@ void sbl_mpu_config(void)
 	{
 		if (SBL_MPU_Region[i].region_size == 0)
 		{
-			break;
+			continue;
 		}
 
 		/* Select the region number in RNR */
