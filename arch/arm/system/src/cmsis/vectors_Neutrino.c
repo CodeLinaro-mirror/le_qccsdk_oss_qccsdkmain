@@ -179,6 +179,8 @@ void pmu_ccpu_slp_cal_done_intr(void) __attribute__((weak, alias("Default_Handle
 #endif //SLEEP_CLK_CAL_IN_ACTIVE_MODE
 #endif // PLATFORM_FERMION
 
+extern void pmu_ccpu_vbat_mon_done_intr(void);
+
 
 typedef void
 (* const pHandler)(void);
@@ -357,7 +359,7 @@ pHandler __isr_vectors[] =
 		DeviceInterrupt_Handler,    // Device specific 77
 		DeviceInterrupt_Handler,            // Device specific 78
 		pmu_ccpu_temp_mon_done_intr,                // Device specific 79
-		DeviceInterrupt_Handler,                // Device specific 80
+		pmu_ccpu_vbat_mon_done_intr,                // Device specific 80
 		DeviceInterrupt_Handler,  				// Device specific 81
 		DeviceInterrupt_Handler,                	// Device specific 82
 		coex_bmh_isr,                 	// Device specific 83
@@ -564,7 +566,7 @@ pHandler __stack_ptr[] =
 		DeviceInterrupt_Handler,    // Device specific 77
 		DeviceInterrupt_Handler,            // Device specific 78
 		pmu_ccpu_temp_mon_done_intr,                // Device specific 79
-		DeviceInterrupt_Handler,                // Device specific 80
+		pmu_ccpu_vbat_mon_done_intr,                // Device specific 80
 		DeviceInterrupt_Handler,  				// Device specific 81
 		DeviceInterrupt_Handler,                	// Device specific 82
 		coex_bmh_isr,                 	// Device specific 83

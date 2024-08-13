@@ -565,6 +565,9 @@ fw_logger_init();
 #endif /* FERMION_QTIMER_WAR */
 #endif /* IMAGE_FERMION */
 
+    /* Initializes PMU TS and Sleep Clock Cal , 
+     * do to be post hres timer init as hres timer APIs are used */
+    nt_socpm_secondary_init();
 #ifndef PLATFORM_FERMION
    /** On PLATFORM_NT, the external wakeup interrupt is used as WPS button
     * for WPS functionality. On PLATFORM_FERMION, the external wakeup interrupt

@@ -34,6 +34,58 @@ config CPR_ENABLE
 	bool "Core Power Reduction support, please default to n"
 	default n
 
+config QTMR_GRAY_CODING_WAR
+	bool "A workaround to fix QTMR clock offset, please default to y"
+	default y
+
+config ULP_SMPS2_ONTSHOT_OPTIMIZE
+	bool "Optimize ULP SMPS2 ontshot to support high temperature and low battery"
+	default y
+
+config PMU_TS_MON_PERIOD_US
+	int "Temperature and VBAT are monitored interlavedly with this peroid us"
+	default 1000000
+
+config PRINTF_ERR
+	bool "enalbe printf error message by err_printf"
+	default y
+
+config PRINTF_WARN
+	bool "enalbe printf warning message by warn_printf"
+	default y
+
+config PRINTF_INFO
+	bool "enalbe printf info message by info_printf"
+	default y
+
+config PRINTF_LOG
+	bool "enalbe printf log message by log_printf"
+	default n
+
+config PRINTF_DUMP
+	bool "enalbe printf dump message by dump_printf"
+	default n
+
+config ERROR_PREFIX
+	string "prefix for err_printf"
+	default "[ERR]"
+
+config WARN_PREFIX
+	string "prefix for warn_printf"
+	default "[WARN]"
+
+config INFO_PREFIX
+	string "prefix for info_printf"
+	default "[INFO]"
+
+config LOG_PREFIX
+	string "prefix for log_printf"
+	default "[LOG]"
+
+config DUMP_PREFIX
+	string "prefix for dump_printf"
+	default "[DUMP]"
+
 rsource "mpu.Kconfig"
 
 endmenu

@@ -120,7 +120,7 @@ enum  nt_slp_dbg_unit_test_type {
 
 #define NT_SOCPM_NVIC_ISER0         0xE000E100    //Irq 0 to 31 set enable register address
 #define NT_SOCPM_NVIC_ISER1         0xE000E104    //Irq 32 to 63 set Enable register address
-#define NT_SOCPM_NVIC_ISER2         0xE000E108    //Irq 63 to 73 set Enable register address
+#define NT_SOCPM_NVIC_ISER2         0xE000E108    //Irq 64 to 95 set Enable register address
 
 #define AON_TIMER_INTR_NVIC1_MASK          (0x1 << 23)
 
@@ -576,6 +576,13 @@ void     aon_ext_interrupt_wake_up( void );
 void nt_socpm_init_soc_cfg(void);
 
 void nt_socpm_init(void);
+
+/*
+ *  @brief : Initializes PMU temperature sensor and Sleep Clock Cal
+ *  @param : none
+ *  @return : None
+ */
+void nt_socpm_secondary_init(void);
 
 /*
  *  @brief : Check if there was an unexpected failure in entering to sleep after wfi
