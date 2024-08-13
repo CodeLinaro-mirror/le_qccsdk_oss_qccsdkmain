@@ -12,6 +12,8 @@
 #include "fwconfig_cmn.h"
 #ifdef PMU_TS_CONFIGURATION
 
+#include <stdio.h>
+#include <ctype.h>
 #include "wifi_fw_pmu_ts_cfg.h"
 #include "nt_common.h"
 #include "HALhwio.h"
@@ -21,6 +23,8 @@
 #include "hal_int_sys.h"
 #include "wifi_fw_pwr_cb_infra.h"
 #include "phyCalUtils.h"
+#include "ferm_hkadc_drv.h"
+#include "printfext.h"
 
 /*-----------------------------------------------------------------------------
  * Global Data Definitions
@@ -34,23 +38,6 @@ pmu_ts_param_t g_pmu_ts_struct;
  *----------------------------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------
- * @function  : pmu_ts_enable_vbatt_temp_mon_done_int
- * @brief     : Enable pmu_ccpu_temp_mon_done_intr Interuupt //Device Specific 79
- * @param     : None
- * @return    : None
- *-----------------------------------------------------------------------------
- */
-void pmu_ts_enable_vbatt_temp_mon_done_int(void)
-{
-    uint32_t temp1;
-    temp1 = HAL_REG_RD(NT_SOCPM_NVIC_ISER2);
-    temp1 = temp1 | (0x1 << 15);
-    HAL_REG_WR(NT_SOCPM_NVIC_ISER2, temp1);
-    return;
-}
-
-
-/*-----------------------------------------------------------------------------
  * @function  : pmu_ccpu_temp_mon_done_intr
  * @brief     : Interuppt handler for pmu_ccpu_temp_mon_done_intr
  * @param     : None
@@ -59,37 +46,35 @@ void pmu_ts_enable_vbatt_temp_mon_done_int(void)
  */
 void __attribute__((section(".after_ram_vectors"))) pmu_ccpu_temp_mon_done_intr(void)
 {
-    uint32_t RAW_TS;
     uint32_t rdata;
-    if (((RAW_TS = HAL_REG_RD(QWLAN_PMU_TEMP_SNR_RD_DATA_REG)) & 
-        QWLAN_PMU_TEMP_SNR_RD_DATA_TC_MEASURED_DATA_VALID_MASK) != 0)
-    {
-        g_pmu_ts_struct.pmu_ts_data_valid = true;
-        g_pmu_ts_struct.pmu_ts_prev_valid_raw_data = RAW_TS & QWLAN_PMU_TEMP_SNR_RD_DATA_TC_MEASURED_DATA_MASK;
-        g_pmu_ts_struct.pmu_ts_data_update_time = hres_timer_curr_time_ms();
-    }
-    else
-    {
-        g_pmu_ts_struct.pmu_ts_data_valid = false;
-    }
-    /* If this interuppt is due to one time temperature measurement, set it back 
-       to preferred default mode (periodic temp meas mode) */
-    if (g_pmu_ts_struct.pmu_ts_meas_mode == ONE_TIME)
-    {
-        //Set periodicity of temperature monitoring in XO ticks
-        HAL_REG_WR(QWLAN_PMU_CFG_TEMP_MON_INTERVAL_REG, _SOCPM_US_TO_XO_TICK(PMU_TS_MON_PERIOD_US));
+    pmu_ts_param_t *ps_pmu_ts = &g_pmu_ts_struct;
 
-        rdata = HAL_REG_RD(QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_REG);
-        rdata = rdata | QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_AUTO_TEMP_MON_EN_MASK |
-            QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_CFG_TEMP_MON_DONE_INTR_EN_MASK;
-        HAL_REG_WR(QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_REG, rdata);
-        pmu_ts_enable_vbatt_temp_mon_done_int();
-        g_pmu_ts_struct.pmu_ts_meas_mode = PERIODIC;
+    if ((ps_pmu_ts->pmu_ts_configured) && (ps_pmu_ts->pmu_ts_meas_mode == PERIODIC)) {
+        ps_pmu_ts->pmu_ts_data_valid = hkadc_get_temp_raw_data(&rdata);
+        if (ps_pmu_ts->pmu_ts_data_valid) {
+            ps_pmu_ts->pmu_ts_prev_valid_raw_data = rdata;
+            ps_pmu_ts->pmu_ts_data_update_time = hres_timer_curr_time_ms();
+        }
+        hkadc_auto_vbat_monitor_enable();
+        //printf("Tirq valid=%d Traw=%d %dms\n", ps_pmu_ts->pmu_ts_data_valid, ps_pmu_ts->pmu_ts_prev_valid_raw_data, ps_pmu_ts->pmu_ts_data_update_time);
     }
-
-    return;
 }
 
+void __attribute__((section(".after_ram_vectors"))) pmu_ccpu_vbat_mon_done_intr(void)
+{
+    uint32_t rdata;
+    pmu_ts_param_t *ps_pmu_ts = &g_pmu_ts_struct;
+
+    if ((ps_pmu_ts->pmu_ts_configured) && (ps_pmu_ts->pmu_ts_meas_mode == PERIODIC)) {
+        ps_pmu_ts->pmu_vbat_data_valid = hkadc_get_vbat_raw_data(&rdata);
+        if (ps_pmu_ts->pmu_vbat_data_valid) {
+            ps_pmu_ts->pmu_vbat_prev_valid_raw_data = rdata;
+            ps_pmu_ts->pmu_vbat_data_update_time = hres_timer_curr_time_ms();
+        }
+        hkadc_auto_temp_monitor_enable();
+        //printf("Virq valid=%d Traw=%d %dms\n", ps_pmu_ts->pmu_vbat_data_valid, ps_pmu_ts->pmu_vbat_prev_valid_raw_data, ps_pmu_ts->pmu_vbat_data_update_time);
+    }
+}
 
 /*-----------------------------------------------------------------------------
  * @function  : pmu_ts_configure
@@ -104,29 +89,37 @@ void pmu_ts_configure(void)
 }
 void pmu_ts_configure_periodic_meas(void)
 {
-    uint32_t rdata;
+    if (g_pmu_ts_struct.pmu_ts_configured) {
+        return;
+    }
 
-    //Enable HKADC for temperature monitoring
-    rdata = HAL_REG_RD(QWLAN_PMU_CFG_HKADC_DATA_AVG_CNT_REG);
-    rdata &= ~QWLAN_PMU_CFG_HKADC_DATA_AVG_CNT_CFG_TEMP_VBATT_MON_SEL_MASK;
-    HAL_REG_WR(QWLAN_PMU_CFG_HKADC_DATA_AVG_CNT_REG, rdata);
+    hkadc_auto_temp_monitor_enable();
+    hkadc_temp_monitor_done_sys_intr_enable(true);
+    hkadc_vbat_monitor_done_sys_intr_enable(true);
 
-    //Set periodicity of temperature monitoring in XO ticks
-    HAL_REG_WR(QWLAN_PMU_CFG_TEMP_MON_INTERVAL_REG, _SOCPM_US_TO_XO_TICK(PMU_TS_MON_PERIOD_US));
-
-    //Enable periodic temperature monitoring
-    rdata = HAL_REG_RD(QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_REG);
-    rdata = rdata | QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_AUTO_TEMP_MON_EN_MASK | 
-        QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_CFG_TEMP_MON_DONE_INTR_EN_MASK;
-    HAL_REG_WR(QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_REG, rdata);
-    
-    pmu_ts_enable_vbatt_temp_mon_done_int();
     g_pmu_ts_struct.pmu_ts_configured = true;
     g_pmu_ts_struct.pmu_ts_meas_mode = PERIODIC;
 
     return;
 }
 
+/*-----------------------------------------------------------------------------
+ * @function  : invalidate_pmu_ts_configuration
+ * @brief     : Set g_pmu_ts_struct.pmu_ts_configured to false
+ * @param     : None
+ * @return    : None
+ *-----------------------------------------------------------------------------
+ */
+void invalidate_pmu_ts_configuration(void)
+{
+    g_pmu_ts_struct.pmu_ts_configured = false;
+    g_pmu_ts_struct.pmu_ts_meas_mode = ONE_TIME;
+    hkadc_stop();
+    hkadc_temp_monitor_done_sys_intr_enable(false);
+    hkadc_vbat_monitor_done_sys_intr_enable(false);
+
+    return;
+}
 
 /*-----------------------------------------------------------------------------
  * @function  : pmu_ts_get_raw_data
@@ -138,55 +131,6 @@ void pmu_ts_configure_periodic_meas(void)
 uint32_t pmu_ts_get_raw_data(void)
 {
     return g_pmu_ts_struct.pmu_ts_prev_valid_raw_data;
-}
-
-/*-----------------------------------------------------------------------------
- * @function  : pmu_ts_update_boot_temperature
- * @brief     : Update the bootup temperature
- * @param     : None
- * @return    : None
- *-----------------------------------------------------------------------------
- */
-void pmu_ts_update_boot_temperature(void)
-{
-#if 0	
-    uint32_t rdata, RAW_TS,start_time, stop_time;
-    int32_t bootup_temp_deg;
-    start_time = nt_hal_get_curr_time();
-
-    //Enable HKADC for temperature monitoring
-    rdata = HAL_REG_RD(QWLAN_PMU_CFG_HKADC_DATA_AVG_CNT_REG);
-    rdata &= ~QWLAN_PMU_CFG_HKADC_DATA_AVG_CNT_CFG_TEMP_VBATT_MON_SEL_MASK;
-    HAL_REG_WR(QWLAN_PMU_CFG_HKADC_DATA_AVG_CNT_REG, rdata);
-
-    rdata = HAL_REG_RD(QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_REG);
-    HAL_REG_WR(QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_REG, (rdata | QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_TEMP_MON_EN_MASK));
-#if(FERMION_CHIP_VERSION == 1)
-    if((HWIO_INXF(SEQ_WCSS_OTP_OFFSET, FERMION_V1_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_PTE_REGION_1_W3, TRIM_TAG_LOW) >= OTP_TRIM_TAG_LOW) ||
-       (HWIO_INXF(SEQ_WCSS_OTP_OFFSET, FERMION_V1_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_PTE_REGION_1_W3, TRIM_TAG_HIGH) >= OTP_TRIM_TAG_HIGH))
-#else
-    if((HWIO_INXF(SEQ_WCSS_OTP_OFFSET, FERMION_V2_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_PTE_REGION_1_W3, TRIM_TAG_LOW) >= OTP_TRIM_TAG_LOW) ||
-       (HWIO_INXF(SEQ_WCSS_OTP_OFFSET, FERMION_V2_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_PTE_REGION_1_W3, TRIM_TAG_HIGH) >= OTP_TRIM_TAG_HIGH))
-#endif
-    {
-        while ((((RAW_TS = HAL_REG_RD(QWLAN_PMU_TEMP_SNR_RD_DATA_REG)) & 0x80000000) == 0) && 
-            ((nt_hal_get_curr_time() - start_time) < 1000))
-        {
-            continue;
-        }
-        g_pmu_ts_data_valid = true;
-        g_pmu_ts_prev_valid_raw_data = RAW_TS & QWLAN_PMU_TEMP_SNR_RD_DATA_TC_MEASURED_DATA_MASK;
-    }
-    else
-    {
-        g_pmu_ts_data_valid = false;
-    }
-    bootup_temp_deg = pmu_ts_get_current_temperature();
-    stop_time = nt_hal_get_curr_time();
-    NT_LOG_PRINT(SOCPM, WARN, "Bootup temperature %d, PMU_TS raw data %d, time taken to measure temperature %d", 
-        bootup_temp_deg, g_pmu_ts_prev_valid_raw_data, (stop_time - start_time));
-    return;
-#endif	
 }
 
 /*-----------------------------------------------------------------------------
@@ -203,6 +147,11 @@ int32_t pmu_ts_get_current_temperature(void)
     return pmu_ts_convert_to_deg_cel(pmu_reg_data);
 }
 
+inline int32_t _sign_extend_dword(uint32_t data, uint8_t n_bits)
+{
+    const int32_t shift_bits = 32 - n_bits;
+    return (((int32_t)data << shift_bits) >> shift_bits);
+}
 
 /*-----------------------------------------------------------------------------
  * @function  : pmu_ts_get_current_temperature
@@ -211,7 +160,7 @@ int32_t pmu_ts_get_current_temperature(void)
  * @return    : Current temperature in degree celsius
  *-----------------------------------------------------------------------------
  */
-int32_t pmu_ts_convert_to_deg_cel(uint32_t pmu_reg_data)
+int32_t __attribute__((section(".__sect_ps_txt"))) pmu_ts_convert_to_deg_cel(uint32_t pmu_reg_data)
 {
 
     int32_t ts_gain_otp_value = 0, ts_offset_residue = 0, temp_deg = 25;
@@ -235,13 +184,13 @@ int32_t pmu_ts_convert_to_deg_cel(uint32_t pmu_reg_data)
             FERMION_V1_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_RF_CALIBRATION_ROW7_W3);
         ts_gain_otp_value = (ts_gain_otp_value & QWLAN_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_RF_CALIBRATION_ROW7_W3_TSENSOR_GAIN_ERROR_MASK) >>
             QWLAN_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_RF_CALIBRATION_ROW7_W3_TSENSOR_GAIN_ERROR_OFFSET;
-        ts_gain_otp_value = sign_extend_dword((uint32_t)ts_gain_otp_value, 8);
+        ts_gain_otp_value = _sign_extend_dword((uint32_t)ts_gain_otp_value, 8);
 #else
         /* TSENDOR_OFFSET_RESIDUE field is added to only 2.0 version of chip */
         /* convert two's complement to signed */
-        ts_gain_otp_value = sign_extend_dword((uint32_t)(HWIO_INXF(SEQ_WCSS_OTP_OFFSET,
+        ts_gain_otp_value = _sign_extend_dword((uint32_t)(HWIO_INXF(SEQ_WCSS_OTP_OFFSET,
             FERMION_V2_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_RF_CALIBRATION_ROW7_W3, TSENSOR_GAIN_ERROR)), 8);
-        ts_offset_residue = sign_extend_dword((uint32_t)(HWIO_INXF(SEQ_WCSS_OTP_OFFSET,
+        ts_offset_residue = _sign_extend_dword((uint32_t)(HWIO_INXF(SEQ_WCSS_OTP_OFFSET,
             FERMION_V2_0_QFPROM_RAW_FUSE_MAP_SECURITY_CONTROL_CORE_RAW_R_QFPROM_RAW_RF_CALIBRATION_ROW8_W0, TSENSOR_OFFSET_RESIDUE)), 8);
 #endif
         ts_gain_err = (float)ts_gain_otp_value * TS_GAIN_RESOLUTION;
@@ -272,13 +221,19 @@ int32_t pmu_ts_convert_to_deg_cel(uint32_t pmu_reg_data)
 void pmu_ts_init(void)
 
 {
-    uint32_t rdata, RAW_TS,start_time, stop_time;
+    uint32_t rdata, RAW_TS,start_time, stop_time, new_time;
     int32_t bootup_temp_deg;
+    int32_t raw_vbat = 0;
+    uint32_t vbatmV = 0;
+
+    invalidate_pmu_ts_configuration();
+
+    hkadc_set_auto_monitor_interval(us2xocnt(CONFIG_PMU_TS_MON_PERIOD_US));
+    //g_pmu_ts_struct.pmu_SMPS2_ONESHOT_TRIM = ulpsmps2_get_oneshot();
 
     g_pmu_ts_struct.pmu_ts_data_valid = false;
-    g_pmu_ts_struct.pmu_ts_meas_mode = ONE_TIME;
-    g_pmu_ts_struct.pmu_ts_prev_valid_raw_data = PMU_TS_ROOM_TEMP_DEFAULT;
-    start_time = hres_timer_curr_time_ms();
+    g_pmu_ts_struct.pmu_ts_prev_valid_raw_data = PMU_TS_RAW_25C;
+    start_time = (uint32_t)hres_timer_curr_time_us();
     g_pmu_ts_struct.pmu_ts_data_update_time = 0;
 
     //Enable HKADC for temperature monitoring
@@ -296,23 +251,39 @@ void pmu_ts_init(void)
            >= OTP_V2)
 #endif
     {
-        while ((((RAW_TS = HAL_REG_RD(QWLAN_PMU_TEMP_SNR_RD_DATA_REG)) & QWLAN_PMU_TEMP_SNR_RD_DATA_TC_MEASURED_DATA_VALID_MASK) == 0) && 
-            ((hres_timer_curr_time_ms() - start_time) < TEMP_MEAS_TIMEOUT_MS)) 
-        {
-            continue;
-        }
+        do {
+            RAW_TS = HAL_REG_RD(QWLAN_PMU_TEMP_SNR_RD_DATA_REG);
+            new_time = (uint32_t)hres_timer_curr_time_us();
+        } while (((RAW_TS&QWLAN_PMU_TEMP_SNR_RD_DATA_TC_MEASURED_DATA_VALID_MASK)==0) && ((new_time-start_time)<TEMP_MEAS_TIMEOUT_US));
         if ((RAW_TS & QWLAN_PMU_TEMP_SNR_RD_DATA_TC_MEASURED_DATA_VALID_MASK) != 0)
         {
             g_pmu_ts_struct.pmu_ts_data_valid = true;
             g_pmu_ts_struct.pmu_ts_prev_valid_raw_data = RAW_TS & QWLAN_PMU_TEMP_SNR_RD_DATA_TC_MEASURED_DATA_MASK;
-            g_pmu_ts_struct.pmu_ts_data_update_time = start_time;
+            g_pmu_ts_struct.pmu_ts_data_update_time = start_time/1000;
         }
     }
-    stop_time = hres_timer_curr_time_ms();
+    stop_time = (uint32_t)hres_timer_curr_time_us();
     bootup_temp_deg = pmu_ts_get_current_temperature();
-    NT_LOG_PRINT(SOCPM, WARN, "Bootup temperature %d, PMU_TS raw data %d, time taken to measure temperature %d, is Valid %d", 
+    NT_LOG_PRINT(SOCPM, WARN, "Bootup temperature %dC, PMU_TS raw data %d, time taken to measure temperature %dus, is Valid %d",
         bootup_temp_deg, g_pmu_ts_struct.pmu_ts_prev_valid_raw_data, (stop_time - start_time), 
         g_pmu_ts_struct.pmu_ts_data_valid);
+
+    g_pmu_ts_struct.pmu_vbat_data_valid = false;
+    g_pmu_ts_struct.pmu_vbat_data_update_time = 0;
+    g_pmu_ts_struct.pmu_vbat_prev_valid_raw_data = PMU_VBAT_TYPICAL_DEFAULT;
+    start_time = (uint32_t)hres_timer_curr_time_us();
+    raw_vbat = hkadc_single_vbat_monitor_get_raw();
+    if (raw_vbat >= 0) {
+        g_pmu_ts_struct.pmu_vbat_data_valid = true;
+        g_pmu_ts_struct.pmu_vbat_prev_valid_raw_data = (uint32_t)raw_vbat;
+        g_pmu_ts_struct.pmu_vbat_data_update_time = start_time/1000;
+        vbatmV = hkadc_vbat_raw2mV((uint32_t)raw_vbat);
+    }
+    stop_time = (uint32_t)hres_timer_curr_time_us();
+    printf("Bootup vbat=%dmV raw=%d time=%dus valid=%d\n", vbatmV, g_pmu_ts_struct.pmu_vbat_prev_valid_raw_data, (stop_time-start_time), g_pmu_ts_struct.pmu_vbat_data_valid);
+
+    hkadc_stop();
+
     fpci_evt_cb_reg((ps_evt_cb_t)&pmu_ts_power_state_change_cb, PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | 
         PWR_EVT_WMAC_SLEEP_ABORT, PS_CALLBACK_PMU_TS_PRIORITY, NULL);
     return;
@@ -344,20 +315,37 @@ bool is_pmu_ts_configured(void)
     return (bool)g_pmu_ts_struct.pmu_ts_configured;
 }
 
-
-/*-----------------------------------------------------------------------------
- * @function  : invalidate_pmu_ts_configuration
- * @brief     : Set g_pmu_ts_struct.pmu_ts_configured to false
- * @param     : None
- * @return    : None
- *-----------------------------------------------------------------------------
- */
-void invalidate_pmu_ts_configuration(void)
+uint32_t tv_monitor_get_vbat_raw_data(void)
 {
-    g_pmu_ts_struct.pmu_ts_configured = false;
-    return;
+    return g_pmu_ts_struct.pmu_vbat_prev_valid_raw_data;
 }
 
+bool is_tv_monitor_vbat_data_valid(void)
+{
+    return (bool)g_pmu_ts_struct.pmu_vbat_data_valid;
+}
+
+uint32_t tv_monitor_get_vbat_mV(void)
+{
+    uint32_t pmu_reg_data = tv_monitor_get_vbat_raw_data();
+    return hkadc_vbat_raw2mV(pmu_reg_data);
+}
+
+void tv_monitor_dump (const char *title)
+{
+    pmu_ts_param_t *ps_pmu_ts = &g_pmu_ts_struct;
+
+    if (title) {
+        printf("%s\n", title);
+    }
+
+    printf("pmu_ts_configured=%d\n", ps_pmu_ts->pmu_ts_configured);
+    printf("pmu_ts_meas_mode=%d\n", ps_pmu_ts->pmu_ts_meas_mode);
+    printf("pmu_ts_data_valid=%d pmu_ts_data_update_time=%dms pmu_ts_prev_valid_raw_data=%d %dC\n",
+        ps_pmu_ts->pmu_ts_data_valid, ps_pmu_ts->pmu_ts_data_update_time, ps_pmu_ts->pmu_ts_prev_valid_raw_data, pmu_ts_convert_to_deg_cel(ps_pmu_ts->pmu_ts_prev_valid_raw_data));
+    printf("pmu_vbat_data_valid=%d pmu_vbat_data_update_time=%dms pmu_vbat_prev_valid_raw_data=%d %dmV\n",
+        ps_pmu_ts->pmu_vbat_data_valid, ps_pmu_ts->pmu_vbat_data_update_time, ps_pmu_ts->pmu_vbat_prev_valid_raw_data, hkadc_vbat_raw2mV(ps_pmu_ts->pmu_vbat_prev_valid_raw_data));
+}
 
 #ifdef FEATURE_FPCI
 /**
@@ -368,42 +356,196 @@ void invalidate_pmu_ts_configuration(void)
 void pmu_ts_power_state_change_cb(uint8_t evt, void* p_args)
 {
     (void)p_args;
-    uint32_t rdata;
     if (evt == PWR_EVT_WMAC_PRE_SLEEP)
     {
         invalidate_pmu_ts_configuration();
+        g_pmu_ts_struct.pmu_dtim_next_update_ts = true;  //sleep will update temp first
+        presleep_update_ulpsmps2_oneshot();
     }
     else if ((evt == PWR_EVT_WMAC_POST_AWAKE) || (evt == PWR_EVT_WMAC_SLEEP_ABORT))
     {
-        uint32_t curr_time = hres_timer_curr_time_ms();
-       
-        /* If time from prev temp meas exceeds PMU_TS_MON_PERIOD_MS(2 secs) initiate a one time measurement */
-        if ((uint32_t)(curr_time - g_pmu_ts_struct.pmu_ts_data_update_time) > PMU_TS_MON_PERIOD_MS)
-        {
-            g_pmu_ts_struct.pmu_ts_data_valid = false;
-
-            //Enable HKADC for temperature monitoring
-            rdata = HAL_REG_RD(QWLAN_PMU_CFG_HKADC_DATA_AVG_CNT_REG);
-            rdata &= ~QWLAN_PMU_CFG_HKADC_DATA_AVG_CNT_CFG_TEMP_VBATT_MON_SEL_MASK;
-            HAL_REG_WR(QWLAN_PMU_CFG_HKADC_DATA_AVG_CNT_REG, rdata);
-
-            //Enable one time temperature monitoring
-            rdata = HAL_REG_RD(QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_REG);
-            rdata = (rdata | QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_TEMP_MON_EN_MASK |
-                QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_CFG_TEMP_MON_DONE_INTR_EN_MASK) & 
-                (~QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_AUTO_TEMP_MON_EN_MASK);
-            HAL_REG_WR(QWLAN_PMU_CFG_ACAL_VBAT_MON_EN_REG, rdata);
-            g_pmu_ts_struct.pmu_ts_meas_mode = ONE_TIME;
-            pmu_ts_enable_vbatt_temp_mon_done_int();
-        }
-        else
-        {
-            pmu_ts_configure_periodic_meas();
-        }
+        hkadc_set_auto_monitor_interval(us2xocnt(CONFIG_PMU_TS_MON_PERIOD_US));
+        pmu_ts_configure_periodic_meas();
     }
     return;
 }
 #endif /* FEATURE_FPCI */
 
+#define DEBUG_ONESHOT_WRITE_READ_IN_SLEEP   0
+
+bool g_presleep_update_ulpsmps2_oneshot_enable = true;
+
+uint32_t dbg_oneshot_update_cnt = 0;
+uint32_t dbg_sleep_vbat_ready_cnt = 0;
+uint32_t dbg_sleep_temp_ready_cnt = 0;
+#if DEBUG_ONESHOT_WRITE_READ_IN_SLEEP
+uint32_t dbg_oneshot_update_temp1_raw = 0;
+uint32_t dbg_oneshot_update_temp2_raw = 0;
+int32_t dbg_oneshot_update_temp1 = 0;
+int32_t dbg_oneshot_update_temp2 = 0;
+uint32_t dbg_oneshot_update_vbat1 = 0;
+uint32_t dbg_oneshot_update_vbat2 = 0;
+uint32_t dbg_oneshot_update_cur_oneshot1 = 0;
+uint32_t dbg_oneshot_update_cur_oneshot2 = 0;
+uint32_t dbg_oneshot_update_cur_oneshot3 = 0;
+uint32_t dbg_oneshot_update_cur_oneshot4 = 0;
+uint32_t dbg_oneshot_update_new_oneshot1 = 0;
+uint32_t dbg_oneshot_update_new_oneshot2 = 0;
+uint32_t dbg_oneshot_update_new_oneshot3 = 0;
+uint32_t dbg_oneshot_update_new_oneshot4 = 0;
+uint32_t dbg_oneshot_update_final_oneshot1 = 0;
+uint32_t dbg_oneshot_update_final_oneshot2 = 0;
+#endif
+
+void __attribute__((section(".__sect_ps_txt"))) dtim_tv_monitor_trigger (void)
+{
+    if (g_pmu_ts_struct.pmu_dtim_next_update_ts) {
+        hkadc_single_temp_monitor_enable();
+    } else {
+        hkadc_single_vbat_monitor_enable();
+    }
+}
+
+void __attribute__((section(".__sect_ps_txt"))) dtim_tv_monitor_poll (void)
+{
+    bool data_ready = false;
+    uint32_t data;
+    pmu_ts_param_t *ps_pmu_ts = &g_pmu_ts_struct;
+
+    if (ps_pmu_ts->pmu_dtim_next_update_ts) {
+        data_ready = hkadc_get_temp_raw_data(&data);
+        if (data_ready) {
+            ps_pmu_ts->pmu_ts_prev_valid_raw_data = data;
+            ps_pmu_ts->pmu_dtim_ts_data_valid = true;
+            dbg_sleep_temp_ready_cnt++;
+        }
+    } else {
+        data_ready = hkadc_get_vbat_raw_data(&data);
+        if (data_ready) {
+            ps_pmu_ts->pmu_vbat_prev_valid_raw_data = data;
+            ps_pmu_ts->pmu_dtim_vbat_data_valid = true;
+            dbg_sleep_vbat_ready_cnt++;
+        }
+    }
+    ps_pmu_ts->pmu_dtim_next_update_ts = !ps_pmu_ts->pmu_dtim_next_update_ts;
+}
+
+//sometimes oneshot is not accessable on DTIM, so add some management potential
+void __attribute__((section(".__sect_ps_txt"))) dtim_tv_set_ulpsmps2_oneshot (uint32_t oneshot)
+{
+    ulpsmps2_set_oneshot(oneshot);
+    //g_pmu_ts_struct.pmu_SMPS2_ONESHOT_TRIM = oneshot;
+}
+
+void dtim_tv_monitor_dump (const char *title)
+{
+    if (title) {
+        info_printf("%s\n", title);
+    }
+
+    info_printf("g_presleep_update_ulpsmps2_oneshot_enable=%d\n", g_presleep_update_ulpsmps2_oneshot_enable);
+    //info_printf("pmu_SMPS2_ONESHOT_TRIM=%d\n", ps_pmu_ts->pmu_SMPS2_ONESHOT_TRIM);
+    info_printf("dbg_oneshot_update_cnt=%d\n", dbg_oneshot_update_cnt);
+    info_printf("dbg_sleep_vbat_ready_cnt=%d\n", dbg_sleep_vbat_ready_cnt);
+    info_printf("dbg_sleep_temp_ready_cnt=%d\n", dbg_sleep_temp_ready_cnt);
+#if DEBUG_ONESHOT_WRITE_READ_IN_SLEEP
+    info_printf("dbg_oneshot_update_temp1_raw=%d\n", dbg_oneshot_update_temp1_raw);
+    info_printf("dbg_oneshot_update_temp2_raw=%d\n", dbg_oneshot_update_temp2_raw);
+    info_printf("dbg_oneshot_update_temp1=%d\n", dbg_oneshot_update_temp1);
+    info_printf("dbg_oneshot_update_temp2=%d\n", dbg_oneshot_update_temp2);
+    info_printf("dbg_oneshot_update_vbat1=%d\n", dbg_oneshot_update_vbat1);
+    info_printf("dbg_oneshot_update_vbat2=%d\n", dbg_oneshot_update_vbat2);
+    info_printf("dbg_oneshot_update_cur_oneshot1=%d\n", dbg_oneshot_update_cur_oneshot1);
+    info_printf("dbg_oneshot_update_cur_oneshot2=%d\n", dbg_oneshot_update_cur_oneshot2);
+    info_printf("dbg_oneshot_update_cur_oneshot3=%d\n", dbg_oneshot_update_cur_oneshot3);
+    info_printf("dbg_oneshot_update_cur_oneshot4=%d\n", dbg_oneshot_update_cur_oneshot4);
+    info_printf("dbg_oneshot_update_new_oneshot1=%d\n", dbg_oneshot_update_new_oneshot1);
+    info_printf("dbg_oneshot_update_new_oneshot2=%d\n", dbg_oneshot_update_new_oneshot2);
+    info_printf("dbg_oneshot_update_new_oneshot3=%d\n", dbg_oneshot_update_new_oneshot3);
+    info_printf("dbg_oneshot_update_new_oneshot4=%d\n", dbg_oneshot_update_new_oneshot4);
+    info_printf("dbg_oneshot_update_final_oneshot1=%d\n", dbg_oneshot_update_final_oneshot1);
+    info_printf("dbg_oneshot_update_final_oneshot2=%d\n", dbg_oneshot_update_final_oneshot2);
+#endif
+}
+
+//CONFIG_ULP_SMPS2_ONTSHOT_OPTIMIZE is defined in Kconfig
+
+void __attribute__((section(".__sect_ps_txt"))) presleep_update_ulpsmps2_oneshot (void)
+{
+#if CONFIG_ULP_SMPS2_ONTSHOT_OPTIMIZE
+    pmu_ts_param_t *ps_pmu_ts = &g_pmu_ts_struct;
+    uint32_t temp_raw = ps_pmu_ts->pmu_ts_prev_valid_raw_data;
+    uint32_t final_oneshot = CX_ONESHOT_GOLDEN;
+    uint32_t cur_oneshot = ulpsmps2_get_oneshot();
+    //uint32_t cur_oneshot = ps_pmu_ts->pmu_SMPS2_ONESHOT_TRIM;
+    int32_t tempC = 0;
+    uint32_t vbatmV = 0;
+
+    if (!g_presleep_update_ulpsmps2_oneshot_enable || !cur_oneshot) {
+        //if cur_oneshot==0, oneshot cannot be write or read
+        return;
+    }
+
+    if (temp_raw > PMU_TS_RAW_33C) {
+        tempC = pmu_ts_convert_to_deg_cel(temp_raw);
+        //tempC = hkadc_temp_raw2C(temp_raw);
+        if (tempC > TEMPERATUREC_GOLDEN) {
+            vbatmV = hkadc_vbat_raw2mV(g_pmu_ts_struct.pmu_vbat_prev_valid_raw_data);
+            final_oneshot = ulpsmps2_get_optimized_oneshot(vbatmV, tempC, NULL, NULL);
+        }
+    }
+
+    if (final_oneshot != cur_oneshot) {
+        dbg_oneshot_update_cnt++;
+        dtim_tv_set_ulpsmps2_oneshot(final_oneshot);
+#if DEBUG_ONESHOT_WRITE_READ_IN_SLEEP
+        uint32_t new_oneshot = 5;
+        new_oneshot = ulpsmps2_get_oneshot();
+        if (!dbg_oneshot_update_temp1_raw) {
+            dbg_oneshot_update_temp1_raw = temp_raw;
+        } else if (!dbg_oneshot_update_temp2_raw) {
+            dbg_oneshot_update_temp2_raw = temp_raw;
+        }
+        if (!dbg_oneshot_update_temp1) {
+            dbg_oneshot_update_temp1 = tempC;
+        } else if (!dbg_oneshot_update_temp2) {
+            dbg_oneshot_update_temp2 = tempC;
+        }
+        if (!dbg_oneshot_update_vbat1) {
+            dbg_oneshot_update_vbat1 = vbatmV;
+        } else if (!dbg_oneshot_update_vbat2) {
+            dbg_oneshot_update_vbat2 = vbatmV;
+        }
+        if (!dbg_oneshot_update_cur_oneshot1) {
+            dbg_oneshot_update_cur_oneshot1 = cur_oneshot;
+        } else if (!dbg_oneshot_update_cur_oneshot2) {
+            dbg_oneshot_update_cur_oneshot2 = cur_oneshot;
+        } else if (!dbg_oneshot_update_cur_oneshot3) {
+            dbg_oneshot_update_cur_oneshot3 = cur_oneshot;
+        } else if (!dbg_oneshot_update_cur_oneshot4) {
+            dbg_oneshot_update_cur_oneshot4 = cur_oneshot;
+        }
+        if (!dbg_oneshot_update_new_oneshot1) {
+            dbg_oneshot_update_new_oneshot1 = new_oneshot;
+        } else if (!dbg_oneshot_update_new_oneshot2) {
+            dbg_oneshot_update_new_oneshot2 = new_oneshot;
+        } else if (!dbg_oneshot_update_new_oneshot3) {
+            dbg_oneshot_update_new_oneshot3 = new_oneshot;
+        } else if (!dbg_oneshot_update_new_oneshot4) {
+            dbg_oneshot_update_new_oneshot4 = new_oneshot;
+        }        
+        if (!dbg_oneshot_update_final_oneshot1) {
+            dbg_oneshot_update_final_oneshot1 = final_oneshot;
+        } else if (!dbg_oneshot_update_final_oneshot2) {
+            dbg_oneshot_update_final_oneshot2 = final_oneshot;
+        }
+#endif        
+    }
+    return;
+#else   /* !CONFIG_ULP_SMPS2_ONTSHOT_OPTIMIZE */
+    return;
+#endif
+}
 
 #endif /* PMU_TS_CONFIGURATION */
+

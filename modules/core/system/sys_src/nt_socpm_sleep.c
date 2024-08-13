@@ -2995,6 +2995,8 @@ static void _socpm_slpcfg_mcuslp(void)
     // Disable CPR and set CX LDO sleep voltage to 0.6V (experimental value)
     wifi_fw_cpr_disable();
 
+    presleep_update_ulpsmps2_oneshot();
+
     // SLEEP MODE enable disable_sleep_mode_en=0
     value = NT_REG_RD(QWLAN_PMU_CFG_PMIC_SLEEP_MODE_CNTL_REG);
     value &= ~QWLAN_PMU_CFG_PMIC_SLEEP_MODE_CNTL_CFG_DISABLE_PMIC_SLEEP_MODE_MASK;
@@ -3983,15 +3985,7 @@ void nt_socpm_init(
 #if defined (IO_DEBUG)
     g_socpm_struct.io_dbg_count = 0;
 #endif /*IO_DEBUG*/
-#ifdef PMU_TS_CONFIGURATION
-    pmu_ts_update_boot_temperature();
-    pmu_ts_configure();
-#endif /* PMU_TS_CONFIGURATION */
-#ifdef SLEEP_CLK_CAL_IN_ACTIVE_MODE
-#ifndef SOCPM_SLEEP_DEBUG
-    socpm_slp_clk_cal_enable(ACTIVE_MODE);
-#endif
-#endif /* SLEEP_CLK_CAL_IN_ACTIVE_MODE */
+
 #ifdef FERMION_POWER_WAR
     /** Observed high power consumption post IMPS exit
      * As observed after a warm boot from deep sleep test bus control reg was not updating to default (0x0)
@@ -4004,6 +3998,25 @@ void nt_socpm_init(
 #ifndef FTM_OVER_UART
     nt_socpm_enable(1);
 #endif
+}
+
+/*
+ *  @brief : Initializes PMU temperature sensor and Sleep Clock Cal
+ *  @param : none
+ *  @return : None
+ */
+void nt_socpm_secondary_init(void)
+{
+#ifdef PMU_TS_CONFIGURATION
+    pmu_ts_init();
+    pmu_ts_configure();
+#endif /* PMU_TS_CONFIGURATION */
+
+#ifdef SLEEP_CLK_CAL_IN_ACTIVE_MODE
+#ifndef SOCPM_SLEEP_DEBUG
+    socpm_slp_clk_cal_enable(ACTIVE_MODE);
+#endif
+#endif /* SLEEP_CLK_CAL_IN_ACTIVE_MODE */
 }
 
 void nt_enable_standby(

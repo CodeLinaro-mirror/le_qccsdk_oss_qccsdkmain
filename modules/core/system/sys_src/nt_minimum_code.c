@@ -18,6 +18,7 @@
 #include "timer_internal.h"
 #include "nt_gpio_api.h"
 #include "wifi_fw_internal_api.h"
+#include "wifi_fw_pmu_ts_cfg.h"
 
 #if defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD)
 #include "wifi_fw_cpr_driver.h"
@@ -338,6 +339,8 @@ ram_minimum_code(
     }
 #endif /* defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD) */
 
+    dtim_tv_monitor_trigger();
+
     //to enable any floating point operation in minimal code
     _min_enable_vfp();
     // in minimum, should not process uart rx
@@ -442,6 +445,7 @@ ram_minimum_code(
             /* Print showing entry of RMC */
             UART_Send_direct("R", 1);
 #endif /* SOCPM_RMC_DBG */
+        presleep_update_ulpsmps2_oneshot();
 slp_switch:
         slp_tmr_sts = NT_REG_RD(QWLAN_PMU_WLAN_SLP_TMR_STS_REG);
 #ifdef COMPENSATE_AON_PROG_DELAY
@@ -494,6 +498,7 @@ slp_switch:
         FDI_RMC_INS_STOP_NULL(FDI_DBG_PWR_S2W_WARM_BOOT_CB);
         if (wkup_us > 0)
         {
+            dtim_tv_monitor_poll();
 #ifdef SOCPM_RMC_DBG
             /* Print when decides to sleep back */
             UART_Send_direct("S\r\n", 3);

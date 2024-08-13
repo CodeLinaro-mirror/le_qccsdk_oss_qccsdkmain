@@ -19,7 +19,8 @@
 #include "nt_flags.h"
 #include "qurt_internal.h"
 #include "qapi_rtc.h"
-
+#include "wifi_fw_pmu_ts_cfg.h"
+#include "ferm_hkadc_drv.h"
 
 static qapi_Status_t platform_reset(uint32_t __attribute__((__unused__)) parameters_count, QAPI_Console_Parameter_t __attribute__((__unused__)) * parameters)
 {
@@ -358,6 +359,117 @@ platform_demo_time_ntp_on_error:
 	return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 }
 
+static qapi_Status_t platform_demo_info(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    (void)(Parameter_Count);
+    (void)(Parameter_List);
+
+    printf("Show system information\n");
+    printf("Temperature=%dC\n", pmu_ts_get_current_temperature());
+    printf("Vbat=%dmV\n", tv_monitor_get_vbat_mV());
+    printf("get RTC time\n");
+    platform_demo_get_time(0, NULL);
+    printf("get heap status\n");
+    platform_demo_free(0, NULL);
+    return QAPI_OK;
+}
+
+static qapi_Status_t platform_demo_getcx(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    (void)(Parameter_Count);
+    (void)(Parameter_List);
+
+    printf("Show cx(ULP-SMPS2) related information\n");
+    tv_monitor_dump("getcx");
+    dtim_tv_monitor_dump("getcx");
+    hkadc_drv_dump("getcx");
+    return QAPI_OK;
+}
+
+static qapi_Status_t platform_demo_calcxoneshot(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    int32_t temperatureC = 0;
+    uint32_t vbatmV = 0;
+    uint32_t OTP_oneshot = 0;
+    uint32_t optmized_oneshot = 0;
+    uint32_t t_one_shot_ns = 0;
+
+    if (Parameter_Count != 2) {
+        printf("Invalid number of arguments\n");
+        goto platform_demo_calcxoneshot_error;
+    }
+
+    if (!Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
+        printf("temperature and vbatmV Should be integer\n");
+        goto platform_demo_calcxoneshot_error;
+    }
+
+    temperatureC = Parameter_List[0].Integer_Value;
+    vbatmV = Parameter_List[1].Integer_Value;
+
+    if ((temperatureC<TEMPERATUREC_MIN) || (temperatureC>TEMPERATUREC_MAX)) {
+        printf("temperature not supported, should be in [%d, %d]\n", TEMPERATUREC_MIN, TEMPERATUREC_MAX);
+        goto platform_demo_calcxoneshot_error;
+    }
+
+    if ((vbatmV<VBATMV_MIN) || (vbatmV>VBATMV_MAX)) {
+        printf("vbatmV not supported, should be in [%d, %d]\n", VBATMV_MIN, VBATMV_MAX);
+        goto platform_demo_calcxoneshot_error;
+    }
+
+    optmized_oneshot = ulpsmps2_get_optimized_oneshot(vbatmV, temperatureC, &OTP_oneshot, &t_one_shot_ns);
+    printf("vbat=%dmV T=%dC OTP_oneshot=%d t_one_shot_ns=%dns optmized_oneshot=%d\n", vbatmV, temperatureC, OTP_oneshot, t_one_shot_ns, optmized_oneshot);
+    return optmized_oneshot;
+
+platform_demo_calcxoneshot_error:
+    printf("Usage: calcxoneshot <tempC> <vbatmV>\n");
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+}
+
+extern bool g_presleep_update_ulpsmps2_oneshot_enable;
+
+static qapi_Status_t platform_demo_setcxoneshot(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint32_t requested_oneshot = 0;
+    qapi_Status_t optmized_oneshot = 0;
+
+    if ((Parameter_Count>=1) && Parameter_List[0].Integer_Is_Valid) {
+        requested_oneshot = Parameter_List[0].Integer_Value;
+        if (requested_oneshot > CX_ONESHOT_MAX) {
+            printf("requested_oneshot not supported, should be in (%d, %d]\n", CX_ONESHOT_MIN, CX_ONESHOT_MAX);
+            if (requested_oneshot==255) {
+                //if requested_oneshot==255, enable update oneshot in sleep
+                g_presleep_update_ulpsmps2_oneshot_enable = true;
+                printf("Magic code match, enable update oneshot in sleep\n");
+            }
+            goto platform_demo_setcxoneshot;
+        }
+    } else {
+        goto platform_demo_setcxoneshot;
+    }
+
+    if (requested_oneshot) {
+        printf("do set oneshot=%d=>%d and disable update oneshot in sleep\n", ulpsmps2_get_oneshot(), requested_oneshot);
+        dtim_tv_set_ulpsmps2_oneshot(requested_oneshot);
+        g_presleep_update_ulpsmps2_oneshot_enable = false;
+        return QAPI_OK;
+    }
+
+    //if requested_oneshot==0, set oneshot according to tempC and vbatmV
+    optmized_oneshot = platform_demo_calcxoneshot((Parameter_Count-1), &Parameter_List[1]);
+    if (optmized_oneshot < 0) {
+        goto platform_demo_setcxoneshot;
+    }
+    printf("do set oneshot=%d=>%d and disable update oneshot in sleep\n", ulpsmps2_get_oneshot(), optmized_oneshot);
+    dtim_tv_set_ulpsmps2_oneshot(optmized_oneshot);
+    g_presleep_update_ulpsmps2_oneshot_enable = false;
+    return QAPI_OK;
+
+platform_demo_setcxoneshot:
+    printf("Usage: setcxoneshot <oneshot> [tempC] [vbatmV]\n");
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+}
+
 const QAPI_Console_Command_t platform_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -371,6 +483,10 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
     {platform_demo_watchdog_reset, "wdrst", "\n", "trigger watchdog reset\n"},
     {platform_demo_time, "time", "\n", "get/set current time in Julian format\n"},
 	{platform_demo_time_ntp, "time_ntp", "\n", "get/set current time in NTP format\n"},
+    {platform_demo_info, "info", "\n", "show system information\n"},
+    {platform_demo_getcx, "getcx", "\n", "get cx(ULP-SMPS2) related information\n"},
+    {platform_demo_calcxoneshot, "calcxoneshot", "<tempC> <vbatmV>", "calculate cx(ULP-SMPS2) oneshot_code accordting to tempC(-40C, 125C) and vbatmV(1600mV, 3600mV)\n"},
+    {platform_demo_setcxoneshot, "setcxoneshot", "<oneshot> [tempC] [vbatmV]\n", "if oneshot not zero, just set; else, calculate oneshot according to tempC and vbatmV then set. This will disable cxoneshot update in sleep\n"},
 };
 
 const QAPI_Console_Command_Group_t platform_shell_cmd_group = {"platform", sizeof(platform_shell_cmds) / sizeof(QAPI_Console_Command_t), platform_shell_cmds};
