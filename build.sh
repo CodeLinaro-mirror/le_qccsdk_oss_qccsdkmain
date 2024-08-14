@@ -17,5 +17,13 @@ cp ${SCRIPT_PATH}/../comp/wifi/LICENSE.txt ${SCRIPT_PATH}/../prebuilt_HY11/
 cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/libwifi_core.a ${SCRIPT_PATH}/../prebuilt_HY11_ART/
 cp ${SCRIPT_PATH}/../comp/wifi/NOTICE ${SCRIPT_PATH}/../prebuilt_HY11_ART/
 cp ${SCRIPT_PATH}/../comp/wifi/LICENSE.txt ${SCRIPT_PATH}/../prebuilt_HY11_ART/
-tar -cvf qccsdk_pkg.tar  ${SCRIPT_PATH}/../
-mv qccsdk_pkg.tar ${SCRIPT_PATH}/../
+
+if [ -d "${SCRIPT_PATH}/SRC-IOE-SDK/" ]; then
+	echo "SDK packed successfully, start pack lib files.. "
+	cp -r ${SCRIPT_PATH}/../prebuilt_HY11 ${SCRIPT_PATH}/../qccsdk/SRC-IOE-SDK/.
+	cp -r ${SCRIPT_PATH}/../prebuilt_HY11_ART ${SCRIPT_PATH}/../qccsdk/SRC-IOE-SDK/.
+	tar -czf SRC-IOE-SDK.tar.gz SRC-IOE-SDK
+	rm -rf ${SCRIPT_PATH}/../qccsdk/SRC-IOE-SDK
+	mv ${SCRIPT_PATH}/../qccsdk/SRC-IOE-SDK.tar.gz ${SCRIPT_PATH}/../
+fi
+
