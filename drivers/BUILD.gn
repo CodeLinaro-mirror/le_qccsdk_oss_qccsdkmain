@@ -15,6 +15,9 @@ drivers_inc = [
 
 drivers_src = [
     "peripherals/qapi_i2c.c",
+]
+
+gpio_src = [
     "peripherals/qapi_gpio.c",
 ]
 
@@ -83,6 +86,8 @@ source_set("drivers") {
              "hfc/qapi_hfc.c",
         ]
     }
+
+    sources += gpio_src
                                     
 }
 
