@@ -700,6 +700,8 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         tolen = sizeof(s_addr);
 
     }
+    else
+    {
 #endif
 #if LWIP_IPV6
     if (AF_INET6 == family)
@@ -736,14 +738,16 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         tolen = sizeof(s_addr6);
         //htdbgprintf("%s() %d IPv6 Addr:%s port %u\n", __func__, __LINE__, inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.a.addr6), temp,sizeof(temp)), sess->hcs_port);
     }
-#endif
     else
+#endif
     {
         htdbgprintf("%s():%d fatal error on index[%d]\n", __func__,__LINE__,sess->index);
-	    error = HTTPC_ERR_INVALID_PARAM;
+        error = HTTPC_ERR_INVALID_PARAM;
         goto ERROR;
     }
-
+#if LWIP_IPV4
+    }
+#endif
     htdbgprintf("%s():%d Sending Connect req on index[%d]\n", __func__,__LINE__,sess->index);
 
     error = connect(sock, to, tolen);
