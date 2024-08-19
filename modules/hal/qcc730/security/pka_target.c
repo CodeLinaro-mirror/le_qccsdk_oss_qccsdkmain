@@ -31,6 +31,7 @@
 #define io_write32(addr, value) (*(volatile uint32_t*)addr = value)
 
 struct pka_state *g_elppka_ctxt;
+static uint8_t pka_init_done = 0;
 
 void pka_enable_clock(pka_state_t * ctxt)
 {
@@ -84,6 +85,9 @@ void pka_power_state_change_cb(uint8_t evt, void *p_args)
 
 int pka_init(pka_state_t * ctxt)
 {
+	if (pka_init_done)
+		return 0;
+
 	// power switch to config
 	pka_power_switch_to_config();
     // enable PKA clock
@@ -128,16 +132,21 @@ int pka_init(pka_state_t * ctxt)
 	fpci_evt_cb_reg((ps_evt_cb_t)&pka_power_state_change_cb, 
         PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, 10, NULL);
 	
+	pka_init_done = 1;
     return 0;
 }
 
 int pka_deinit(pka_state_t * ctxt)
 {
+	if (!pka_init_done)
+		return 0;
+
     if (ctxt->mutex)
     {
         qurt_mutex_delete( &ctxt->mutex );
         ctxt->mutex = 0;
     }
+	pka_init_done = 0;
     return 0;
 }
 
