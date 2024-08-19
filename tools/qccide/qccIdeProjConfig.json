@@ -235,7 +235,7 @@
     "chipTarget": "QCC730",
     "toolchainName": "arm-none-eabi-gcc",
     "sdkPath": "",
-    "demoPath": "./fermion_sbl",
+    "demoPath": "./bootloader/SBL",
     "demoRTOS": "",
     "demoChipBoard": "qcc730v2_evb11_hostless",
     "demoBuildScriptWin": "qccsdk.py",
@@ -266,7 +266,7 @@
       "qcc730v2_evb12_hostless"
     ],
     "incPaths": [
-      "./fermion_sbl",
+      "./bootloader/SBL",
       "./output/${demoChipBoard}/${defaultDemo}"
     ],
     "SET_CFG_PATTERN": {
@@ -382,7 +382,7 @@
     "chipTarget": "QCC730",
     "toolchainName": "arm-none-eabi-gcc",
     "sdkPath": "",
-    "demoPath": "./nvm_programmer",
+    "demoPath": "./tools/nvm_programmer",
     "demoRTOS": "",
     "demoChipBoard": "qcc730v2_evb11_hostless",
     "demoBuildScriptWin": "qccsdk.py",
@@ -413,7 +413,7 @@
       "qcc730v2_evb12_hostless"
     ],
     "incPaths": [
-      "./nvm_programmer",
+      "./tools/nvm_programmer",
       "./output/${demoChipBoard}/${defaultDemo}"
     ],
     "SET_CFG_PATTERN": {
