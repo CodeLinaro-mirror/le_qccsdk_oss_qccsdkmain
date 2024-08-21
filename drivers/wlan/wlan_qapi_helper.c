@@ -5,6 +5,7 @@
 
 #include "wlan_drv.h"
 #include "wlan_qapi_helper.h"
+#include "wlan_ra.h"
 #include "wmi_api.h"
 #include "safeAPI.h"
 
@@ -655,4 +656,229 @@ qapi_Status_t wlan_set_appie(qapi_WLAN_App_Ie_Params_t *ie_params)
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 
     return error;  
+}
+
+qapi_Status_t wlan_set_rts_cts(uint8_t device_ID, uint32_t enable)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+	cmd->pdev_param_id = WIFI_PARAM_SET_RTS_CTS;
+	cmd->pdev_param_value = enable;
+
+	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+	if(p_cxt->wlan_set_param_block_mode) {
+		p_cxt->param_id = WIFI_PARAM_SET_RTS_CTS;
+		qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+	} else {
+		log_printf("unblock mode, should check WMI cmd done in event cb\n");
+	}
+	error = get_wlan_qapi_error();
+	return error;
+}
+
+qapi_Status_t wlan_get_rts_cts(uint32_t *enable)
+{
+	volatile hal_tpe_sta_desc_t* desc = ((volatile hal_tpe_sta_desc_t *) ((uint32_t)&_ln_RAM_start_addr_hw_desc__ + HAL_MMAP_TPE_DESC_OFST)) + STA_MODE;
+	if (desc->rate_params_20Mhz[0].protection_mode)
+		*enable = 1;
+	else
+		*enable = 0;
+	return QAPI_OK;
+}
+
+qapi_Status_t wlan_set_rts_rate(uint8_t device_ID, uint32_t rate)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+	if (rate > 1)
+		return QAPI_ERR_INVALID_PARAM;
+
+	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+	cmd->pdev_param_id = WIFI_PARAM_SET_RTS_RATE_2G;
+	cmd->pdev_param_value = rate;
+
+	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+	if(p_cxt->wlan_set_param_block_mode) {
+		p_cxt->param_id = WIFI_PARAM_SET_RTS_RATE_2G;
+		qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+	} else {
+		log_printf("unblock mode, should check WMI cmd done in event cb\n");
+	}
+	error = get_wlan_qapi_error();
+	return error;
+}
+
+qapi_Status_t wlan_get_rts_rate(uint32_t *rate)
+{
+	nt_hal_fix_rts_rate(0, (uint32_t)rate);
+
+	if (*rate == HAL_RT_IDX_11B_LONG_1_MBPS)
+		*rate = 1;
+	else if (*rate == HAL_RT_IDX_11A_6_MBPS)
+		*rate = 6;
+	else if (*rate == HAL_RT_IDX_11A_12_MBPS)
+		*rate = 12;
+	else
+		return QAPI_ERR_INVALID_PARAM;
+	return QAPI_OK;
+}
+
+qapi_Status_t wlan_set_cw_size(uint8_t device_ID, uint8_t qid, uint16_t cw_min, uint16_t cw_max)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+	qapi_WLAN_Contention_Window_Params_t cw_para;
+
+	if ((qid >= 8) && (qid != 0xff))
+		return QAPI_ERR_INVALID_PARAM;
+
+	cw_para.qid = qid;
+	cw_para.cw_min = cw_min;
+	cw_para.cw_max = cw_max;
+
+	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+	cmd->pdev_param_id = WIFI_PARAM_SET_CW_SIZE;
+	cmd->pdev_param_value = (uint32_t)&cw_para;
+
+	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+	if(p_cxt->wlan_set_param_block_mode) {
+		p_cxt->param_id = WIFI_PARAM_SET_CW_SIZE;
+		qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+	} else {
+		log_printf("unblock mode, should check WMI cmd done in event cb\n");
+	}
+	error = get_wlan_qapi_error();
+	return error;
+}
+
+qapi_Status_t wlan_get_cw_size(uint8_t qid, uint16_t *cw_min, uint16_t *cw_max)
+{
+	uint32_t value;
+	if (qid > 7 && qid != 0xff)
+		return QAPI_ERR_INVALID_PARAM;
+
+	if (qid == 0xff)
+		value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_0_REG);
+	else
+		value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_0_REG + 4 * qid);
+
+	*cw_min = (uint16_t)value;
+	*cw_max = (uint16_t)(value >> 16);
+
+	return QAPI_OK;
+}
+
+qapi_Status_t wlan_set_per_upper_threshold(uint8_t device_ID, uint32_t threshold)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+	if (threshold > 100)
+		return QAPI_ERR_INVALID_PARAM;
+
+	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+	cmd->pdev_param_id = WIFI_PARAM_SET_PER_UPPER_THRESHOLD;
+	cmd->pdev_param_value = threshold;
+
+	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+	if(p_cxt->wlan_set_param_block_mode) {
+		p_cxt->param_id = WIFI_PARAM_SET_PER_UPPER_THRESHOLD;
+		qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+	} else {
+		log_printf("unblock mode, should check WMI cmd done in event cb\n");
+	}
+	error = get_wlan_qapi_error();
+	return error;
+}
+
+qapi_Status_t wlan_get_per_upper_threshold(uint32_t *threshold)
+{
+	extern devh_t *gdevp;
+	nt_rate_context_t *pRateCtrl = (nt_rate_context_t *)gdevp->pRateCtrl;
+	*threshold = pRateCtrl->perUpperThresh;
+
+	return QAPI_OK;
+}
+
+qapi_Status_t wlan_set_ba_win_size(uint8_t device_ID, uint16_t ack_timeout, uint16_t delay)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+	if (ack_timeout >= 4096|| delay >= 64)
+		return QAPI_ERR_INVALID_PARAM;
+
+	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+	cmd->pdev_param_id = WIFI_PARAM_SET_BA_WIN_SIZE;
+	cmd->pdev_param_value = (ack_timeout << 16) | delay;
+
+	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+	if(p_cxt->wlan_set_param_block_mode) {
+		p_cxt->param_id = WIFI_PARAM_SET_BA_WIN_SIZE;
+		qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+	} else {
+		log_printf("unblock mode, should check WMI cmd done in event cb\n");
+	}
+	error = get_wlan_qapi_error();
+	return error;
+}
+
+qapi_Status_t wlan_get_ba_win_size(uint16_t *ack_timeout, uint16_t *delay)
+{
+	uint32_t value;
+	value = HAL_REG_RD(QWLAN_MTU_SW_MTU_BCN_SLOT_USEC_SIFS_LIMIT_REG);
+	value &= (uint32_t)QWLAN_MTU_SW_MTU_BCN_SLOT_USEC_SIFS_LIMIT_SW_MTU_EARLY_PKT_DET_MISS_LIMIT_MASK;
+	*ack_timeout = (uint16_t)(value >> QWLAN_MTU_SW_MTU_BCN_SLOT_USEC_SIFS_LIMIT_SW_MTU_EARLY_PKT_DET_MISS_LIMIT_OFFSET);
+
+	value = HAL_REG_RD(QWLAN_AGC_D_FIRANDCAL_REG);
+	value &= (uint32_t)QWLAN_AGC_D_FIRANDCAL_DELAY_MASK;
+	*delay = (uint16_t)(value >> QWLAN_AGC_D_FIRANDCAL_DELAY_OFFSET);
+	return QAPI_OK;
+}
+
+qapi_Status_t wlan_set_slot_time(uint8_t device_ID, uint32_t slot_time)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+	if (slot_time != 9 && slot_time != 20)
+		return QAPI_ERR_INVALID_PARAM;
+
+	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+	cmd->pdev_param_id = WIFI_PARAM_SET_SLOT_TIME;
+	cmd->pdev_param_value = slot_time;
+
+	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+	if(p_cxt->wlan_set_param_block_mode) {
+		p_cxt->param_id = WIFI_PARAM_SET_SLOT_TIME;
+		qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+	} else {
+		log_printf("unblock mode, should check WMI cmd done in event cb\n");
+	}
+	error = get_wlan_qapi_error();
+	return error;
+}
+
+qapi_Status_t wlan_get_slot_time(uint32_t *slot_time)
+{
+	uint32_t value;
+	value = HAL_REG_RD(QWLAN_MTU_SW_MTU_BCN_SLOT_USEC_SIFS_LIMIT_REG);
+	value &= (uint32_t)QWLAN_MTU_SW_MTU_BCN_SLOT_USEC_SIFS_LIMIT_SW_MTU_BCN_SLOT_LIMIT_MASK;
+	*slot_time = (value >> QWLAN_MTU_SW_MTU_BCN_SLOT_USEC_SIFS_LIMIT_SW_MTU_BCN_SLOT_LIMIT_OFFSET);
+	return QAPI_OK;
 }

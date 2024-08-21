@@ -391,6 +391,9 @@ nt_status_t nt_hal_wmm_params_set(struct chanAccParams *wmm, uint32_t phyRateFul
 #else
 nt_status_t nt_hal_wmm_params_set(struct chanAccParams *wmm);
 #endif
+nt_status_t nt_hal_mod_wmmparam_cw(uint8_t qid, uint16_t min, uint16_t max);
+nt_status_t nt_hal_mod_ba_win_size(uint16_t ack_timeout, uint16_t delay);
+nt_status_t nt_hal_mod_slot_time(uint32_t slot_time);
 
 uint32_t hal_find_seq_num(nt_hal_bss_t *bss,uint32_t staid,uint32_t batid);
 uint32_t nt_hal_get_seq_num(nt_hal_bss_t *bss,uint32_t staid,uint32_t batid);

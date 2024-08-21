@@ -2663,6 +2663,25 @@ typedef struct {
 
 /**
 @ingroup qapi_wlan
+Set STA contention window size.
+*/
+typedef struct {
+    uint8_t qid;
+    uint16_t cw_min;
+    uint16_t cw_max;
+}qapi_WLAN_Contention_Window_Params_t;
+
+/**
+@ingroup qapi_wlan
+Set STA BA window size.
+*/
+typedef struct {
+    uint16_t ack_timeout;
+    uint16_t delay;
+}qapi_WLAN_BA_Window_Params_t;
+
+/**
+@ingroup qapi_wlan
 Function pointer to an application specified callback handler function.
 
 The callback handler for WLAN commands can be set using qapi_WLAN_Set_Callback().

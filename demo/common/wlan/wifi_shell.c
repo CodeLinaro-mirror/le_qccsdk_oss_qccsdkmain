@@ -1266,7 +1266,7 @@ static qapi_Status_t setSTAListenInterval(uint32_t __attribute__((__unused__)) P
         return -1;
     }
     return 0;
-    }
+}
 
 static qapi_Status_t getSTAListenInterval(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
@@ -1817,6 +1817,191 @@ static qapi_Status_t setApplicationIe(uint32_t __attribute__((__unused__)) Param
     return QAPI_ERROR;
 }
 
+#define RT_IDX_11B_LONG_1_MBPS 0
+#define RT_IDX_11A_6_MBPS 1
+// use this command after 2G connection
+static qapi_Status_t setAntiInfParam(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint32_t enable = 1;
+    uint32_t rts_rate = RT_IDX_11B_LONG_1_MBPS;
+    qapi_WLAN_Contention_Window_Params_t cw_size_cfg;
+    uint32_t threshold = 60;
+    qapi_WLAN_BA_Window_Params_t ba_win_size_cfg;
+    uint32_t slot_time = 20;
+
+    cw_size_cfg.qid = 0xff; //set queue 0 - 7
+    cw_size_cfg.cw_min = 0x04;
+    cw_size_cfg.cw_max = 0x0f;
+
+    ba_win_size_cfg.ack_timeout = 128; //128us, should less than 4096
+    ba_win_size_cfg.delay = 10; //10 * 2 * SM clock cycles, should less than 64
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS,
+                                &enable,
+                                sizeof(enable),
+                                FALSE))
+    {
+        info_printf("Enable RTS/CTS fail\r\n");
+        info_printf("1:enable  0:disable\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G,
+                                &rts_rate,
+                                sizeof(rts_rate),
+                                FALSE))
+    {
+        info_printf("fix RTS rate fail\r\n");
+        info_printf("0:1Mbps  1:6Mbps\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW,
+                                &cw_size_cfg,
+                                sizeof(cw_size_cfg),
+                                FALSE))
+    {
+        info_printf("set contention window size fail\r\n");
+        info_printf("set qid = 0xff for all queue; set qid = 0-7 for single queue\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD,
+                                &threshold,
+                                sizeof(threshold),
+                                FALSE))
+    {
+        info_printf("set per upper threshold fail\r\n");
+        info_printf("threshold should less than 100\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW,
+                                &ba_win_size_cfg,
+                                sizeof(ba_win_size_cfg),
+                                FALSE))
+    {
+        info_printf("set BA window size fail\r\n");
+        info_printf("ack_timeout should less than 4096\r\n");
+        info_printf("delay should less than 64\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME,
+                                &slot_time,
+                                sizeof(slot_time),
+                                FALSE))
+    {
+        info_printf("set slot time fail\r\n");
+        info_printf("set slot time to 9us or 20us\r\n");
+        return -1;
+    }
+
+    info_printf("setAntiInfParam success\r\n");
+    return 0;
+}
+
+static qapi_Status_t getAntiInfParam(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint32_t enable;
+    uint32_t rts_rate;
+    qapi_WLAN_Contention_Window_Params_t cw_size_cfg;
+    uint32_t threshold;
+    qapi_WLAN_BA_Window_Params_t ba_win;
+    uint32_t slot_time;
+    uint32_t length;
+    cw_size_cfg.qid = 0xff;
+    length = sizeof(enable);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS,
+                                &enable,
+                                &length)){
+        info_printf("get RTS enable fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        if (enable)
+            info_printf("RTS enable\r\n");
+        else
+            info_printf("RTS disable\r\n");;
+    }
+
+    length = sizeof(rts_rate);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G,
+                                &rts_rate,
+                                &length)){
+        info_printf("get RTS rate fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("RTS rate: %dMbps\r\n", rts_rate);
+    }
+
+    length = sizeof(cw_size_cfg);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW,
+                                &cw_size_cfg,
+                                &length)){
+        info_printf("get contention window size fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("contention window size -- qid:%d, cw_min:%d, cw_max:%d\r\n", cw_size_cfg.qid, cw_size_cfg.cw_min, cw_size_cfg.cw_max);
+    }
+
+    length = sizeof(threshold);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD,
+                                &threshold,
+                                &length)){
+        info_printf("get per upper threshold fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("per upper threshold:%d\r\n", threshold);
+    }
+
+    length = sizeof(ba_win);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW,
+                                &ba_win,
+                                &length)){
+        info_printf("get per upper ba window size fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("ba window size -- ack_timeout:%dus, delay:%d SM clock cycles\r\n", ba_win.ack_timeout, 2 * ba_win.delay);
+    }
+
+    length = sizeof(slot_time);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME,
+                                &slot_time,
+                                &length)){
+        info_printf("get slot time fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("slot time:%dus\r\n", slot_time);
+    }
+    return 0;
+}
+
 const QAPI_Console_Command_t wifi_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -1859,7 +2044,9 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 #ifdef CONFIG_MGMT_FILTER_DEMO	
 	{ setMgmtFilter,	"setMgmtFilter",        "0:None, 1:Asso Resp, 2:Probe Resp, 3:Asso and Probe Resp, -1:print mgmt frames",  "Set management frames filter"},
 #endif	
-    { setApplicationIe, "setApplicationIe", "<0:beacon/1:probe request/2:probe response/3:asssociation request> <IE starting with dd>",  "Set application specified IE in specified management frame. Every input character is a nibble which means every 2 character is a byte, two characters are converted into a hex number before putting it in the frame. The length of application specified IE should be multiple of 2. if user has single digit value he need to prepend with 0 for ex: 0x5 should be 0x05. To remove IE, input only 'dd'"},
+	{ setApplicationIe, "setApplicationIe", "<0:beacon/1:probe request/2:probe response/3:asssociation request> <IE starting with dd>",  "Set application specified IE in specified management frame. Every input character is a nibble which means every 2 character is a byte, two characters are converted into a hex number before putting it in the frame. The length of application specified IE should be multiple of 2. if user has single digit value he need to prepend with 0 for ex: 0x5 should be 0x05. To remove IE, input only 'dd'"},
+	{ setAntiInfParam,	"setAntiInfParam",        "",  "Set default anti-interference parameters to improve throughput in noisy environment"},
+	{ getAntiInfParam,	"getAntiInfParam",        "",  "Get default anti-interference parameters"},
 };
 
 const QAPI_Console_Command_Group_t wifi_shell_cmd_group = {WLAN_SHELL_GROUP_NAME, sizeof(wifi_shell_cmds) / sizeof(QAPI_Console_Command_t), wifi_shell_cmds};

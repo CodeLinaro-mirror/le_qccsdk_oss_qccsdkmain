@@ -571,6 +571,9 @@ void hal_mod_wmmparams_add(struct chanAccParams *wmm, uint32_t phyRtFullHarfQuar
 #else
 void hal_mod_wmmparams_add(struct chanAccParams *wmm);
 #endif
+void hal_mod_wmmparam_cw(uint8_t qid, uint16_t cw_min, uint16_t cw_max);
+void hal_mod_ba_win_size(uint16_t ack_timeout, uint16_t delay);
+void hal_mod_slot_time(uint32_t slot_time);
 
 /*
 * @brief  update wmm parameters with wmm params sent by SAP

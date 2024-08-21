@@ -1267,6 +1267,65 @@ qapi_WLAN_MGMT_FRAME_e
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_MGMT_FRAME_FILTER				83
 
+/**
+Command ID to enable/disable RTS/CTS protection when operating in Station mode.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] uint32_t        Set 1 to enable RTS/CTS protection, 0 to be disabled.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS           84
+
+/**
+Command ID to fix RTS rate in 2G when operating in Station mode.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] uint32_t        0: 1Mbps  1: 6Mbps
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G           85
+
+/**
+Command ID to adjust contention window size when operating in Station mode.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] qapi_WLAN_Contention_Window_Params_t  Set contention window size for queue 0-7.
+
+@sa
+#qapi_WLAN_Contention_Window_Params_t
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW           86
+
+/**
+Command ID to adjust PER upper threshold when operating in Station mode.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] uint32_t  Set PER upper threshold to 0-100.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD           87
+
+/**
+Command ID to adjust BA window size when operating in Station mode.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] qapi_WLAN_BA_Window_Params_t  Set BA window size.
+
+@sa
+#qapi_WLAN_BA_Window_Params_t
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW           88
+
+/**
+Command ID to adjust BA window size when operating in Station mode.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] uint32_t  change slot time to 9us/20us.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME           89
 
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE                0
 

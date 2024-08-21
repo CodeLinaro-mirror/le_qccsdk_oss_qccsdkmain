@@ -34,5 +34,17 @@ extern qapi_Status_t wlan_get_sta_slptime(uint32_t *listen_interval);
 extern qapi_Status_t wlan_clear_mgmt_frame_queue(void);
 extern qapi_Status_t wlan_recv_mgmt_frame(uint8_t *buffer, uint32_t buffer_len, uint32_t *frame_len, uint32_t timeout);
 extern qapi_Status_t wlan_set_appie(qapi_WLAN_App_Ie_Params_t *ie_params);
+extern qapi_Status_t wlan_set_rts_cts(uint8_t device_ID, uint32_t enable);
+extern qapi_Status_t wlan_get_rts_cts(uint32_t *enable);
+extern qapi_Status_t wlan_set_rts_rate(uint8_t device_ID, uint32_t rate);
+extern qapi_Status_t wlan_get_rts_rate(uint32_t *rate);
+extern qapi_Status_t wlan_set_cw_size(uint8_t device_ID, uint8_t qid, uint16_t cw_min, uint16_t cw_max);
+extern qapi_Status_t wlan_get_cw_size(uint8_t qid, uint16_t *cw_min, uint16_t *cw_max);
+extern qapi_Status_t wlan_set_per_upper_threshold(uint8_t device_ID, uint32_t threshold);
+extern qapi_Status_t wlan_get_per_upper_threshold(uint32_t *threshold);
+extern qapi_Status_t wlan_set_ba_win_size(uint8_t device_ID, uint16_t ack_timeout, uint16_t delay);
+extern qapi_Status_t wlan_get_ba_win_size(uint16_t *ack_timeout, uint16_t *delay);
+extern qapi_Status_t wlan_set_slot_time(uint8_t device_ID, uint32_t slot_time);
+extern qapi_Status_t wlan_get_slot_time(uint32_t *slot_time);
 #endif //WLAN_QAPI_HELPER_H
 

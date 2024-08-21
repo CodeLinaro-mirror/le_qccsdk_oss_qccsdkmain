@@ -133,6 +133,36 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
             ret = wlan_set_appie(ie_param);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_APP_IE */
         }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS: {
+            uint32_t enable = *((uint32_t *) data);
+            ret = wlan_set_rts_cts(device_ID, enable);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G: {
+            uint32_t rate = *((uint32_t *) data);
+            ret = wlan_set_rts_rate(device_ID, rate);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW: {
+            qapi_WLAN_Contention_Window_Params_t cw_para = *((qapi_WLAN_Contention_Window_Params_t *) data);
+            ret = wlan_set_cw_size(device_ID, cw_para.qid, cw_para.cw_min, cw_para.cw_max);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD: {
+            uint32_t threshold = *((uint32_t *) data);
+            ret = wlan_set_per_upper_threshold(device_ID, threshold);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW: {
+            qapi_WLAN_BA_Window_Params_t ba_win = *((qapi_WLAN_BA_Window_Params_t *) data);
+            ret = wlan_set_ba_win_size(device_ID, ba_win.ack_timeout, ba_win.delay);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME: {
+            uint32_t slot_time = *((uint32_t *) data);
+            ret = wlan_set_slot_time(device_ID, slot_time);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME */
+        }
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;
@@ -334,7 +364,55 @@ qapi_Status_t qapi_WLAN_Get_Param (uint8_t __attribute__((__unused__)) device_ID
                 return QAPI_WLAN_ERR_EINVAL;
             }
             wlan_get_sta_slptime(interval);
-            break;
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS: {
+            uint32_t *enable = (uint32_t *)data;
+            if (*length < sizeof(uint32_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            wlan_get_rts_cts(enable);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G: {
+            uint32_t *rate = (uint32_t *)data;
+            if (*length < sizeof(uint32_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            ret = wlan_get_rts_rate(rate);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW: {
+            qapi_WLAN_Contention_Window_Params_t *cw_para = (qapi_WLAN_Contention_Window_Params_t *)data;
+            if (*length < sizeof(uint32_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            ret = wlan_get_cw_size(cw_para->qid, &cw_para->cw_min, &cw_para->cw_max);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD: {
+            uint32_t *threshold = (uint32_t *)data;
+            if (*length < sizeof(uint32_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            wlan_get_per_upper_threshold(threshold);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW: {
+            qapi_WLAN_BA_Window_Params_t *ba_win = (qapi_WLAN_BA_Window_Params_t *)data;
+            if (*length < sizeof(uint32_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            wlan_get_ba_win_size(&ba_win->ack_timeout, &ba_win->delay);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME: {
+            uint32_t *slot_time = (uint32_t *)data;
+            if (*length < sizeof(uint32_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            wlan_get_slot_time(slot_time);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME */
         }
 		default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
 			PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
