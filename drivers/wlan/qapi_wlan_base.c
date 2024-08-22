@@ -129,7 +129,7 @@ qapi_Status_t qapi_WLAN_Commit (uint8_t  __attribute__((__unused__)) device_ID)
     uint8_t authMode = p_cxt->connect_cmd.authMode;
 
     WLAN_QAPI_LOCK();
-    if ((authMode==WMI_WPA_PSK_AUTH) || (authMode==WMI_WPA2_PSK_AUTH)  || (authMode==WMI_WPA3_SHA256_AUTH) ) {
+    if ((authMode==WMI_WPA_PSK_AUTH) || (authMode==WMI_WPA2_PSK_AUTH)  || (authMode==WMI_WPA3_SHA256_AUTH) || (authMode==(WMI_WPA2_PSK_AUTH | WMI_WPA3_SHA256_AUTH))) {
         wmi_set_passphrase();
     }
     ret = wmi_connect();

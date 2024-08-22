@@ -631,6 +631,8 @@ static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Param
         e_wpa_ver = QAPI_WLAN_AUTH_WPA2_PSK_E;
 	} else if (!strcmp(wpaVer, "SAE")) {
         e_wpa_ver = QAPI_WLAN_AUTH_WPA3_SAE_E;
+	} else if (!strcmp(wpaVer,"SAE_WPA2")) {
+        e_wpa_ver = QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E;
     } else {
         info_printf("invalid wpa ver =%s\n", wpaVer);
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
