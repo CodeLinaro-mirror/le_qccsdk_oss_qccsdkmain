@@ -8,7 +8,7 @@
 #========================================================================
 SCRIPT_PATH=$(dirname "$(readlink -f "$0")")
 export PATH=/pkg/qct/software/arm/linaro-toolchain/gcc-arm-none-eabi-8-2019-q3-update/bin:$PATH
-python intg.py
+python intg.py --fsdk
 mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11
 mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11_ART
 cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/libwifi_core.a  ${SCRIPT_PATH}/../prebuilt_HY11/
