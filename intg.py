@@ -70,12 +70,6 @@ if args.fsdk==True or (os.getenv("CRM_BUILDID")!=None):
     if not is_HY11_build:
         cUtils.rmtree('SRC-IOE-SDK')
         cUtils.python_script_op(script='tools/pack/pack_sdk.py')
-        cUtils.chdir('SRC-IOE-SDK/qccsdk')
-        apps_build(board_name='qcc730v2_evb11_hostless', ext_demo=True)
-        apps_build(board_name='qcc730v2_evb13_hostless', ext_demo=True)
-        apps_build(board_name='mqm730i')
-        apps_build(board_name='mqm730x')
-        set_default()
     else:
         print("HY_11 build, no need to pack\r\n")
 	
