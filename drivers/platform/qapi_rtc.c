@@ -13,20 +13,22 @@
 #include "nt_common.h"
 #include "nt_osal.h"
 #include <stdio.h>
-
+#include "timer.h"
 
 /*-------------------------------------------------------------------------
  * Variables
  *-----------------------------------------------------------------------*/
  
-qurt_time_t last_rtc_time = 0;
+
+uint64_t last_rtc_time = 0;
 ntp_Time_t last_ntp_time = {0,0};
 uint32_t last_ntp_sec = 0;
 uint32_t last_ntp_frac = 0;
 
 
 
-
+extern uint64_t start_tsf_beacon;
+extern int64_t rtc_time_padding;
 /*-------------------------------------------------------------------------
  * Function Definition
  *-----------------------------------------------------------------------*/
@@ -171,14 +173,14 @@ qapi_Status_t qapi_Core_RTC_Julian_Set(qapi_Time_t *tm)
  */
 qapi_Status_t qapi_Core_RTC_NTP_Get(ntp_Time_t *tm)
 {
-	qurt_time_t curr, diff;
+	uint32_t curr, diff;
 	uint32_t sec, msec;
 
 	if(last_rtc_time == 0)
 		return QAPI_ERROR;
 
-	curr = qurt_timer_get_ticks();
-	diff = curr - last_rtc_time;
+	curr = hres_timer_curr_time_ms();
+	diff = curr - last_rtc_time + rtc_time_padding;
 	
 	sec = (diff/1000) + last_ntp_time.second;
 	msec = (diff%1000) + get_msec_from_ntp_frac(last_ntp_time.frac);
@@ -202,7 +204,9 @@ qapi_Status_t qapi_Core_RTC_NTP_Get(ntp_Time_t *tm)
  */
 qapi_Status_t qapi_Core_RTC_NTP_Set(ntp_Time_t *tm)
 {
-	last_rtc_time = qurt_timer_get_ticks();
+	last_rtc_time = hres_timer_curr_time_ms();
+	start_tsf_beacon = 0;
+	rtc_time_padding = 0;
 	last_ntp_time.second = tm->second;
 	last_ntp_time.frac = tm->frac;
 	
