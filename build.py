@@ -444,23 +444,18 @@ def setup_env():
             path_env = gn_path
     if path_env:
         os.environ['PATH'] = path_env
-    #crm_string = 'FERMION.IOE_HL.1.0-00186-QCAFMNSWPL-1'
-    crm_string = os.environ.get('CRM_BUILDID')
-    if crm_string == None:
-        file_path = os.path.join(".", "build_version.txt")
-        if os.path.exists(file_path):
-            with open(file_path, "r") as file:
-                crm_string = file.readline()
-                print('Not tiberium build, but a SDK build with CRM_BUILDID:{}'.format(crm_string))
-    if crm_string == None:
-        crm_string =''
-    print('CRM build: ' + crm_string)
-    match = re.search(r'-(0)*(\d+)(\.)?(\d)*-', crm_string)
-    if match:
-        build_id = match.group(2)
-    else:
-        print('non-CRM build, using defaut: ' + default_build_id)
+
+    if not os.path.exists("/local/mnt/workspace/au_build_version.txt"):
         build_id = default_build_id
+    else:
+        with open("/local/mnt/workspace/au_build_version.txt", 'r') as file:
+            version = file.readline().strip();
+            print('au_build_version.txt:{}'.format(version))
+            try:
+                parts = version.split('.')
+                build_id = int(parts[-1])
+            except (IndexError, ValueError):
+                build_id = default_build_id
     print('build id: %d' % (int(build_id)))
     if os.path.exists('modules/wifi/bin/libwifi_core.a'):
         g_is_sdk_packed = True
