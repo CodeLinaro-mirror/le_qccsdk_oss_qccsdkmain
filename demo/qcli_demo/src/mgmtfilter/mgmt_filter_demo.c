@@ -23,31 +23,28 @@ mgmt_frame_t  mgmt_frame_recv_buf[MGMT_FRAME_MAX_NUM] = {0};
 
 extern uint8_t get_active_device();
 
-static void clear_mgmt_frames(void)
+static void free_mgmt_frames_buffer(void)
 {
-    uint32_t i;
 	
-	for (i=0; i<MGMT_FRAME_MAX_NUM; i++)
+	if (NULL != mgmt_frame_recv_buf[0].data)
 	{
-	    mgmt_frame_recv_buf[i].len = 0;
+	    free(mgmt_frame_recv_buf[0].data);
 	}
+
+	memset(&mgmt_frame_recv_buf, 0, sizeof(mgmt_frame_recv_buf));
 }
 
-static void mgmt_frame_recv_thread(void *arg)
-{
-    (void)(arg);
-	uint8_t deviceId = get_active_device();
-    uint32_t i, j;
-	uint8_t *buffer = NULL;
+static int malloc_mgmt_frames_buffer(void)
+{	
+    uint32_t i;
+	uint8_t *buffer = NULL;	
 	uint32_t  buffer_len = MGMT_FRAME_MAX_SIZE;
-    uint32_t frame_len = 0;
-	uint8_t enabled_flag = 0;
 	
     buffer = malloc(buffer_len*MGMT_FRAME_MAX_NUM);
 	if (NULL == buffer)
 	{
 	    printf("malloc buffer failed in mgmt_frame_recv_thread");
-		return;
+		return QAPI_ERROR;
 	}
 
 	for (i=0; i<MGMT_FRAME_MAX_NUM; i++)
@@ -56,6 +53,17 @@ static void mgmt_frame_recv_thread(void *arg)
 		mgmt_frame_recv_buf[i].len = 0;
 	}
 
+	return QAPI_OK;
+}
+
+static void mgmt_frame_recv_thread(void *arg)
+{
+    (void)(arg);
+	uint8_t deviceId = get_active_device();
+    uint32_t i, j;
+    uint32_t frame_len = 0;
+	uint8_t enabled_flag = 0;
+	
 	i=0;
     while (1) 
     {
@@ -69,16 +77,23 @@ static void mgmt_frame_recv_thread(void *arg)
 
 	    /*Enable management frame filter*/
         if (mgmt_frame_recv_enabled && (0 == enabled_flag))
-        {
+        {            
+			if (QAPI_OK != malloc_mgmt_frames_buffer())
+			{
+			    continue;
+			}
+			
 			if (QAPI_OK != qapi_WLAN_Enable_Mgmt_Filter(deviceId, mgmt_frame_recv_filter))
 			{
 				printf("set mgmt frame filter fail\r\n");
+				free_mgmt_frames_buffer();
+				continue;
 			}
 			enabled_flag = 1;
         }
 
 		/*Receive management frames*/
-      	if(qapi_WLAN_Recv_Mgmt_Frames(mgmt_frame_recv_buf[i].data, buffer_len, &frame_len, 2000) == QAPI_OK)
+      	if(qapi_WLAN_Recv_Mgmt_Frames(mgmt_frame_recv_buf[i].data, MGMT_FRAME_MAX_SIZE, &frame_len, 2000) == QAPI_OK)
       	{
 			printf("Recv Frame len %d: ", frame_len);
 			for (j=0; j<frame_len; j++)
@@ -101,7 +116,7 @@ static void mgmt_frame_recv_thread(void *arg)
 	    if ((!mgmt_frame_recv_enabled) && (1 == enabled_flag))
 		{
 		   qapi_WLAN_Disable_Mgmt_Filter(deviceId);
-		   clear_mgmt_frames();
+		   free_mgmt_frames_buffer();
 		   enabled_flag = 0;
 		}
     } 

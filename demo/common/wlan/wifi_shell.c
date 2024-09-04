@@ -1316,7 +1316,7 @@ static void print_mgmt_frames(void)
 
 static qapi_Status_t setMgmtFilter(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
-    if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+    if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || Parameter_Count > 1 ) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
