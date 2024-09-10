@@ -120,7 +120,7 @@ enum  nt_slp_dbg_unit_test_type {
 
 #define NT_SOCPM_NVIC_ISER0         0xE000E100    //Irq 0 to 31 set enable register address
 #define NT_SOCPM_NVIC_ISER1         0xE000E104    //Irq 32 to 63 set Enable register address
-#define NT_SOCPM_NVIC_ISER2         0xE000E108    //Irq 63 to 73 set Enable register address
+#define NT_SOCPM_NVIC_ISER2         0xE000E108    //Irq 64 to 95 set Enable register address
 
 #define AON_TIMER_INTR_NVIC1_MASK          (0x1 << 23)
 
@@ -138,12 +138,14 @@ enum  nt_slp_dbg_unit_test_type {
 #endif
 
 #define MCU_SLEEP_OFF_TO_CLK_REQ_US                (300)
-#define MCU_SLEEP_CLK_REQ_TO_MX_SUPPLY_TIMER_US    (1500)
-#define MCU_SLEEP_MX_SUPPLY_TO_XO_SETTLE_US        (1700)
-#define MCU_SLEEP_XO_SETTLE_TO_CPU_BOOT_US         (1100)
-#define MCU_SLEEP_HW_SLEEP_TRANSITION_TIME_US      (MCU_SLEEP_OFF_TO_CLK_REQ_US + MCU_SLEEP_CLK_REQ_TO_MX_SUPPLY_TIMER_US + MCU_SLEEP_MX_SUPPLY_TO_XO_SETTLE_US + MCU_SLEEP_XO_SETTLE_TO_CPU_BOOT_US)   /*W2S*/
+#define MCU_SLEEP_CLK_REQ_TO_MX_SUPPLY_TIMER_US    (2000)
+#define MCU_SLEEP_MX_SUPPLY_TO_XO_SETTLE_US        (1526)
+#define MCU_SLEEP_XO_SETTLE_TO_CPU_BOOT_US         (125)
+/* time to account for board to board variation seen in HW wake time */
+#define MCU_SLEEP_HW_WAKE_VARIATION_TOLERANCE_US   (180)
+#define MCU_SLEEP_HW_S2W_TRANSITION_TIME_US      (MCU_SLEEP_OFF_TO_CLK_REQ_US + MCU_SLEEP_CLK_REQ_TO_MX_SUPPLY_TIMER_US + MCU_SLEEP_MX_SUPPLY_TO_XO_SETTLE_US + MCU_SLEEP_XO_SETTLE_TO_CPU_BOOT_US + MCU_SLEEP_HW_WAKE_VARIATION_TOLERANCE_US)   /*W2S*/
 #define MCU_SLEEP_SW_SLEEP_TRANSITION_TIME_US      (4500)
-#define MCU_SLEEP_OVERALL_SLEEP_TRANSITION_TIME_US (MCU_SLEEP_HW_SLEEP_TRANSITION_TIME_US + MCU_SLEEP_SW_SLEEP_TRANSITION_TIME_US)
+#define MCU_SLEEP_OVERALL_SLEEP_TRANSITION_TIME_US (MCU_SLEEP_HW_S2W_TRANSITION_TIME_US + MCU_SLEEP_SW_SLEEP_TRANSITION_TIME_US)
 #define CLK_GATED_SLEEP_SW_SLEEP_TRANSITION_TIME_US  (1350)
 
 /* time from CPU warm boot due to AON timerexpiry to min_cb execution */
@@ -165,6 +167,17 @@ extern uint32_t slp_exit_hw_delay_fixed;
 extern uint8_t ignore_bcmc_in_bmps;
 
 #define NT_CHECK_BIT_STATE(_value , _pos) ( _value & (1 << _pos))
+
+/* Time taken from end of min cb to context restore */
+#define MINCB_END_TO_CTXT_RESTORE_US                    70
+/* Time taken from context restore to restarting the scheduler */
+#define CTX_RESTORE_TO_SCHED_RESTART_US                 290
+
+/* Upper limit on sleep slop offset time */
+#define SLEEP_SLOP_OFFSET_UPPER_LIMIT_US        1500
+
+/* Time from CPU sleep to CLK_REQ going low, as profiled from waveforms */
+#define MCU_SLEEP_HW_W2S_TRANSITION_TIME_US        (1500)
 
 #ifdef PLATFORM_FERMION
 //Sleep modes types
@@ -286,6 +299,12 @@ typedef struct {
 #ifdef PLATFORM_FERMION
     cpr_cfg_t cpr_cfg;
 #endif /* PLATFORM_FERMION */
+    /* Parameters related to sleep slop offset:
+     * Sleep slop offset is the offset time which accounts for clock drifts
+     * between the AP and STA, to ensure that protocol wakeups occur on time.
+     */
+    uint8_t slop_step_us;       // Sleep slop offset step time per interval
+    uint8_t slop_interval_ms;   // Granular time interval to calculate sleep slop offset
 } SOCPM_STRUCT;
 extern SOCPM_STRUCT g_socpm_struct;
 
@@ -460,6 +479,12 @@ void     nt_socpm_glob_restore(void);
 * @return none
 */
 void nt_enable_standby(uint64_t sleep_time);
+/*
+* @brief: This function used to config and enable indefinite deepsleep
+* @param 
+* @return none
+*/
+void nt_enable_indef_deepsleep( uint64_t sleep_time );
 
 /*
 * @brief: This function is used to get last slept time in us
@@ -551,6 +576,13 @@ void     aon_ext_interrupt_wake_up( void );
 void nt_socpm_init_soc_cfg(void);
 
 void nt_socpm_init(void);
+
+/*
+ *  @brief : Initializes PMU temperature sensor and Sleep Clock Cal
+ *  @param : none
+ *  @return : None
+ */
+void nt_socpm_secondary_init(void);
 
 /*
  *  @brief : Check if there was an unexpected failure in entering to sleep after wfi
@@ -683,9 +715,9 @@ bool nt_bcn_logs_is_enabled(void);
 /*
  * @brief : This function is used to get socpm status
  * @param : None
- * @return : None
+ * @return : the value of socpm status 0:disable other: enable
  */
-void nt_socpm_status(void);
+uint32_t nt_socpm_status(void);
 
 /*
  * @brief : This function is used to add dummy sleep list node handle in slp list

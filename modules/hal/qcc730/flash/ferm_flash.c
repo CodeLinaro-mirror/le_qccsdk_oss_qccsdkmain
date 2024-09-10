@@ -1004,6 +1004,10 @@ FLASH_STATUS drv_flash_deinit(uint32_t dereg)
         flash_context.operation_param = NULL;
     }
 
+#ifndef CONFIG_NON_OS
+    qurt_mutex_delete(&flash_mutex);
+#endif
+
 #if defined FEATURE_FPCI && !defined CONFIG_NON_OS
     if(dereg)
         fpci_evt_cb_dereg((ps_evt_cb_t)&flash_power_state_change_cb, PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT);

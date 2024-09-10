@@ -41,8 +41,13 @@ extern QAPI_Console_Group_Handle_t net_shell_cmd_group_handle;              /* H
 #define IPV6_MC_LPBK_DIS 0 /**< Disable loopback behavior for multicast packets. */
 #define IPV6_MC_LPBK_EN 1  /**< Enable loopback behavior for multicast packets. */
 #define IPERF_TX_THREAD_PRIO   5
-#define IPERF_RX_THREAD_PRIO   7
+#define IPERF_RX_THREAD_PRIO   6
 #define IPERF_RESULT_THREAD_PRIO   3
+
+#define MAX_IPERF_RX_THREAD_COUNTE    4
+UBaseType_t iperf_rx_thread_priority = IPERF_RX_THREAD_PRIO;
+TaskHandle_t iperf_rx_thread_handle[MAX_IPERF_RX_THREAD_COUNTE]={0};
+uint8_t iperf_rx_thread_handle_sum = 0;
 
 #if TO_CHECK
 void iperf3_make_cookie(char *str, int len);
@@ -163,6 +168,85 @@ static void iperf_common_clear_stats(THROUGHPUT_CXT *p_tCxt)
     p_tCxt->pktStats.sent_bytes = 0;
     p_tCxt->pktStats.pkts_recvd = 0;
 }
+
+static int iperf_get_unused_rx_thread_index(void)
+{
+    uint8_t thread_index;
+    for( thread_index = 0; thread_index < MAX_IPERF_RX_THREAD_COUNTE; thread_index++) 
+    {
+        if(iperf_rx_thread_handle[thread_index] == NULL)
+        {
+           return thread_index;
+        }
+
+    }
+    if( thread_index >= MAX_IPERF_RX_THREAD_COUNTE)
+    {
+        return -1;
+    }
+
+    return -1;
+}
+
+static void iperf_upgrade_rx_thread_priority(void)
+{
+    uint8_t thread_index;
+    for( thread_index = 0; thread_index < MAX_IPERF_RX_THREAD_COUNTE; thread_index++) 
+    {
+        if(iperf_rx_thread_handle[thread_index] != NULL)
+        {
+            nt_qurt_thread_set_priority(iperf_rx_thread_handle[thread_index], iperf_rx_thread_priority+1); /*increase udp rx thread priority in multi-thread context*/
+        }
+		printf("Toby: rx thread upgraded\r\n");
+    }
+
+    return;
+}
+
+static void iperf_resume_rx_thread_priority(void)
+{
+    uint8_t thread_index;
+    for( thread_index = 0; thread_index < MAX_IPERF_RX_THREAD_COUNTE; thread_index++) 
+    {
+        if(iperf_rx_thread_handle[thread_index] != NULL)
+        {
+            nt_qurt_thread_set_priority(iperf_rx_thread_handle[thread_index], iperf_rx_thread_priority); /*increase udp rx thread priority in multi-thread context*/
+        }
+
+    }
+
+    return;
+}
+
+static int iperf_remove_rx_thread_based_on_id(TaskHandle_t rx_thread_id)
+{
+    uint8_t thread_index;
+    
+    for(thread_index = 0; thread_index < MAX_IPERF_RX_THREAD_COUNTE; thread_index++) 
+    {
+        if(iperf_rx_thread_handle[thread_index] == rx_thread_id)
+        {
+            iperf_rx_thread_handle[thread_index] = NULL; 
+            iperf_rx_thread_handle_sum--;
+            break;
+        }
+
+    }
+    if( thread_index >= MAX_IPERF_RX_THREAD_COUNTE)
+    {
+         IPERF_PRINTF("remove_rx_thread error!\r\n",thread_index,rx_thread_id);
+         return -1;
+    }
+    
+    if(iperf_rx_thread_handle_sum == 1 )
+    {
+        iperf_resume_rx_thread_priority();
+    }
+
+    return 0;
+}
+
+
 
 /************************************************************************
  * NAME: iperf_common_check_test_time
@@ -998,20 +1082,41 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             tCxt->pktStats.iperf_display_interval = interval;
 
 #if IPERF_RX_THREAD
-    err_t ret;
-    ret = nt_qurt_thread_create(iperf_udp_rx, "udp_rx", 3072, tCxt, IPERF_RX_THREAD_PRIO, NULL);
+        err_t ret;
+        int unused_thread_index = -1;
 
-    if (ret == -1)
-    {
-        IPERF_PRINTF("UDP server task creation failed\r\n");
-        if(tCxt)
+        unused_thread_index = iperf_get_unused_rx_thread_index();
+        if(unused_thread_index == -1)
         {
-            free(tCxt);
-            tCxt = NULL;
+            IPERF_PRINTF("UDP server get unused thread index failed!\r\n");
+            if(tCxt)
+            {
+                free(tCxt);
+                tCxt = NULL;
+            }
+            goto RET_OK;
         }
+        ret = nt_qurt_thread_create(iperf_udp_rx, "udp_rx", 3072, tCxt, iperf_rx_thread_priority, &(iperf_rx_thread_handle[unused_thread_index]));
+        if (ret == -1)
+        {
+            IPERF_PRINTF("UDP server task creation failed\r\n");
+            if(tCxt)
+            {
+                free(tCxt);
+                tCxt = NULL;
+            }
 
-        goto RET_OK;
-    }
+            goto RET_OK;
+        }
+        else
+        {
+            iperf_rx_thread_handle_sum++;
+        }
+        if( iperf_rx_thread_handle_sum > 1 )
+        {   
+            iperf_upgrade_rx_thread_priority();
+            
+        }
 #else
             iperf_udp_rx(tCxt);
 #endif
@@ -1036,20 +1141,43 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             tCxt->test_type = RX;
             tCxt->pktStats.iperf_display_interval = interval;
 #if IPERF_RX_THREAD
-    err_t ret;
-    ret = nt_qurt_thread_create(iperf_tcp_rx, "tcp_rx", 3072, tCxt, IPERF_RX_THREAD_PRIO, NULL);
+            err_t ret;
+            int unused_thread_index = -1;
 
-    if (ret == -1)
-    {
-        IPERF_PRINTF("TCP server task creation failed\r\n");
-        if(tCxt)
-        {
-            free(tCxt);
-            tCxt = NULL;
-        }
+            unused_thread_index = iperf_get_unused_rx_thread_index();
+            if(unused_thread_index == -1)
+            {
+                IPERF_PRINTF("UDP server get unused thread index failed!\r\n");
+                if(tCxt)
+                {
+                    free(tCxt);
+                    tCxt = NULL;
+                }
+                goto RET_OK;
+            }
+            ret = nt_qurt_thread_create(iperf_tcp_rx, "tcp_rx", 3072, tCxt, iperf_rx_thread_priority, &(iperf_rx_thread_handle[unused_thread_index]));
+            if (ret == -1)
+            {
+                IPERF_PRINTF("TCP server task creation failed\r\n");
+                if(tCxt)
+                {
+                    free(tCxt);
+                    tCxt = NULL;
+                }
 
-        goto RET_OK;
-    }
+                goto RET_OK;
+            }
+            else
+            {
+                iperf_rx_thread_handle_sum++;
+            }
+            
+            if( iperf_rx_thread_handle_sum > 1 )
+            {   
+                iperf_upgrade_rx_thread_priority();
+                
+            }
+   
     //return;
 #else
             iperf_tcp_rx(tCxt);
@@ -1104,8 +1232,8 @@ void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur)
         throughput_Kbps = (pCxtPara->bytes / (msInterval / 8));
 
         bytes = pCxtPara->bytes;
-        sec_val1 = pCxtPara->iperf_time_sec;
-        sec_val2 = pCxtPara->iperf_time_sec + pCxtPara->iperf_display_interval;
+        sec_val1 = (prev - pCxtPara->first_time)/1000;
+        sec_val2 = (cur - pCxtPara->first_time)/1000;
 
         if (bytes > BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE)
         {
@@ -1568,7 +1696,9 @@ static void iperf_client_send(void *arg)
                 }
                 else
                 {
-                    IPERF_PRINTF("TX timeout:%d, %s\n", errno, strerror(errno));
+                    IPERF_PRINTF("TX err:%d\n", errno);
+                    if(EAGAIN == errno)
+                        break;
                     app_get_time(&p_tCxt->pktStats.last_time);
                     if(ERR_TIMEOUT == errno || ERR_OK == errno)
                     {
@@ -1744,9 +1874,13 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         IPERF_PRINTF("ERROR: p_tCxt in iperf_udp_tx() is NULL\n");
         goto ERROR_1;
     }
-    
+
+#if LWIP_IPV4
     struct sockaddr_in foreign_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 foreign_addr6;
+#endif
     struct sockaddr *to;
     uint32_t tolen;
     char ip_str[48];
@@ -1757,6 +1891,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
 
     if (p_tCxt->params.tx_params.v6)
     {
+#if LWIP_IPV6
         family = AF_INET6;
         inet_ntop(family, p_tCxt->params.tx_params.v6addr, ip_str, sizeof(ip_str));
 
@@ -1769,9 +1904,13 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         to = (struct sockaddr *)&foreign_addr6;
         tolen = sizeof(foreign_addr6);
         tos_opt = IPV6_TCLASS;
+#else
+		goto ERROR_1;
+#endif
     }
     else
     {
+#if LWIP_IPV4
         family = AF_INET;
         inet_ntop(family, &p_tCxt->params.tx_params.ip_address, ip_str, sizeof(ip_str));
 
@@ -1787,6 +1926,9 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         to = (struct sockaddr *)&foreign_addr;
         tolen = sizeof(foreign_addr);
         tos_opt = IP_TOS;
+#else
+		goto ERROR_1;
+#endif
     }
 
     IPERF_PRINTF("------------------------------------------------------------\n");
@@ -1825,6 +1967,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
     // }
     if (p_tCxt->params.tx_params.v6 && IS_IPV6_MULTICAST(p_tCxt->params.tx_params.v6addr))
     {
+#if LWIP_IPV6
         uint32_t val;
 
         /* Configure value to be used in the Hop Limit field in IPv6 header of
@@ -1849,6 +1992,9 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         {
             goto ERROR_2;
         }
+#else
+		goto ERROR_2;
+#endif
     }
 
     /* Connect to the server.*/
@@ -1991,10 +2137,14 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     int addrlen;
     uint32_t fromlen;
     struct sockaddr *from;
+#if LWIP_IPV4
     struct sockaddr_in local_addr;
+	struct sockaddr_in foreign_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 local_addr6;
-    struct sockaddr_in foreign_addr;
-    struct sockaddr_in6 foreign_addr6;
+	struct sockaddr_in6 foreign_addr6;
+#endif
     char ip_str[48];
     int family;
     uint16_t port;
@@ -2002,6 +2152,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     int32_t conn_sock;
     int is_test_done = 0;
     int32_t udp_datagram_size = (int32_t)sizeof(udp_datagram);
+    int ret =0;
 
     p_tCxt->iperf_stream_id = iperf_get_unused_id();
     if (p_tCxt->iperf_stream_id == MAX_STREAM)
@@ -2020,6 +2171,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
 
     if (p_tCxt->params.rx_params.v6)
     {
+#if LWIP_IPV6
         family = AF_INET6;
         from = (struct sockaddr *)&foreign_addr6;
         addr = (struct sockaddr *)&local_addr6;
@@ -2030,9 +2182,13 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
         local_addr6.sin6_port = htons(port);
         local_addr6.sin6_family = family;
         memscpy(&local_addr6.sin6_addr, sizeof(struct ip6_addr), p_tCxt->params.rx_params.local_v6addr, sizeof(struct ip6_addr));
-    }
+#else
+		goto ERROR_1;
+#endif
+	}
     else
     {
+#if LWIP_IPV4
         family = AF_INET;
         from = (struct sockaddr *)&foreign_addr;
         addr = (struct sockaddr *)&local_addr;
@@ -2043,7 +2199,10 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
         local_addr.sin_port = htons(port);
         local_addr.sin_family = family;
         local_addr.sin_addr.s_addr = p_tCxt->params.rx_params.local_address;
-    }
+#else
+		goto ERROR_1;
+#endif
+	}
 
     /* Open socket */
     if ((p_tCxt->sock_local = socket(family, SOCK_DGRAM, 0)) == A_ERROR)
@@ -2063,6 +2222,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     {
         if (p_tCxt->params.rx_params.v6)
         {
+#if LWIP_IPV6
             struct ipv6_mreq group6;
             memscpy(&group6.ipv6mr_multiaddr, sizeof(struct ip6_addr), p_tCxt->params.rx_params.mcIpv6addr, sizeof(struct ip6_addr));
             group6.ipv6mr_interface = p_tCxt->params.rx_params.scope_id;
@@ -2071,6 +2231,9 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                 IPERF_PRINTF("ERROR: Socket set option failure.\n");
                 goto ERROR_2;
             }
+#else
+			goto ERROR_2;
+#endif
         }
         else
         {
@@ -2244,9 +2407,15 @@ ERROR_1:
     }
   
     IPERF_PRINTF(BENCH_TEST_COMPLETED);
-    #if IPERF_RX_THREAD
-    nt_osal_thread_delete(NULL);
-    #endif
+#if IPERF_RX_THREAD
+    ret = iperf_remove_rx_thread_based_on_id(nt_qurt_thread_get_id());
+    if(ret == -1)
+    {
+        IPERF_PRINTF("remove_rx_thread error!\r\n");
+    }
+    nt_osal_thread_delete(NULL);    
+#endif
+
     return;
 }
 
@@ -2265,9 +2434,13 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         IPERF_PRINTF("ERROR: p_tCxt in iperf_tcp_tx() is NULL\n");
         goto ERROR_1;
     }
-    
+
+#if LWIP_IPV4
     struct sockaddr_in foreign_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 foreign_addr6;
+#endif
     struct sockaddr *to;
     uint32_t tolen;
     char ip_str[48];
@@ -2291,6 +2464,7 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
 
     if (p_tCxt->params.tx_params.v6)
     {
+#if LWIP_IPV6
         family = AF_INET6;
         inet_ntop(family, &p_tCxt->params.tx_params.v6addr[0], ip_str, sizeof(ip_str));
 
@@ -2303,9 +2477,13 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         to = (struct sockaddr *)&foreign_addr6;
         tolen = sizeof(foreign_addr6);
         tos_opt = IPV6_TCLASS;
+#else
+		goto ERROR_1;
+#endif
     }
     else
     {
+#if LWIP_IPV4
         family = AF_INET;
         inet_ntop(family, &p_tCxt->params.tx_params.ip_address, ip_str, sizeof(ip_str));
 
@@ -2317,6 +2495,9 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         to = (struct sockaddr *)&foreign_addr;
         tolen = sizeof(foreign_addr);
         tos_opt = IP_TOS;
+#else
+		goto ERROR_1;
+#endif
     }
 
     /* Create socket */
@@ -2404,18 +2585,23 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
     int32_t received = 0;
     int32_t conn_sock = 0, printit = 1;
+#if LWIP_IPV4
     struct sockaddr_in local_addr;
+	struct sockaddr_in foreign_addr;
+#endif
+#if LWIP_IPV6
     struct sockaddr_in6 local_addr6;
+	struct sockaddr_in6 foreign_addr6;
+#endif
     struct sockaddr *addr;
     uint32_t addrlen;
-    struct sockaddr_in foreign_addr;
-    struct sockaddr_in6 foreign_addr6;
     struct sockaddr *from;
     uint32_t fromlen;
     void *sin_addr;
     void *local_sin_addr = NULL;
     char ip_str[48];
-
+    int ret=0;
+    
 #ifdef TCP_RX_RETRY_AFTER_FIN
     uint32_t retry = 20;
 #endif
@@ -2479,6 +2665,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
     if (p_tCxt->params.rx_params.v6)
     {
+#if LWIP_IPV6
         family = AF_INET6;
 
         memset(&local_addr6, 0, sizeof(local_addr6));
@@ -2492,9 +2679,13 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         from = (struct sockaddr *)&foreign_addr6;
         fromlen = sizeof(struct sockaddr_in6);
         sin_addr = &foreign_addr6.sin6_addr;
+#else
+		goto tcp_rx_QUIT;
+#endif
     }
     else
     {
+#if LWIP_IPV4    
         family = AF_INET;
 
         memset(&local_addr, 0, sizeof(local_addr));
@@ -2508,6 +2699,9 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         from = (struct sockaddr *)&foreign_addr;
         fromlen = sizeof(struct sockaddr_in);
         sin_addr = &foreign_addr.sin_addr;
+#else
+		goto tcp_rx_QUIT;
+#endif
     }
 
     /* Create listen socket */
@@ -2640,6 +2834,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         if ((session->buffer = malloc(CFG_PACKET_SIZE_MAX_RX)) == NULL)
         {
             IPERF_PRINTF("Out of memory error\n");
+            session->sock_peer = sock_peer;
             iperf_tcp_CloseSession(session, &rd_set);
             newSession = 0;
             // continue;
@@ -2689,7 +2884,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     {
         if (iperf_rx_quit || (get_device_connect_state() == false))
             goto tcp_rx_QUIT;
-#if 0
+#if 1
         tv.tv_sec = 2;
         tv.tv_usec = 0;
         rset = rd_set;
@@ -2765,7 +2960,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
                     }
                 }
                 conn_sock--;
-#if 0                
+#if 1                
             }
         }
 #endif
@@ -2807,6 +3002,12 @@ tcp_rx_QUIT2:
 
     IPERF_PRINTF(BENCH_TEST_COMPLETED);
     #if IPERF_RX_THREAD
+    ret = iperf_remove_rx_thread_based_on_id(nt_qurt_thread_get_id());
+    if(ret == -1)
+    {
+        IPERF_PRINTF("remove_rx_thread error!\r\n");
+    }
+    
     nt_osal_thread_delete(NULL);
     #endif
     return;

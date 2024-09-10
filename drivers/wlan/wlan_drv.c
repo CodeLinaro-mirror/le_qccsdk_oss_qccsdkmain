@@ -67,7 +67,7 @@ void wlan_drv_roaming_timer_handler(TimerHandle_t thandle)
 
     if (p_cxt->roaming_time_out <= WLAN_ROAMING_TIMER_PERIOD_MAX) {
         uint8_t authMode = p_cxt->connect_cmd.authMode;
-        if ((authMode==WMI_WPA_PSK_AUTH) || (authMode==WMI_WPA2_PSK_AUTH)) {
+        if ((authMode==WMI_WPA_PSK_AUTH) || (authMode==WMI_WPA2_PSK_AUTH)  || (authMode==WMI_WPA3_SHA256_AUTH) || (authMode==(WMI_WPA2_PSK_AUTH | WMI_WPA3_SHA256_AUTH))) {
             wmi_set_passphrase();
         }
         wmi_connect();
@@ -89,7 +89,8 @@ qapi_Status_t wlan_drv_roaming_start(void)
 
     if ((p_cxt) && \
         (p_cxt->roaming_timer) && \
-        (p_cxt->wlan_roaming_started == 0)) {
+        (p_cxt->wlan_roaming_started == 0) && \
+		(p_cxt->connect_cmd.ssidLength != 0)) {
         p_cxt->wlan_roaming_started = 1;
         p_cxt->roaming_time_out = WLAN_ROAMING_TIMER_PERIOD_DEFAULT;
         nt_timer_change_time_period(p_cxt->roaming_timer, NT_MS_TO_TICKS(p_cxt->roaming_time_out));
@@ -139,6 +140,8 @@ int wlan_qapi_init (void)
 	p_cxt->wlan_set_param_block_mode = true;
     p_cxt->wlan_get_regulatory_block_mode = true;
     p_cxt->wlan_set_rate_block_mode = true;
+	p_cxt->wlan_send_raw_block_mode = true;
+    p_cxt->wlan_set_mgmt_filter_block_mode = true;
 
     wmi_register_event_handler(wmi_event_relay, (void*)p_cxt);
     p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf_length = QAPI_EVENT_LARGE_PAYLOAD_LENGTH_MAX;
@@ -162,6 +165,7 @@ int wlan_qapi_init (void)
                                                                 NT_MS_TO_TICKS(p_cxt->roaming_time_out), \
                                                                 FALSE);
     memscpy(p_cxt->country_code,3,DEF_AP_COUNTRY_CODE,3);
+    p_cxt->mgmt_filter.recv_queue = nt_qurt_pipe_create(100, sizeof(WMI_MGMT_FRAME_RECV_MSG));	
     return (int)QAPI_OK;
 }
 

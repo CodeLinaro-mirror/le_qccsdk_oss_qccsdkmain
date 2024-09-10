@@ -6,6 +6,7 @@ system_inc = [
     "inc",
     "../common",
     "//modules/hal/qcc730/fs",
+    "//modules/hal/qcc730/wdt",
 ]
 
 system_src = [
@@ -23,6 +24,7 @@ system_src = [
     "sys_src/nt_socpm_sleep.c",
     "sys_src/nt_wifi_driver.c",
     "sys_src/wifi_fw_init.c",
+    "sys_src/ferm_uart.c",
     "sys_src/unpa.c",
     "sys_src/unpa_client.c",
     "sys_src/unpa_query.c",
@@ -38,7 +40,7 @@ system_src = [
     "sys_src/nt_cc_battery_driver.c",
     "sys_src/nt_sys_monitoring.c",
     "sys_src/nt_prng_integration.c",
-    "sys_src/nt_prng.c",
+    "sys_src/ferm_hkadc_drv.c",
 ]
 
 config("_config") {
@@ -47,4 +49,7 @@ config("_config") {
 
 source_set("system") {
     sources = system_src
+    if (CONFIG_MPU_ENABLE) {
+        sources += [ "sys_src/ferm_mpu.c" ]
+    }
 }

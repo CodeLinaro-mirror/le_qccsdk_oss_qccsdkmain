@@ -31,6 +31,7 @@
 #ifdef NT_GPIO_FLAG
 #include "nt_gpio_api.h"
 #endif
+#include "nt_wdt_api.h"
 
 #include "wps_def.h"
 
@@ -73,7 +74,7 @@
 extern wmi_msg_struct_t g_Cmd_Translation_wifi_hndl;
 #endif
 extern ppm_common_t g_ppm_common_struct;
-
+extern GPIO_Config_t gpio_config;
 #ifdef CONFIG_BOARD_QCC730_QSPI_ENABLE
 #include "ferm_flash.h"
 #endif
@@ -211,6 +212,8 @@ static void _socpm_slp_fn_process(sleep_mode mode);
 static void _socpm_list_search(void);
 static void _socpm_slpcfg_sby(void);
 static void _socpm_slpcfg_mcuslp(void);
+static void socpm_enter_deepsleep();
+
 #if defined(PLATFORM_FERMION)
 static void _socpm_slpcfg_light(void);
 #endif /*PLATFORM_FERMION*/
@@ -225,6 +228,7 @@ static sleep_mode nt_socpm_sleep_solver(uint64_t sleep_time);
 // static void _socpm_sleep_lst_reorder(int modified, int slp_mode_f);
 
 // static sleep_mode _socpm_slpmode_get(uint64_t slp_time);
+static uint64_t _socpm_get_sleep_slop_adjusted_sleep_time(uint64_t sleep_time_us);
 
 void _socpm_slptmr_off(void);
 static uint64_t nt_socpm_slp_tmr_get(void);
@@ -1187,6 +1191,9 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
 		_socpm_systick_on();
 		/* Re-enable interrupts */
 		NT_SOCPM_IRQ_ENABLE();
+		
+        nt_watchdog_bark_timer_reset();
+
     }
 #endif /* SUPPORT_SLEEP_DEBUG_UNIT_TEST_CMD */
 
@@ -1273,6 +1280,9 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
 
         /* This function performs sleep recipe as per the sleep mode specified */
         vPreSleepProcessing(_socpm_slp_mode);
+
+        nt_watchdog_timer_freeze();
+
         /* Save current context and call WFI */
         _socpm_ctxt_save();
         /*  Check if sleep entry was prevented and assert if not a valid prevention  */
@@ -1350,6 +1360,9 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         /* Re-enable the interrupts*/
         // GC:TODO
         NT_SOCPM_IRQ_ENABLE();
+
+        nt_watchdog_bark_timer_reset();
+
 #if 0
         NT_LOG_PRINT(DPM, ERR,"slp:%dms  slp:%dus aonTm:%dus\n\r",
                 (uint32_t)slp_exp, (uint32_t)slp_exp_us, (uint32_t)cur_aon_us);
@@ -2079,6 +2092,49 @@ _socpm_mem_wr_drv(
     }
 }
 
+/*
+ * @brief  Compute sleep time adjusted for sleep slop offset
+ * @param  : sleep_time_us -> Sleep time requested in microseconds
+ * @return : Adjusted sleep time in microseconds
+ */
+static uint64_t
+_socpm_get_sleep_slop_adjusted_sleep_time(uint64_t sleep_time_us)
+{
+    /* Sleep slop offset is the offset time which accounts for clock drifts
+     * between the AP and STA, to ensure that protocol wakeups occur on time.
+     */
+
+    uint64_t sleep_slop_offset_us = 0;
+    uint64_t sleep_time_ms = US_TO_MS(sleep_time_us);
+    if(gdevp)
+    {
+        PM_STRUCT *pPmStruct = (PM_STRUCT*)gdevp->pPmStruct;
+        // Fixed pre sleep time accounting for HW delays and base early rx
+        uint32_t bmps_s2w_compensation = bmps_compute_s2w_compensation_time(pPmStruct)
+            + SLP_TIME_CALC_TO_AON_PRGM_US;
+        // _minprintf("s2w", bmps_s2w_compensation , (unsigned int) bmps_s2w_compensation);
+        uint64_t bcn_pre_wake = bmps_s2w_compensation  + nt_pm_get_bmps_beacon_early_rx(gdevp);
+        if(sleep_time_ms < g_socpm_struct.slop_interval_ms )
+        {
+            sleep_slop_offset_us = 100;
+        }
+        else
+        {
+            sleep_slop_offset_us =
+                (((sleep_time_ms+ US_TO_MS(bcn_pre_wake))/g_socpm_struct.slop_interval_ms))
+                * g_socpm_struct.slop_step_us;
+        }
+
+        /* Cap sleep slop offset to upper limit */
+        if(sleep_slop_offset_us > SLEEP_SLOP_OFFSET_UPPER_LIMIT_US)
+        {
+            sleep_slop_offset_us = SLEEP_SLOP_OFFSET_UPPER_LIMIT_US; 
+        }
+    }
+
+    return ((sleep_time_us > sleep_slop_offset_us)?(sleep_time_us - sleep_slop_offset_us ):0);
+}
+
 static void
 _socpm_slp_fn_process(
     sleep_mode mode)
@@ -2111,7 +2167,8 @@ _socpm_slp_fn_process(
 
             head_sleep_back = _socpm_slp_lst[list_no].slp_info.min_cb_fn(wkup_delay_us);
 
-            _socpm_slp_lst[list_no].slp_info.slp_time = head_sleep_back;
+            _socpm_slp_lst[list_no].slp_info.slp_time =
+                _socpm_get_sleep_slop_adjusted_sleep_time(head_sleep_back);
 
 #if defined(SUPPORT_SLEEP_LIST_IMPROVEMENTS)
             _socpm_slp_lst[_socpm_slp_lst_head].slp_info.start_time_us = hres_timer_curr_time_us();
@@ -2410,6 +2467,7 @@ int nt_socpm_sleep_register(
             _socpm_last_slp_count++;
             current_slp_count = _socpm_last_slp_count;
             _socpm_slp_lst[_socpm_last_slp_count].slp_info = *slp_info;
+            _socpm_slp_lst[_socpm_last_slp_count].slp_info.slp_time = _socpm_get_sleep_slop_adjusted_sleep_time(slp_info->slp_time);
             _socpm_slp_lst[_socpm_last_slp_count].next = NULL;
             _socpm_slp_lst[_socpm_last_slp_count].slp_info.list_no = _socpm_last_slp_count;
 #if defined(SUPPORT_SLEEP_LIST_IMPROVEMENTS)
@@ -2429,7 +2487,7 @@ int nt_socpm_sleep_register(
     else if (list_idx < _SOCPM_SLP_LST_SZ)
     { // update an existing entry
         _socpm_slp_lst[list_idx].slp_info = *slp_info;
-        _socpm_slp_lst[list_idx].slp_info.slp_time = slp_info->slp_time;
+        _socpm_slp_lst[list_idx].slp_info.slp_time = _socpm_get_sleep_slop_adjusted_sleep_time(slp_info->slp_time);
         _socpm_slp_lst[list_idx].slp_info.slp_mode = slp_info->slp_mode;
 
         _socpm_slp_lst[list_idx].slp_info.list_no = list_idx;
@@ -2659,20 +2717,42 @@ static void slp_gpio_pupd_disable()
 {
     uint32_t value;
 
+    gpio_config.ls_sync   = NT_REG_RD(QWLAN_GPIO_GPIO_LS_SYNC_REG);
+    gpio_config.dr        = NT_REG_RD(QWLAN_GPIO_GPIO_SWPORTA_DR_REG);
+    gpio_config.ddr       = NT_REG_RD(QWLAN_GPIO_GPIO_SWPORTA_DDR_REG);
+    gpio_config.int_level = NT_REG_RD(QWLAN_GPIO_GPIO_INTTYPE_LEVEL_REG);
+    gpio_config.int_polar = NT_REG_RD(QWLAN_GPIO_GPIO_INR_POLARITY_REG);
+    gpio_config.int_en    = NT_REG_RD(QWLAN_GPIO_GPIO_INTEN_REG);
+
+    value =  NT_REG_RD(QWLAN_PMU_CFG_IOPAD_DS_REG);
+    gpio_config.ds = value;
+
     /*Disable pull up/pull down for JTAG/UART TX/WSI data/F2A IOs before going to sleep*/
     value =  NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PU_REG);
+    gpio_config.pu = value;
     value &= ~ (QWLAN_PMU_CFG_IOPAD_PU_AON_IOPAD_TDI_PU_MASK); //JTAG
     value &= ~ (QWLAN_PMU_CFG_IOPAD_PU_AON_IOPAD_TMS_PU_MASK); //JTAG
     value &= ~ (QWLAN_PMU_CFG_IOPAD_PU_AON_IOPAD_GPIO_14_PU_MASK); //WSI data
     NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, value);
     value =  NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PD_REG);
+    gpio_config.pd = value;
     value &= ~ (QWLAN_PMU_CFG_IOPAD_PD_AON_IOPAD_GPIO_11_PD_MASK); //UART TX
     value &= ~ (QWLAN_PMU_CFG_IOPAD_PD_AON_IOPAD_GPIO_8_PD_MASK); //F2A
     /* Improve low power by disabling UART */
+#if CONFIG_BOARD_QCC730_UART_GPIO_OPTION == 3
+    /* UART: GPIO1 GPIO3*/
     value &= ~ (QWLAN_PMU_CFG_IOPAD_PD_AON_IOPAD_GPIO_1_PD_MASK); //GPIO1 bit1
     value &= ~ (QWLAN_PMU_CFG_IOPAD_PD_AON_IOPAD_GPIO_3_PD_MASK); //GPIO3 bit3
+#endif
 
-	NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG,value);
+#if CONFIG_BOARD_QCC730_UART_GPIO_OPTION == 1
+    /* UART: GPIO13 GPIO14*/
+    value &= ~ (QWLAN_PMU_CFG_IOPAD_PD_AON_IOPAD_GPIO_13_PD_MASK); //GPIO13
+    value &= ~ (QWLAN_PMU_CFG_IOPAD_PD_AON_IOPAD_GPIO_14_PD_MASK); //GPIO14
+#endif
+
+    NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG,value);
+    gpio_config.saved = 1;
 }
 
 static void __attribute__((used)) socpm_enter_mcusleep()
@@ -2914,6 +2994,8 @@ static void _socpm_slpcfg_mcuslp(void)
 
     // Disable CPR and set CX LDO sleep voltage to 0.6V (experimental value)
     wifi_fw_cpr_disable();
+
+    presleep_update_ulpsmps2_oneshot();
 
     // SLEEP MODE enable disable_sleep_mode_en=0
     value = NT_REG_RD(QWLAN_PMU_CFG_PMIC_SLEEP_MODE_CNTL_REG);
@@ -3348,7 +3430,23 @@ static void _socpm_slpcfg_light(void)
 
 #endif /*PLATFORM_FERMION*/
 
-static void __attribute__((used)) socpm_enter_deepsleep()
+
+void nt_enable_indef_deepsleep( uint64_t sleep_time )
+{
+#ifdef CONFIG_BOARD_QCC730_QSPI_ENABLE
+    drv_flash_deinit(0);
+#endif
+
+#ifdef PLATFORM_FERMION
+    wifi_fw_pmic_pre_sleep_config(Standby);
+#endif /* PLATFORM_FERMION */
+
+    //nt_socpm_slp_tmr_set(sleep_time);
+    socpm_enter_deepsleep();
+}
+
+//static void __attribute__((used)) socpm_enter_deepsleep()
+static void socpm_enter_deepsleep()
 {
     uint32_t reg_val;
     __asm volatile("cpsid i \n");
@@ -3487,6 +3585,13 @@ _socpm_slpcfg_sby(
     reg_val|=(0xF<<QWLAN_PMU_SON_GDSCR_EN_REST_WAIT_OFFSET)&QWLAN_PMU_SON_GDSCR_EN_REST_WAIT_MASK;
                               NT_REG_WR(QWLAN_PMU_SON_GDSCR_REG,reg_val);    //for BBPLL issue
     NT_REG_WR(QWLAN_PMU_CFG_PWFM_TRAGET_REG,0xF0);   //for RRAM IR drop
+#else 
+    /* Disable SON retention before deep sleep.
+     * Fixes CPR not working on exit from deep sleep.
+     */
+    reg_val = NT_REG_RD(QWLAN_PMU_SON_GDSCR_REG);
+    reg_val &= ~QWLAN_PMU_SON_GDSCR_RETAIN_FF_ENABLE_MASK;
+    NT_REG_WR(QWLAN_PMU_SON_GDSCR_REG, reg_val);
 #endif /* FERMION_1_0_POWER_WAR */
 
     _socpm_slp_timing_tuning();
@@ -3764,9 +3869,11 @@ void nt_socpm_init_soc_cfg(void)
     g_socpm_struct.socpm_indef_deep_sleep_en = *((uint32_t *)(nt_devcfg_get_config(NT_DEVCFG_INDEF_DEEP_SLEEP_EN)));
 #endif /* FEATURE_INDEF_DEEP_SLP */
 
-#if defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD)
-    g_socpm_struct.cpr_cfg.ini_enabled = *((uint32_t *)(nt_devcfg_get_config(NT_DEVCFG_CPR_ENABLED)));
-#endif /* defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD) */
+#if defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD) && defined(CONFIG_CPR_ENABLE)
+    g_socpm_struct.cpr_cfg.ini_enabled = 1;
+#endif /* defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD) && CONFIG_CPR_ENABLE */
+    g_socpm_struct.slop_step_us = *((uint8_t *)(nt_devcfg_get_config(NT_DEVCFG_SLP_SLOP_STEP_US)));
+    g_socpm_struct.slop_interval_ms = *((uint8_t *)(nt_devcfg_get_config(NT_DEVCFG_SLP_SLOP_INTERVAL_MS)));
 }
 
 void nt_socpm_init(
@@ -3878,15 +3985,7 @@ void nt_socpm_init(
 #if defined (IO_DEBUG)
     g_socpm_struct.io_dbg_count = 0;
 #endif /*IO_DEBUG*/
-#ifdef PMU_TS_CONFIGURATION
-    pmu_ts_update_boot_temperature();
-    pmu_ts_configure();
-#endif /* PMU_TS_CONFIGURATION */
-#ifdef SLEEP_CLK_CAL_IN_ACTIVE_MODE
-#ifndef SOCPM_SLEEP_DEBUG
-    socpm_slp_clk_cal_enable(ACTIVE_MODE);
-#endif
-#endif /* SLEEP_CLK_CAL_IN_ACTIVE_MODE */
+
 #ifdef FERMION_POWER_WAR
     /** Observed high power consumption post IMPS exit
      * As observed after a warm boot from deep sleep test bus control reg was not updating to default (0x0)
@@ -3899,6 +3998,25 @@ void nt_socpm_init(
 #ifndef FTM_OVER_UART
     nt_socpm_enable(1);
 #endif
+}
+
+/*
+ *  @brief : Initializes PMU temperature sensor and Sleep Clock Cal
+ *  @param : none
+ *  @return : None
+ */
+void nt_socpm_secondary_init(void)
+{
+#ifdef PMU_TS_CONFIGURATION
+    pmu_ts_init();
+    pmu_ts_configure();
+#endif /* PMU_TS_CONFIGURATION */
+
+#ifdef SLEEP_CLK_CAL_IN_ACTIVE_MODE
+#ifndef SOCPM_SLEEP_DEBUG
+    socpm_slp_clk_cal_enable(ACTIVE_MODE);
+#endif
+#endif /* SLEEP_CLK_CAL_IN_ACTIVE_MODE */
 }
 
 void nt_enable_standby(
@@ -3916,7 +4034,15 @@ void nt_enable_standby(
 #ifdef PLATFORM_FERMION
     wifi_fw_pmic_pre_sleep_config(Standby);
 #endif /* PLATFORM_FERMION */
+#ifdef FEATURE_INDEF_DEEP_SLP
+    /* Avoid configuring the sleep timer while indefinite deep sleep is enabled */
+    if (!g_socpm_struct.socpm_indef_deep_sleep_en)
+    {
+        nt_socpm_slp_tmr_set(sleep_time);
+    }
+#else
     nt_socpm_slp_tmr_set(sleep_time);
+#endif /* FEATURE_INDEF_DEEP_SLP */
     _socpm_slpcfg_sby();
 }
 
@@ -3980,7 +4106,8 @@ nt_socpm_min_proc(
             int temp = _socpm_slp_lst_head;
 
             slept_time = _socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time;
-            _socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time = sleep_back;
+            _socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time =
+                _socpm_get_sleep_slop_adjusted_sleep_time(sleep_back);
 
 #if defined(SUPPORT_SLEEP_LIST_IMPROVEMENTS)
             _socpm_slp_lst[_socpm_last_slp_count].slp_info.start_time_us = hres_timer_curr_time_us();
@@ -4082,7 +4209,7 @@ void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point
             }
             else if((g_socpm_struct.nvic_icpr_status[1] & AON_TIMER_INTR_NVIC1_MASK)
 #ifdef PLATFORM_FERMION
-                    || (g_socpm_struct.nvic_icpr_status[1] & A2F_ASSERT_INTR_NVIC1_MASK)
+                    || (g_socpm_struct.nvic_icpr_status[1] & A2F_ASSERT_INTR_NVIC1_MASK) || (g_socpm_struct.nvic_icpr_status[0] & NT_CM4_UART_INTERRUPT_BIT_MASK)
 #endif /* PLATFORM_FERMION */
             )
             {
@@ -4815,7 +4942,7 @@ void nt_enable_beacon_miss_log(bool enable)
  * @param : None
  * @return : None
  */
-void nt_socpm_status(void)
+uint32_t nt_socpm_status(void)
 {
     if (nt_socpm_slp_time_min > 0)
     {
@@ -4825,6 +4952,7 @@ void nt_socpm_status(void)
     {
         NT_LOG_PRINT(SOCPM, ERR, "socpm status: disabled");
     }
+	return nt_socpm_slp_time_min;
 }
 
 /*

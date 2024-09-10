@@ -97,7 +97,7 @@ extern uint8_t hal_staid;
 extern uint8_t delstaidx;
 
 //table index for RMF updation
-#define TBLIDX_AP_RMF_UPDATE		-1
+#define TBLIDX_AP_RMF_UPDATE		-2
 #define TBLIDX_STA_RMF_UPDATE		 2
 
 #define MTU_TXP_DELAY_LIMIT ((QWLAN_MTU_SW_MTU_MISC_LIMITS_SW_MTU_TXP_DELAY_LIMIT_DEFAULT>>QWLAN_MTU_SW_MTU_MISC_LIMITS_SW_MTU_TXP_DELAY_LIMIT_OFFSET)/2)
@@ -571,6 +571,9 @@ void hal_mod_wmmparams_add(struct chanAccParams *wmm, uint32_t phyRtFullHarfQuar
 #else
 void hal_mod_wmmparams_add(struct chanAccParams *wmm);
 #endif
+void hal_mod_wmmparam_cw(uint8_t qid, uint16_t cw_min, uint16_t cw_max);
+void hal_mod_ba_win_size(uint16_t ack_timeout, uint16_t delay);
+void hal_mod_slot_time(uint32_t slot_time);
 
 /*
 * @brief  update wmm parameters with wmm params sent by SAP
@@ -909,6 +912,7 @@ void hal_phy_power_switch_to_cfg();
 void hal_phy_power_switch_to_listen();
 void hal_mac_sw_powerup();
 void hal_mac_hw_ctrl();
+void nt_hal_tpe_retry_threshold_set(uint8_t staid, uint8_t retry_bit, uint8_t retry_threshold0, uint8_t retry_threshold1, uint8_t retry_threshold2);
 
 #ifdef PHY_POWER_SWITCH
 void hal_phy_power_switch_to_cfg(void);

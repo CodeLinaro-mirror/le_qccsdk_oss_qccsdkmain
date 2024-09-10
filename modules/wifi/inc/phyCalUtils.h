@@ -77,7 +77,16 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #define RXGAINNUM 1
 #define CXCRXGAINNUM 2
-
+#define OTP_SP50_M15_LIMIT_SS 150
+#define OTP_SP50_M15_LIMIT_FF 175
+#define OTP_SP50_M15_LIMIT_TT (OTP_SP50_M15_LIMIT_SS+OTP_SP50_M15_LIMIT_FF)/2
+#define OTP_SP50_M15_TURNPOINT_5G 167
+#define DACBO_5G_SUBBAND_RANGE1 4900
+#define DACBO_5G_SUBBAND_RANGE2 5295
+#define DACBO_5G_SUBBAND_RANGE3 5745
+#define DACBO_5G_SUBBAND_RANGE4 5900
+#define DACBO_6G_SUBBAND_RANGE1 6045
+#define DACBO_6G_SUBBAND_RANGE2 6195
 /* Tx Power Mode */
 typedef enum e_tx_power_mode {
     tx_power_mode_high, tx_power_mode_medium, tx_power_mode_low, tx_power_mode_very_low, num_tx_power_modes,
@@ -323,6 +332,8 @@ int32_t signmag2twoscomp(uint32_t data, uint8_t n_bits);
 int32_t twoscomp2signmag(int32_t data, uint8_t n_bits);
 void set_finegain_offset(uint8_t fgoffset11a, uint8_t fgoffset11b, uint8_t fgoffset11n);
 uint8_t phyrf_get_process_monitor_chiptype(void);
+uint16_t chip_version_otp_read();
+uint16_t otp_version_otp_read();
 void PHYRF_REG_WR_SCRIPTS(const uint32_t TBL[][2], int count);
 uint32_t PHYRF_REGFLD_RD(uint32_t addr, uint32_t lsb, uint32_t mask);
 void PHYRF_REGFLD_WR(uint32_t addr, uint32_t data, uint32_t lsb, uint32_t mask);
@@ -331,6 +342,12 @@ void phyrf_temperature_data_config(void);
 int32_t phyrf_temperature_data_get(void);
 uint32_t phyrf_pmu_ts_data_get(void);
 int8_t phyrf_rssi_correction(int8_t input_rssi, uint8_t band);
+int8_t phyrf_tpc_apply_dac_bo(uint16_t dac_bo_nom, uint16_t chan, uint8_t band, bool dac_bo_enabled);
+void phyrf_rf_bandedge_disable();
+void phyrf_rf_bandedge_enable();
+void phyrf_rf_bandedge_adjust();
+void rctune_compose_regfld(uint32_t *data, uint32_t value, uint32_t SHIFT, uint32_t MASK);
+uint32_t rctune_extract_regfld(uint32_t data, uint32_t SHIFT, uint32_t MASK);
 #if defined(HALMAC_UFW)
 void phyrf_rx_set_rssi_offset(int8_t rssiOffset, int8_t rssiOffset_lgt);
 #endif
@@ -345,7 +362,10 @@ typedef enum phyrf_param_id_t
     phyrf_param_id_bdfPointer,
     phyrf_param_id_lnaPwrMode,
     phyrf_param_id_neutrino_xpa,
-    phyrf_param_id_BOOTSEQ_EXECUTED
+    phyrf_param_id_BOOTSEQ_EXECUTED,
+    phyrf_param_id_current_bandcode,
+    phyrf_param_id_current_freq,
+    phyrf_param_id_bandedge_enable,
 } phyrf_param_id_t;
 
 typedef enum phyrf_param_onoff_t
@@ -374,15 +394,18 @@ typedef enum phyrf_param_lnamode_t
 
 typedef struct phyrf_cal_globol_flag_t
 {
-	uint32_t phyrf_xLNA5G : 1;
-	uint32_t phyrf_xLNA6G : 1;
-	uint32_t phyrf_coexEnable2G : 1;
+    uint32_t phyrf_current_freq : 16;
+    uint32_t phyrf_current_bandcode : 2;
+    uint32_t phyrf_xLNA5G : 1;
+    uint32_t phyrf_xLNA6G : 1;
+    uint32_t phyrf_coexEnable2G : 1;
     uint32_t phyrf_tpcMode : 2;
     uint32_t phyrf_txPowerMode : 2;
     uint32_t phyrf_pwrOffset : 5;
     uint32_t phyrf_lnaPwrMode : 2; // 0:LP, 1:HP
     uint32_t phyrf_neutrino_xpa : 2;
     uint32_t phyrf_bootseq_executed : 1;  // 0: False, 1: True, default is 0
+    uint32_t phyrf_bandedge_enable : 1;
 } phyrf_cal_globol_flag_t;
 
 typedef enum phyrf_chiptype_t 

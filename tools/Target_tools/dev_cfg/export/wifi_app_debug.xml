@@ -3,7 +3,7 @@
 <module name="sdk">
 <driver name="wifi_app debug">
   <device id="0x03000006">
-      <props id="1" id_name="NT_DEVCFG_PROTECTION_MODE" helptext="protection mode" type="0x00000002"> 1 </props>
+      <props id="1" id_name="NT_DEVCFG_PROTECTION_MODE" min="0" max="2" oem_configurable="false" helptext="protection mode" type="0x00000002"> 1 </props>
       <props id="2" id_name="NT_DEVCFG_ONBOARDING_ENABLE" min="0" max="1" helptext="enable/disable onboarding" type="0x00000002"> 0 </props>
       <props id="3" id_name="NT_DEVCFG_NETWORK_NAME" helptext="default ssid name" type="0x00000002">0xedcba</props>
       <props id="4" id_name="NT_DEVCFG_AUTH_TYPE" helptext="Security type default is none" type="0x00000002"> 0 </props>

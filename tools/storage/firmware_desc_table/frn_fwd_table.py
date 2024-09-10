@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 #===============================================================================
-#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-#SPDX-License-Identifier: BSD-3-Clause-Clear
+# $QTI_LICENSE_QDN_SH$
+
 #===============================================================================
 
 import struct
@@ -47,7 +47,7 @@ class Firmware_Descriptor_Entry:
         self.address = 0
         self.state = 0
         self.version = 0
-
+        
         temp = [0x00] * self.reserve_size
 
         if sys.version_info[0] < 3:
@@ -59,7 +59,7 @@ class Firmware_Descriptor_Entry:
         ''' Convert the firmware descriptor entry into a packed binary
         form '''
         if isinstance(self.reserved,str):
-            self.reserved = self.reserved.encode('utf-8')
+            self.reserved = self.reserved.encode('utf-8')            
 
         data = self.fde_packed.pack(self.id,
                                     self.rank,
@@ -95,7 +95,7 @@ class Firmware_Descriptor_Entry:
         data = data + "Address:   0x%X\n" % (self.address)
         data = data + "State:    %d (0x%X)\n" % (self.state, self.state)
         data = data + "Version:   %d (0x%X)\n" % (self.version, self.version)
-
+        
         if sys.version_info[0] < 3:
             data = data + "Reserved:  0x%s\n" % (self.reserved.encode('hex').upper())
         else:
@@ -188,7 +188,7 @@ class Firmware_Descriptor_Table:
         if isinstance(self.signature,str):
             self.signature = self.signature.encode('utf-8')
         if isinstance(self.reserved,str):
-            self.reserved = self.reserved.encode('utf-8')
+            self.reserved = self.reserved.encode('utf-8')            
         data = self.fdt_packed.pack(self.signature,
                                     self.num_fde,
                                     self.reserved
@@ -319,7 +319,7 @@ def xml_to_bin(fdtxml, fdtbin, printtable, size):
         size = len(t)
         data.extend(t)
         data.extend(pad[size:])
-
+        
         try:
             with open(fdtbin , 'wb') as f:
                 f.seek(0)
@@ -343,11 +343,11 @@ def bin_to_xml(fdtbin, fdtxml, printtable):
                 f.close()
         except IOError as e:
             raise AssertionError("Can't open file %s" % (fdtbin))
-
+        
         fdt.from_binary(data)
 
         xml_string = fdt.to_xml_str()
-
+        
         try:
             with open(fdtxml , 'wb') as f:
                 f.seek(0)
@@ -378,7 +378,7 @@ def main():
     parser.add_argument('--fdtbin', type=str, required=True, help='Firmware Descriptor Table Binary output file')
     parser.add_argument('--ctype', help='Convert type. 0: xml to binary, 1: binary to xml', type=int, choices=[0,1], default=0)
     parser.add_argument('--printtable', help='Print the partition table as a friendly string to the output.', default=False, action='store_true')
-
+    
     args = parser.parse_args()
 
     convert_type = args.ctype
@@ -390,7 +390,7 @@ def main():
 
     elif convert_type == 1:
         print("Convert from bin to xml")
-        bin_to_xml(args.fdtbin, args.fdtxml, args.printtable)
+        bin_to_xml(args.fdtbin, args.fdtxml, args.printtable)    
 
 if __name__ == "__main__":
     main()

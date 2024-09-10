@@ -539,15 +539,15 @@ int vfs_mkdir(const char *abs_path)
     struct fs_mount_t *mp;
     int rc = -ENOTSUP;
 
-    if(check_directory_depth(abs_path))
-        return rc;
-
     if ((abs_path == NULL) ||
             (strlen(abs_path) <= 1) || (abs_path[0] != '/'))
     {
         LOG_ERR("invalid directory name!!\r\n");
         return -EINVAL;
     }
+    
+    if(check_directory_depth(abs_path))
+        return rc;
 
     rc = fs_get_mnt_point(&mp, abs_path, NULL);
     if (rc < 0)

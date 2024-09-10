@@ -7,6 +7,7 @@
 #define __WLAN_DRV_H__
 
 #include <stdio.h>
+#include "printfext.h"
 
 #include "qapi_wlan.h"
 #include "wmi.h"
@@ -16,64 +17,6 @@
 #include "qurt_internal.h"
 #include "qurt_mutex.h"
 #include "nt_osal.h"
-
-#define QAPI_WLAN_DEBUG 1
-
-#if QAPI_WLAN_DEBUG
-#define QAPI_WLAN_ERR   1
-#define QAPI_WLAN_WARN  1
-#define QAPI_WLAN_INFO  1
-#define QAPI_WLAN_LOG   1
-#else
-#define QAPI_WLAN_ERR   0
-#define QAPI_WLAN_WARN  0
-#define QAPI_WLAN_INFO  0
-#define QAPI_WLAN_LOG   0
-#endif
-
-#define MODULE_PRINT_PREFIX     "[qapi_wlan] "
-
-#define ERR_PREFIX  "[ERR] "
-#define WARN_PREFIX  "[WARN] "
-#define INFO_PREFIX  "[INFO] "
-#define LOG_PREFIX  "[LOG] "
-
-#if QAPI_WLAN_ERR
-#define err_printf(msg,...)     printf(MODULE_PRINT_PREFIX ERR_PREFIX msg, ##__VA_ARGS__)
-#else
-#define err_printf(msg...)     do { } while (0)
-#endif
-
-#if QAPI_WLAN_WARN
-#define warn_printf(msg,...)     printf(MODULE_PRINT_PREFIX WARN_PREFIX msg, ##__VA_ARGS__)
-#else
-#define warn_printf(msg...)     do { } while (0)
-#endif
-
-#if QAPI_WLAN_INFO
-#define info_printf(msg,...)     printf(MODULE_PRINT_PREFIX INFO_PREFIX msg, ##__VA_ARGS__)
-#else
-#define info_printf(msg...)     do { } while (0)
-#endif
-
-#if QAPI_WLAN_LOG
-#define log_printf(msg,...)     printf(MODULE_PRINT_PREFIX LOG_PREFIX msg, ##__VA_ARGS__)
-#else
-#define log_printf(msg...)     do { } while (0)
-#endif
-
-#define PRINT_ERR_NOT_SUPPORTED         err_printf("Not supported yet\n")
-#define PRINT_ERR_INVALID_PARAM         err_printf("Invalid paramter\n")
-#define PRINT_ERR_INVALID_PARAM1(msg, argx)         err_printf("Invalid paramter: " msg "=0x%x\n", argx)
-#define PRINT_ERR_ALREADY_EXIST         err_printf("Already exist\n")
-#define PRINT_ERR_WMI_CMD_SEND_FAILED   err_printf("WMI command send failed\n")
-#define PRINT_ERR_NO_RESOURCE           err_printf("No resource\n")
-
-#define PRINT_WARN_SKIP                 warn_printf("Skip\n")
-
-#define PRINT_LOG_FUNC_LINE             log_printf("%s %d\n", __FUNCTION__, __LINE__)
-#define PRINT_LOG_FUNC_LINE_ENTRY       log_printf("%s %d entry\n", __FUNCTION__, __LINE__)
-#define PRINT_LOG_FUNC_LINE_EXIT        log_printf("%s %d exit\n", __FUNCTION__, __LINE__)
 
 #define QAPI_EVENT_LARGE_PAYLOAD_LENGTH_MAX     1000
 #define QAPI_EVENT_LARGE_PAYLOAD_BUF_NUM        3
@@ -117,6 +60,8 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t                wlan_roaming_started:1;
     uint32_t                wlan_set_rate_block_mode:1;
     uint32_t                wlan_get_rate_block_mode:1;
+	uint32_t                wlan_send_raw_block_mode:1;
+    uint32_t                wlan_set_mgmt_filter_block_mode:1;
     qapi_Status_t           wlan_qapi_error;
     dev_common_t           *dev_common;
     wlan_evt_payload_t      event_payload_buf[EVT_PAYLOAD_MAX];
@@ -143,7 +88,11 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t                roaming_time_out;
     TimerHandle_t           roaming_timer;
     char					country_code[3];
+	uint8_t					frame_queued_flag;
     qapi_WLAN_Set_Rate_Params_t rate_param;
+	qapi_WLAN_Raw_Send_Params_t raw_pkt_frame;
+	WMI_MGMT_FRAME_FILTER mgmt_filter;
+    WMI_SET_APPIE_CMD       appie_cmd;
 } wlan_qapi_cxt_t;
 
 extern wlan_qapi_cxt_t *gp_wlan_qapi_cxt;

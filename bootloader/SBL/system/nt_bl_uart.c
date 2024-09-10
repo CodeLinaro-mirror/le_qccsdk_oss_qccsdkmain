@@ -1,4 +1,6 @@
 /*
+*Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+*SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #include <string.h>
 #include <stdarg.h>
@@ -69,7 +71,7 @@ void nt_uartInit(void)
 	nt_nop_delay(10);
 
 	HW_REG_WR(SYS_UART_FCR,FCR_DISABLE);
-	HW_REG_WR(SYS_UART_IER,UART_ERDA_INTTERUPT_ENABLE);
+//HW_REG_WR(SYS_UART_IER,UART_ERDA_INTTERUPT_ENABLE);
 
 	//setuartFlag(0);
 }

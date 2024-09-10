@@ -61,6 +61,7 @@ typedef int32_t qapi_Status_t;
 #define QAPI_MOD_WIFI                    (15)  /**< Wifi module - module id. */
 #define QAPI_MOD_NETWORKING              (16)  /**< NET module - module id. */
 #define QAPI_MOD_FLASH                   (17)  /**< Flash module - module id. */
+#define QAPI_MOD_HKADC                   (18)  /**< Flash module - module id. */
 
 /** @} */ /* end namegroup */
 

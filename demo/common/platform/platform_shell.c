@@ -9,6 +9,7 @@
 #include "qapi_heap_status.h"
 
 #include "qapi_console.h"
+#include "qapi_fatal_err.h"
 
 #include <stdio.h>
 
@@ -17,6 +18,9 @@
 #include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include "qurt_internal.h"
+#include "qapi_rtc.h"
+#include "wifi_fw_pmu_ts_cfg.h"
+#include "ferm_hkadc_drv.h"
 
 static qapi_Status_t platform_reset(uint32_t __attribute__((__unused__)) parameters_count, QAPI_Console_Parameter_t __attribute__((__unused__)) * parameters)
 {
@@ -115,6 +119,357 @@ qapi_Status_t platform_demo_free(uint32_t Parameter_Count, QAPI_Console_Paramete
     return QAPI_OK;
 }
 
+qapi_Status_t platform_demo_watchdog_reset(__attribute__((__unused__)) uint32_t parameters_count, __attribute__((__unused__)) QAPI_Console_Parameter_t * parameters)
+{
+    //trigger watchdog rereset
+    QAPI_FATAL_ERR(0,0,0);
+	
+    return QAPI_OK;
+}
+
+
+static qapi_Status_t platform_demo_get_time(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_Time_t tm;
+    qapi_Status_t status;
+
+    status = qapi_Core_RTC_Julian_Get(&tm);
+    if ( QAPI_OK != status ) {
+        printf("Failed on a call to qapi_Core_RTC_Julian_Get(), status=%d\r\n", status);
+        printf("Please note that this is likely happened because the time was not set\r\n", status);
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+    }
+
+    printf("Julian Time: \r\n");
+    printf("year = %d\r\n", tm.year);
+    printf("month = %d\r\n", tm.month);
+    printf("day = %d\r\n", tm.day);
+    printf("hour = %d\r\n", tm.hour);
+    printf("minute = %d\r\n", tm.minute);
+    printf("second = %d\r\n", tm.second);
+    printf("day_Of_Week = %d\r\n", tm.day_Of_Week);
+
+    return QAPI_OK;
+}
+
+void print_usage_set_time()
+{
+    printf("Usage: time set year month day hour minute second day_Of_Week\r\n");
+    printf("\t\t year: Year [1980 through 2100]\r\n");
+    printf("\t\t month: Month of year [1 through 12]\r\n");
+    printf("\t\t day: Day of month [1 through 31]\r\n");
+    printf("\t\t hour: Hour of day [0 through 23]\r\n");
+    printf("\t\t minute: Minute of hour [0 through 59]\r\n");
+    printf("\t\t second: Second of minute [0 through 59]\r\n");
+    printf("\t\t day_Of_Weak: Day of the week [0 through 6] (corresponding to Monday through Sunday)\r\n");
+}
+
+static qapi_Status_t platform_demo_set_time(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    qapi_Time_t tm;
+    qapi_Status_t status;
+
+	if ( Parameter_Count != 7 ) {
+		printf("Invalid number of arguments\r\n");
+		goto platform_demo_set_time_on_error;
+	}
+
+	// check year
+	if ((Parameter_List[0].Integer_Is_Valid) && (Parameter_List[0].Integer_Value >= 1980) && (Parameter_List[0].Integer_Value <= 2100))
+	{
+		tm.year = Parameter_List[0].Integer_Value;
+	}
+	else
+	{
+		printf("Invalid year\r\n");
+		goto platform_demo_set_time_on_error;
+	}
+	
+	// check month
+	if ((Parameter_List[1].Integer_Is_Valid) && (Parameter_List[1].Integer_Value >= 1) && (Parameter_List[1].Integer_Value <= 12))
+	{
+		tm.month = Parameter_List[1].Integer_Value;
+	}
+	else
+	{
+		printf("Invalid month\r\n");
+		goto platform_demo_set_time_on_error;
+	}
+	
+	// check day
+	if ((Parameter_List[2].Integer_Is_Valid) && (Parameter_List[2].Integer_Value >= 1) && (Parameter_List[2].Integer_Value <= 31))
+	{
+		tm.day = Parameter_List[2].Integer_Value;
+	}
+	else
+	{
+		printf("Invalid day\r\n");
+		goto platform_demo_set_time_on_error;
+	}
+	
+	// check hour
+	if ((Parameter_List[3].Integer_Is_Valid) && (Parameter_List[3].Integer_Value >= 0) && (Parameter_List[3].Integer_Value <= 23))
+	{
+		tm.hour = Parameter_List[3].Integer_Value;
+	}
+	else
+	{
+		printf("Invalid hour\r\n");
+		goto platform_demo_set_time_on_error;
+	}
+	
+	// check minute
+	if ((Parameter_List[4].Integer_Is_Valid) && (Parameter_List[4].Integer_Value >= 0) && (Parameter_List[4].Integer_Value <= 59))
+	{
+		tm.minute = Parameter_List[4].Integer_Value;
+	}
+	else
+	{
+		printf("Invalid minute\r\n");
+		goto platform_demo_set_time_on_error;
+	}
+	
+	// check second
+	if ((Parameter_List[5].Integer_Is_Valid) && (Parameter_List[5].Integer_Value >= 0) && (Parameter_List[5].Integer_Value <= 59))
+	{
+		tm.second = Parameter_List[5].Integer_Value;
+	}
+	else
+	{
+		printf("Invalid second\r\n");
+		goto platform_demo_set_time_on_error;
+	}
+	
+	// check day of the week
+	if ((Parameter_List[6].Integer_Is_Valid) && (Parameter_List[6].Integer_Value >= 0) && (Parameter_List[6].Integer_Value <= 6))
+	{
+		tm.day_Of_Week = Parameter_List[6].Integer_Value;
+	}
+	else
+	{
+		printf("Invalid day_Of_Week\r\n");
+		goto platform_demo_set_time_on_error;
+	}
+	
+	status = qapi_Core_RTC_Julian_Set(&tm);
+	if (0 != status ) {
+		printf("Failed on a call to qapi_Core_RTC_Julian_Set(), status=%d\r\n", status);
+		goto platform_demo_set_time_on_error;
+	}
+	
+	return QAPI_OK;
+	
+platform_demo_set_time_on_error:
+	print_usage_set_time();
+	return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+}
+
+static qapi_Status_t platform_demo_time(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+	if (Parameter_Count < 1) {
+		printf("Invalid number of arguments\r\n");
+		goto platform_demo_time_on_error;
+	}
+
+	if(0 == strcmp(Parameter_List[0].String_Value, "get")) {
+		return platform_demo_get_time(Parameter_Count-1, &Parameter_List[1]);
+	}
+	else if ( 0 == strcmp(Parameter_List[0].String_Value, "set") ) {
+		return platform_demo_set_time(Parameter_Count-1, &Parameter_List[1]);
+	}
+
+platform_demo_time_on_error:
+	printf("Usage: time get/set <params>\r\n");
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+}
+
+static qapi_Status_t platform_demo_get_time_ntp(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	ntp_Time_t ntp;
+    qapi_Status_t status;
+
+    status = qapi_Core_RTC_NTP_Get(&ntp);
+    if ( QAPI_OK != status ) {
+        printf("Failed on a call to qapi_Core_RTC_NTP_Get(), status=%d\r\n", status);
+        printf("Please note that this is likely happened because the time was not set\r\n", status);
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+    }
+
+    printf("NTP time: \r\n");
+    printf("sec = %u\r\n", ntp.second);
+    printf("frac = %u\r\n", ntp.frac);
+
+    return QAPI_OK;	
+}
+
+//static qapi_Status_t platform_demo_set_time_ntp(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+static qapi_Status_t platform_demo_set_time_ntp(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    ntp_Time_t ntp;
+	uint32_t sec;
+
+	if ( Parameter_Count < 1 ) {
+		printf("Invalid number of arguments\r\n");
+		goto platform_demo_set_time_ntp_on_error;
+	}
+
+	// check sec part
+	if (Parameter_List[0].Integer_Is_Valid)
+	{
+		ntp.second = Parameter_List[0].Integer_Value;
+	}
+	else
+	{
+		printf("Invalid ntp second\r\n");
+		goto platform_demo_set_time_ntp_on_error;
+	}
+
+	//check frac part
+	if(Parameter_Count > 1 && Parameter_List[1].Integer_Is_Valid)
+	{
+		ntp.frac = Parameter_List[1].Integer_Value; 
+	}
+	else
+	{
+		ntp.frac = 0;
+	}
+	return qapi_Core_RTC_NTP_Set(&ntp);
+		
+platform_demo_set_time_ntp_on_error:
+	printf("Usage: time_ntp set sec [frac]\r\n");
+	return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+}
+
+static qapi_Status_t platform_demo_time_ntp(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+	if (Parameter_Count < 1) {
+		printf("Invalid number of arguments\r\n");
+		goto platform_demo_time_ntp_on_error;
+	}
+	
+	if(0 == strcmp(Parameter_List[0].String_Value, "get")) {
+		return platform_demo_get_time_ntp(Parameter_Count-1, &Parameter_List[1]);
+	}
+	else if ( 0 == strcmp(Parameter_List[0].String_Value, "set") ) {
+		return platform_demo_set_time_ntp(Parameter_Count-1, &Parameter_List[1]);
+	}
+	
+platform_demo_time_ntp_on_error:
+	printf("Usage: time_ntp get/set <params>\r\n");
+	return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+}
+
+static qapi_Status_t platform_demo_info(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    (void)(Parameter_Count);
+    (void)(Parameter_List);
+
+    printf("Show system information\n");
+    printf("Temperature=%dC\n", pmu_ts_get_current_temperature());
+    printf("Vbat=%dmV\n", tv_monitor_get_vbat_mV());
+    printf("get RTC time\n");
+    platform_demo_get_time(0, NULL);
+    printf("get heap status\n");
+    platform_demo_free(0, NULL);
+    return QAPI_OK;
+}
+
+static qapi_Status_t platform_demo_getcx(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    (void)(Parameter_Count);
+    (void)(Parameter_List);
+
+    printf("Show cx(ULP-SMPS2) related information\n");
+    tv_monitor_dump("getcx");
+    dtim_tv_monitor_dump("getcx");
+    hkadc_drv_dump("getcx");
+    return QAPI_OK;
+}
+
+static qapi_Status_t platform_demo_calcxoneshot(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    int32_t temperatureC = 0;
+    uint32_t vbatmV = 0;
+    uint32_t OTP_oneshot = 0;
+    uint32_t optmized_oneshot = 0;
+    uint32_t t_one_shot_ns = 0;
+
+    if (Parameter_Count != 2) {
+        printf("Invalid number of arguments\n");
+        goto platform_demo_calcxoneshot_error;
+    }
+
+    if (!Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
+        printf("temperature and vbatmV Should be integer\n");
+        goto platform_demo_calcxoneshot_error;
+    }
+
+    temperatureC = Parameter_List[0].Integer_Value;
+    vbatmV = Parameter_List[1].Integer_Value;
+
+    if ((temperatureC<TEMPERATUREC_MIN) || (temperatureC>TEMPERATUREC_MAX)) {
+        printf("temperature not supported, should be in [%d, %d]\n", TEMPERATUREC_MIN, TEMPERATUREC_MAX);
+        goto platform_demo_calcxoneshot_error;
+    }
+
+    if ((vbatmV<VBATMV_MIN) || (vbatmV>VBATMV_MAX)) {
+        printf("vbatmV not supported, should be in [%d, %d]\n", VBATMV_MIN, VBATMV_MAX);
+        goto platform_demo_calcxoneshot_error;
+    }
+
+    optmized_oneshot = ulpsmps2_get_optimized_oneshot(vbatmV, temperatureC, &OTP_oneshot, &t_one_shot_ns);
+    printf("vbat=%dmV T=%dC OTP_oneshot=%d t_one_shot_ns=%dns optmized_oneshot=%d\n", vbatmV, temperatureC, OTP_oneshot, t_one_shot_ns, optmized_oneshot);
+    return optmized_oneshot;
+
+platform_demo_calcxoneshot_error:
+    printf("Usage: calcxoneshot <tempC> <vbatmV>\n");
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+}
+
+extern bool g_presleep_update_ulpsmps2_oneshot_enable;
+
+static qapi_Status_t platform_demo_setcxoneshot(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint32_t requested_oneshot = 0;
+    qapi_Status_t optmized_oneshot = 0;
+
+    if ((Parameter_Count>=1) && Parameter_List[0].Integer_Is_Valid) {
+        requested_oneshot = Parameter_List[0].Integer_Value;
+        if (requested_oneshot > CX_ONESHOT_MAX) {
+            printf("requested_oneshot not supported, should be in (%d, %d]\n", CX_ONESHOT_MIN, CX_ONESHOT_MAX);
+            if (requested_oneshot==255) {
+                //if requested_oneshot==255, enable update oneshot in sleep
+                g_presleep_update_ulpsmps2_oneshot_enable = true;
+                printf("Magic code match, enable update oneshot in sleep\n");
+            }
+            goto platform_demo_setcxoneshot;
+        }
+    } else {
+        goto platform_demo_setcxoneshot;
+    }
+
+    if (requested_oneshot) {
+        printf("do set oneshot=%d=>%d and disable update oneshot in sleep\n", ulpsmps2_get_oneshot(), requested_oneshot);
+        dtim_tv_set_ulpsmps2_oneshot(requested_oneshot);
+        g_presleep_update_ulpsmps2_oneshot_enable = false;
+        return QAPI_OK;
+    }
+
+    //if requested_oneshot==0, set oneshot according to tempC and vbatmV
+    optmized_oneshot = platform_demo_calcxoneshot((Parameter_Count-1), &Parameter_List[1]);
+    if (optmized_oneshot < 0) {
+        goto platform_demo_setcxoneshot;
+    }
+    printf("do set oneshot=%d=>%d and disable update oneshot in sleep\n", ulpsmps2_get_oneshot(), optmized_oneshot);
+    dtim_tv_set_ulpsmps2_oneshot(optmized_oneshot);
+    g_presleep_update_ulpsmps2_oneshot_enable = false;
+    return QAPI_OK;
+
+platform_demo_setcxoneshot:
+    printf("Usage: setcxoneshot <oneshot> [tempC] [vbatmV]\n");
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+}
+
 const QAPI_Console_Command_t platform_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -125,6 +480,13 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
 #endif
     {bgtest, "bgtest", "[time_s(5)] [interval_s(1)]", "background command test\n"},
     {platform_demo_free, "free", "\n", "display the heap size and an approximation of free amount of heap bytes\n"},
+    {platform_demo_watchdog_reset, "wdrst", "\n", "trigger watchdog reset\n"},
+    {platform_demo_time, "time", "\n", "get/set current time in Julian format\n"},
+	{platform_demo_time_ntp, "time_ntp", "\n", "get/set current time in NTP format\n"},
+    {platform_demo_info, "info", "\n", "show system information\n"},
+    {platform_demo_getcx, "getcx", "\n", "get cx(ULP-SMPS2) related information\n"},
+    {platform_demo_calcxoneshot, "calcxoneshot", "<tempC> <vbatmV>", "calculate cx(ULP-SMPS2) oneshot_code accordting to tempC(-40C, 125C) and vbatmV(1600mV, 3600mV)\n"},
+    {platform_demo_setcxoneshot, "setcxoneshot", "<oneshot> [tempC] [vbatmV]\n", "if oneshot not zero, just set; else, calculate oneshot according to tempC and vbatmV then set. This will disable cxoneshot update in sleep\n"},
 };
 
 const QAPI_Console_Command_Group_t platform_shell_cmd_group = {"platform", sizeof(platform_shell_cmds) / sizeof(QAPI_Console_Command_t), platform_shell_cmds};

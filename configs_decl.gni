@@ -6,7 +6,7 @@ declare_args() {
     board_name = "qcc730v2_evb11_hostless"
 
     PLATFORM_VERSION_FERMION = "E3_07"
-    PLATFORM_VERSION_FERMION_V2 = "TAPEOUT_02"
+    PLATFORM_VERSION_FERMION_V2 = "TAPEOUT_07"
     CHIP_VERSION_FERMION = 1
     XIP_FLASH_DEMO = false
     CONFIG_BIN_GEN = false
@@ -18,6 +18,8 @@ declare_args() {
     CONFIG_HEAP_STATISTIC = false
     CONFIG_WMI_EVENT = false
     CONFIG_RING_IF = false
+    CONFIG_RING_IF_ONLY = false
+    CONFIG_QCSPI_HFC_TEST = false
     CONFIG_SAP_POWERSAVE = false
     CONFIG_WFM_EN = false
     CONFIG_DEBUG_STATS = false
@@ -29,6 +31,7 @@ declare_args() {
     CONFIG_P2P = false
     CONFIG_COEX_MCI = false
     CONFIG_COEX_PTA = false
+    CONFIG_6GHZ = false
     CONFIG_6G_BAND = false
     CONFIG_LWIP_HEAP_POOL = false
 
@@ -40,6 +43,9 @@ declare_args() {
     CONFIG_PLATFORM_SHELL = false
     CONFIG_WLAN = true
     CONFIG_I2CM_SHELL = false
+    CONFIG_GPIO_SHELL = false
+    CONFIG_UART_SHELL = false
+    CONFIG_UART_QAPI = false
     CONFIG_PROF_SHELL = false
     CONFIG_WIFI_SHELL = false
     CONFIG_NET_SHELL = false
@@ -88,6 +94,25 @@ declare_args() {
     CONFIG_FWUP_DEMO = false
 
     CONFIG_FLASH_XIP_SUPPORT = false
+    
+    CONFIG_MPU_ENABLE=false
+    CONFIG_MPU_DEMO=false
 
     CONFIG_LIBWIFI_CORE = true
+    CONFIG_HTTP_CLIENT = false
+    CONFIG_HTTP_CLIENT_DEMO = false
+    CONFIG_MBEDTLS_USE_PKA = false
+    CONFIG_MBEDTLS_PKA_TEST = false
+    CONFIG_MQTT_CLIENT = false
+    CONFIG_MQTT_CLIENT_DEMO = false
+    CONFIG_MQTT_PLAINTEXT_DEMO = false
+    CONFIG_MQTT_BASIC_TLS_DEMO = false
+    CONFIG_MQTT_MUTUAL_AUTH_DEMO = false
+    CONFIG_MGMT_FILTER_DEMO=false
+
+    CONFIG_HTTP_CLIENT = false
+    CONFIG_HTTP_CLIENT_DEMO = false
+
+    CONFIG_CPR_ENABLE = true
+    CONFIG_RNG_TEST = false
 }

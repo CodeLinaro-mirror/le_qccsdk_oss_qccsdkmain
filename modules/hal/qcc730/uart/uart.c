@@ -63,6 +63,7 @@ void nt_nop_delay( uint32_t n )
 #define SYS_UART_FAR    ( QWLAN_UART_UART_FAR_REG )
 #define SYS_UART_IIR    ( QWLAN_UART_UART_IIR_REG )
 #define SYS_UART_MCR    ( QWLAN_UART_UART_MCR_REG )
+#define SYS_UART_USR    ( QWLAN_UART_UART_USR_REG )
 
 #define UART_ERDA_INTTERUPT_DISABLE     0x00
 #define UART_ERDA_INTTERUPT_ENABLE 		0x01
@@ -158,8 +159,7 @@ myputchar(
     txbuf[0] = (char)ch;
     txbuf[1] = 0;
     SEGGER_RTT_printf(0, txbuf);
-#endif
-
+#else
 	if(nt_socpm_uart_flag_state_get(APP_MODE_SEL)){
 		__asm volatile(" nop	\n");
 		(void) ch;
@@ -173,6 +173,7 @@ myputchar(
 		while (((NT_REG_RD(QWLAN_UART_UART_LSR_REG) & QWLAN_UART_UART_LSR_TEMPT_MASK )== UART_UART_LSR_TEMPT_BUSY) && (cntr < UART_TRANS_TIME_OUT));
 		NT_REG_WR(QWLAN_UART_UART_RBR_REG,ch);
 	}//_UART_DISABLE_ALL
+#endif
 #endif
 }
 
@@ -502,6 +503,8 @@ UART_Recieve_buff(
     extern TaskHandle_t QCLI_Task_handle;
 #endif
 #endif
+    /* WR: Case for external wakup from deepsleep */
+    HW_REG_RD(QWLAN_UART_UART_USR_REG);
 	//read THR register
 	data = (char)NT_HW_RD(QWLAN_UART_UART_RBR_REG);
 #ifdef FTM_OVER_UART
@@ -555,7 +558,8 @@ uart_irq_handler(
 {
 	PROF_IRQ_ENTER();
 	extern int process_routine;
-	if (process_routine == 0)
+	extern int process_uart_rx_irq;
+	if (process_routine == 0 && process_uart_rx_irq)
 	{
 		UART_Recieve_buff();
 		uart_flag = 1;

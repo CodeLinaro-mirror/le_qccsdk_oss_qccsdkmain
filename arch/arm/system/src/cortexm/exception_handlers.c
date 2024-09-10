@@ -38,7 +38,10 @@
 #ifdef PLATFORM_FERMION
 #include "Fermion_seq_hwioreg.h"
 #endif //PLATFORM_FERMION
+#include "fermion_hw_reg.h"
 // ----------------------------------------------------------------------------
+
+#define WDOG_INTR_PENDING_BITMASK 0x400000
 
 extern void
 __attribute__((noreturn,weak))
@@ -88,6 +91,45 @@ void assert_handler(const char *  file,const char* func, const uint32_t line)
 void __attribute__ ((section(".after_ram_vectors"),weak))
 NMI_Handler (void)
 {
+
+#if (FERMION_CHIP_VERSION == 2)
+		/*This is a software workaround for the AON WDT issue in 2.0, after a WDT bite,
+		the control goes to NMI handler, after entering reset vector. So in the
+		NMI handler, we de-assert the last bark signal and return
+		*/
+		//Clearing the WDOG bark interrupt
+		uint32_t control_reg, wdog_status;
+		//Disable NMI
+	
+		//DEBUG_MODE_PRINTF("NMI\r\n");
+	
+		HWIO_OUTXF(SEQ_WCSS_CCU_OFFSET, CCU_CCU_R_CCU_MISC_CTL, CCU_CCPU_NMI_EN, 0);
+		//Clearing watchdog interrupt in NVIC
+		NVIC->ICPR[1] = NVIC->ICPR[1]& WDOG_INTR_PENDING_BITMASK;
+		//Sampling WDOG status to print
+		wdog_status = NT_REG_RD(QWLAN_PMU_WDOG_STS_REG); 
+	  
+		control_reg = NT_REG_RD(QWLAN_PMU_AON_WDOG_CTL_REG);		 //AON - read the watchdog control reg.
+		control_reg |= QWLAN_PMU_AON_WDOG_CTL_WDOG_RESET_MASK;
+		NT_REG_WR(QWLAN_PMU_AON_WDOG_CTL_REG, control_reg); 		 //AON - wirte 1 to AON dog ctl reg by using AON wdog reset mask field.
+	  
+		control_reg &= (uint32_t)(~(QWLAN_PMU_AON_WDOG_CTL_WDOG_RESET_MASK));
+		NT_REG_WR(QWLAN_PMU_AON_WDOG_CTL_REG,control_reg);			 // write 0 to AON wdog ctl reg by using wdog reset mask field
+	  
+		volatile uint32_t count = NT_REG_RD(QWLAN_PMU_AON_WDOG_COUNT_REG);
+		(void )wdog_status;
+		while(0 != count)
+		{
+			count = NT_REG_RD(QWLAN_PMU_AON_WDOG_COUNT_REG);
+		}
+		//Disable AON-WDOG
+		control_reg = NT_REG_RD(QWLAN_PMU_AON_WDOG_CTL_REG);					   
+		control_reg &=	(uint32_t)(~( QWLAN_PMU_AON_WDOG_CTL_WDOG_ENABLE_MASK));
+		NT_REG_WR(QWLAN_PMU_AON_WDOG_CTL_REG,control_reg);
+
+		return;
+#else
+
 #ifdef PLATFORM_FERMION
     uint32_t exception_num = HWIO_INXF(SEQ_WCSS_CCU_OFFSET,CCU_CCU_R_CCU_MISC_CTL,CCU_CCPU_NMI_SEL) ;
     if(exception_num == WCSS_wdog_bark)
@@ -105,6 +147,8 @@ else
             {
             }
     }
+
+#endif
 }
 
 // ----------------------------------------------------------------------------

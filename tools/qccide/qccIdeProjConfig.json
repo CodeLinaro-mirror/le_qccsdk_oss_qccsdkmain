@@ -30,6 +30,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -102,6 +104,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -175,6 +179,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -229,7 +235,7 @@
     "chipTarget": "QCC730",
     "toolchainName": "arm-none-eabi-gcc",
     "sdkPath": "",
-    "demoPath": "./fermion_sbl",
+    "demoPath": "./bootloader/SBL",
     "demoRTOS": "",
     "demoChipBoard": "qcc730v2_evb11_hostless",
     "demoBuildScriptWin": "qccsdk.py",
@@ -248,6 +254,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -258,7 +266,7 @@
       "qcc730v2_evb12_hostless"
     ],
     "incPaths": [
-      "./fermion_sbl",
+      "./bootloader/SBL",
       "./output/${demoChipBoard}/${defaultDemo}"
     ],
     "SET_CFG_PATTERN": {
@@ -318,6 +326,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -372,7 +382,7 @@
     "chipTarget": "QCC730",
     "toolchainName": "arm-none-eabi-gcc",
     "sdkPath": "",
-    "demoPath": "./nvm_programmer",
+    "demoPath": "./tools/nvm_programmer",
     "demoRTOS": "",
     "demoChipBoard": "qcc730v2_evb11_hostless",
     "demoBuildScriptWin": "qccsdk.py",
@@ -391,6 +401,8 @@
     "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
     "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
     "boardList": [
+      "cqm730x",
+      "cqm730i",
       "mqm730x",
       "mqm730i",
       "mqm405x",
@@ -401,7 +413,7 @@
       "qcc730v2_evb12_hostless"
     ],
     "incPaths": [
-      "./nvm_programmer",
+      "./tools/nvm_programmer",
       "./output/${demoChipBoard}/${defaultDemo}"
     ],
     "SET_CFG_PATTERN": {

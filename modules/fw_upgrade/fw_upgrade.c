@@ -37,6 +37,8 @@
 #define FW_UPGRADE_FLAG_DUPLICATE_ACTIVE_FS        (1<<1)
 #define FW_UPGRADE_FLAG_DUPLICATE_KEEP_TRIAL_FS    (1<<2)
 
+#define UNUSED(x)   (void)(x)
+ 
 /**********************************************************************************************************/
 /* Globals																                                  */
 /**********************************************************************************************************/
@@ -1067,162 +1069,64 @@ static fw_upgrade_status_code_t fw_upgrade_process_receive_image(uint8_t *buffer
  */
 static fw_upgrade_status_code_t fw_upgrade_process_duplicate_fs(uint32_t flags)
 {
-    if (flags == 0) {
-        return FW_UPGRADE_OK_E;
-    }
-    return FW_UPGRADE_OK_E;
-#if 0
-#define BUF_SIZE    1024
-#define NAME_LEN    256
-    static const char *fs_root_bdev_name = "spinor";
-    static const char *fs1_root_name = "/spinor/";
-    static const char *fs2_root_name = "/spinor2/";
-    int result = 1;
-    int fd_write = -1, fd_read = -1;
-    uint32_t num_read, num_write;
-    uint8_t fs2_name[NAME_LEN], *name_ptr1, *name_ptr2;
-    uint8_t *buf = (uint8_t *) malloc(BUF_SIZE);
-    fw_upgrade_status_code_t rtn = QAPI_FW_UPGRADE_OK_E;
-    qapi_fs_iter_handle_t iter_handle1 = NULL, iter_handle2;
-    struct qapi_fs_iter_entry file_info;
-	qapi_Status_t status;
+    uint8_t *buf = NULL;
+    uint32_t size;
+    uint32_t offset;
+    uint32_t disk_size;
+    uint32_t nbytes;
+    fu_part_hdl_t hdl1 = NULL;
+    fu_part_hdl_t hdl2 = NULL;
+	fw_upgrade_status_code_t ret = FW_UPGRADE_OK_E;
 
-    if( buf  == NULL ) {
-        rtn = FW_UPGRADE_ERR_INSUFFICIENT_MEMORY_E;
+    UNUSED(flags);
+
+    fw_upgrade_get_mem_block_size(&size);
+    buf = (uint8_t *) malloc(size);
+    if (buf == NULL) {
+        ret = FW_UPGRADE_ERR_INSUFFICIENT_MEMORY_E;
         goto dup_fs_end;
     }
 
-    //get FS1 file list handle
-    status = qapi_Fs_Iter_Open(fs1_root_name, &iter_handle1);
-    if ( FW_UPGRADE_OK_E != status ) {
-        rtn = FW_UPGRADE_ERR_FILE_OPEN_ERROR_E;
+    //copy FS1 to FS2                 
+    if ((fw_upgrade_find_partition(fw_upgrade_get_active_fwd(NULL, NULL), FS1_IMG_ID, &hdl1) != FW_UPGRADE_OK_E) ||
+        (fw_upgrade_find_partition(fw_upgrade_get_active_fwd(NULL, NULL), FS2_IMG_ID, &hdl2) != FW_UPGRADE_OK_E)) {
+        ret = FW_UPGRADE_ERR_FLASH_IMAGE_NOT_FOUND_E;
         goto dup_fs_end;
     }
 
-    /*--------------------------------------------------------*/
-    //prepare FS2
-    status = qapi_Fs_Iter_Open(fs2_root_name, &iter_handle2);
-    if ( FW_UPGRADE_OK_E != status ) {
-        result = qapi_Fs_Mount(fs_root_bdev_name, fs2_root_name, QAPI_FS_MOUNT_FLAG_CREATE_FS, FS2_IMG_ID);
-        if( result != 0 ) {
-            rtn = FW_UPGRADE_ERR_MOUNT_FILE_SYSTEM_ERROR_E;
-            goto dup_fs_end;
-        }
+    disk_size = ((fu_partition_client_t *)hdl1)->img_size;
 
-        status = qapi_Fs_Iter_Open(fs2_root_name, &iter_handle2);
-        if ( FW_UPGRADE_OK_E != status ) {
-            rtn = FW_UPGRADE_ERR_FILE_OPEN_ERROR_E;
-            goto dup_fs_end;
+    for (offset = 0; offset < disk_size; offset += size) {
+        if (fw_upgrade_read_partition(hdl1, offset, (char *)buf, size, &nbytes) != FW_UPGRADE_OK_E) {
+            ret = FW_UPGRADE_ERR_FLASH_READ_FAIL_E;
+            break;
         }
+        // erase one block
+        if (fw_upgrade_erase_partition(hdl2, offset, size) != FW_UPGRADE_OK_E) {
+            ret = FW_UPGRADE_ERR_FLASH_ERASE_PARTITION_E;
+            break;
+        } 
+        //write flash
+        if (fw_upgrade_write_partition(hdl2, offset, (char *)buf, size) != FW_UPGRADE_OK_E) {
+            ret = FW_UPGRADE_ERR_FLASH_WRITE_PARTITION_E;
+            break;
+        }                
     }
-    qapi_Fs_Iter_Close(iter_handle2);
-
-    //copy files from FS1 to FS2
-    do {
-        uint32_t len1, len2;
-
-        status = qapi_Fs_Iter_Next(iter_handle1, &file_info);
-        if ( FW_UPGRADE_OK_E == status ) {
-            //open file at FS1
-            status = qapi_Fs_Open(file_info.file_path, QAPI_FS_O_RDONLY, &fd_read);
-            if ( FW_UPGRADE_OK_E != status ) {
-                rtn = FW_UPGRADE_ERR_FILE_OPEN_ERROR_E;
-                goto dup_fs_end;
-            }
-
-            //prepare FS2 file name
-            len2 = strnlen(fs2_root_name, NAME_LEN);
-            name_ptr2 = (uint8_t *) memscpy((void *)fs2_name, len2, fs2_root_name, len2) + len2;
-            name_ptr1 = (uint8_t *) strstr(file_info.file_path, fs1_root_name);
-            if( name_ptr1 == NULL ) {
-                break;
-            }
-
-            name_ptr1 += strlen(fs1_root_name);
-            len1 = strlen((char *) name_ptr1);
-
-            //validate the buffer length
-            if( NAME_LEN - len2 < len1 ) {
-                rtn = FW_UPGRADE_ERR_FILE_NAME_TOO_LONG_E;
-                break;
-            }
-
-            name_ptr2 = (uint8_t *) memscpy((void *) name_ptr2, len1, (void *)name_ptr1, len1) + len1;
-            *name_ptr2 = '\0';
-
-            //check KEEP_TRIAL_FILE Flag
-            if( flags & QAPI_FW_UPGRADE_FLAG_DUPLICATE_KEEP_TRIAL_FS ) {
-                //open file at FS2 as READONLY
-                status = qapi_Fs_Open((char *) fs2_name, QAPI_FS_O_RDONLY, &fd_write);
-                if ( FW_UPGRADE_OK_E == status ) {
-                    //file exists, skip copying the file
-                    goto next_file;
-                }
-            }
-
-            //open file at FS2
-            status = qapi_Fs_Open((char *) fs2_name, QAPI_FS_O_CREAT | QAPI_FS_O_RDWR | QAPI_FS_O_TRUNC, &fd_write);
-            if ( FW_UPGRADE_OK_E != status ) {
-                rtn = FW_UPGRADE_ERR_FILE_OPEN_ERROR_E;
-                goto dup_fs_end;
-            }
-
-            //copy file
-            while( (qapi_Fs_Read(fd_read, buf, BUF_SIZE, &num_read) == FW_UPGRADE_OK_E) && (num_read > 0))
-            {
-                uint32_t offset, count;
-
-                offset = 0;
-                count = num_read;
-
-                while(count > 0)
-                {
-                    if( qapi_Fs_Write(fd_write, buf+offset, count, &num_write) != FW_UPGRADE_OK_E ) {
-                        rtn = FW_UPGRADE_ERR_FILE_WRITE_ERROR_E;
-                        break;
-                    }
-
-                    offset += num_write;
-                    count -= num_write;
-                }
-            }
-next_file:
-            //close the files
-            if ( fd_read >= 0 ) {
-                qapi_Fs_Close(fd_read);
-                fd_read = -1;
-            }
-
-            if ( fd_write >= 0 ) {
-                qapi_Fs_Close(fd_write);
-                fd_write = -1;
-            }
-        }
-    } while ( FW_UPGRADE_OK_E == status );
-
 
 dup_fs_end:
     if( buf ) {
         free(buf);
     }
-
-    if( fd_read >= 0 ) {
-        qapi_Fs_Close(fd_read);
+    if (hdl1) {
+        ((fu_partition_client_t *)hdl1)->ref_count = 0;
+        hdl1 = NULL;
+    }
+    if (hdl2) {
+        ((fu_partition_client_t *)hdl2)->ref_count = 0;
+        hdl2 = NULL;
     }
 
-    if( fd_write >= 0 ) {
-        qapi_Fs_Close(fd_write);
-    }
-
-    if( iter_handle1 != NULL) {
-        qapi_Fs_Iter_Close(iter_handle1);
-    }
-
-    if( result == 0 ) {
-        qapi_Fs_Unmount((char *) fs2_name);
-    }
-    return rtn;
-#endif
+    return ret;
 }
 
 /*

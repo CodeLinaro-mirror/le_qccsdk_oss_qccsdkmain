@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #ifdef SUPPORT_QCSPI_SLAVE
-#if defined(SUPPORT_RING_IF)
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 #include "ring_svc_api.h"
 #endif
 #include "Fermion_hwiobase.h"
@@ -54,16 +54,11 @@ void __attribute__((section(".__sect_ps_txt")))
 qcspi_slv_init (void)
 {
     uint32_t temp;
-#ifdef FERMION_SILICON
-    //Enable PSS power domain (Done in PBL)
-    // HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET,
-    // NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ,
-    // PD_PSS_CNTL_BIT,QCSPI_SLAVE_ENABLE);
-#else
+
     //gpio disable dw_spi_slave
     nt_gpio_pin_mode(NT_GPIOA, QCSPI_SLAVE_DW_SPI_GPIO_PIN, GPIO_INPUT);
     nt_gpio_pin_write(NT_GPIOA, QCSPI_SLAVE_DW_SPI_GPIO_PIN, NT_GPIO_LOW);
-#endif
+
     //PMU Root clock enable to SPI Slave
     HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET,
     NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_ROOT_CLK_ENABLE,
@@ -75,11 +70,22 @@ qcspi_slv_init (void)
     //This register needs to be written first to unlock write access to BOOT_STRAP_CONFIGURATION_STATUS
     HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET,
     NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_BOOT_STRAP_CONFIG_SECURE,
-    BOOT_STRAP_CONFIG_SECURE, QCSPI_SLAVE_NVIC_MASK);
+    BOOT_STRAP_CONFIG_SECURE, QCSPI_SLAVE_FR_BOOT_STRAP_VALE);
     //Disabling DWSPI, Enabling QcSPI
     HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET,
     NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_BOOT_STRAP_CONFIGURATION_STATUS,
     CFG_SPISLAVE_SELECT,QCSPI_SLAVE_ENABLE);
+
+    //This register needs to be written first to unlock write access to BOOT_STRAP_CONFIGURATION_STATUS
+    HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET,
+    NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_BOOT_STRAP_CONFIG_SECURE,
+    BOOT_STRAP_CONFIG_SECURE, QCSPI_SLAVE_FR_BOOT_STRAP_VALE);
+
+    //enable spi slave
+    HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET,
+    NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_BOOT_STRAP_CONFIGURATION_STATUS,
+    CFG_SPI_ENABLE,QCSPI_SLAVE_ENABLE);  
+	
     //Disabling Serial Synchronous Interface
     HWIO_OUTXF(SEQ_WCSS_DWSPI_SLAVE_OFFSET,
     DWSPI_SLAVE_DWSPI_SLAVE_SSIENR,
@@ -140,7 +146,7 @@ nt_spi_slv_interrupt(
     //If the source of interrupt is HOST_INT0, control interface is called
     if(qcspi_status & QCSPI_SLAVE_HOST_INT0_MASK)
     {
-#if defined(SUPPORT_RING_IF)
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
         ringif_apps_ring_update_isr();
 #endif
     }

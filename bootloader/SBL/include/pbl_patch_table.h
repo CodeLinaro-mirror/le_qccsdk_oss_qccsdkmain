@@ -21,6 +21,7 @@
 #include "binary_descriptor.h"
 #include "pbl_image_auth.h"
 #include "pbl_auth_indt.h"
+#include "pbl_mpu.h"
 
 #ifndef PBL_PATCH_ENABLE
 #ifndef SBL_BUILD 
@@ -76,6 +77,7 @@ typedef struct {
 	pbl_patch_ind_t				pbl_patch;
 	pbl_image_auth_ind_t        pbl_image_auth;
 	pbl_secboot_ind_p           pbl_secboot;	
+	pbl_mpu_ind_t           	pbl_mpu;
 } func_ind_t;
 
 typedef void (*pbl_patch_glb_data_t)(void*);

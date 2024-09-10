@@ -35,6 +35,11 @@
 #define ADDITIONAL_BAND_5G_2  5960 // Freq falls in 6G band
 #define ADDITIONAL_BAND_5G_3  5980 // Freq falls in 6G band
 
+#define REGULATORY_5G_LOWER_BOUND  5180 // Start of 5GHZ band
+#define REGULATORY_5G_UPPER_BOUND  5900 // End of 5.9GHz band, 5915 is still in proposed state
+#define REGULATORY_6G_LOWER_BOUND  5955 // Freq falls in 6G band 
+#define REGULATORY_6G_UPPER_BOUND  6415 // Freq falls in 6G band 
+
 typedef enum
 {
     FREQ_BAND_2G        = 0x1,

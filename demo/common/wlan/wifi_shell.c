@@ -13,6 +13,9 @@
 #include "qurt_mutex.h"
 
 #include "safeAPI.h"
+#ifdef CONFIG_MGMT_FILTER_DEMO
+#include "mgmt_filter_demo.h"
+#endif
 
 #define WIFI_SHELL_INFO 1
 #define WIFI_SHELL_LOG  0
@@ -103,7 +106,10 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                 if(list[i].security_Enabled){
                     if(list[i].rsn_Auth || list[i].rsn_Cipher){
                         printf("\r\n\r");
-                        printf("RSN/WPA2= ");
+                        if((list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) || (list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK))
+                            printf("RSN/WPA2= ");
+                        if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE)
+                            printf("WPA3= ");
                     }
                     if(list[i].rsn_Auth){
                         printf(" {");
@@ -111,7 +117,10 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                              printf("802.1X ");
                         }
                         if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK){
-                             printf("PSK ");
+                            printf("PSK ");
+                        }
+                        if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE){
+                            printf("SAE");
                         }
                         printf("}");
                     }
@@ -156,10 +165,6 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                             printf("AES ");
                         }
                         printf("}");
-                    }
-                    /* it may be old-fashioned WEP this is identified by * absent wpa and rsn ciphers */
-                    if(list[i].rsn_Cipher == 0 && list[i].wpa_Cipher == 0){
-                        printf("WEP ");
                     }
                 }else{
                     printf("NONE! ");
@@ -245,6 +250,16 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
 
         break;
     }
+	case QAPI_WLAN_CHANNEL_SWITCH_CB_E: {
+		qapi_WLAN_Chan_Switch_Evt_t *ecsa = (qapi_WLAN_Chan_Switch_Evt_t *)payload;
+		if(ecsa->evt_hdr.status == QAPI_OK) {
+			p_cxt->channel_frequency = ecsa->freq;
+			info_printf("devId %d channel switch to %d success\n", p_cxt->active_device, ecsa->freq);
+		} else {
+			info_printf("devId %d channel switch fail, reason %d\n", p_cxt->active_device, ecsa->reason);
+		}
+		break;
+	}
     }
 }
 
@@ -456,7 +471,7 @@ qapi_Status_t set_active_deviceid(uint8_t deviceId)
 
 	if(deviceId >= NT_MAX_DEVICES)
 	{
-		info_printf("the maximum device ID is %d\n",NT_MAX_DEVICES);
+		info_printf("the maximum device ID is %d\n",NT_MAX_DEVICES-1);
 		return QAPI_ERROR;
 	}
 
@@ -614,6 +629,10 @@ static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Param
         e_wpa_ver = QAPI_WLAN_AUTH_WPA_PSK_E;
     } else if (!strcmp(wpaVer,"WPA2")) {
         e_wpa_ver = QAPI_WLAN_AUTH_WPA2_PSK_E;
+	} else if (!strcmp(wpaVer, "SAE")) {
+        e_wpa_ver = QAPI_WLAN_AUTH_WPA3_SAE_E;
+	} else if (!strcmp(wpaVer,"SAE_WPA2")) {
+        e_wpa_ver = QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E;
     } else {
         info_printf("invalid wpa ver =%s\n", wpaVer);
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
@@ -769,27 +788,34 @@ static qapi_Status_t SetChannel(uint32_t __attribute__((__unused__)) Parameter_C
 {
 	qapi_Status_t ret= QAPI_OK;
 	uint8_t deviceId = get_active_device();
-	uint32_t channelNum = 0;
+	uint32_t channel[2] = {0, 0};
 
     if(!pg_wifi_shell_cxt->wlan_enabled) {
         info_printf("wlan is not enabled \n");
         return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
     }
 
-	if( Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+	if( Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
 		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 	}
-
-	//ret = set_channel_hint(Parameter_List[0].Integer_Value));
-	channelNum = Parameter_List[0].Integer_Value;
+	
+	channel[0] = Parameter_List[0].Integer_Value;
+    if( Parameter_Count >= 2 ) {
+#ifdef CONFIG_6GHZ
+	    channel[1] = Parameter_List[1].Integer_Value;
+#else
+        info_printf("cannot set 6g channel since 6g is not enabled \n");
+        return QAPI_WLAN_ERR_EINVAL;
+#endif
+    }
 	ret = qapi_WLAN_Set_Param(deviceId,
 								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
 								__QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL,
-								(void *) &channelNum,
-								sizeof(channelNum),
+								(void *) &channel,
+								sizeof(channel),
 								FALSE);
 	if(ret != QAPI_OK) {
-		info_printf("set channel %d fail \n",channelNum);
+		info_printf("set channel %d fail \n",channel[0]);
 	}
 	return ret;
 }
@@ -1210,6 +1236,118 @@ static qapi_Status_t GetRate(uint32_t __attribute__((__unused__)) Parameter_Coun
     return QAPI_OK;
 }
 
+static qapi_Status_t setSTAListenInterval(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    qapi_WLAN_Listen_Interval_Params_t listen_interval;
+
+    if(Parameter_Count != 2 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_List[0].Integer_Value > UINT16_MAX || Parameter_List[0].Integer_Value < 0) {
+        info_printf("listen interval need set 0-65535 TU\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    if (!(Parameter_List[1].Integer_Value == 0 || Parameter_List[1].Integer_Value == 1)) {
+        info_printf("round type need set to 0 or 1\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    listen_interval.time = (uint16_t)Parameter_List[0].Integer_Value;
+    listen_interval.round_type = (uint16_t)Parameter_List[1].Integer_Value;
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU,
+                                &listen_interval,
+                                sizeof(listen_interval),
+                                FALSE))
+    {
+        info_printf("set STA listen interval fail\r\n");
+        return -1;
+    }
+    return 0;
+}
+
+static qapi_Status_t getSTAListenInterval(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint32_t listen_interval;
+    uint32_t length = sizeof(listen_interval);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU,
+                                &listen_interval,
+                                &length)){
+        info_printf("get listen interval fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("get listen interval: %d TU\r\n", listen_interval);
+    }
+    return 0;
+}
+
+#ifdef CONFIG_MGMT_FILTER_DEMO
+static void print_mgmt_frames(void)
+{
+    uint32_t i, j;
+
+	for (i=0; i<10; i++)
+	{
+	    if (mgmt_frame_recv_buf[i].len == 0)
+	    {
+	        continue;
+	    }
+		
+	    printf("Recv Frame len %d: ", mgmt_frame_recv_buf[i].len);
+      	for (j=0; j<mgmt_frame_recv_buf[i].len; j++)
+      	{
+            if (j%16 == 0)
+			{
+				printf("\r\n");
+			}
+      	    printf("%02x", *(mgmt_frame_recv_buf[i].data+j));
+      	}		
+		printf("\r\n\r\n");
+	}
+}
+
+
+static qapi_Status_t setMgmtFilter(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || Parameter_Count > 1 ) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_List[0].Integer_Value == -1)
+    {
+		print_mgmt_frames();
+		return QAPI_OK;
+    }
+	
+    if ((Parameter_List[0].Integer_Value != QAPI_WLAN_MGMT_NONE_E)
+		  && (Parameter_List[0].Integer_Value != QAPI_WLAN_MGMT_ASSOC_RESP_E) 
+		  && (Parameter_List[0].Integer_Value != QAPI_WLAN_MGMT_PROBE_RESP_E)
+		  && ((Parameter_List[0].Integer_Value != (QAPI_WLAN_MGMT_ASSOC_RESP_E | QAPI_WLAN_MGMT_PROBE_RESP_E)))) {
+        info_printf("management frame type need set 0, 1, 2, 3 or -1\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+	mgmt_frame_recv_filter = Parameter_List[0].Integer_Value;
+
+	if (mgmt_frame_recv_filter != QAPI_WLAN_MGMT_NONE_E)
+	{
+		mgmt_frame_recv_enabled = 1;		
+        qurt_signal_set(&mgmt_filter_start, MGMT_FILTER_MASK_START);
+	}
+	else
+	{
+		mgmt_frame_recv_enabled = 0;
+	}
+    return QAPI_OK;
+}
+#endif
 
 int32_t set_ap_beacon_interval(uint32_t beacon_int_in_tu)
 {
@@ -1371,6 +1509,501 @@ static qapi_Status_t setAPInactivityPeriod(uint32_t Parameter_Count, QAPI_Consol
     return QAPI_OK;
 }
 
+extern uint8_t ecsa_ap_chan_switch(uint8_t mode,uint8_t count,uint8_t ch_no,uint8_t is_6g);
+extern void ecsa_set_type(int type);
+
+static qapi_Status_t setCSAType(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+	
+    if (Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    
+	ecsa_set_type(Parameter_List[0].Integer_Value);
+
+    return QAPI_OK;
+}
+
+static qapi_Status_t channelSwitch(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+	uint8_t mode, count, ch_no, is_6g = 0;
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+	
+    if (Parameter_Count < 3 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid || !Parameter_List[2].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+	ch_no = Parameter_List[0].Integer_Value;
+	count = Parameter_List[1].Integer_Value;
+	mode = Parameter_List[2].Integer_Value;
+
+	if(Parameter_Count > 3 && Parameter_List[0].Integer_Is_Valid)
+		is_6g = Parameter_List[3].Integer_Value;
+	
+	if(ecsa_ap_chan_switch(mode, count, ch_no, is_6g) != 0) {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+	}
+	
+    return QAPI_OK;
+}
+static qapi_Status_t sendRawFrame(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint8_t rate_index = 0, tries = 0, header_type = 0;
+	//uint8_t deviceId = get_active_device();
+    uint32_t i = 0, chan = 0, size = 0;
+    int32_t status = -1;
+    uint8_t addr[4][6];
+    qapi_WLAN_Raw_Send_Params_t rawSendParams;
+	
+	/*Only for test of self-defined frame*/
+	uint8_t probe_req_str[70]={ 
+						/*FC*/
+						0x40, 0x00,
+						/*Duration*/
+						0x00, 0x00,
+						/*Addr1*/
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+						/*Addr2*/
+						0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 
+						/*Addr3*/
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+						/*SEQ*/
+						0x00, 0x00,
+						/*SSID */
+						0x00,0x00,
+						/*supported rates*/
+						0x01, 0x08, 0x02, 0x04 ,0x0b, 0x16, 0x8c, 0x92, 0x98, 0xa4,
+						/*extended supported Rates*/
+						0x32 ,0xC8, 0x5C ,0x9B ,0x31, 0xB6, 0x16, 0x0D ,0xFC, 0xB2, 
+						0xC0, 0x8B, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00 ,0x00 ,0x98 ,
+						0x0D ,0x00 ,0x00 ,0x00 ,0x00 ,0x00 ,0xC0 ,0x06 ,0x00 ,0x88 ,0x01,0x66,0x15,0x0B 
+			};
+  
+
+    if((Parameter_Count < 5) || (Parameter_Count > 9)){
+      goto raw_usage;
+    }
+
+    rate_index = Parameter_List[0].Integer_Value;
+    tries = Parameter_List[1].Integer_Value;
+    size = Parameter_List[2].Integer_Value;
+    chan = Parameter_List[3].Integer_Value;
+    header_type = (uint8_t)strtol((const char *)Parameter_List[4].String_Value, NULL, 16);
+    memset (addr, 0, sizeof(addr));
+	
+	if(header_type == 0xff){
+		rawSendParams.data = malloc(sizeof(probe_req_str));
+		memcpy(rawSendParams.data, probe_req_str, sizeof(probe_req_str));
+    	rawSendParams.data_Length = sizeof(probe_req_str);
+	}
+	else{
+		rawSendParams.data = NULL;
+    	rawSendParams.data_Length = 0;
+	}
+	
+    for(i = 0; i < (Parameter_Count-5);i++) {
+        if(ether_aton((const char *)Parameter_List[5+i].String_Value, &(addr[i][0])))
+        {
+            info_printf("ERROR: MAC address translation failed.\r\n");
+            return status;
+        }
+    }
+
+    if( Parameter_Count == 5 )
+    {
+            addr[0][0] = 0xff;
+            addr[0][1] = 0xff;
+            addr[0][2] = 0xff;
+            addr[0][3] = 0xff;
+            addr[0][4] = 0xff;
+            addr[0][5] = 0xff;
+            addr[1][0] = 0x00;
+            addr[1][1] = 0x03;
+            addr[1][2] = 0x7f;
+            addr[1][3] = 0xdd;
+            addr[1][4] = 0xdd;
+            addr[1][5] = 0xdd;
+            addr[2][0] = 0x00;
+            addr[2][1] = 0x03;
+            addr[2][2] = 0x7f;
+            addr[2][3] = 0xdd;
+            addr[2][4] = 0xdd;
+            addr[2][5] = 0xdd;
+            addr[3][0] = 0x00;
+            addr[3][1] = 0x03;
+            addr[3][2] = 0x7f;
+            addr[3][3] = 0xee;
+            addr[3][4] = 0xee;
+            addr[3][5] = 0xee;
+            if(header_type == 2) {
+                memcpy(&addr[0][0], &addr[1][0], __QAPI_WLAN_MAC_LEN);
+                //change destination address
+                addr[2][3] = 0xaa;
+                addr[2][4] = 0xaa;
+                addr[2][5] = 0xaa;
+            }
+    }
+
+    rawSendParams.rate_Index = rate_index;
+    rawSendParams.num_Tries = tries;
+    rawSendParams.payload_Size = size;
+    rawSendParams.channel = chan;
+    rawSendParams.header_Type = header_type;
+    rawSendParams.seq = 0;
+    memcpy(&rawSendParams.addr1[0], addr[0], __QAPI_WLAN_MAC_LEN);
+    memcpy(&rawSendParams.addr2[0], addr[1], __QAPI_WLAN_MAC_LEN);
+    memcpy(&rawSendParams.addr3[0], addr[2], __QAPI_WLAN_MAC_LEN);
+    memcpy(&rawSendParams.addr4[0], addr[3], __QAPI_WLAN_MAC_LEN);
+    
+
+    status = qapi_WLAN_Raw_Send(&rawSendParams);
+    if( status == QAPI_WLAN_ERROR)
+    {
+raw_usage:
+       info_printf("raw input error\r\n");
+       info_printf("usage = WLAN SendRawFrame rate num_tries num_bytes channel header_type [addr1 [addr2 [addr3 [addr4]]]]\r\n");
+	   info_printf("example = sendrawframe 1 10 30 11 1 00:03:7f:cc:cc:cc 00:03:7f:dd:dd:dd 00:03:7f:dd:dd:dd 00:aa:bb:28:43:91 \r\n");
+	   info_printf("NOTICE: 1. if the addr not given, will use default addr; 2. broadcast frame will only be sent once\r\n");
+       info_printf("rate = rate index where 0==1mbps; 1==2mbps; 2==5.5mbps etc(this value will not take effect when connected)\r\n");
+       info_printf("num_tries = number of transmits 1 - 14(broadcast frames will be sent only once)\r\n");
+       info_printf("num_bytes = payload size 0 to 1400\r\n");
+       info_printf("channel = 0 - 11 for 2g; 36- for 5g (this value will not take effect when connected)\r\n");
+       info_printf("header_type = 0==beacon frame; 1== Probe Request; 2==QOS data frame; 3==4 address data framel; ff==self-defined frame\r\n");
+       info_printf("addr1 = mac address xx:xx:xx:xx:xx:xx, default ff:ff:ff:ff:ff:ff\r\n");
+       info_printf("addr2 = mac address xx:xx:xx:xx:xx:xx, default 00:03:7f:dd:dd:dd\r\n");
+       info_printf("addr3 = mac address xx:xx:xx:xx:xx:xx, default 00:03:7f:dd:dd:dd, QoS changed to 00:03:7f:aa:aa:aa\r\n");
+       info_printf("addr4 = mac address xx:xx:xx:xx:xx:xx, default 00:03:7f:ee:ee:ee\r\n");              
+    }
+
+	if((header_type == 0xff) 
+		&& (rawSendParams.data != NULL))
+	{	
+		free(rawSendParams.data);
+	}
+    
+    return status;
+}
+
+uint8_t ascii_to_hex(char val)
+{
+    if('0' <= val && '9' >= val)
+    {
+        return (uint8_t)(val - '0');
+    }
+    else if('a' <= val && 'f' >= val)
+    {
+        return (uint8_t)((val - 'a') + 0x0a);
+    }
+    else if('A' <= val && 'F' >= val)
+    {
+        return (uint8_t)((val - 'A') + 0x0a);
+    }
+    return 0xff;/* Error */
+}
+
+int32_t set_app_ie(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t enet_device = get_active_device();
+    uint32_t dataLen = sizeof(qapi_WLAN_DEV_Mode_e);
+    qapi_WLAN_DEV_Mode_e wifimode;
+    int32_t return_code = 0;
+    uint32_t length = 0, i = 0;
+    uint8 tmpvalue1 = 0, tmpvalue2 = 0;
+    qapi_WLAN_App_Ie_Params_t ie_params;
+
+    if(QAPI_OK != qapi_WLAN_Get_Param (enet_device, 
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+                                &wifimode,
+                                &dataLen)){
+        info_printf("get operation mode fail for device %d\n", enet_device);
+        return -1;
+    }
+
+    ie_params.mgmt_Frame_Type = Parameter_List[0].Integer_Value;
+
+    if ((wifimode == DEV_MODE_STATION_E) && (ie_params.mgmt_Frame_Type != QAPI_WLAN_FRAME_ASSOC_REQ_E))
+    {
+        info_printf("In station mode, application specified information element can be added only in association request frames\r\n");
+        return -1;
+    }
+
+    if ((wifimode == DEV_MODE_AP_E) &&
+        ((ie_params.mgmt_Frame_Type != QAPI_WLAN_FRAME_BEACON_E) && (ie_params.mgmt_Frame_Type != QAPI_WLAN_FRAME_PROBE_RESP_E)))
+    {
+        info_printf("In soft-AP mode, application specified information element can be added only in beacon and probe response frames\r\n");
+        return -1;
+    }
+
+    length= strlen((char *)Parameter_List[1].String_Value);
+    if (length < 2)
+    {
+        info_printf("Invalid application specified information element length. Application specified information element must start with 'dd'\r\n");
+        return -1;
+    }
+
+    if (length % 2 !=0)
+    {
+        info_printf("Invalid application specified information element length. The length must be a multiple of two.\r\n");
+        return -1;
+    }
+
+    /* The length must be not less than 10 as every two input characters are converted into a hex number 
+     * and a valid application information element at least has element ID, length and OUI per 802.11 spec.
+     */
+    if(length > 2 && length < 10)
+    {
+        info_printf("The input characters cannot be converted into a valid application element information.\r\n");
+        info_printf("The input characters should follow the format:Element ID(1 byte)|Length(1 byte)|OUI(3 bytes)|Vendor-specific content((Length-3)bytes).\r\n");
+        return -1;
+    }
+
+    ie_params.ie_Len = length/2;
+	
+    if ((strncmp((char *)(Parameter_List[1].String_Value), "dd", 2) != 0))
+    {
+        info_printf("Application specified information element must start with 'dd'\r\n");
+        return -1;
+    }
+
+    ie_params.ie_Info = (uint8_t *)malloc(ie_params.ie_Len + 1);
+    for(i = 0; i < ie_params.ie_Len; i++)
+    {
+        tmpvalue1 = ascii_to_hex(Parameter_List[1].String_Value[2*i]);
+        tmpvalue2 = ascii_to_hex(Parameter_List[1].String_Value[2*i+1]);
+        if(tmpvalue1 == 0xff ||tmpvalue2 == 0xff)
+        {
+            free(ie_params.ie_Info);
+            info_printf("The characters of Application specified information element only be '0-9', 'a-f' and 'A-F'.\r\n");
+            return -1;
+        }
+        ie_params.ie_Info[i] = ((tmpvalue1<<4)&0xf0)|(tmpvalue2&0xf);
+    }
+
+    /* The length in application information element should be the length of OUI + vendor-specific content*/
+    if((ie_params.ie_Len > 1) && (ie_params.ie_Info[1] != (ie_params.ie_Len -2)))
+    {	
+        free(ie_params.ie_Info);
+        info_printf("The length in application information element is not correct, it should be the length of OUI + vendor-specific content. \r\n");
+        return -1;
+    }
+	
+    ie_params.ie_Info[ie_params.ie_Len] = '\0';
+    return_code = qapi_WLAN_Set_Param (enet_device,
+                                       __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                       __QAPI_WLAN_PARAM_GROUP_WIRELESS_APP_IE,
+                                       &ie_params,
+                                       sizeof(qapi_WLAN_App_Ie_Params_t),
+                                       FALSE);
+    free(ie_params.ie_Info);
+    return return_code;
+}
+
+static qapi_Status_t setApplicationIe(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    if(Parameter_Count < 2 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid)
+    {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    if (0 == set_app_ie(Parameter_Count, Parameter_List))
+    {
+       return QAPI_OK;
+    }
+    return QAPI_ERROR;
+}
+
+#define RT_IDX_11B_LONG_1_MBPS 0
+#define RT_IDX_11A_6_MBPS 1
+// use this command after 2G connection
+static qapi_Status_t setAntiInfParam(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint32_t enable = 1;
+    uint32_t rts_rate = RT_IDX_11B_LONG_1_MBPS;
+    qapi_WLAN_Contention_Window_Params_t cw_size_cfg;
+    uint32_t threshold = 60;
+    qapi_WLAN_BA_Window_Params_t ba_win_size_cfg;
+    uint32_t slot_time = 20;
+
+    cw_size_cfg.qid = 0xff; //set queue 0 - 7
+    cw_size_cfg.cw_min = 0x04;
+    cw_size_cfg.cw_max = 0x0f;
+
+    ba_win_size_cfg.ack_timeout = 128; //128us, should less than 4096
+    ba_win_size_cfg.delay = 10; //10 * 2 * SM clock cycles, should less than 64
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS,
+                                &enable,
+                                sizeof(enable),
+                                FALSE))
+    {
+        info_printf("Enable RTS/CTS fail\r\n");
+        info_printf("1:enable  0:disable\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G,
+                                &rts_rate,
+                                sizeof(rts_rate),
+                                FALSE))
+    {
+        info_printf("fix RTS rate fail\r\n");
+        info_printf("0:1Mbps  1:6Mbps\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW,
+                                &cw_size_cfg,
+                                sizeof(cw_size_cfg),
+                                FALSE))
+    {
+        info_printf("set contention window size fail\r\n");
+        info_printf("set qid = 0xff for all queue; set qid = 0-7 for single queue\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD,
+                                &threshold,
+                                sizeof(threshold),
+                                FALSE))
+    {
+        info_printf("set per upper threshold fail\r\n");
+        info_printf("threshold should less than 100\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW,
+                                &ba_win_size_cfg,
+                                sizeof(ba_win_size_cfg),
+                                FALSE))
+    {
+        info_printf("set BA window size fail\r\n");
+        info_printf("ack_timeout should less than 4096\r\n");
+        info_printf("delay should less than 64\r\n");
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME,
+                                &slot_time,
+                                sizeof(slot_time),
+                                FALSE))
+    {
+        info_printf("set slot time fail\r\n");
+        info_printf("set slot time to 9us or 20us\r\n");
+        return -1;
+    }
+
+    info_printf("setAntiInfParam success\r\n");
+    return 0;
+}
+
+static qapi_Status_t getAntiInfParam(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint32_t enable;
+    uint32_t rts_rate;
+    qapi_WLAN_Contention_Window_Params_t cw_size_cfg;
+    uint32_t threshold;
+    qapi_WLAN_BA_Window_Params_t ba_win;
+    uint32_t slot_time;
+    uint32_t length;
+    cw_size_cfg.qid = 0xff;
+    length = sizeof(enable);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS,
+                                &enable,
+                                &length)){
+        info_printf("get RTS enable fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        if (enable)
+            info_printf("RTS enable\r\n");
+        else
+            info_printf("RTS disable\r\n");;
+    }
+
+    length = sizeof(rts_rate);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G,
+                                &rts_rate,
+                                &length)){
+        info_printf("get RTS rate fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("RTS rate: %dMbps\r\n", rts_rate);
+    }
+
+    length = sizeof(cw_size_cfg);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW,
+                                &cw_size_cfg,
+                                &length)){
+        info_printf("get contention window size fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("contention window size -- qid:%d, cw_min:%d, cw_max:%d\r\n", cw_size_cfg.qid, cw_size_cfg.cw_min, cw_size_cfg.cw_max);
+    }
+
+    length = sizeof(threshold);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD,
+                                &threshold,
+                                &length)){
+        info_printf("get per upper threshold fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("per upper threshold:%d\r\n", threshold);
+    }
+
+    length = sizeof(ba_win);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW,
+                                &ba_win,
+                                &length)){
+        info_printf("get per upper ba window size fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("ba window size -- ack_timeout:%dus, delay:%d SM clock cycles\r\n", ba_win.ack_timeout, 2 * ba_win.delay);
+    }
+
+    length = sizeof(slot_time);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME,
+                                &slot_time,
+                                &length)){
+        info_printf("get slot time fail for device %d\n",deviceId);
+        return -1;
+    } else {
+        info_printf("slot time:%dus\r\n", slot_time);
+    }
+    return 0;
+}
+
 const QAPI_Console_Command_t wifi_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -1384,8 +2017,8 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { Connect,         "Connect",               "<ssid> [bssid]",        "Connect to a given ssid and given bssid(bssid option applicable to STA mode only. if AP mode connect command shouldnt take BSSID)"},
     { GetRssi,         "GetRssi",               "",                      "Get link quality indicator (SNR in dB) between AP and STA."},
     { Disconnect,      "Disconnect",            "",                      "Disconnect from AP or peer"},
-    { SetChannel,      "SetChannel",            "<channel>",             "Set a channel hint."},
-    { SetPhyMode,      "SetPhyMode",            "<mode = a|b|g|ag|gonly>","Set the wireless mode"},
+    { SetChannel,      "SetChannel",            "<channel> [<is_6g_index = 0:no, 1:yes>]",      "Set a channel hint."},
+    { SetPhyMode,      "SetPhyMode",            "<mode = a|b|g|ng|abgn>","Set the wireless mode"},
     { Set11nHTCap,     "Set11nHTCap",           "<HTCap = disable|ht20>","Set 11n HT parameter"},
     { SetOperatingMode,"SetOperatingMode",      "<ap|station> [<hidden|0> <wps|0>]",  "Set the operating mode to either Soft-AP or STA. Hidden and wps parameters only apply to AP mode."},
     { SetPowerMode,    "SetPowerMode",          "<mode = 0: Max performance, 1: Power Save>",    "Set the device power mode."},
@@ -1405,6 +2038,17 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 	{ setAPBeaconInterval,		"SetAPBeaconInterval",          "<beacon_interval_in_ms>", "Set the beacon interval in ms."},
 	{ setAPDtimPeriod,			"SetAPDtimPeriod",              "<dtim_period>",           "Set the DTIM period"},
 	{ setAPInactivityPeriod,	"SetAPInactivityPeriod",        "<inactivity_period_in_mins>",  "Set inactivity period "},
+	{ setCSAType,		"setCSAType",		"<0:csa | 1:ecsa>",	"set CSA type to CSA or ECSA"},
+	{ channelSwitch,	"channelSwitch",	"<new channel num> <switch count> <switch mode> [is 6G]",	"channel switch in AP mode"},
+	{ setSTAListenInterval,	"setSTAListenInterval",        "<listen_interval_in_TU> <0: ronud up|1: round down>",  "Set STA listen interval in TU which will round up/down to DTIM interval, 1TU=1024us"},
+	{ getSTAListenInterval,	"getSTAListenInterval",        "",  "Get STA listen interval in TU"},
+	{ sendRawFrame,	"sendRawFrame",        "",  "<rate_index> <num_tries = 1-14> <num_bytes = 0-1400> <channel: 1-11 or 36-> <type = 0:Beacon, 1:Probe Request, 2: QoS Data, 3: 4-addr data, ff:self-defined> [addr1 [addr2 [addr3 [addr4]]]]"},
+#ifdef CONFIG_MGMT_FILTER_DEMO	
+	{ setMgmtFilter,	"setMgmtFilter",        "0:None, 1:Asso Resp, 2:Probe Resp, 3:Asso and Probe Resp, -1:print mgmt frames",  "Set management frames filter"},
+#endif	
+	{ setApplicationIe, "setApplicationIe", "<0:beacon/1:probe request/2:probe response/3:asssociation request> <IE starting with dd>",  "Set application specified IE in specified management frame. Every input character is a nibble which means every 2 character is a byte, two characters are converted into a hex number before putting it in the frame. The length of application specified IE should be multiple of 2. if user has single digit value he need to prepend with 0 for ex: 0x5 should be 0x05. To remove IE, input only 'dd'"},
+	{ setAntiInfParam,	"setAntiInfParam",        "",  "Set default anti-interference parameters to improve throughput in noisy environment"},
+	{ getAntiInfParam,	"getAntiInfParam",        "",  "Get default anti-interference parameters"},
 };
 
 const QAPI_Console_Command_Group_t wifi_shell_cmd_group = {WLAN_SHELL_GROUP_NAME, sizeof(wifi_shell_cmds) / sizeof(QAPI_Console_Command_t), wifi_shell_cmds};

@@ -54,7 +54,7 @@ SECTIONS
 
 		. = ALIGN(4);
 
-	} >SBL_RAM AT> SBLAMEM
+	} >SBL_RAM_RO AT> SBLAMEM
 
 	/*
 	* The program code is stored in the .text section,
@@ -80,7 +80,7 @@ SECTIONS
 		*(.glue_7)
 		*(.glue_7t)
 
-	} >SBL_RAM AT> SBLAMEM
+	} >SBL_RAM_RO AT> SBLAMEM
 
 	/*
 	* The initialised data section.
@@ -109,7 +109,7 @@ SECTIONS
 
 		_ln__data_end__ = . ;
 
-	} >SBL_RAM AT> SBLAMEM
+	} >SBL_RAM_RW AT> SBLAMEM
 	_ln_RF_start_addr_data__ = LOADADDR(.data);
 	_ln__data_size__ = SIZEOF(.data) ;
 
@@ -130,7 +130,7 @@ SECTIONS
 		*(.bss_end .bss_end.*)
 		. = ALIGN(4);
 		_ln__bss_end__ = .;        /* standard newlib definition */
-	} >SBL_RAM AT> SBLAMEM
+	} >SBL_RAM_RW AT> SBLAMEM
 	_ln__bss_size__ = SIZEOF(.bss);
 
 	.noinit (NOLOAD) : ALIGN(4)
@@ -140,8 +140,8 @@ SECTIONS
 		*(.noinit .noinit.*)
 
 		. = ALIGN(4) ;
-		_end_noinit = .;
-	} >SBL_RAM AT> SBLAMEM
+		_end_noinit = .;  
+	} >SBL_RAM_RW AT> SBLAMEM
 
 
 	/* Mandatory to be word aligned, _sbrk assumes this */
@@ -164,7 +164,7 @@ SECTIONS
 		KEEP (*(.pbl_version_num))
 
 		. = ALIGN(16);
-	} >PBL_PATCH AT> SBLAMEM
+	} >PBL_PATCH_RO AT> SBLAMEM 
 
 	.sec_patch_txt : ALIGN(16)
 	{
@@ -173,7 +173,7 @@ SECTIONS
 		*pbl_patch.o(.rodata .rodata.* .constdata .constdata.*)
 
 		. = ALIGN(16);
-	} >PBL_PATCH AT> SBLAMEM
+	} >PBL_PATCH_RO AT> SBLAMEM 
 
 	.sec_patch_data : ALIGN(16)
 	{
@@ -181,7 +181,7 @@ SECTIONS
 		*pbl_patch.o(.data .data.*)
 
 		. = ALIGN(16);
-	} >PBL_PATCH AT> SBLAMEM
+	} >PBL_PATCH_RW AT> SBLAMEM
 
 	_ln_RF_start_addr_patch_data__ = LOADADDR(.sec_patch_data);
 	_ln_RAM_start_addr_patch_data__ = ADDR(.sec_patch_data);

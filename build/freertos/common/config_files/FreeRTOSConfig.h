@@ -91,7 +91,7 @@
 #define configUSE_POSIX_ERRNO                        1
 #define configUSE_STATS_FORMATTING_FUNCTIONS         1
 
-#ifdef PROF_DRV
+#ifdef CONFIG_PROF
 #define	configGENERATE_RUN_TIME_STATS				 1
 #define configUSE_STATS_FORMATTING_FUNCTIONS         1
 #define configSUPPORT_DYNAMIC_ALLOCATION			 1
@@ -243,7 +243,7 @@ extern uint32_t run_time_stat_init_time;
 /* The platform FreeRTOS is running on. */
 #define configPLATFORM_NAME    "NXPLPC54018"
 
-#ifdef PROF_DRV
+#ifdef CONFIG_PROF
 uint64_t prof_timer_get_count();
 #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()
 #define portGET_RUN_TIME_COUNTER_VALUE() prof_timer_get_count() 

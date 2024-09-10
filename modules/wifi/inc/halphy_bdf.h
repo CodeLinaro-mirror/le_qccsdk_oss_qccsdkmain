@@ -85,9 +85,14 @@ void halphy_bdf_get_crx_mode(int8_t *crx_mode);
 void halphy_bdf_update_capin_capout(uint8_t capin, uint8_t capout);
 
 #ifdef PLATFORM_FERMION
-void halphy_bdf_get_rssi_correction_value(halphy_rssi_correction_t *rssi_corr, PHY_BAND band);
-void halphy_update_rssi_temp_correction_value(halphy_rssi_correction_t *rssi_corr, PHY_BAND curr_band, int16_t curr_temp);
+void halphy_bdf_get_rssi_correction_value(halphy_rssi_correction_t *rssi_corr, uint8_t band);
+void halphy_update_rssi_temp_correction_value(halphy_rssi_correction_t *rssi_corr, uint8_t curr_band, int16_t curr_temp);
 int8_t halphy_bdf_get_crx_rssi_correction(void);
 #endif /* PLATFORM_FERMION */
+uint32_t halphy_bdf_get_configAddr(void);
+uint32_t halphy_bdf_get_rtt_base_delay(uint8_t band);
 bool halphy_bdf_get_temp_recal_support(uint8_t band);
+void halphy_bdf_get_temp_recal_th(uint8_t band, int8_t *TempThLo, int8_t *TempThHi);
+bool halphy_bdf_channel_supported(uint16_t channel_freq, uint16_t country_id);
+uint32_t halphy_bdf_get_rtt_base_delay(uint8_t band);
 #endif /* _HALPHY_BDF_H_ */

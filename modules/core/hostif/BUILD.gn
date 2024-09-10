@@ -1,0 +1,38 @@
+import("//configs_decl.gni")
+
+hostif_inc = [
+    "api/wifi",
+    "wifi_svc/inc",
+    "ring_if_lib/inc",
+    "data_svc/inc",
+    "fw_offloads/inc",
+]
+
+hostif_src = [
+    "wifi_svc/src/wifi_lib.c",
+    "ring_if_lib/src/ctrl_ring_hdlr.c",
+    "ring_if_lib/src/data_ring_hdlr.c",
+    "ring_if_lib/src/ring_ctx_holder.c",
+    "ring_if_lib/src/ring_svc_api.c",
+    "data_svc/src/data_svc.c",
+    "data_svc/src/data_svc_ip.c",
+    "data_svc/src/data_svc_udp.c",
+    "data_svc/src/data_svc_hfc.c",
+    "data_svc/src/data_svc_tcp.c",
+    "data_svc/src/data_svc_raweth.c",
+    "fw_offloads/src/wifi_fw_eb_offloads.c",
+]
+
+not_needed("*", [ ])
+
+config("_config") {
+    if (CONFIG_RING_IF || CONFIG_RING_IF_ONLY) {
+      include_dirs = hostif_inc
+    }
+}
+
+source_set("hostif") {
+    if (CONFIG_RING_IF || CONFIG_RING_IF_ONLY) {
+      sources = hostif_src
+    }
+}

@@ -31,7 +31,8 @@
  */
 #ifndef LWIP_HDR_LWIPOPTS_H__
 #define LWIP_HDR_LWIPOPTS_H__
-
+#include "wifi_cmn.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #ifdef MEM_CPY_VIA_DXE
 #include <stdint.h>
@@ -150,7 +151,7 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #endif
 #define MEMP_NUM_TCP_SEG                TCP_SND_QUEUELEN
 #define TCP_OVERSIZE                    TCP_MSS
-#define TCP_WND                         (12 * TCP_MSS)//(12 * TCP_MSS)
+#define TCP_WND                         (24 * TCP_MSS)
 #define TCP_SND_BUF                     TCP_WND
 #define LWIP_WND_SCALE                  0
 #define TCP_RCV_SCALE                   0

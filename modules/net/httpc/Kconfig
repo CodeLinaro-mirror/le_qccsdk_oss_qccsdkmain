@@ -1,0 +1,8 @@
+config HTTP_CLIENT
+    bool "enable HTTP client"
+    default n
+
+config HTTP_CLIENT_DEMO
+    depends on HTTP_CLIENT && FILE_SYSTEM
+    bool "enable HTTP client demo"
+    default n

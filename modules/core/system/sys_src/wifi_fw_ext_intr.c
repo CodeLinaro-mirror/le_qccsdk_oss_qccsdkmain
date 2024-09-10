@@ -16,6 +16,9 @@
 #include "ExceptionHandlers.h"
 #include "HALhwio.h"
 #include "Fermion_seq_hwioreg.h"
+#include "FreeRTOS.h"
+#include "semphr.h"
+#include "list.h"
 
 #include "nt_common.h"
 #include "nt_hw.h"
@@ -25,7 +28,7 @@
 #include "nt_logger_api.h"
 
 #include "wifi_fw_logger.h"
-#ifdef SUPPORT_RING_IF
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 #include "wifi_fw_cmn_api.h"
 #endif
 #include "wlan_power.h"
@@ -48,6 +51,7 @@
  * Global Data Definitions
  * ----------------------------------------------------------------------*/
 extern SOCPM_STRUCT g_socpm_struct;
+static SemaphoreHandle_t _socpm_mutex;
 
 /*-------------------------------------------------------------------------
  * Static Function Definitions
@@ -66,6 +70,7 @@ extern SOCPM_STRUCT g_socpm_struct;
 void __attribute__((section(".__sect_ps_txt")))
 wifi_fw_ext_f2a_pulse(f2a_short_reason_t reason)
 {
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
     /* Wait till Fw Table is initialized */
     if (!wifi_fw_is_table_initialized())
     {
@@ -90,6 +95,7 @@ wifi_fw_ext_f2a_pulse(f2a_short_reason_t reason)
         nt_gpio_pin_write(FIRMWARE_2_HOST_GPIO_PORT, FIRMWARE_2_HOST_GPIO, FIRMWARE_2_HOST_DE_ASSERT);
         NT_LOG_PRINT(SOCPM, INFO, "F2A pulse");
     }
+#endif	
 }
 
 /*
@@ -100,6 +106,7 @@ wifi_fw_ext_f2a_pulse(f2a_short_reason_t reason)
  */
 void wifi_fw_ext_f2a_signal_assert(f2a_short_reason_t reason)
 {
+#if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
     /* Wait till Fw Table is initialized */
     if (!wifi_fw_is_table_initialized())
     {
@@ -138,6 +145,7 @@ void wifi_fw_ext_f2a_signal_assert(f2a_short_reason_t reason)
          */
         wifi_fw_ext_f2a_pulse(reason);
     }
+#endif	
 }
 
 /*
@@ -262,6 +270,9 @@ void init_aon_ext_wakeup_int(void)
     en_ext_int = NT_REG_RD(NVIC_ISER3);
     en_ext_int |= A2F_DEASSERT_INTR_NVIC3_MASK;
     NT_REG_WR(NVIC_ISER3, en_ext_int);
+	
+	_socpm_mutex = xSemaphoreCreateMutex();
+	//xSemaphoreGive(_socpm_mutex);
 }
 
 /*
@@ -349,6 +360,9 @@ bool f2a_enable_disable_assert(
 void __attribute__((section(".after_ram_vectors")))
 aon_a2f_assert_isr_handler(void)
 {
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	
+	xSemaphoreTakeFromISR(_socpm_mutex, &xHigherPriorityTaskWoken);
     uint32_t qcspi_sanity, qcspi_status;
     bool qcspi_ready = TRUE;
     bool send_f2a_pulse = TRUE;
@@ -365,6 +379,20 @@ aon_a2f_assert_isr_handler(void)
     g_socpm_struct.host_supports_a2f = TRUE;
     NT_LOG_PRINT(SOCPM, INFO, "A2F assert");
 
+#ifdef SUPPORT_SWTMR_TO_WKUP_FROM_BMPS
+#if 1
+    if ((nt_socpm_status()>0) && 
+		(PM_STRUCT *)gdevp->pPmStruct != NULL &&
+		(PM_GET_RRI_STATE((PM_STRUCT *)gdevp->pPmStruct) ==PM_RRI_MAC_DOWN_MCUSLP) &&
+        ((PM_STRUCT *)(gdevp->pPmStruct))->pm_type == PM_MODE_BMPS)
+    {
+        //NT_LOG_PRINT(SOCPM, CRIT, "send pm");
+		PM_SET_SLEEP_EXIT_REASON((PM_STRUCT *)gdevp->pPmStruct, EXIT_REASON_EXT_INT);
+		nt_send_pm_mode_cmd(0);
+    }
+#endif
+
+#endif /* SUPPORT_SWTMR_TO_WKUP_FROM_BMPS */
     // Deassert F2A if it was asserted
     if (TRUE == g_socpm_struct.f2a_asserted)
     {
@@ -454,6 +482,7 @@ aon_a2f_assert_isr_handler(void)
         NT_LOG_PRINT(SOCPM, CRIT, "Wake from TWT sleep due to A2F");
     }
 #endif /* NT_DEBUG */
+	xSemaphoreGiveFromISR(_socpm_mutex, &xHigherPriorityTaskWoken);
 }
 
 /*

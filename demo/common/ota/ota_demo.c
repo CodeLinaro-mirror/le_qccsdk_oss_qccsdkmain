@@ -27,6 +27,7 @@ typedef struct {
     char *interface_name;
     char *url;
     char *cfg_file;
+    uint32_t flags;
 } fw_upgrade_params_t;
 
 /**********************************************************************************************************/
@@ -53,16 +54,16 @@ static qapi_Status_t Command_Fw_Set_Image_Size(uint32_t Parameter_Count, QAPI_Co
 /* The following is the complete command list for the Firmware Upgrade demo. */
 const QAPI_Console_Command_t Fw_Upgrade_Command_List[] =
 {
-    /* cmd_function                     cmd_string usage_string              description */
-    {Command_Display_FWD,               "fwd",     "",                       "Display FWD"},
-    {Command_Delete_FWD,                "del",     "[fwd]",                  "Erase FWD"},
-    {Command_Done_Trial,                "trial",   "[0|1] [reboot flag]",    "Accept/Reject Trial FWD"},
-    {Command_Display_ActiveImage,       "img",     "[id]",                   "Display Active FWD Image Info"},
-    {Command_Fw_Upgrade_TFTP_Upgrade,   "tftp",    "[if] [server] [file]",   "tftp [if_name] [tftp_server] [fw filename]\r\n"},
-    {Command_Fw_Upgrade_Cancel,         "cancel",  "",                       "cancel fw upgrade\r\n"},
-    {Command_Fw_Upgrade_Suspend,        "suspend", "",                       "suspend fw upgrade\r\n"},
-    {Command_Fw_Upgrade_Resume,         "resume",  "",                       "resume fw upgrade\r\n"},
-    {Command_Fw_Set_Image_Size,         "setsize", "[fwd] [id] [size]",      "set image size\r\n"},
+    /* cmd_function                     cmd_string usage_string                    description */
+    {Command_Display_FWD,               "fwd",     "",                             "Display FWD"},
+    {Command_Delete_FWD,                "del",     "[fwd]",                        "Erase FWD"},
+    {Command_Done_Trial,                "trial",   "[1|0] [reboot flag]",          "Accept/Reject Trial FWD"},
+    {Command_Display_ActiveImage,       "img",     "[id]",                         "Display Active FWD Image Info"},
+    {Command_Fw_Upgrade_TFTP_Upgrade,   "tftp",    "[if] [server] [file] [flag]",  "tftp [if_name] [tftp_server] [fw filename] [flag]\r\n"},
+    {Command_Fw_Upgrade_Cancel,         "cancel",  "",                             "cancel fw upgrade\r\n"},
+    {Command_Fw_Upgrade_Suspend,        "suspend", "",                             "suspend fw upgrade\r\n"},
+    {Command_Fw_Upgrade_Resume,         "resume",  "",                             "resume fw upgrade\r\n"},
+    {Command_Fw_Set_Image_Size,         "setsize", "[fwd] [id] [size]",            "set image size\r\n"},
 };
 
 const QAPI_Console_Command_Group_t Fw_Upgrade_Command_Group =
@@ -206,7 +207,7 @@ static qapi_Status_t Command_Delete_FWD(uint32_t Parameter_Count, QAPI_Console_P
 static qapi_Status_t Command_Done_Trial(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     if ((Parameter_Count != 2) || (Parameter_List[0].Integer_Is_Valid == 0) || (Parameter_List[1].Integer_Is_Valid == 0)) {
-        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "usage: trial [0|1] [reboot flag]\r\n");
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "usage: trial [1|0] [reboot flag]\r\n");
         return QAPI_ERR_INVALID_PARAM;
     }
 
@@ -445,7 +446,6 @@ static qapi_Status_t Command_Fw_Upgrade_Resume(uint32_t Parameter_Count, QAPI_Co
 
 static void fw_upgrade_TFTP_upgrade_task(void __attribute__((__unused__))*pvParameters)
 {
-    uint32_t  flags;
     qapi_Status_t resp_code;
     qapi_Fw_Upgrade_Plugin_t plugin = {plugin_tftp_init,
                                 plugin_tftp_recv_data,
@@ -453,12 +453,10 @@ static void fw_upgrade_TFTP_upgrade_task(void __attribute__((__unused__))*pvPara
 								plugin_tftp_resume,
                                 plugin_tftp_fin};
 
-    flags = QAPI_FW_UPGRADE_FLAG_AUTO_REBOOT;
-
     if (upgrade_params == NULL) {
         goto tftp_thread_end;
     }
-    resp_code = qapi_Fw_Upgrade(upgrade_params->interface_name, &plugin, upgrade_params->url, upgrade_params->cfg_file, flags, fw_upgrade_callback, NULL);
+    resp_code = qapi_Fw_Upgrade(upgrade_params->interface_name, &plugin, upgrade_params->url, upgrade_params->cfg_file, upgrade_params->flags, fw_upgrade_callback, NULL);
 
     if (QAPI_OK != resp_code) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Firmware Upgrade Image Download Failed ERR:%d\r\n",resp_code);
@@ -484,9 +482,17 @@ static qapi_Status_t Command_Fw_Upgrade_TFTP_Upgrade(uint32_t Parameter_Count, Q
     uint32_t interface_len;
     uint32_t url_len;
     uint32_t cfg_len;
+    uint32_t flags = (QAPI_FW_UPGRADE_FLAG_AUTO_REBOOT | QAPI_FW_UPGRADE_FLAG_DUPLICATE_ACTIVE_FS);
 
-    if (Parameter_Count != 3) {
-        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "usage: tftp [if_name] [tftp_server] [fw filename]\r\n");
+    if (Parameter_Count != 3 && Parameter_Count != 4) {
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "usage: tftp [if_name] [tftp_server] [fw filename] [flag]\r\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    if (Parameter_Count == 4 && 
+        ((!Parameter_List[3].Integer_Is_Valid) ||
+        (!(Parameter_List[3].Integer_Value & flags) && Parameter_List[3].Integer_Value != 0))) {
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Flag bit0: auto reboot, bit1: dup fs\r\n");
         return QAPI_ERR_INVALID_PARAM;
     }
 
@@ -499,6 +505,7 @@ static qapi_Status_t Command_Fw_Upgrade_TFTP_Upgrade(uint32_t Parameter_Count, Q
     if (upgrade_params == NULL) {
         return QAPI_ERROR;
     }
+    memset(upgrade_params, 0, sizeof(fw_upgrade_params_t));
     interface_len = strlen(Parameter_List[0].String_Value) + 1;
     upgrade_params->interface_name = malloc(interface_len);
     if (upgrade_params->interface_name == NULL) {
@@ -526,6 +533,12 @@ static qapi_Status_t Command_Fw_Upgrade_TFTP_Upgrade(uint32_t Parameter_Count, Q
     memset(upgrade_params->cfg_file, 0, cfg_len);
     memscpy(upgrade_params->cfg_file, cfg_len, Parameter_List[2].String_Value, cfg_len);
 
+    if (Parameter_Count == 3) {
+        upgrade_params->flags = QAPI_FW_UPGRADE_FLAG_AUTO_REBOOT;
+    } else if (Parameter_Count == 4) {
+        upgrade_params->flags = Parameter_List[3].Integer_Value;
+    }
+    
     nt_qurt_thread_create(fw_upgrade_TFTP_upgrade_task, "fw_upgrade_demo", 1024, NULL, configUART_COMMAND_CONSOLE_TASK_PRIORITY, &fw_upgrade_task_handle);
 
 tftp_upgrade_end:

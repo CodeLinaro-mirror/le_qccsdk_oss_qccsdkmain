@@ -5,4 +5,5 @@
    <fde address="0x212400" filename="" format="0" id="0" rank="0" state="1" version="1"/>
    <fde address="0x208000" filename="" format="0" id="1" rank="0" state="0" version="0"/>
    <fde address="0x21A400" filename="" format="1" id="2" rank="2" state="0" version="0"/>
+   <fde address="0x37A000" filename="" format="0" id="3" rank="2" state="1" version="0"/>
 </fdt>

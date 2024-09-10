@@ -5,8 +5,14 @@
 
 #include <string.h>
 #include <stdint.h>
-#if (CONFIG_FW_DEMO)
-#include "qapi_firmware_upgrade.h"
+#ifdef CONFIG_FWUP_DEMO
+#include "ota_demo.h"
+#endif
+#if CONFIG_MPU_DEMO
+#include "mpu_demo.h"
+#endif
+#ifdef CONFIG_MGMT_FILTER_DEMO
+#include "mgmt_filter_demo.h"
 #endif
 
 #ifdef FERMION_SILICON
@@ -25,6 +31,17 @@ void app_init(void)
 #ifdef CONFIG_FWUP_DEMO
     Initialize_FwUpgrade_Demo();
 #endif 
+    Initialize_Crypto_Demo();
+#ifdef CONFIG_QCSPI_HFC_TEST
+	extern void Initialize_qcspi_hfc_Demo(void);
+	Initialize_qcspi_hfc_Demo();
+#endif
+#if CONFIG_MPU_DEMO
+	Initialize_MPU_Demo();
+#endif
+#ifdef CONFIG_MGMT_FILTER_DEMO
+	Initialize_Mgmt_Filter_Demo();
+#endif
     UART_SEND_DIRECT("app_init over\r\n");
 }
 

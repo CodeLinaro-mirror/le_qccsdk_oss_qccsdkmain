@@ -21,6 +21,9 @@
 #include "boot_log.h"
 #include "sbl_auth.h"
 #include "sbl_flash_fwd.h"
+#if CONFIG_MPU_ENABLE
+#include "sbl_mpu.h"
+#endif
 #include "safeAPI.h"
 
 /*-------------------------------------------------------------------------
@@ -43,8 +46,19 @@ extern sbl_info_s g_sbl_info;
 
 /*Temp add for BIN image*/
 #define APP_ELF_RRAM_ADDR			0x2d1000	
-#define APP_ARGS_MAGIC				(0x5a)
-#define SET_APP_ARGS(bin_mode)		((void*)(((uint8_t)(bin_mode))|((APP_ARGS_MAGIC)<<8)))
+#define APP_ARGS_MAGIC				(0x55aa55aa)
+//#define SET_APP_ARGS(bin_mode)		((void*)(((uint8_t)(bin_mode))|((APP_ARGS_MAGIC)<<8)))
+
+#define SBL_SHARE_VER 1
+
+typedef struct {
+	uint32_t magic_num;
+	uint8_t ver;
+	uint8_t img_type;
+	uint8_t rsv1;
+	uint8_t rsv2;
+	uint32_t bdf_addr;
+} boot_sbl_share;
 
 #define PBL_VERSION_ADDR			0x200168
 #define PBL_VER_MAJOR_CS			16
@@ -59,6 +73,8 @@ boot_elf_loader app_elf_loader;
 boot_pbl_share_func		pbl_share_func;
 boot_pbl_share_data		pbl_share_data;
 boot_pbl_share_data_es	pbl_share_data_es;
+
+boot_sbl_share sbl_share;
 
 uint32_t				sbl_fde_idx;
 char					*pbl_cmd;
@@ -121,6 +137,16 @@ void get_pbl_share(void *arg, uint32_t cs_pbl) {
 	return;
 }
 
+void set_sbl_share(uint8_t img_type, uint32_t bdf_addr)
+{
+	boot_sbl_share *share = &sbl_share;
+
+	share->magic_num = APP_ARGS_MAGIC;
+	share->ver = SBL_SHARE_VER;
+	share->img_type = img_type;
+	share->bdf_addr = bdf_addr;
+}
+
 /*
 * @brief: SBL entry function, which contains the dummy code
 * @param: pointer to the arguments
@@ -134,7 +160,7 @@ loader_start( void* arg){
 	uint32_t start_addr = APP_IMAGE_START_ADDRESS;
 	uint32_t app_load_addr = APP_IMAGE_FLASH_ADDRESS; //default virtual flash addr, 0 is invalid.
 	boot_elf_load_type type;
-    fdt_s       *fdt;	
+    fdt_s       *fdt = NULL;	
     fdt_entry   fde, tempfde;
 
 	memset(&fde, 0, sizeof(fdt_entry));
@@ -145,6 +171,10 @@ loader_start( void* arg){
 	uint32_t cs_pbl = 1;
 
 	secboot_auth_image_info_t image_info;
+
+#if CONFIG_MPU_ENABLE
+	sbl_mpu_config();
+#endif
 
 	nt_uartInit();
 
@@ -373,11 +403,17 @@ loader_start( void* arg){
 		msp = (uint32_t*)APP_IMAGE_START_ADDRESS;
 		app_entry = (elf_entry_args)(app_elf_loader.elf_hdr.e_entry);
 
+#if CONFIG_MPU_ENABLE
+		sbl_mpu_disable();
+#endif
+
 		sbl_printf("APP entry 0x%08x, startAdd=0x%x\r\n", (unsigned int)app_entry, (unsigned int)msp);
 
 		__asm volatile ("MSR msp, %0" : : "r" (*msp) : "sp");
 
-		app_entry(SET_APP_ARGS(OTA_IMG_FORMAT_ELF));
+		set_sbl_share(OTA_IMG_FORMAT_ELF, get_bdf_addr(fdt));
+
+		app_entry((void *)&sbl_share);
 
 	} else {
 		sbl_printf("Jump to APP bin\r\n");
@@ -386,11 +422,17 @@ loader_start( void* arg){
 
 		app_entry = (elf_entry_args)(*((uint32_t *)(start_addr) + 1));
 
+#if CONFIG_MPU_ENABLE
+		sbl_mpu_disable();
+#endif
+
 		sbl_printf("APP entry 0x%08x\r\n", (unsigned int)app_entry);
 
 		__asm volatile ("MSR msp, %0" : : "r" (*msp) : "sp");
 
-		app_entry(SET_APP_ARGS(OTA_IMG_FORMAT_BIN));
+		set_sbl_share(OTA_IMG_FORMAT_BIN, get_bdf_addr(fdt));
+
+		app_entry((void *)&sbl_share);
 	}
 
 	sbl_printf("SBL shouldn't run here\r\n");
@@ -418,7 +460,46 @@ bl_error_type boot_sbl_find_appimg(fdt_s *fdt, uint32_t *idx)
 	}
     
 	return BL_ERR_INVALID_PARAM;
-} 
+}
+
+bl_error_type boot_sbl_find_bdf(fdt_s *fdt, uint32_t *idx)
+{
+	uint32_t app_idx=FDE_INVAL_IDX;
+	if (!idx || !fdt)
+		return BL_ERR_NULL_PTR;
+
+	fde_get_idx_by_id_rank(fdt, OTA_IMG_ID_BDF, OTA_IMG_RANK_CURRENT, &app_idx);
+
+	if (app_idx != FDE_INVAL_IDX) {
+		*idx = app_idx;
+		return BL_ERR_NONE;
+	}
+
+	return BL_ERR_INVALID_PARAM;
+}
+
+uint32_t get_bdf_addr(fdt_s *fdt)
+{
+	uint32_t idx;
+	fdt_entry fde;
+	uint32_t bdf_addr;
+
+	memset(&fde, 0, sizeof(fdt_entry));
+
+	if(BL_ERR_NONE != boot_sbl_find_bdf(fdt, &idx)) {
+		idx = FDE_INVAL_IDX;
+	}
+	if (idx != FDE_INVAL_IDX) {
+		fde_get_by_idx(fdt, &fde, idx);
+		bdf_addr = fde.addr;
+	} else {
+		sbl_printf("use default bdf start addr 0x37A000\r\n");
+		bdf_addr = 0x37A000;
+	}
+
+	return bdf_addr;
+}
+
 uint8_t boot_sbl_select_validFwd(sbl_info_s *info)
 {
 	if(info->err_code != ERROR_SBL_NONE)

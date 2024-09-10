@@ -38,6 +38,7 @@
 
 #include <stdint.h>
 #include "neutrino.h"
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 
 

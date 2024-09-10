@@ -109,14 +109,18 @@ uint32 sbl_image_auth
 	        sbl_ret = BL_ERR_ROLLBACK_VERSION_VERIFY_FAIL;
 	    }
 	}
-
-	if (BL_ERR_NONE == sbl_ret)
-	{
-	    SECBOOT_PRINT("sbl_secboot_image_auth SUC\r\n");
-	}
-	else
-	{
-	    SECBOOT_PRINT("sbl_secboot_image_auth FAIL\r\n");
+	
+	if (BL_ERR_NONE != sbl_ret)
+	{	    
+	    if (FALSE == sbl_shared->auth_state.auth_enabled)
+	    {
+	        SECBOOT_PRINT("app image header hash verification FAILED\r\n");
+	     
+	    }
+		else
+		{
+	        SECBOOT_PRINT("app image authentication FAILED\r\n");   
+		}
 	}
 	return sbl_ret;
 }
@@ -188,13 +192,9 @@ uint32 sbl_compute_verify_hash(secboot_auth_image_info_t *image_info, boot_apps_
 													 p_app_img_auth_state);
 	}
 
-    if (sbl_ret == BL_ERR_NONE)
+    if (sbl_ret != BL_ERR_NONE)
     {
-  	    SECBOOT_PRINT("sbl_compute_verify_hash SUC\r\n");
-    }
-    else
-    {
-        SECBOOT_PRINT("sbl_compute_verify_hash FAIL\r\n");
+        SECBOOT_PRINT("app image hash verification FAILED\r\n");
     }
     return sbl_ret;
 }

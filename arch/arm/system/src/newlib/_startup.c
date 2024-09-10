@@ -39,12 +39,14 @@
 
 // ----------------------------------------------------------------------------
 
+#include <assert.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <string.h>
 
 #include "nt_common.h"
 
+#include "fwconfig_cmn.h"
 #include "nt_flags.h"
 
 #include "safeAPI.h"
@@ -175,13 +177,26 @@ void early_reset();
  * @Param      	:	NONE
  * @return     	:	NONE
  */
-#define APP_ARGS_MAGIC	(0x5a)
-#define GET_APP_ARGS_BIN_MODE(args)	(((uint32_t)(args))&0xff)
-#define GET_APP_ARGS_MAGIC(args)	((((uint32_t)(args))>>8)&0xff)
+#define APP_ARGS_MAGIC	(0x55aa55aa)
+//#define GET_APP_ARGS_BIN_MODE(args)	(((uint32_t)(args))&0xff)
+//#define GET_APP_ARGS_MAGIC(args)	((((uint32_t)(args))>>8)&0xff)
 enum ota_image_format {
 	OTA_IMG_FORMAT_ELF,
 	OTA_IMG_FORMAT_BIN,
 };
+
+#define SBL_SHARE_VER 1
+
+typedef struct {
+	uint32_t magic_num;
+	uint8_t ver;
+	uint8_t img_type;
+	uint8_t rsv1;
+	uint8_t rsv2;
+	uint32_t bdf_addr;
+} boot_sbl_share;
+
+uint32_t bdf_addr;
 
 void __attribute__ ((section(".after_vectors"),noreturn,weak))
 _start (void* arg)
@@ -189,7 +204,7 @@ _start (void* arg)
    // int int_number;
     extern  uint32_t load_r13[2];
     uint32_t temp = load_r13[0];
-	uint32_t cp_arg = (uint32_t)arg;
+    boot_sbl_share sbl_share = *((boot_sbl_share *)arg);
     uint8_t temp_log_arr[256] = {0};
     uint32_t pbl_log_count = 0;
     uint8_t * pbl_log_addr = PBL_LOG_REGION_CMEMA;
@@ -241,8 +256,13 @@ _start (void* arg)
 		else
 	#endif // NT_MULTI_IMAGE
 		{
-			uint8_t app_arg_bin_mode = GET_APP_ARGS_BIN_MODE(cp_arg);
-			uint8_t app_arg_magic = GET_APP_ARGS_MAGIC(cp_arg);
+			/* this may come from wdog reset */
+			if(!(sbl_share.ver >= SBL_SHARE_VER))
+				nt_system_sw_reset();
+				
+			uint8_t app_arg_bin_mode = sbl_share.img_type;
+			uint32_t app_arg_magic = sbl_share.magic_num;
+
 			uint8_t do_memload = 1;
 			if ((APP_ARGS_MAGIC==app_arg_magic) && (OTA_IMG_FORMAT_ELF==app_arg_bin_mode)) {
 				do_memload = 0;
@@ -265,6 +285,8 @@ _start (void* arg)
 				memset(&_ln_bss_start__,0x0,&_ln_sect_sleep_data_retention_size__);
 			}
 		}
+
+	bdf_addr = sbl_share.bdf_addr;
 
 	// Copying of pbl_log from temp_buffer to pbl_log_buffer
 	memscpy(&pbl_log_buff[0], temp_log_arr[0], &temp_log_arr[0], temp_log_arr[0] );

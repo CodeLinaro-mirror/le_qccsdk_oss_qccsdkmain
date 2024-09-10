@@ -32,11 +32,8 @@
 #define WMI_PASSPHRASE_LEN    64
 #define WMI_PMK_LEN           32
 #define WMI_GMK_LEN           32
-#ifdef SUPPORT_5GHZ
-#define WMI_CHANNEL_NUM_MAX   52
-#else
-#define WMI_CHANNEL_NUM_MAX   11
-#endif
+#define WMI_CHANNEL_NUM_MAX   TOT_MAX_CHANNEL_INDEX + 1
+#define WMI_MAX_APP_IE_LEN    64
 
 typedef PREPACK struct {
 	uint8_t *wur_buffer;
@@ -64,7 +61,7 @@ typedef enum {
     WMI_SET_TKIP_COUNTERMEASURES_CMDID,
     WMI_RSSI_THRESHOLD_PARAMS_CMDID,
     WMI_SET_ACCESS_PARAMS_CMDID,
-    WMI_SET_MAX_SP_LEN_CMDID,
+    WMI_SET_MAX_SP_LEN_CMDID,                
 
     WMI_SET_WMM_CMDID,
     WMI_SET_WMM_TXOP_CMDID,
@@ -242,6 +239,9 @@ typedef enum {
     WMI_HALPHY_ANI_PERIODIC_CB_CMDID, /* Handles ANI periodic monitor activities at poll timer expiry */
     WMI_HALPHY_TEMP_CMP_PERIODIC_CB_CMDID, /*  Handles periodic temperature monitor activities for SCPC compensation*/
     WMI_GET_RATE,
+    WMI_SEND_RAW,
+    WMI_SET_MGMT_FILTER_CMDID,
+    WMI_SET_APPIE_CMDID,
     WMI_CMD_MAX, /* Note: This cmd should be the last in the WMI_COMMAND_ID ENUM */
 } WMI_COMMAND_ID;
 
@@ -256,8 +256,8 @@ typedef enum {
     WMI_WIFI_SET_MODE_EVTID,
     WMI_SCAN_START_EVTID,
     WMI_SCAN_STOP_EVTID,
-    WMI_SCAN_COMP_EVTID,
-    WMI_COEX_EVTID, //0x0A
+    WMI_SCAN_COMP_EVTID, //0x0A
+    WMI_COEX_EVTID,
     WMI_TWT_SETUP_EVTID,
     WMI_TWT_TEARDOWN_EVTID,
     WMI_TWT_STATUS_EVTID,
@@ -266,11 +266,15 @@ typedef enum {
     WMI_IP_ADDR_READY_EVTID,
     WMI_IP_PING_EVTID,
     WMI_NETIF_ADD_EVTID,
-    WMI_SET_PARAM_EVENT_ID,
+    WMI_SET_PARAM_EVENT_ID, //0x14
     WMI_REPORT_STATISTICS_EVTID,
     WMI_REGULATORY_EVTID,
     WMI_SET_RATE_EVTID,
     WMI_GET_RATE_EVTID,
+    WMI_CHAN_SWITCH_EVTID,
+	WMI_SCAN_RESULT_EVTID,
+	WMI_SEND_RAW_FRAME_EVTID,
+	WMI_MGMT_FRAME_FILTER_EVTID,
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
 
@@ -321,6 +325,13 @@ typedef enum {
     AES_CRYPT           = 0x08,
 	BIP_CRYPT			= 0x10,
 } CRYPTO_TYPE;
+
+typedef enum
+{
+    WLAN_MGMT_NONE_E  = 0x0, /**< None. */
+    WLAN_MGMT_ASSOC_RESP_E  = 0x1, /**< Association response. */
+    WLAN_MGMT_PROBE_RESP_E  = 0x2  /**< Probe response. */
+} WLAN_MGMT_FRAME_FILTER_e;
 
 /* Each of these timeout event id should correspond with the
  * timeout handlers defined in wmi_timer_disp_hnd_t
@@ -405,7 +416,7 @@ typedef enum  //@Wmi generic timedout handler events
 #ifdef FEATURE_PERIODIC_WAKE_SLEEP
 	/*Periodic traffic idle timer timeout event*/
 	periodicTrafficIdleTimer_eventid,
-#endif
+#endif	
 	invalid_evntid = 0xff
 }wmi_tmdout_evnthndl_t;
 
@@ -1029,7 +1040,7 @@ typedef PREPACK struct {
 typedef PREPACK struct {
     uint8_t mgmtFrmType;  /* one of WMI_MGMT_FRAME_TYPE */
     uint8_t ieLen;    /* Length  of the IE that should be added to the MGMT frame */
-    uint8_t ieInfo[1];
+    uint8_t ieInfo[WMI_MAX_APP_IE_LEN];
 } POSTPACK WMI_SET_APPIE_CMD;
 
 /*
@@ -1567,6 +1578,31 @@ uint8_t set_rate_config_s_rate ;
 uint8_t set_rate_config_t_rate ;
 } POSTPACK SET_RATE_CFG;
 
+typedef enum
+{
+    HDR_TYPE_BEACON    = 0,
+	HDR_TYPE_PROBE_REQ = 1,
+	HDR_TYPE_QOS_DATA  = 2,
+	HDR_TYPE_FOUR_ADDR = 3,
+	HDR_TYPE_SELF_DEF  = 0xff
+} raw_mode_header_type;
+
+typedef PREPACK struct
+{ 
+	uint8_t deviceId;
+	uint8_t rate_Index; 
+	uint8_t num_Tries; 
+	uint32_t payload_Size; 
+	raw_mode_header_type  header_Type; 
+	uint16_t seq;  
+	uint8_t addr1[IEEE80211_ADDR_LEN];
+	uint8_t addr2[IEEE80211_ADDR_LEN];
+	uint8_t addr3[IEEE80211_ADDR_LEN];
+	uint8_t addr4[IEEE80211_ADDR_LEN];
+	uint32_t data_Length;   
+	uint8_t *data;
+} POSTPACK SEND_RAW_FRAME;
+
 #ifdef NT_FN_FTM_11V
 typedef PREPACK struct {
 	uint8_t conn_id;						  /* station id to which ftm frames to be sent from ap and viceversa */
@@ -1658,6 +1694,20 @@ typedef PREPACK struct{
     ap_info scan_bss_info[MAX_SCAN_SSID];
 } POSTPACK SCAN_RESULT;
 
+typedef PREPACK struct{
+	uint8_t  enable;
+	uint8_t  dev_id;
+	uint8_t  reserved[2];
+    uint32_t filter;
+    void     *recv_queue;
+} POSTPACK WMI_MGMT_FRAME_FILTER;
+
+typedef PREPACK struct{
+	uint32_t  sub_type;
+    uint8_t  *frame;
+    uint16_t  frame_len;
+} POSTPACK WMI_MGMT_FRAME_RECV_MSG;
+
 #ifdef SUPPORT_SAP_POWERSAVE
 typedef PREPACK struct {
     uint32_t next_tbtt_hi;
@@ -1684,6 +1734,13 @@ typedef PREPACK struct{
     uint8_t param_id;
 } POSTPACK SET_PDEV_PARAM_RESULT;
 
+typedef PREPACK struct {
+	uint8_t netif_id; /*Network interface id of the connected interface */
+	uint8_t status;
+	uint8_t reason;
+    uint16_t new_chan_freq;
+} POSTPACK chan_switch_event;
+
 #ifdef CONFIG_WMI_EVENT
 typedef enum {
     WIFI_PARAM_SET_PDEV_CHANNEL = 0,
@@ -1698,6 +1755,14 @@ typedef enum {
     WIFI_PARAM_SET_AP_HIDDEN = 9,
     WIFI_PARAM_SET_ALLOW_AGGR = 10,
     WIFI_PARAM_SET_AMSDU_RX = 11,
+    WIFI_PARAM_SET_STA_DTIM = 12,
+    WIFI_PARAM_SET_APP_IE = 13,
+    WIFI_PARAM_SET_RTS_CTS = 14,
+    WIFI_PARAM_SET_RTS_RATE_2G = 15,
+    WIFI_PARAM_SET_CW_SIZE = 16,
+    WIFI_PARAM_SET_PER_UPPER_THRESHOLD = 17,
+    WIFI_PARAM_SET_BA_WIN_SIZE = 18,
+    WIFI_PARAM_SET_SLOT_TIME = 19,
 }param_id;
 enum {
     WIFI_STATUS_SUCCESS,

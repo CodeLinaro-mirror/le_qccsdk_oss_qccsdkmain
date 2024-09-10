@@ -66,18 +66,6 @@ typedef struct{
 	}wnm_ps_buf_t;
 #endif	/* NT_FN_WNM_POWERSAVE_MODE */
 
-#ifdef FEATURE_STA_ECSA
-typedef struct{
-	uint8_t category;
-	uint8_t action_code;
-	uint8_t channel_switch_mode;
-	uint8_t new_op_class;
-	uint8_t new_channel_no;
-	uint8_t channel_switch_count;
-	uint32_t target_tsf;
-}ecsa_buf_t;
-#endif /*FEATURE_STA_ECSA*/
-
 #if (defined SUPPORT_STA_TWT_RENEG) || (defined SUPPORT_AP_TWT_RENEG)
 typedef enum {
     RSSI_TYPE,
@@ -162,9 +150,6 @@ typedef struct {
 #if (defined NT_FN_WUR_AP) || (defined NT_FN_WUR_STA)
         wur_buf_t wur_buf;
 #endif
-#ifdef FEATURE_STA_ECSA
-		ecsa_buf_t ecsa_buf;
-#endif /*FEATURE_STA_ECSA*/
 #ifdef NT_FN_WNM_POWERSAVE_MODE
         wnm_ps_buf_t wnm_buf;		///<wnm parameter for management frame
 #endif	/* NT_FN_WNM_POWERSAVE_MODE */

@@ -14,6 +14,7 @@
 #include "nt_socpm_sleep.h"
 #include "wlan_drv.h"
 #include "wmi_api.h"
+#include "lowpower_internal.h"
 
 
 #define TEST_SLP_TYPE_MCU       1
@@ -67,12 +68,13 @@ static qapi_Status_t pm_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_
 
 static qapi_Status_t test_sleep(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-    nt_socpm_sleep_t test_sleep_timer;
-    if( Parameter_Count != 2 || !Parameter_List ||
-        !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
-        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
-    }
-    memset(&test_sleep_timer, 0, sizeof(test_sleep_timer));
+    if (0) {
+        nt_socpm_sleep_t test_sleep_timer;
+        if( Parameter_Count != 2 || !Parameter_List ||
+            !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
+            return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+        }
+        memset(&test_sleep_timer, 0, sizeof(test_sleep_timer));
 
     if (Parameter_List[0].Integer_Value == TEST_SLP_TYPE_MCU) {
         test_sleep_timer.slp_mode = mcu_sleep;
@@ -81,15 +83,18 @@ static qapi_Status_t test_sleep(uint32_t Parameter_Count, QAPI_Console_Parameter
     } else
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 
-    test_sleep_timer.slp_time = Parameter_List[1].Integer_Value;
-    test_sleep_timer.slp_cb_fn = test_sleep_cb;
-    test_sleep_timer.min_cb_fn = test_min_cb;
-    test_sleep_timer.wkup_cb_fn = test_wkup_cb;
-    qapi_pm_enable(1);
-    nt_dpm_stop_network_stack();
-    test_sleep_start_time = (uint32_t)hres_timer_curr_time_us();
-    test_sleep_list_no = nt_socpm_sleep_register(&test_sleep_timer, -1);
-    return QAPI_OK;
+        test_sleep_timer.slp_time = Parameter_List[1].Integer_Value;
+        test_sleep_timer.slp_cb_fn = test_sleep_cb;
+        test_sleep_timer.min_cb_fn = test_min_cb;
+        test_sleep_timer.wkup_cb_fn = test_wkup_cb;
+        qapi_pm_enable(1);
+        nt_dpm_stop_network_stack();
+        test_sleep_start_time = (uint32_t)hres_timer_curr_time_us();
+        test_sleep_list_no = nt_socpm_sleep_register(&test_sleep_timer, -1);
+        return QAPI_OK;
+    } else
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+
 }
 
 static qapi_Status_t deepsleep(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
@@ -99,13 +104,12 @@ static qapi_Status_t deepsleep(uint32_t Parameter_Count, QAPI_Console_Parameter_
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
     if (Parameter_List[0].Integer_Value == DEEP_SLP_WKUP_EXT) {
-        printf("Ext wakeup not supported yet");
-        return QAPI_ERR_NOT_SUPPORTED;
-        //nt_socpm_en_indef_deep_sleep(TRUE);
+        printf("Ext wakeup indefinite deepsleep supported");
+        nt_socpm_en_indef_deep_sleep(TRUE);
     }
     uint64_t slp_time = (uint64_t)Parameter_List[1].Integer_Value;
     qapi_pm_enable(1);
-    return qapi_deepsleep_enter(1, slp_time);
+    return qapi_deepsleep_enter(Parameter_List[0].Integer_Value, slp_time);
 }
 
 static qapi_Status_t slp_clk_cal_cfg(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
@@ -235,11 +239,35 @@ static qapi_Status_t bmps_force_dtim(uint32_t Parameter_Count, QAPI_Console_Para
     return QAPI_OK;
 }
 
+#ifdef CONFIG_CPR_ENABLE
+static qapi_Status_t cpr_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    extern void wifi_fw_cpr_reenable(void);
+    extern void wifi_fw_cpr_disable(void);
+    
+    if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_List[0].Integer_Value == 0) {
+        wifi_fw_cpr_disable();
+        printf("CPR Disabled");
+    } else if (Parameter_List[0].Integer_Value == 1) {
+        wifi_fw_cpr_reenable();
+        printf("CPR Reenabled");
+    } else {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    return QAPI_OK;
+}
+#endif //CONFIG_CPR_ENABLE
+
 const QAPI_Console_Command_t lowpower_shell_cmds[] =
 {
    // cmd_function    cmd_string               usage_string             description
     {pm_enable, "pm_enable", "<1/0>", "Enable/disable system power management\n"},
-    {test_sleep, "test_sleep", "<1:mcu_sleep|2:lightsleep> <sleep duration in us>", "Cfg and enable sleep\n"},
+//    {test_sleep, "test_sleep", "<1:mcu_sleep|2:lightsleep> <sleep duration in us>", "Cfg and enable sleep\n"},
+    {test_sleep, "test_sleep", "", "Not support now\n"},
     {deepsleep, "deepsleep", "<1:AON timer wkup|2:Ext wkup> <sleep duration in us>", "Cfg and enable deepsleep\n"},
     {slp_clk_cal_cfg, "slp_clk_cal_cfg", "<1/0>", "Enable/disable slp_clk_cal in sleep mode\n"},
     {bmps_enable, "bmps_enable", "<1/0> [timeout in ms to exit BMPS]", "Enable BMPS(DTIM) sleep for WLAN\n"},
@@ -249,6 +277,9 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
     {imps_cfg, "imps_cfg", "<1:Enable|0:Disable> <deepsleep time in ms> <recnx timeout in ms> <cmd proc in ms> <cnx timeout in ms>", "Cfg BMPS timing parameters\n"},
     {slp_clk_cal_act, "slp_clk_cal_act", "<1/0>", "Enable/disable slp_clk_cal in active mode\n"},
     {bmps_force_dtim, "bmps_force_dtim", "<Forced DTIM count>", "Force DTIM count\n"},
+#ifdef CONFIG_CPR_ENABLE
+    {cpr_enable, "cpr_enable", "<1/0>", "Enable CPR for Power save (This qcli is only for debugging. CPR enabled for default)\n"},
+#endif //CONFIG_CPR_ENABLE
 };
 
 const QAPI_Console_Command_Group_t lowpower_shell_cmd_group = {"lowpower", sizeof(lowpower_shell_cmds) / sizeof(QAPI_Console_Command_t), lowpower_shell_cmds};
@@ -259,4 +290,3 @@ void lowpower_shell_init(void)
 {
     lowpower_shell_cmd_group_handle = QAPI_Console_Register_Command_Group(NULL, &lowpower_shell_cmd_group);
 }
-

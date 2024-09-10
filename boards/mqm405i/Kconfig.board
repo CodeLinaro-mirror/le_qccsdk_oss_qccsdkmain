@@ -1,0 +1,5 @@
+
+config BOARD_MQM405I
+	bool "BOARD MQM405I as QCC730V2 MP board on iPA"
+	select SOC_QCC730V2
+	default n

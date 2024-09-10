@@ -44,5 +44,7 @@ void phyrf_CRx_Enable(void* coex_Input);
 void phyrf_CRx_Disable();
 void phyrf_init_bb(uint8_t band_code, uint8_t bSkipBandCommonTable, uint16_t mhz);
 void phyrf_init_rf(uint8_t band_code, uint16_t mhz);
-
+void phyrf_rf_rctuning_rxbb_bbf();
+void phyrf_rf_rctuning_txbb_ppa();
+void phyrf_rf_rctuning_txbb_bbf(uint8_t bandcode);
 #endif  /* _HALPHY_INI_H_ */

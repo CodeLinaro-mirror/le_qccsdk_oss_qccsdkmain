@@ -24,12 +24,6 @@ struct ieee80211_frame;
 #define DC_PASSIVE_CHAN_DWELL_TIME_CONNECTED   30
 #define DC_CHAN_DWELL_TIME_MIN               DC_ACTIVE_CHAN_DWELL_TIME_DEFAULT
 #define MAX_PROBED_SSIDS                     (MAX_PROBED_SSID_INDEX + 1)
-#ifdef SUPPORT_5GHZ
-#define TOT_5GHZ_CHANNELS                    33
-#define TOT_2GHZ_CHANNELS                    11
-#define TOT_5GHZ_MAX_CHANNEL_INDEX          TOT_5GHZ_CHANNELS + TOT_2GHZ_CHANNELS - 1
-#define TOT_2GHZ_MAX_CHANNEL_INDEX          TOT_2GHZ_CHANNELS - 1
-#endif
 
 typedef enum {
     DC_SCAN_TYPE_ID = 0,

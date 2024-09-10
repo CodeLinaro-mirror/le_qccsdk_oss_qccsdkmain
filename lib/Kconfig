@@ -25,9 +25,21 @@ config LOWPOWER_SHELL
 config I2CM_SHELL
     bool "enable i2c master shell"
     default n
+config GPIO_SHELL
+    bool "enable gpio shell"
+config UART_QAPI
+    bool "enable uart qapi"
+    default n
+config UART_SHELL
+    bool "enable uart shell"
+	select UART_QAPI
+    default n
 config NET_SHELL
     bool "enable net shell"
     default n
+config PROF_SHELL
+	bool "enable prof shell"
+	default n
 config PROF
     bool "enable PROF"
     default n
@@ -38,6 +50,10 @@ config QTIMER
     bool "enable QTIMER"
     default n
 
+config UNITTEST_SHELL
+    bool "enable unit_test commands"
+    default n
+    
 config HEAP_STATISTIC
     bool "enable heap statistic"
     default n
@@ -97,10 +113,40 @@ config CH12_CH13_DISABLE_XPA
     
 config SIGMA_TRAFFIC
     bool "enable SIGMA_TRAFFIC"
-    default y
+    default n
 
 config UNITTEST_SHELL
     bool "enable unit_test commands"
     default n
     
+config 6GHZ
+    bool "enable 6G support in qapi"
+    default n
+
+config MQTT_CLIENT
+    bool "enable MQTT client"
+    default n
+
+config MQTT_CLIENT_DEMO
+    depends on MQTT_CLIENT && FILE_SYSTEM
+    bool "enable MQTT client demo"
+    default n
+
+config MQTT_PLAINTEXT_DEMO
+    depends on MQTT_CLIENT && FILE_SYSTEM
+    bool "enable MQTT over TCP demo"
+    default n
+
+config MQTT_BASIC_TLS_DEMO
+    depends on MQTT_CLIENT && FILE_SYSTEM
+    bool "enable MQTT over SSL one way authentication demo"
+    default n
+
+config MQTT_MUTUAL_AUTH_DEMO
+    depends on MQTT_CLIENT && FILE_SYSTEM
+    bool "enable MQTT over SSL mutual authentication demo"
+    default n
+config RNG_TEST
+    bool "enable RNG test"
+    default n
 endmenu

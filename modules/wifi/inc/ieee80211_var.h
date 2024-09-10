@@ -31,6 +31,15 @@
  *
  */
 
+#ifdef CONFIG_WIFILIB_6GHZ
+typedef struct ieee80211_he_op_ie{
+    uint ie_he_op_param:24;
+    uint8_t ie_bss_color;
+    uint16_t ie_he_mcs;
+    uint8_t ie_6g_channel;
+    uint32_t ie_6g_info;
+}__attribute__ ((packed)) ieee80211_he_op_ie_t;
+#endif
 
 struct ieee80211_common_ie {
     uint16_t    ie_chan;
@@ -51,6 +60,7 @@ struct ieee80211_common_ie {
     uint16_t    ie_beaconInt;
     uint8_t     *ie_tim;
     uint8_t     *ie_chswitch;
+	uint8_t     *ie_extchswitch;
     uint8_t     *ie_txpower;
     uint8_t     *ie_qbss;
     uint8_t     *ie_erp;
@@ -75,7 +85,11 @@ struct ieee80211_common_ie {
     uint8_t 	*ie_twt_cap;			/* twt capability element */
 #endif /* NT_FN_TWT */
     uint8_t 	*ie_ext_cap;
+    uint8_t 	*ie_he_cap;
     struct chanAccParams chanParams;
+#ifdef CONFIG_WIFILIB_6GHZ
+    ieee80211_he_op_ie_t *ie_he_op;
+#endif	
 };
 
 #define IEEE80211_TXPOWER_MAX   100 /* .5 dbM (XXX units?) */

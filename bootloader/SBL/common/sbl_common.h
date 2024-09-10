@@ -25,6 +25,7 @@ void sbl_printf(const char *fmt, ...);
 void sbl_wait_jtag_enter();
 void nt_uartInit(void);
 bl_error_type boot_sbl_find_appimg(fdt_s *fdt, uint32_t *idx);
+uint32_t get_bdf_addr(fdt_s *fdt);
 void boot_sbl_sw_reset( void );
 uint32_t sbl_get_xipstart_offset();
 bl_error_type boot_sbl_flash_init();

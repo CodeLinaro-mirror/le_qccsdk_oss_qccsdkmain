@@ -23,6 +23,9 @@
 
 #ifndef CONFIG_HEAP_STATISTIC
 extern void * pvPortCalloc(size_t xNum, size_t xSize);
+#ifdef DEBUG_MEM_LEAK
+extern void * pvPortCallocWrapper(size_t xNum, size_t xSize, const char *caller);
+#endif
 #endif
 
 
@@ -173,7 +176,8 @@ int nt_osal_get_expiry_time(nt_osal_timer_handle_t timer_handle);
 int nt_osal_timer_stop(nt_osal_timer_handle_t timer_handle , nt_osal_tick_type_t block_time);
 int nt_osal_delete_timer(nt_osal_timer_handle_t timer_handle , nt_osal_tick_type_t block_time);
 int nt_osal_timer_period_change(nt_osal_timer_handle_t timer_handle , nt_osal_tick_type_t timer_period, nt_osal_tick_type_t block_time);
-nt_osal_tick_type_t nt_osal_get_ticks(void);
+#define nt_osal_get_ticks() \
+		xTaskGetTickCount()
 size_t  strnscat(char  *dst, size_t  dst_size, const char  *src, size_t src_size);
 size_t  memscpy(void *dst,size_t dst_size,const void *src,size_t src_size);
 #else
@@ -230,17 +234,31 @@ extern void *__pvPortCalloc( size_t xNum, size_t xSize );
 #endif
 
 /*allocating heap memory*/
+#ifndef DEBUG_MEM_LEAK
 #define nt_osal_allocate_memory(size) \
 		pvPortMalloc(size)
+#else
+#define nt_osal_allocate_memory(size) \
+		pvPortMallocWrapper(size, __FUNCTION__)
+#endif
 
 /*Release allocated memory*/
+#ifndef DEBUG_MEM_LEAK
 #define nt_osal_free_memory(ptr) \
 		vPortFree(ptr)
+#else
+#define nt_osal_free_memory(ptr) \
+		pvPortFreeWrapper(ptr,__FUNCTION__)
+#endif
 
 /* Calloc */
+#ifndef DEBUG_MEM_LEAK
 #define nt_osal_calloc(count, size) \
 		pvPortCalloc(count, size)
-
+#else
+#define nt_osal_calloc(count, size) \
+		pvPortCallocWrapper(count, size,__FUNCTION__)
+#endif
 
 
 

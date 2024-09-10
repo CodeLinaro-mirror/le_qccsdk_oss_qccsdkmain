@@ -229,10 +229,6 @@
 	#define NT_FN_WPA3
 	#endif//NT_FN_WPA3
 
-	/* flag for enabling H/W Crypto */
-	#ifndef NT_FN_HW_CRYPTO
-	//#define NT_FN_HW_CRYPTO
-	#endif//NT_FN_HW_CRYPTO
 
 /* flag for enabling HCAL test code  */
 	#ifndef NT_FN_HCAL_TEST
@@ -810,6 +806,11 @@
 //#undef NT_NEUTRINO_1_0_SYS_MAC
 //#undef NT_NEUTRINO_1_0
 #endif//PLATFORM_FERMION
+
+	/* flag for enabling H/W Crypto */
+	#ifndef NT_FN_HW_CRYPTO
+	#define NT_FN_HW_CRYPTO
+	#endif//NT_FN_HW_CRYPTO
 #endif//IMAGE_FERMION
 
 #endif // _NT_FLAGS_H_

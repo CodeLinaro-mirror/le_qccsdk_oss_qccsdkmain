@@ -1,0 +1,39 @@
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
+
+import("//configs_decl.gni")
+
+mqtt_inc = [
+    "../../../../comp/backoffAlgorithm/source/include",
+    "../../../../comp/mqtt/source/interface",
+    "./logging",
+    "./mqtt_platform",
+]
+
+mqtt_src = {}
+mqtt_src = [
+    "./mqtt_platform/transport_mbedtls.c",
+    "./mqtt_platform/plaintext_posix.c",
+    "./mqtt_platform/sockets_posix.c",
+    "../../../../comp/mqtt/source/core_mqtt.c",
+    "../../../../comp/mqtt/source/core_mqtt_serializer.c",
+    "../../../../comp/mqtt/source/core_mqtt_state.c",
+    "../../../../comp/backoffAlgorithm/source/backoff_algorithm.c",
+]
+
+config("_config") {
+    include_dirs = mqtt_inc
+}
+
+source_set("mqtt_client") {
+    sources = []
+    if (CONFIG_MQTT_CLIENT) {
+        sources += mqtt_src
+    }
+
+    if (CONFIG_MQTT_CLIENT_DEMO) {
+        sources += [
+            "mqtt_client_demo.c",
+        ]
+    }
+}

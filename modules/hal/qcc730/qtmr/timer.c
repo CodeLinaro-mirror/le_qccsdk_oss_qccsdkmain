@@ -1588,7 +1588,15 @@ uint32_t hres_timer_deinit(void)
 	qtmr_status status;
 #endif
 
-    nt_osal_semaphore_delete(timer_mutex);
+    if(timer_mutex != NULL)
+    {
+        nt_osal_semaphore_delete(timer_mutex);
+        timer_mutex = NULL;
+    }
+    else
+    {
+        NT_LOG_SYSTEM_ERR("attempt to delete timer_mutex which is NULL",0,0,0);
+    }
 
 #ifndef	QTMR_DRV
     /*disable the timer interrupt */

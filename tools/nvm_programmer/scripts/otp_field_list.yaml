@@ -5,7 +5,7 @@
   offset: '4'
   length: '1'
   access: READ_WRITE
-- name: WRITE_PERMISSION_READ_WRITE_PERMISSIONS
+- name: WRITE_PERMISSION_READ_WRITE_PERMISIONS
   address: '0x00000030'
   offset: '26'
   length: '1'

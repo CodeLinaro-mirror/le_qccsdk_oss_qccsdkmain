@@ -78,6 +78,7 @@ void nt_set_reset_delayed_imps(NT_BOOL is_set);
 NT_BOOL nt_is_imps_registered(void);
 
 void nt_send_imps_enter_cmd(NT_BOOL is_isr_context);
+void nt_send_pm_mode_cmd(NT_BOOL enable);
 
 #if (defined CONFIG_NT_RCLI)
 void *nt_wpm_imps_stats(void);

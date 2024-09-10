@@ -46,6 +46,15 @@ typedef enum whal_reset_flags_s
    WHAL_RECOVERY_RESET = 1,
    UNKNOWN = 2,
 } whal_reset_flags_t;
+#ifdef TEMP_BASED_RECAL_SUPPORT
+typedef enum halphy_recal_region_s
+{
+   RECAL_REGION_LOW = 0,
+   RECAL_REGION_MID = 1,
+   RECAL_REGION_HIGH = 2,
+   RECAL_REGION_INVALID = 3,
+} halphy_recal_region_t;
+#endif /* TEMP_BASED_RECAL_SUPPORT */
 
 typedef struct halphy_handle_s {
     channel_t cur_chan;
@@ -59,9 +68,21 @@ typedef struct halphy_handle_s {
     int16_t set_tx_power; // (x 0.5 dB)
 #ifdef TEMP_BASED_RECAL_SUPPORT
     bool temp_based_recal;
+    uint8_t curr_recal_temp_region;
+    uint16_t curr_recal_channel;
+    uint8_t prev_recal_temp_region;
+    uint16_t prev_recal_channel;
 #endif /* TEMP_BASED_RECAL_SUPPORT */
 } halphy_handle_t;
 
+#ifdef PHY_MAC_RX_HW_COUNTER_LOGGING
+typedef struct halphy_rx_hw_count_s {
+    uint32_t phy_rx_pkt;    /* number of packets for which phy has seen a successful signal field and service field in the packet it is receiving and is now moving forward with decoding the payload */
+    uint32_t rxPktCount;    /* MAC HW reg DPU_DPU_RXPKTCOUNT | 0x2081804 */
+    uint32_t dma_send;      /* MAC HW reg RXP_DMA_SEND_CNT | 0x2080880 */
+    uint32_t fcs_err;       /* MAC HW RXP_FCS_ERR_CNT | 0x208087C */
+}halphy_rx_hw_count_t;
+#endif /* PHY_MAC_RX_HW_COUNTER_LOGGING */
 /**
   * @brief Allocates memory and initialize Phy Memory
   * @param  None
@@ -137,6 +158,15 @@ halphy_handle_t* halphy_get_phyhandle(void);
 #ifdef PLATFORM_FERMION
 int8_t halphy_rssi_correction(int8_t input_rssi);
 bool halphy_get_hw_crx_mode(void);
+
+#ifdef PHY_MAC_RX_HW_COUNTER_LOGGING
+void halphy_init_rx_hw_count(void);
+void halphy_deinit_rx_hw_count(void);
+void halphy_reset_rx_hw_count(void);
+void halphy_log_rx_hw_count(halphy_rx_hw_count_t * rx_hw_count);
+void halphy_logging_control(bool value);
+#endif /* PHY_MAC_RX_HW_COUNTER_LOGGING */
+
 #endif /* PLATFORM_FERMION */
 
 #ifdef PLATFORM_NT

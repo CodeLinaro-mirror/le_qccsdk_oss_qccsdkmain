@@ -1,0 +1,64 @@
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
+import("//configs_decl.gni")
+
+mqtt_demo_inc = [
+    "src",
+    "//modules/net/mqtt_client/mqtt_platform",
+]
+
+mqtt_demo_src = [
+    "src/mqtt_main.c",
+    "src/mqtt_demo.c",
+    
+    "//drivers/wlan/wlan_drv.c",
+    "//drivers/wlan/qapi_wlan_base.c",
+    "//drivers/wlan/qapi_wlan_param_group.c",
+    "//drivers/wlan/wmi_api.c",
+    "//drivers/wlan/wlan_qapi_helper.c",
+]
+
+if (CONFIG_MQTT_PLAINTEXT_DEMO) {
+    mqtt_demo_inc += [
+        "src/mqtt_demo_plaintext",
+    ]
+    
+    mqtt_demo_src += [
+        "src/mqtt_demo_plaintext/mqtt_demo_plaintext.c",
+    ]
+}
+
+if (CONFIG_MQTT_BASIC_TLS_DEMO) {
+    mqtt_demo_inc += [
+        "src/mqtt_demo_basic_tls",
+    ]
+    
+    mqtt_demo_src += [
+        "src/mqtt_demo_basic_tls/mqtt_demo_basic_tls.c",
+    ]
+}
+
+if (CONFIG_MQTT_MUTUAL_AUTH_DEMO) {
+    mqtt_demo_inc += [
+        "src/mqtt_demo_mutual_auth",
+    ]
+    
+    mqtt_demo_src += [
+        "src/mqtt_demo_mutual_auth/mqtt_demo_mutual_auth.c",
+    ]
+}
+
+not_needed("*", [ ])
+
+config("_config") {
+    if (image_name == "FERMION_MQTT_DEMO") {
+        include_dirs = mqtt_demo_inc
+    }
+}
+
+source_set("mqtt_demo") {
+    if (image_name == "FERMION_MQTT_DEMO") {
+        sources = mqtt_demo_src
+    }
+}
+

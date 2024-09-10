@@ -18,8 +18,8 @@ MEMORY
 
   OTPMEM (rw) : ORIGIN = 0x001A0000, LENGTH = 0x00001000
   PBLMEM (xrw) : ORIGIN = 0x00200000, LENGTH = 0x00008000
-  PBL_PATCH (xrw) : ORIGIN = 0x00208000, LENGTH = 0x00002000
-  FDTMEM (rw) : ORIGIN = 0x0020A000, LENGTH = 0x00000400
+  FDTMEM (rw) : ORIGIN = 0x00208000, LENGTH = 0x00000400
+  PBL_PATCH (xrw) : ORIGIN = 0x00208400, LENGTH = 0x00002000
   SBLAMEM (xrw) : ORIGIN = 0x0020A400, LENGTH = 0x00008000
   SBLBMEM (xrw) : ORIGIN = 0x00212400, LENGTH = 0x00008000
   RRAM_FLASH (xrw) : ORIGIN = 0x0021A400, LENGTH = 0x00165C00
@@ -29,6 +29,23 @@ MEMORY
   PBL_RAM (xrw) : ORIGIN = 0x00000000, LENGTH = 0x00008000
   SBL_RAM (xrw) : ORIGIN = 0x00088000, LENGTH = 0x00008000
   CONFIG_TABLE (rw) : ORIGIN = 0x00090000, LENGTH = 0x00010000
+}
+
+PHDRS
+{
+	SEG_XIP_FLASH   PT_LOAD;
+	SEG_RAM         PT_LOAD;
+	SEG_PS_TXT      PT_LOAD;
+	SEG_DATA       	PT_LOAD;
+	SEG_RETENTION   PT_LOAD;
+	SEG_PERF        PT_LOAD;
+	SEG_PERF_DATA   PT_LOAD;
+	SEG_APP         PT_LOAD;
+	SEG_TEXT        PT_LOAD;
+	SEG_RAM_DATA    PT_LOAD;
+	SEG_RAM_DATA2   PT_LOAD;
+	SEG_EXIDX       0x70000001 FLAGS(4);
+
 }
 
 /*Ram Bank address and their size*/
@@ -222,16 +239,51 @@ SECTIONS
        __vectors_start = ABSOLUTE(.) ;
         KEEP(*(.flash_isr_vector))         /* Interrupt vectors */
 
-
-        . = ALIGN(4) ;
-
-    } >FLASH
-
+	
+        . = ALIGN(4) ; 
+                  
+    } >FLASH : SEG_XIP_FLASH
+    
     _ln_isr_vector_size__ = SIZEOF(.flash_isr_vector) ;
+    
+/* ---------------------------------- XIP flash customer text section --------------------------- */    
+/* This is sample for XIP running function. This LD sample put default .text into XIP place now. 
+ * If the default .text is not in XIP, user can put the preferred function for XIP here.
+ */
+    _ln_RF_start_addr_xip_txt__ = LOADADDR(.__xip_app_txt) ;
+    _ln_RAM_start_addr_xip_txt__ = ADDR(.__xip_app_txt) ;
+    
+    .__xip_app_txt : ALIGN(4)
+    {    
+        *platform_shell.o(.text .text.*) 
 
-/* ---------------------------- Power Save/Minimal code - text section ------------------------- */
+	/*======================================*/
+        *platform_shell.o(.rodata .rodata.* .constdata .constdata.*)
 
-    _ln_RF_start_addr_ps_txt__ = LOADADDR(.__sect_ps_txt) ;
+        . = ALIGN(4) ; 
+        
+    } >FLASH : SEG_XIP_FLASH
+    
+    _ln_xip_app_txt_size__ = SIZEOF(.__xip_app_txt) ;
+    
+/*
+ * For exception catch 
+ */
+/*	
+    /DISCARD/ : {
+	   *(.ARM.exidx)
+    }	
+*/
+    .ARM.exidx : ALIGN(4)
+    {
+        __exidx_start = .;
+	*(.ARM.exidx* .gnu.linkonce.armexidx.*)
+	__exidx_end = .;
+    } >FLASH : SEG_XIP_FLASH
+	
+/* ---------------------------- Power Save/Minimal code - text section ------------------------- */ 
+    
+    _ln_RF_start_addr_ps_txt__ = LOADADDR(.__sect_ps_txt) ; 
     _ln_RAM_start_addr_ps_txt__ = ADDR(.__sect_ps_txt);
 
     .__sect_ps_txt : ALIGN(4)
@@ -275,9 +327,9 @@ SECTIONS
         *(.__sect_ps_txt)
 
         . = ALIGN(4);
-    } >RAM AT> FLASH
-
-    _ln_ps_txt_size__ = SIZEOF(.__sect_ps_txt) ;
+    } >RAM AT> FLASH : SEG_PS_TXT
+    
+    _ln_ps_txt_size__ = SIZEOF(.__sect_ps_txt) ; 
 
 
 /* ----------------------------- Power Save/Minimal code - data section ------------------------ */
@@ -297,22 +349,22 @@ SECTIONS
         *wifi_fw_cpr_driver.o(.data .data.*)
         *hal_modules.o(.data .data.*)
         *(.__sect_ps_data)                 /* includes RRI table, HW descriptors, Packet Memory(beacon), Statistics, Logs */
-
-        . = ALIGN(4) ;
-    } >RAM AT> FLASH
-
-    _ln_ps_data_size__ = SIZEOF(.__sect_ps_data) ;
-
-    ASSERT( (28K > (_ln_ps_data_size__)), "power save data exceeds the limit")
-
-/* --------------------------------------- System Stack --------------------------------------- */
-
+         
+        . = ALIGN(4) ; 
+    } >RAM AT> FLASH : SEG_DATA
+    
+    _ln_ps_data_size__ = SIZEOF(.__sect_ps_data) ; 
+    
+    ASSERT( (28K > (_ln_ps_data_size__)), "power save data exceeds the limit")  
+    
+/* --------------------------------------- System Stack --------------------------------------- */ 
+  
     .system_stack (NOLOAD) : ALIGN(4)
     {
         . += __Main_Stack_Size ;        /* 3KB Memory reserved */
         _ln_RAM_stack_start_addr = ABSOLUTE(.) ;
-    } >RAM
-
+    } >RAM : SEG_DATA
+          
     _ln_system_stack_size__ = SIZEOF(.system_stack);
 
 /* ---------------------------- Sleep Data Retention section --------------------------------- */
@@ -330,9 +382,9 @@ SECTIONS
         *(.bss_end .bss_end.*)
         . = ALIGN(4);
         _ln_bss_end__ = .;        /* standard newlib definition */
-
-    } >RAM
-
+      
+    } >RAM : SEG_RETENTION
+    
     _ln_sect_sleep_data_retention_size__ = SIZEOF(.__sect_sleep_data_retention) ;
 
 /*    ASSERT( (20K > (_ln_bss_size__)), "bss exceeds the limit")
@@ -388,8 +440,8 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         *libg_nano.a:*(.rodata .rodata.* .constdata .constdata.*)
 
         . = ALIGN(4);
-    } >RAM AT> FLASH
-
+    } >RAM AT> FLASH : SEG_PERF
+    
     _ln_perf_txt_size__ = SIZEOF(.__sect_perf_txt) ;
 
 /* ------------------------------- Performance code - Data Section ------------------------------------ */
@@ -416,9 +468,9 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         *libg_nano.a:*(.data .data.*)
 
         . = ALIGN(4);
-    } >RAM AT> FLASH
-
-    _ln_perf_data_size__ = SIZEOF(.__sect_perf_data) ;
+    } >RAM AT> FLASH : SEG_PERF_DATA
+    
+    _ln_perf_data_size__ = SIZEOF(.__sect_perf_data) ; 
 
 
 /* ---------------------------------- RAM resident Apps text section --------------------------- */
@@ -431,19 +483,18 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         EXCLUDE_FILE(*nt_dhcps.o *nt_multicast.o *httpd.o) os/freertos/libraries/3rdparty/lwip/src/apps\/*.o(.text .text.*)
         *lwiperf.o(.text .text.*)
         *udp_perf_raw_client.o(.text .text.*)
-	*ping.o(.text .text.*)
-        *flash_demo.o(.text .text.*)
-	 *nt_mem.o(.text .text.*)
-         EXCLUDE_FILE(*nt_dhcps.o *nt_multicast.o *httpd.o) os/freertos/libraries/3rdparty/lwip/src/apps\/*.o(.rodata .rodata.* .constdata .constdata.*)
+        *iperf.o(.text .text.*)     
+        *sigma_udp.o(.text .text.*)
+   		
+          EXCLUDE_FILE(*nt_dhcps.o *nt_multicast.o *httpd.o) os/freertos/libraries/3rdparty/lwip/src/apps\/*.o(.rodata .rodata.* .constdata .constdata.*)
         *lwiperf.o(.rodata .rodata.* .constdata .constdata.*)
         *udp_perf_raw_client.o(.rodata .rodata.* .constdata .constdata.*)
-	*ping.o(.rodata .rodata.* .constdata .constdata.*)
-	*flash_demo.o(.rodata .rodata.* .constdata .constdata.*)
-	 *nt_mem.o(.rodata .rodata.* .constdata .constdata.*)
-        . = ALIGN(4) ;
-
-    } >RAM AT>FLASH
-
+        *iperf.o(.rodata .rodata.* .constdata .constdata.*) 
+        *sigma_udp.o(.rodata .rodata.* .constdata .constdata.*) 
+        . = ALIGN(4) ; 
+        
+    } >RAM AT> FLASH : SEG_APP
+    
     _ln_app_txt_size__ = SIZEOF(.__sect_app_txt) ;
 
 /* ----------------------------------- RAM resident Apps data section --------------------------- */
@@ -458,18 +509,19 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         *lwiperf.o(.data .data.*)
         *udp_perf_raw_client.o(.data .data.*)
         *apps/WiFi_App\/*.o(.data .data.*)
+        *iperf.o(.data .data.*)     
+        *sigma_udp.o(.data .data.*)
 
-
-        . = ALIGN(4) ;
-
-    } >RAM AT> FLASH
-
-
+        . = ALIGN(4) ; 
+            
+    } >RAM AT> FLASH : SEG_APP
+    
+    
     _ln_app_data_size__ = SIZEOF(.__sect_app_data) ;
 
 /* ------------------------- WLAN Control & System Text Section -------------------------------- */
 
-    .text : ALIGN(4K)
+    .text : ALIGN(4)
     {
         *(.after_vectors .after_vectors.*)    /* Startup code and ISR */
 
@@ -499,7 +551,8 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         . = ALIGN(4);
         _ln_text_end__ = . ;
 
-    } >FLASH
+/*    } >RRAM_FLASH AT> FLASH : SEG_TEXT */
+    } >FLASH : SEG_XIP_FLASH 
 
 /* ---------------------------- WLAN Control & System Data Section ----------------------------- */
        .data : ALIGN(4)
@@ -525,20 +578,8 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         *(.data_end .data_end.*)
         . = ALIGN(4);
 
-    } >RAM AT> FLASH
+    } >RAM AT> FLASH : SEG_RAM_DATA
      _ln_data_size__ = SIZEOF(.ram_data);
-
-/* ---------------------------- WLAN BDF Data Section ----------------------------- */
-	.bdf_data : ALIGN(16)
-	{
-		_ln_BDF_Start_Addr = . ;
-
-		KEEP(*(.bdf))
-
-        . = ALIGN(16);
-	} >RRAM_FLASH AT> FLASH
-
-	_ln_BDF_Data_length = SIZEOF(.bdf_data) ;
 
 /* ---------------------------- WLAN REGDB Data Section ----------------------------- */
 	.regdb_data : ALIGN(16)
@@ -548,7 +589,7 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
 		KEEP(*(.regdb))
 
         . = ALIGN(16);
-	} >RRAM_FLASH AT> FLASH
+	} >RRAM_FLASH AT> FLASH : SEG_RAM_DATA2
 
 	_ln_REGDB_Data_length = SIZEOF(.regdb_data) ;
 
@@ -567,7 +608,7 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
 		. += 1024 * 12;
 
         . = ALIGN(16);
-	} >RRAM_FLASH AT> FLASH
+	} >RRAM_FLASH AT> FLASH : SEG_RAM_DATA2
 
 	_ln_CAL_Data_length = SIZEOF(.cal_data) ;
 
@@ -587,7 +628,7 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         _ln_RAM_start_addr_hw_pktmem__ = ABSOLUTE(.) ;
         . += 32768 ;
        _ln_RAM_end_addr_hw_pktmem__ = ABSOLUTE(.) ;
-    } >RAM
+    } >RAM : SEG_RAM
 
 /* --------------------------- Hardware Descriptors/Data structures --------------------------- */
 /* Warning : Linker script reserves the memory for HW Descriptors.
@@ -600,8 +641,8 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
  + RXP address table + RRI region */
       . += 22504 ;
       _ln_RAM_end_addr_hw_desc__ = ABSOLUTE(.) ;
-    } >RAM
-
+    } >RAM : SEG_RAM
+    
 /*  Default heap definitions required by _sbrk. Heap size set to 100 */
 
     .noinit (NOLOAD) : ALIGN(4)
@@ -612,14 +653,14 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         . += 100 ;
 
          . = ALIGN(4) ;
-        _end_noinit = .;
-    } > RAM
+        _end_noinit = .;   
+    } > RAM : SEG_RAM
  /*   .__sect_qspi_mem_addr (NOLOAD) : ALIGN(4)
     {
         _ln_RAM_qspi_slv_mem_addr = ABSOLUTE(.);
         . += 4;
-    } >RAM
-*/
+    } >RAM : SEG_RAM
+*/    
 /* ----------------------------------------- Heap Section ------------------------------------- */
     .heap (NOLOAD) : ALIGN(4)
     {
@@ -627,8 +668,8 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         *(.heap)
         . = ALIGN(4) ;
        _ln_RAM_addr_heap_end__ = ABSOLUTE(.) ;
-    } >RAM
-
+    } >RAM : SEG_RAM   
+    
     ASSERT( ((LENGTH(RAM) - _ln_RAM_addr_heap_start__) > 170K), "ERROR : Heap is less than 170 KB")
 
     /* Mandatory to be word aligned, _sbrk assumes this */
