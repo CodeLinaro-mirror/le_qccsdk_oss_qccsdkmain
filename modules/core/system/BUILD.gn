@@ -39,7 +39,6 @@ system_src = [
     "sys_src/nt_cc_batt_mng.c",
     "sys_src/nt_cc_battery_driver.c",
     "sys_src/nt_sys_monitoring.c",
-    "sys_src/nt_prng_integration.c",
     "sys_src/ferm_hkadc_drv.c",
 ]
 
