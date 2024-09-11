@@ -2663,13 +2663,15 @@ typedef struct {
 
 /**
 @ingroup qapi_wlan
-Set STA contention window size.
+Set STA edca param, including aifsn/cw_min/cw_max/txoplimit.
 */
 typedef struct {
     uint8_t qid;
+    uint8_t aifsn;
     uint16_t cw_min;
     uint16_t cw_max;
-}qapi_WLAN_Contention_Window_Params_t;
+    uint16_t txop_limit;
+}qapi_WLAN_Edca_Params_t;
 
 /**
 @ingroup qapi_wlan

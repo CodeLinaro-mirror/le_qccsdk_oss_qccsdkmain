@@ -143,9 +143,9 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
             ret = wlan_set_rts_rate(device_ID, rate);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G */
         }
-        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW: {
-            qapi_WLAN_Contention_Window_Params_t cw_para = *((qapi_WLAN_Contention_Window_Params_t *) data);
-            ret = wlan_set_cw_size(device_ID, cw_para.qid, cw_para.cw_min, cw_para.cw_max);
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM: {
+            qapi_WLAN_Edca_Params_t edca_para = *((qapi_WLAN_Edca_Params_t *) data);
+            ret = wlan_set_edca_param(device_ID, edca_para.qid, edca_para.aifsn, edca_para.cw_min, edca_para.cw_max, edca_para.txop_limit);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW */
         }
         case __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD: {
@@ -162,6 +162,11 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
             uint32_t slot_time = *((uint32_t *) data);
             ret = wlan_set_slot_time(device_ID, slot_time);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCCA_THRESHOLD: {
+            uint8_t edcca_threshold = *((uint8_t *)data);
+            ret = wlan_set_edcca_threshold(device_ID, edcca_threshold);
+            break;
         }
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
@@ -386,12 +391,12 @@ qapi_Status_t qapi_WLAN_Get_Param (uint8_t __attribute__((__unused__)) device_ID
             ret = wlan_get_rts_rate(rate);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G */
         }
-        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW: {
-            qapi_WLAN_Contention_Window_Params_t *cw_para = (qapi_WLAN_Contention_Window_Params_t *)data;
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM: {
+            qapi_WLAN_Edca_Params_t *edca_para = (qapi_WLAN_Edca_Params_t *)data;
             if (*length < sizeof(uint32_t)) {
                 return QAPI_WLAN_ERR_EINVAL;
             }
-            ret = wlan_get_cw_size(cw_para->qid, &cw_para->cw_min, &cw_para->cw_max);
+            ret = wlan_get_edca_param(edca_para->qid, &edca_para->aifsn, &edca_para->cw_min, &edca_para->cw_max, &edca_para->txop_limit);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW */
         }
         case __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD: {
@@ -417,6 +422,14 @@ qapi_Status_t qapi_WLAN_Get_Param (uint8_t __attribute__((__unused__)) device_ID
             }
             wlan_get_slot_time(slot_time);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCCA_THRESHOLD: {
+            uint8_t *edcca_threshold = (uint8_t *)data;
+            if (*length < sizeof(uint8_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            wlan_get_edcca_threshold(edcca_threshold);
+            break;
         }
 		default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
 			PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);

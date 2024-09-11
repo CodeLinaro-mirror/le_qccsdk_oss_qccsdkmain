@@ -730,28 +730,30 @@ qapi_Status_t wlan_get_rts_rate(uint32_t *rate)
 	return QAPI_OK;
 }
 
-qapi_Status_t wlan_set_cw_size(uint8_t device_ID, uint8_t qid, uint16_t cw_min, uint16_t cw_max)
+qapi_Status_t wlan_set_edca_param(uint8_t device_ID, uint8_t qid, uint8_t aifsn, uint16_t cw_min, uint16_t cw_max, uint16_t txop_limit)
 {
 	qapi_Status_t error = QAPI_OK;
 	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
-	qapi_WLAN_Contention_Window_Params_t cw_para;
+	qapi_WLAN_Edca_Params_t edca_para;
 
 	if ((qid >= 8) && (qid != 0xff))
 		return QAPI_ERR_INVALID_PARAM;
 
-	cw_para.qid = qid;
-	cw_para.cw_min = cw_min;
-	cw_para.cw_max = cw_max;
+	edca_para.qid = qid;
+	edca_para.aifsn = aifsn;
+	edca_para.cw_min = cw_min;
+	edca_para.cw_max = cw_max;
+	edca_para.txop_limit = txop_limit;
 
 	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
-	cmd->pdev_param_id = WIFI_PARAM_SET_CW_SIZE;
-	cmd->pdev_param_value = (uint32_t)&cw_para;
+	cmd->pdev_param_id = WIFI_PARAM_SET_EDCA;
+	cmd->pdev_param_value = (uint32_t)&edca_para;
 
 	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
 
 	if(p_cxt->wlan_set_param_block_mode) {
-		p_cxt->param_id = WIFI_PARAM_SET_CW_SIZE;
+		p_cxt->param_id = WIFI_PARAM_SET_EDCA;
 		qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
 	} else {
 		log_printf("unblock mode, should check WMI cmd done in event cb\n");
@@ -760,19 +762,90 @@ qapi_Status_t wlan_set_cw_size(uint8_t device_ID, uint8_t qid, uint16_t cw_min, 
 	return error;
 }
 
-qapi_Status_t wlan_get_cw_size(uint8_t qid, uint16_t *cw_min, uint16_t *cw_max)
+qapi_Status_t wlan_get_edca_param(uint8_t qid, uint8_t *aifs, uint16_t *cw_min, uint16_t *cw_max, uint16_t *txop_limit)
 {
 	uint32_t value;
 	if (qid > 7 && qid != 0xff)
 		return QAPI_ERR_INVALID_PARAM;
 
-	if (qid == 0xff)
-		value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_0_REG);
-	else
-		value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_0_REG + 4 * qid);
-
-	*cw_min = (uint16_t)value;
-	*cw_max = (uint16_t)(value >> 16);
+	switch (qid)
+	{
+		case 0:
+		case 0xff:
+			value = HAL_REG_RD(QWLAN_MTU_DIFS_LIMIT_0TO3_REG);
+			*aifs = value & 0xFF;
+			value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_0_REG);
+			*cw_min = value & 0xFFFF;
+			*cw_max = (value >> 16) & 0xFFFF;
+			value = HAL_REG_RD(QWLAN_TPE_EDCF_TXOP_0_1_REG);
+			*txop_limit = value & 0xFFFF;
+			break;
+		case 1:
+			value = HAL_REG_RD(QWLAN_MTU_DIFS_LIMIT_0TO3_REG);
+			*aifs = (value >> 8) & 0xFF;
+			value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_1_REG);
+			*cw_min = value & 0xFFFF;
+			*cw_max = (value >> 16) & 0xFFFF;
+			value = HAL_REG_RD(QWLAN_TPE_EDCF_TXOP_0_1_REG);
+			*txop_limit = (value >> 16)& 0xFFFF;
+			break;
+		case 2:
+			value = HAL_REG_RD(QWLAN_MTU_DIFS_LIMIT_0TO3_REG);
+			*aifs = (value >> 16) & 0xFF;
+			value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_2_REG);
+			*cw_min = value & 0xFFFF;
+			*cw_max = (value >> 16) & 0xFFFF;
+			value = HAL_REG_RD(QWLAN_TPE_EDCF_TXOP_2_3_REG);
+			*txop_limit = (value) & 0xFFFF;
+			break;
+		case 3:
+			value = HAL_REG_RD(QWLAN_MTU_DIFS_LIMIT_0TO3_REG);
+			*aifs = (value >> 24) & 0xFF;
+			value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_3_REG);
+			*cw_min = value & 0xFFFF;
+			*cw_max = (value >> 16) & 0xFFFF;
+			value = HAL_REG_RD(QWLAN_TPE_EDCF_TXOP_2_3_REG);
+			*txop_limit = (value >> 16) & 0xFFFF;
+			break;
+		case 4:
+			value = HAL_REG_RD(QWLAN_MTU_DIFS_LIMIT_4TO7_REG);
+			*aifs = value & 0xFF;
+			value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_4_REG);
+			*cw_min = value & 0xFFFF;
+			*cw_max = (value >> 16) & 0xFFFF;
+			value = HAL_REG_RD(QWLAN_TPE_EDCF_TXOP_4_5_REG);
+			*txop_limit = (value) & 0xFFFF;
+			break;
+		case 5:
+			value = HAL_REG_RD(QWLAN_MTU_DIFS_LIMIT_4TO7_REG);
+			*aifs = (value >> 8) & 0xFF;
+			value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_5_REG);
+			*cw_min = value & 0xFFFF;
+			*cw_max = (value >> 16) & 0xFFFF;
+			value = HAL_REG_RD(QWLAN_TPE_EDCF_TXOP_4_5_REG);
+			*txop_limit = (value >> 16)& 0xFFFF;
+			break;
+		case 6:
+			value = HAL_REG_RD(QWLAN_MTU_DIFS_LIMIT_4TO7_REG);
+			*aifs = (value >> 16) & 0xFF;
+			value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_6_REG);
+			*cw_min = value & 0xFFFF;
+			*cw_max = (value >> 16) & 0xFFFF;
+			value = HAL_REG_RD(QWLAN_TPE_EDCF_TXOP_6_7_REG);
+			*txop_limit = value & 0xFFFF;
+			break;
+		case 7:
+			value = HAL_REG_RD(QWLAN_MTU_DIFS_LIMIT_4TO7_REG);
+			*aifs = (value >> 24) & 0xFF;
+			value = HAL_REG_RD(QWLAN_MTU_SW_CW_MIN_CW_MAX_7_REG);
+			*cw_min = value & 0xFFFF;
+			*cw_max = (value >> 16) & 0xFFFF;
+			value = HAL_REG_RD(QWLAN_TPE_EDCF_TXOP_6_7_REG);
+			*txop_limit = (value >> 16)& 0xFFFF;
+			break;
+		default:
+			return QAPI_ERR_INVALID_PARAM;
+	}
 
 	return QAPI_OK;
 }
@@ -880,5 +953,39 @@ qapi_Status_t wlan_get_slot_time(uint32_t *slot_time)
 	value = HAL_REG_RD(QWLAN_MTU_SW_MTU_BCN_SLOT_USEC_SIFS_LIMIT_REG);
 	value &= (uint32_t)QWLAN_MTU_SW_MTU_BCN_SLOT_USEC_SIFS_LIMIT_SW_MTU_BCN_SLOT_LIMIT_MASK;
 	*slot_time = (value >> QWLAN_MTU_SW_MTU_BCN_SLOT_USEC_SIFS_LIMIT_SW_MTU_BCN_SLOT_LIMIT_OFFSET);
+	return QAPI_OK;
+}
+
+qapi_Status_t wlan_set_edcca_threshold(uint8_t device_ID, uint8_t edcca_threshold)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+	if (edcca_threshold > 100)
+		return QAPI_ERR_INVALID_PARAM;
+
+		memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+		cmd->pdev_param_id = WIFI_PARAM_SET_EDCCA_THRESHOLD;
+		cmd->pdev_param_value = edcca_threshold;
+
+		wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+		if(p_cxt->wlan_set_param_block_mode) {
+			p_cxt->param_id = WIFI_PARAM_SET_EDCCA_THRESHOLD;
+			qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+		} else {
+			log_printf("unblock mode, should check WMI cmd done in event cb\n");
+		}
+		error = get_wlan_qapi_error();
+		return error;
+}
+
+qapi_Status_t wlan_get_edcca_threshold(uint8_t *edcca_threshold)
+{
+	uint32_t value;
+	value = HAL_REG_RD(QWLAN_AGC_TH_EDET_REG);
+	value &= (uint32_t)QWLAN_AGC_TH_EDET_TH20_MASK;
+	*edcca_threshold = (value >> QWLAN_AGC_TH_EDET_TH20_OFFSET);
 	return QAPI_OK;
 }
