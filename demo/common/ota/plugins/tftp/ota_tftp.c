@@ -75,6 +75,7 @@
 typedef enum {
     OTA_STATUS_NOT_STARTED,
     OTA_STATUS_RUNNING,
+    OTA_STATUS_RUNNING_WAITING_FOR_STOP,
     OTA_STATUS_STOP,
 } tftp_ota_status_t;
 
@@ -295,7 +296,8 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
     tv.tv_sec = TFTP_RECV_TIMEOUT;
     tv.tv_usec = 0;
 
-    while (ota_tftp_sess->status == OTA_STATUS_RUNNING) {
+    while (ota_tftp_sess->status == OTA_STATUS_RUNNING
+		|| ota_tftp_sess->status == OTA_STATUS_RUNNING_WAITING_FOR_STOP) {
 
         /* check if there are enough buffer to store data */
         if ((ota_tftp_sess->receive_data + TFTP_PAYLOAD_SIZE) > TFTP_RCV_BUF_SIZE) {
@@ -430,13 +432,18 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
                     /* transfer done if pkt length is less than 512 */
                     if (received < (TFTP_PAYLOAD_SIZE + TFTP_HEADER_SIZE)) {
                         /* finish */
-                        ota_tftp_sess->status = OTA_STATUS_STOP;
-                        break;
+                        ota_tftp_sess->status = OTA_STATUS_RUNNING_WAITING_FOR_STOP;
+                        continue;
                     }
                 } else if (ota_tftp_sess->pkt_seq == ota_tftp_sess->pkt_seq_last) {
                     /* Server resent the last packt again. It might not have received ACK.
                        Re-send ACK */
-                    ota_tftp_pkt_ack(ota_tftp_sess->pkt_seq);
+                    if(ota_tftp_sess->status == OTA_STATUS_RUNNING_WAITING_FOR_STOP){
+						/*continue to receive*/
+						continue;
+                    }
+					else
+                    	ota_tftp_pkt_ack(ota_tftp_sess->pkt_seq);
                 } else {
                     if (cur_time - ota_tftp_sess->send_time >= TFTP_TIMEOUT) {
                         ota_tftp_timeout();
@@ -453,8 +460,12 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
                 break;
             }
         } else {
-            if (cur_time - ota_tftp_sess->send_time >= TFTP_TIMEOUT) {
-                ota_tftp_timeout();
+            if (cur_time - ota_tftp_sess->send_time >= TFTP_TIMEOUT) {		
+				if(ota_tftp_sess->status == OTA_STATUS_RUNNING_WAITING_FOR_STOP){
+					/*no pkt to receive*/
+					ota_tftp_sess->status = OTA_STATUS_STOP;
+				}else
+                	ota_tftp_timeout();
             }
         }
     }
@@ -696,7 +707,19 @@ tftp_init_end:
 
 qapi_Status_t plugin_tftp_fin(void)
 {
-    ota_tftp_fin();
+	uint8_t *buffer = NULL;
+	uint32_t *ret_size = 0; 
+
+	/*When finish, receive one last time, if server sent something, just drop it*/
+    if ((buffer = malloc(TFTP_RCV_BUF_SIZE)) == NULL) {
+        printf("Out of memory error\r\n");
+        return QAPI_FW_UPGRADE_ERR_TFTP_NO_MEMORY;
+    }
+	
+	plugin_tftp_recv_data(buffer, TFTP_RCV_BUF_SIZE, ret_size, NULL);
+	free(buffer);
+	
+	ota_tftp_fin();
     return QAPI_OK;
 }
 
