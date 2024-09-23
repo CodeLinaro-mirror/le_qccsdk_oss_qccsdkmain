@@ -30,6 +30,7 @@
 
 #include "ping.h"
 #include "iperf.h"
+#include "pmtud_demo.h"
 #include "safeAPI.h"
 #include "ssl_demo.h"
 #include "httpc_demo.h"
@@ -903,6 +904,9 @@ const QAPI_Console_Command_t net_shell_cmds[] =
     {mqttc_demo, "mqttc",    "\n\nType \"mqttc\" to get more info on usage\n",
                                     "\nMQTT Client: Set up and configure MQ Telemetry Transport client"},
 #endif
+
+    {pmtud_demo, "pmtud",    "\n\nType \"pmtud\" to get mtu on the path to dst\n",
+                                    "\nMTUD Client: Type command. For example \"pmtud --dst\".\n"},
 
 };
 
