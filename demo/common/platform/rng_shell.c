@@ -39,7 +39,7 @@ static qapi_Status_t Getn(uint32_t __attribute__((__unused__)) Parameter_Count, 
     }
 
     uint32_t len = Parameter_List[0].Integer_Value;
-    if(len<=0) {
+    if(len<=0 || len >1024) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
@@ -68,7 +68,7 @@ static const QAPI_Console_Command_t rng_shell_cmds[] =
     //cmd_function      cmd_string      usage_string                            description
     {Init,                "init",         " ",                              "init rng driver"},
     {Get,              "get",             " ",                              "get random number"},
-    {Getn,              "getn",             " <len>",                              "get n-Bytes random number"},
+    {Getn,              "getn",             " <len>",                              "get n-Bytes(0,1024] random number"},
 };
 
 static const QAPI_Console_Command_Group_t rng_shell_cmd_group =
