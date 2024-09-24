@@ -149,4 +149,32 @@ config MQTT_MUTUAL_AUTH_DEMO
 config RNG_TEST
     bool "enable RNG test"
     default n
+
+config NET_SSL_DEMO
+    depends on NET_SHELL
+    bool "enable ssl command under net shell"
+    default y
+
+config MATTER_ENABLE
+    bool "MATTER function enable"
+    default n
+    help
+        Enable Matter function
+
+config GENERATE_MATTER_LIB
+    depends on MATTER_ENABLE
+    bool "Whether generate the Matter lib"
+    default y
+
+choice MATTER_DEMO_NAME
+    prompt "Choose the Matter demo to build"
+    depends on MATTER_ENABLE
+    default MATTER_LIGHTING_DEMO
+
+    config MATTER_LIGHTING_DEMO
+        bool "Build Matter Lighting demo"
+
+    config MATTER_SWITCH_DEMO
+        bool "Build Matter Switch demo"
+endchoice
 endmenu

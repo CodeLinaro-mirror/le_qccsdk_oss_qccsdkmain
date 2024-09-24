@@ -17,9 +17,6 @@
 /* enable Iperf fucnion */
 #define CONFIG_NET_IPERF
 
-/* enable SSL tool */
-#define CONFIG_NET_SSL_DEMO
-
 #if NET_SHELL_INFO
 #define info_printf(msg,...)     printf(NET_SHELL_GROUP_PRINTF_SUFFIX msg, ##__VA_ARGS__)
 #else

@@ -147,6 +147,10 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 
 #ifdef HTTPS_SERVER
 #define PBUF_POOL_SIZE                  16
+#elif CONFIG_MATTER_ENABLE
+#define PBUF_POOL_SIZE                  8
+#define MEMP_STATS                      0
+#define LWIP_DISABLE_TCP_SANITY_CHECKS  1
 #else
 #define PBUF_POOL_SIZE                  0
 #endif

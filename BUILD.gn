@@ -10,6 +10,7 @@ is_sbl = false
 is_hosted_sbl = false
 is_nvm_programmer = false
 is_ftm = false
+is_matter = false
 need_fs = false
 elf_dir = "bin"
 build_type = "__DEBUG_BUILD"
@@ -34,11 +35,15 @@ if (image_name == "FERMION_FTM") {
     is_ftm = true
 }
 
+if (image_name == "FERMION_MATTER_DEMO") {
+    is_matter = true
+}
+
 if (image_name == "FERMION") {
     CONFIG_LIBWIFI_CORE = false
 }
 
-if (image_name =="FERMION_FS_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO" || image_name == "FERMION_MQTT_DEMO") {
+if (image_name =="FERMION_FS_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO" || image_name == "FERMION_MQTT_DEMO" || image_name == "FERMION_MATTER_DEMO") {
     need_fs = true
 }
 
@@ -92,6 +97,7 @@ projects_common = [
     "//arch/arm/system",
     "//demo/fs_demo",
     "//demo/mqtt_demo",
+    "//demo/matter_demo",
     "//modules/net/mqtt_client",
 ]
 
@@ -219,6 +225,20 @@ config("linker_config") {
     ldflags += [ "-Tlibs.ld" ]
     ldflags += [ "-n", "--gc-sections" ]
     ldflags += [ "-Map", rebase_path("${root_build_dir}/${elf_dir}/${image_name}.map") ]
+
+    if ( (is_matter) && (CONFIG_MATTER_ENABLE) )
+    {
+        if (CONFIG_MATTER_LIGHTING_DEMO)
+        {
+            libs += [ "//../comp/matter/examples/lighting-app/fermion/output/obj/lib/libLIGHT.a" ]
+        }
+        else if (CONFIG_MATTER_SWITCH_DEMO)
+        {
+            libs += [ "//../comp/matter/examples/light-switch-app/fermion/output/obj/lib/libSWITCH.a" ]
+        }
+        libs += [ "stdc++_nano", "stdc++" ]
+    }
+
     libs += [ "c_nano", "nosys", "m", "gcc" ]
     lib_dirs += [ "${lib_c_nano_path[0]}", "${lib_gcc_path[0]}" ]
 }

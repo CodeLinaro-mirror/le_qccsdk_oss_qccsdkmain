@@ -2995,9 +2995,6 @@ typedef enum {
     QAPI_WLAN_FTM_LOAD_BD /**< Load board data. */
 } qapi_WLAN_FTM_CMD_e;
 
-/**
-@ingroup qapi_wlan
-Sends the TLV1 command buffer to the KF UTF.
 
 /**
 @ingroup qapi_wlan
