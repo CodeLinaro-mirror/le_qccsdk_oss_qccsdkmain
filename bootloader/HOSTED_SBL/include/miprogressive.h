@@ -1,0 +1,177 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+#ifndef __MI_PROGRESSIVE_H__
+#define __MI_PROGRESSIVE_H__
+/* The latest ELF documentation is at http://www.caldera.com/developers/gabi/latest/ch5.pheader.html
+ * and it talks about OS and PROCESSOR specific fields.
+ * we use the bits (PF_MASKOS) in Elf32_PHdr.p_flags as recomended by ARM
+ */
+
+/* Definition for segment flags used in p_flag of program_segmen header
+ *
+ *                 Pool Indx    Segment type    Access type   Page/non page
+ * bits in p_fag/-----27-----/----26-24-------/---- 23-21----/------20-------/
+ */
+/* Note: MI_PBT_MAX_SEGMENTS would impact OSBL memory usage */
+#ifndef MI_PBT_MAX_SEGMENTS
+#define MI_PBT_MAX_SEGMENTS 20
+#endif
+
+#define MAX_HASH_SEGMENT_SIZE (16*1024)
+//MI_PBT_MAX_SEGMENTS * CRYPTO_DIGEST_BYTE_SIZE_SHA256 +sizeof(MBNHeader) + 2k * SECBOOT_TOTAL_MAX_CERTS
+
+#define MI_PBT_NON_PAGED_SEGMENT   0x0
+#define MI_PBT_PAGED_SEGMENT       0x1
+
+#define MI_PBT_RW_SEGMENT          0x0
+#define MI_PBT_RO_SEGMENT          0x1
+#define MI_PBT_ZI_SEGMENT          0x2
+#define MI_PBT_NOTUSED_SEGMENT     0x3
+#define MI_PBT_SHARED_SEGMENT      0x4
+
+#define MI_PBT_L4_SEGMENT          0x0
+#define MI_PBT_AMSS_SEGMENT        0x1
+#define MI_PBT_HASH_SEGMENT        0x2
+#define MI_PBT_BOOT_SEGMENT        0x3
+#define MI_PBT_L4BSP_SEGMENT       0x4
+#define MI_PBT_SWAPPED_SEGMENT     0x5
+#define MI_PBT_SWAP_POOL_SEGMENT   0x6
+#define MI_PBT_PHDR_SEGMENT        0x7
+
+#define MI_PBT_POOL_INDEX          0x1
+
+#define MI_PBT_FLAG_PAGE_MODE_MASK        0x100000
+#define MI_PBT_FLAG_ACCESS_TYPE_MASK      0xE00000
+#define MI_PBT_FLAG_SEGMENT_TYPE_MASK     0x7000000
+#define MI_PBT_FLAG_POOL_INDEX_MASK       0x8000000
+
+#define MI_PBT_FLAG_PAGE_MODE_SHIFT       0x14
+#define MI_PBT_FLAG_ACCESS_TYPE_SHIFT     0x15
+#define MI_PBT_FLAG_SEGMENT_TYPE_SHIFT    0x18
+#define MI_PBT_FLAG_POOL_INDEX_SHIFT      0x1B
+
+
+#define MI_PBT_FLAGS_MASK                 0x0FF00000
+#define MI_PBT_PHDR_FLAGS_SHIFT           0x14
+
+
+#define MI_PBT_ELF_AMSS_NON_PAGED_RW_SEGMENT \
+          (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT)
+
+#define MI_PBT_ELF_AMSS_NON_PAGED_RO_SEGMENT \
+          ( (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_RO_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT) )
+
+#define MI_PBT_ELF_AMSS_NON_PAGED_ZI_SEGMENT \
+          ( (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_ZI_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT) )
+
+#define MI_PBT_ELF_AMSS_NON_PAGED_NOTUSED_SEGMENT \
+          ( (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_NOTUSED_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT) )
+
+#define MI_PBT_ELF_AMSS_NON_PAGED_SHARED_SEGMENT \
+          ( (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_SHARED_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT) )
+
+
+#define MI_PBT_ELF_AMSS_PAGED_RW_SEGMENT \
+          ( (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT) )
+
+#define MI_PBT_ELF_AMSS_PAGED_RO_SEGMENT \
+          ( (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_RO_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT)    | \
+            (MI_PBT_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT) )
+
+#define MI_PBT_ELF_AMSS_PAGED_ZI_SEGMENT \
+          ( (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_ZI_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT)    | \
+            (MI_PBT_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT) )
+
+#define MI_PBT_ELF_AMSS_PAGED_NOTUSED_SEGMENT \
+          ( (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT)   | \
+            (MI_PBT_NOTUSED_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT) | \
+            (MI_PBT_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT) )
+
+#define MI_PBT_ELF_AMSS_PAGED_SHARED_SEGMENT \
+          ( (MI_PBT_AMSS_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT)   | \
+            (MI_PBT_SHARED_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT) | \
+            (MI_PBT_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT) )
+
+
+#define MI_PBT_ELF_HASH_SEGMENT \
+          ( (MI_PBT_HASH_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_RO_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT) )
+
+#define MI_PBT_ELF_BOOT_SEGMENT \
+           ( (MI_PBT_BOOT_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+             (MI_PBT_RO_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT) )
+
+#define MI_PBT_ELF_NON_PAGED_L4BSP_SEGMENT \
+          (MI_PBT_L4BSP_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT)
+
+#define MI_PBT_ELF_PAGED_L4BSP_SEGMENT \
+           ( (MI_PBT_L4BSP_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+             (MI_PBT_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT) )
+
+#define MI_PBT_ELF_SWAPPED_PAGED_RO_SEGMENT_INDEX0 \
+          ( (MI_PBT_SWAPPED_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_RO_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT)       | \
+            (MI_PBT_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT) )
+
+#define MI_PBT_ELF_SWAPPED_PAGED_RO_SEGMENT_INDEX1 \
+          ( (MI_PBT_SWAPPED_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_RO_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT)       | \
+            (MI_PBT_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT)      | \
+            (MI_PBT_POOL_INDEX << MI_PBT_FLAG_POOL_INDEX_SHIFT) )
+
+#define MI_PBT_ELF_SWAP_POOL_NON_PAGED_ZI_SEGMENT_INDEX0 \
+          ( (MI_PBT_SWAP_POOL_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_ZI_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT)         | \
+            (MI_PBT_NON_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT) )
+
+#define MI_PBT_ELF_SWAP_POOL_NON_PAGED_ZI_SEGMENT_INDEX1 \
+          ( (MI_PBT_SWAP_POOL_SEGMENT << MI_PBT_FLAG_SEGMENT_TYPE_SHIFT) | \
+            (MI_PBT_ZI_SEGMENT << MI_PBT_FLAG_ACCESS_TYPE_SHIFT)         | \
+            (MI_PBT_NON_PAGED_SEGMENT << MI_PBT_FLAG_PAGE_MODE_SHIFT)    | \
+            (MI_PBT_POOL_INDEX << MI_PBT_FLAG_POOL_INDEX_SHIFT))
+
+
+#define MI_PBT_PAGE_MODE_VALUE(x) \
+         ( ((x) & MI_PBT_FLAG_PAGE_MODE_MASK) >> \
+           MI_PBT_FLAG_PAGE_MODE_SHIFT )
+
+#define MI_PBT_ACCESS_TYPE_VALUE(x) \
+         ( ((x) & MI_PBT_FLAG_ACCESS_TYPE_MASK) >> \
+           MI_PBT_FLAG_ACCESS_TYPE_SHIFT )
+
+#define MI_PBT_SEGMENT_TYPE_VALUE(x) \
+         ( ((x) & MI_PBT_FLAG_SEGMENT_TYPE_MASK) >> \
+            MI_PBT_FLAG_SEGMENT_TYPE_SHIFT )
+
+#define MI_PBT_POOL_INDEX_VALUE(x) \
+          ( ((x) & MI_PBT_FLAG_POOL_INDEX_MASK) >> \
+            MI_PBT_FLAG_POOL_INDEX_SHIFT )
+
+
+/* Segment memory attributes */
+#define MI_PBT_MEM_READ_WRITE 0
+#define MI_PBT_MEM_READ_ONLY  1
+
+/* Size of computed HASH values for progressive boot segments */
+#define MI_PROG_BOOT_DIGEST_SIZE  20
+
+/* Standard ELF segment type definitions */
+#define MI_PBT_ELF_PT_NULL    0
+#define MI_PBT_ELF_PT_LOAD    1
+#define MI_PBT_ELF_PT_DYNAMIC 2
+#define MI_PBT_ELF_PT_INTERP  3
+#define MI_PBT_ELF_PT_NOTE    4
+#define MI_PBT_ELF_PT_SHLIB   5
+#define MI_PBT_ELF_PT_PHDR    6
+#define MI_PBT_ELF_TLS        7
+
+#endif //__MI_PROGRESSIVE_H__

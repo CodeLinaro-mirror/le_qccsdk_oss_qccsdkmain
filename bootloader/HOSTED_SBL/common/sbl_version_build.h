@@ -1,0 +1,7 @@
+
+#ifndef SBL_VERSION_BUILD
+#define SBL_VERSION_BUILD
+#define SBL_VER_MAJOR 0
+#define SBL_VER_MINOR 1
+#define SBL_VER_COUNT 8
+#endif

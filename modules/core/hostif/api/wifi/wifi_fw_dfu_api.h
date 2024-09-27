@@ -60,11 +60,12 @@ WIFI_FW_STRUCT_SIZE_SYNC(msg_hdr_t, 4);
 typedef struct a2f_dfu_start_req
 {
     msg_hdr_t header;         /* message header that contains msg id*/
+    uint32_t dfu_imgsize;
     uint8_t soft_id_bitmap;   /* refer soft_id_t to create the bitmap(this can have bitmap for multiple resources) */
     uint8_t reserved[3];
 } a2f_dfu_start_req_t;
 WIFI_FW_STRUCT_4BYTE_ALLIGN_CHECK(a2f_dfu_start_req_t);
-WIFI_FW_STRUCT_SIZE_SYNC(a2f_dfu_start_req_t, 8);
+WIFI_FW_STRUCT_SIZE_SYNC(a2f_dfu_start_req_t, 12);
 
 typedef struct a2f_dfu_transfer_header_cfm
 {

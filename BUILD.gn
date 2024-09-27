@@ -7,6 +7,7 @@ import("//configs_decl.gni")
 is_pbl = false
 is_ioe_pbl = false
 is_sbl = false
+is_hosted_sbl = false
 is_nvm_programmer = false
 is_ftm = false
 need_fs = false
@@ -19,6 +20,10 @@ if (image_name == "FERMION_PBL") {
 
 if (image_name == "FERMION_SBL") {
     is_sbl = true
+}
+
+if (image_name == "FERMION_HOSTED_SBL") {
+    is_hosted_sbl = true
 }
 
 if (image_name == "FERMION_NVM_PROGRAMMER") {
@@ -53,6 +58,10 @@ projects_pbl = [
 
 projects_sbl = [
     "//bootloader/SBL",
+]
+
+projects_hosted_sbl = [
+    "//bootloader/HOSTED_SBL",
 ]
 
 projects_nvm_programmer = [
@@ -155,7 +164,7 @@ config("default_config") {
         ":common_define",
         ":common_inc",
     ]
-    if (!is_pbl && !is_sbl && !is_nvm_programmer) {
+    if (!is_pbl && !is_sbl && !is_hosted_sbl && !is_nvm_programmer) {
         foreach(prj, projects_common) {
             prj_cfg = string_join("", [ prj, ":_config" ])
             configs += [ prj_cfg ]
@@ -178,6 +187,9 @@ config("linker_config") {
     if (is_pbl) {
         ldflags += [ "-Tfrn_pbl.ld" ]
     } else if (is_sbl) {
+        ldflags += [ "-Tfrn_ioe_sbl.ld" ]
+        ldflags += [ "--start-group", rebase_path("bootloader/SBL/src/pbl_patch.o"), "--end-group" ]
+    } else if (is_hosted_sbl) {
         ldflags += [ "-Tfrn_ioe_sbl.ld" ]
         ldflags += [ "--start-group", rebase_path("bootloader/SBL/src/pbl_patch.o"), "--end-group" ]
     } else if (is_nvm_programmer) {
@@ -220,6 +232,8 @@ executable("elf_target") {
         public_deps += projects_pbl
     } else if (is_sbl) {
         public_deps += projects_sbl
+    } else if (is_hosted_sbl) {
+        public_deps += projects_hosted_sbl        
     } else if (is_nvm_programmer) {
         public_deps += projects_nvm_programmer
     } else {

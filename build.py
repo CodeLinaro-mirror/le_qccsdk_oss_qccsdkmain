@@ -14,6 +14,7 @@ import re
 
 image_list = [ 
     'FERMION_SBL',
+	'FERMION_HOSTED_SBL',
     'FERMION_IOE_QCLI_DEMO',
     'FERMION_FTM',
     'FERMION_HELLO_WORLD',
@@ -25,6 +26,7 @@ image_list = [
 proj_conf = { 
     'FERMION_IOE_QCLI_DEMO':'demo/qcli_demo/prj.conf',
     'FERMION_SBL':'demo/qcli_demo/prj.conf',
+	'FERMION_HOSTED_SBL':'demo/qcli_demo/prj.conf',
     'FERMION_FTM':'demo/ftm/ftm_prj.conf',
     'FERMION_HELLO_WORLD':'demo/hello_world/prj.conf',
     'FERMION_POSIX_DEMO':'demo/posix_demo/prj.conf',
@@ -256,6 +258,9 @@ def pre_build_script(variant_name = 'FERMION_QCLI_DEMO', variant_image_id = 'MM'
     if variant_image_id == 'SBL':
         pre_build_script = 'sbl_prebuild.py'
         cmd = [ 'python', 'build/freertos/eclipse-gcc/Scripts/' + pre_build_script, '.', variant_name, variant_image_id ]
+    if variant_image_id == 'HOSTED_SBL':
+        pre_build_script = 'sbl_prebuild.py'
+        cmd = [ 'python', 'build/freertos/eclipse-gcc/Scripts/' + pre_build_script, '.', variant_name, variant_image_id ]
     #cmd = [ 'python', 'tools/host_tools/dev_cfg/' + pre_build_script, '.',
     #    variant_name, variant_image_id,
     #]
@@ -315,6 +320,9 @@ def execute_gn_build(image = 'FERMION'):
     if image == 'FERMION_SBL':
         variant_image_id = 'SBL'
         pre_build_script(image, variant_image_id)
+    if image == 'FERMION_HOSTED_SBL':
+        variant_image_id = 'HOSTED_SBL'
+        pre_build_script(image, variant_image_id)
         #logging.warning('image=%s ....' %(image))
     # gn gen
     #gn_args = '--args='
@@ -368,6 +376,8 @@ def sign_image(build_output= '',image='FERMION_IOE_QCLI_DEMO'):
     image_type = 'app'
     if image =='FERMION_SBL':
         image_type = 'sbl'
+    elif image =='FERMION_HOSTED_SBL':
+        image_type = 'hosted_sbl'
     else:
         image_type = 'app'
 
