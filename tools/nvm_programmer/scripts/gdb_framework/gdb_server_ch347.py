@@ -42,7 +42,7 @@ class GDB_Server(object):
         if ('server_script' in kwargs) and (kwargs['server_script']):
             self.server_script = kwargs['server_script']
         else:
-            self.server_script = '../../jtag/openocd/ch347/qcc730.cfg'
+            self.server_script = './qcc730_openocd_ch347.cfg'
 
         self.server_script = self.server_script.replace(os.sep, '/')
 
