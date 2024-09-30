@@ -18,6 +18,7 @@
 #include "nt_devcfg_def.h"
 #include "nt_devcfg_types.h"
 #include "nt_devcfg_from_master_xml.h"
+#define A_MIN(x, y)             (((x) < (y)) ? (x) : (y))
 
 nt_devcfg_structure_t nt_device_instance;   			 //instance of common structure to fill from xml
 
@@ -42,8 +43,9 @@ nt_devcfg_structure_t nt_device_instance;   			 //instance of common structure t
 void nt_devcfg_parse()
 {
 	uint32 dal_var=DALPROP_PropBin_devcfg_xml[0];
-	int  total_hex_val, starting_add;
+	int  total_hex_val, starting_add, end_add;
 	int count_1, count_2;
+	int params_remain = 0;
 	uint32 *count_ptr;
 	uint32 ret_val, device_id;
 
@@ -59,9 +61,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_LFS_REG_TYPE);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					 count_ptr++;
@@ -79,9 +82,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_FG_SCAN_PROBE_TYPE);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					 count_ptr++;
@@ -99,9 +103,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_INTVAL);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					 count_ptr++;
@@ -119,9 +124,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_TWT_ENABLE);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					 count_ptr++;
@@ -139,9 +145,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_PROTECTION_MODE);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					count_ptr++;
@@ -159,9 +166,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_RA_FIXED_RATE_INDEX);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					count_ptr++;
@@ -180,9 +188,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_WIFISEC_AUTH_INTER_FRM_TIMER);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					count_ptr++;
@@ -200,9 +209,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_CONN_TIMEOUT);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					count_ptr++;
@@ -220,9 +230,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_WMMP_BE_ACM);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					count_ptr++;
@@ -240,9 +251,10 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT_DEVCFG_DEFAULT_MAC_ADDR_AP_P1);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
-
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
 					count_ptr++;
@@ -298,7 +310,9 @@ void nt_devcfg_parse()
 			if(DALPROP_PropBin_devcfg_xml[count_1]==device_id)
 			{
 				starting_add=(((int)(DALPROP_PropBin_devcfg_xml[count_1+1]))/4);
-				for(count_2=starting_add; count_2<total_hex_val; count_2+=2)
+				params_remain = GET_NUM_LEFT_DEVCFG(nt_devcfg_structure_t, NT2_DEVCFG_ENABLE_DISABLE_RRAM_DXE);
+				end_add = A_MIN(starting_add + params_remain * 2, total_hex_val);
+				for(count_2=starting_add; count_2<end_add; count_2+=2)
 				{
 					ret_val=DALPROP_PropBin_devcfg_xml[count_2+1];
 					*count_ptr=ret_val;
