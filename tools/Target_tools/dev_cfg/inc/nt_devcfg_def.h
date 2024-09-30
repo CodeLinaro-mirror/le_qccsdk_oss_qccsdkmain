@@ -59,4 +59,7 @@ typedef uint32  DALInterfaceVersion;
 #define NULL  0
 #endif
 
+#define GET_NUM_LEFT_DEVCFG(type, param_current) \
+	((sizeof(type) - offsetof(type, param_current)) / sizeof(uint32))
+
 #endif /* CORE_DEV_CFG_INC_NT_DEVCNFG_DEF_H_ */
