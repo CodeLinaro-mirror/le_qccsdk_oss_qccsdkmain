@@ -8,6 +8,7 @@
 #include "wmi_api.h"
 #include "safeAPI.h"
 #include "assert.h"
+#include "wmi.h"
 
 typedef void (*wlan_evt_fn_table)(void*);
 
@@ -549,6 +550,31 @@ static void wmi_set_rate_event(void *msg)
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
 
+static void wmi_get_tx_power_event(void *msg)
+{
+    if (!msg) {
+        warn_printf("msg NULL\n");
+        return;
+    }
+
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_WLAN_Get_Power_Evt_t *evt = &(p_cxt->get_tx_power_result);
+    wlan_tx_power_t *result = (wlan_tx_power_t *)msg;
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    evt->ctl_power = result->ctl_power;
+    evt->real_power = result->real_power;
+    evt->reg_power = result->reg_power;
+    evt->target_power = result->target_power;
+
+	set_wlan_qapi_error(QAPI_OK);
+
+    if (p_cxt->wlan_get_tx_power_block_mode){
+        qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_TX_POWER);
+    }
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+}
+
 static void wmi_get_rate_event(void *msg)
 {
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
@@ -681,6 +707,9 @@ static void wmi_event_dispatch(event_t event_id, void *data)
 		case WMI_SEND_RAW_FRAME_EVTID:
 			wmi_send_raw_event(data);
 			break;
+        case WMI_GET_TX_POWER_EVTID:
+            wmi_get_tx_power_event(data);
+            break;
 		case WMI_MGMT_FRAME_FILTER_EVTID:
 			wmi_set_mgmt_filter_event(data);
         default:
@@ -1166,6 +1195,22 @@ qapi_Status_t wmi_set_mgmt_filter (void)
         log_printf("unblock mode, should check WMI cmd done in event cb\n");
     }
 	
+    ret = get_wlan_qapi_error();
+    return ret;
+}
+
+qapi_Status_t wmi_get_tx_power (void)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_Status_t ret = QAPI_WLAN_ERROR;
+
+    wmi_cmd_send(WMI_GET_TX_POWER_CMDID, (void *)(&(p_cxt->get_tx_power_result)), sizeof(qapi_WLAN_Get_Power_Evt_t));
+    if (p_cxt->wlan_get_tx_power_block_mode) {
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_TX_POWER, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+
     ret = get_wlan_qapi_error();
     return ret;
 }

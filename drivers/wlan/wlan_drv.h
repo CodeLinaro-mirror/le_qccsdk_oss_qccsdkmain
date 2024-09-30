@@ -62,6 +62,7 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t                wlan_get_rate_block_mode:1;
 	uint32_t                wlan_send_raw_block_mode:1;
     uint32_t                wlan_set_mgmt_filter_block_mode:1;
+    uint32_t                wlan_get_tx_power_block_mode:1;
     qapi_Status_t           wlan_qapi_error;
     dev_common_t           *dev_common;
     wlan_evt_payload_t      event_payload_buf[EVT_PAYLOAD_MAX];
@@ -93,6 +94,8 @@ typedef struct wlan_qapi_cxt_s {
 	qapi_WLAN_Raw_Send_Params_t raw_pkt_frame;
 	WMI_MGMT_FRAME_FILTER mgmt_filter;
     WMI_SET_APPIE_CMD       appie_cmd;
+    WMI_SET_TX_POWER_CMD    tx_power;
+    qapi_WLAN_Get_Power_Evt_t get_tx_power_result;
 } wlan_qapi_cxt_t;
 
 extern wlan_qapi_cxt_t *gp_wlan_qapi_cxt;

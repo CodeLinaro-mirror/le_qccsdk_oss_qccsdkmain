@@ -242,6 +242,8 @@ typedef enum {
     WMI_SEND_RAW,
     WMI_SET_MGMT_FILTER_CMDID,
     WMI_SET_APPIE_CMDID,
+    WMI_SET_TX_POWER,
+    WMI_GET_TX_POWER_CMDID,
     WMI_CMD_MAX, /* Note: This cmd should be the last in the WMI_COMMAND_ID ENUM */
 } WMI_COMMAND_ID;
 
@@ -275,6 +277,7 @@ typedef enum {
 	WMI_SCAN_RESULT_EVTID,
 	WMI_SEND_RAW_FRAME_EVTID,
 	WMI_MGMT_FRAME_FILTER_EVTID,
+    WMI_GET_TX_POWER_EVTID,
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
 
@@ -959,6 +962,14 @@ typedef PREPACK struct wlan_regulatory_s {
 	wlan_reg_rule_t reg_rules[MAX_REGULATORY_RULES];
 }POSTPACK wlan_regulatory_t ;
 
+typedef PREPACK struct wlan_tx_power_s {
+    uint8_t reg_power;
+    uint8_t ctl_power;
+    uint16_t target_power;
+    uint16_t real_power;
+    uint8_t power_designated;
+}POSTPACK wlan_tx_power_t;
+
 typedef PREPACK struct wlan_cserv_stats_s {
 	uint8_t status;
 	uint8_t	cs_rssi;
@@ -1058,6 +1069,13 @@ typedef PREPACK struct {
     uint8_t pmkid[WMI_PMKID_LEN];
 } POSTPACK WMI_PMKID;
 
+/*
+ * WMI_SET_TX_POWER_CMD
+ */
+typedef PREPACK struct {
+    uint8_t txpower;
+    uint8_t policy;
+} POSTPACK WMI_SET_TX_POWER_CMD;
 
 /*
  * WMI_SET_PMKID_LIST_CMD
@@ -1764,6 +1782,7 @@ typedef enum {
     WIFI_PARAM_SET_BA_WIN_SIZE = 18,
     WIFI_PARAM_SET_SLOT_TIME = 19,
     WIFI_PARAM_SET_EDCCA_THRESHOLD = 20,
+    WIFI_PARAM_SET_TX_POWER = 21,
 }param_id;
 enum {
     WIFI_STATUS_SUCCESS,

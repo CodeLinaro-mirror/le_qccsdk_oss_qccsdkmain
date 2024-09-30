@@ -1145,6 +1145,85 @@ static qapi_Status_t GetCountryCode(uint32_t __attribute__((__unused__)) Paramet
     return ret;
 }
 
+qapi_Status_t set_tx_power(uint32 txpower, qapi_WLAN_TX_Power_Policy_e policy)
+{
+	qapi_Status_t ret = QAPI_OK;
+    qapi_WLAN_Set_Txpower_Params_t set_tx_power_cfg;
+    set_tx_power_cfg.txpower = txpower;
+    set_tx_power_cfg.policy = policy;
+     
+    ret = qapi_WLAN_Set_Param(get_active_device(),
+                        __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                        __QAPI_WLAN_PARAM_GROUP_WIRELESS_TX_POWER_IN_DBM,
+                        &set_tx_power_cfg,
+                        sizeof(set_tx_power_cfg),
+                        FALSE);
+
+    return ret;
+}
+
+static qapi_Status_t SetTxPower(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	qapi_Status_t ret = QAPI_OK;
+	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+	uint8_t policy = 0;
+	
+    if (0 == p_cxt->wlan_enabled)
+    {
+        info_printf("Enable WLAN before set tx power\r\n");
+        return QAPI_ERROR;
+    }
+
+	if ((!Parameter_List) || ( Parameter_Count < 1 ))
+    {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_Count == 2)
+    {
+        policy = Parameter_List[1].Integer_Value;
+    }
+	if (policy >= QAPI_WLAN_POLICY_NUM_E)
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+
+	ret = set_tx_power( Parameter_List[0].Integer_Value, policy);
+    
+	if(ret != QAPI_OK) {
+		info_printf("set tx power to %d fail\n", Parameter_List[0].Integer_Value);
+	}
+	return ret;
+}
+
+static qapi_Status_t GetTxPower(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+	
+    if (0 == p_cxt->wlan_enabled)
+    {
+        info_printf("Enable WLAN before get tx power\r\n");
+        return QAPI_ERROR;
+    }
+
+	uint8_t deviceId = get_active_device();
+    qapi_WLAN_Get_Power_Evt_t power;
+    uint32_t length = sizeof(power);
+
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_TX_POWER_IN_DBM,
+                                &power,
+                                &length)){
+        info_printf("get tx power fail for device %d\n",deviceId);
+        return QAPI_ERROR;
+    } else {
+        info_printf("get real_power: %d dbm\r\n", power.real_power);
+        info_printf("get ctl_power: %d dbm\r\n", power.ctl_power);
+        info_printf("get reg_power: %d dbm\r\n", power.reg_power);
+        info_printf("get target_power: %d dbm\r\n", power.target_power);
+    }
+    return QAPI_OK;
+}
+
 #if CONFIG_DEBUG_CMD_XPA
 extern uint8_t halphy_xpa_enabled(uint8_t enable, uint8_t band);
 extern uint8_t halphy_xpa_enable(uint8_t enable, uint8_t band);
@@ -2178,6 +2257,9 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { getEdcaParam, "getEdcaParam",        "<qtid:0~7 or 255>",  "Get Edca parameters for qtid, 255:tid0"},
     { setEdccaThreshold, "setEdccaThreshold", "<EDCCA value, euqals real value plus 100>", "set EDCCA threshold to filter the non-wifi signal"},
     { getEdccaThreshold, "getEdccaThreshold", "", "get the EDCCA threshold"},
+    { SetTxPower,           "SetTxPower",     "<txPower> [<policy = 0:SAFETY>]",   "Set the transmit power in dbm. The default policy is SAFETY. Set value to 100 to restore default settings."   },
+    { GetTxPower,           "GetTxPower",     "",                                  "Get the transmit power, reg_power, target power and CTL power"   },
+
 };
 
 const QAPI_Console_Command_Group_t wifi_shell_cmd_group = {WLAN_SHELL_GROUP_NAME, sizeof(wifi_shell_cmds) / sizeof(QAPI_Console_Command_t), wifi_shell_cmds};
