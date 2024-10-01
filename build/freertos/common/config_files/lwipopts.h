@@ -64,6 +64,7 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #define MEMP_NUM_UDP_PCB                8		/** Maximum number of PCB allocation for UDP allowed at any instance in system */
 #define DEFAULT_TCP_RECVMBOX_SIZE		64		/** mailbox size for the incoming packets on a NETCONN_TCP. */
 #define DEFAULT_UDP_RECVMBOX_SIZE		64		/** mailbox size for the incoming packets on a NETCONN_UDP. */
+#define DEFAULT_RAW_RECVMBOX_SIZE		64		/** mailbox size for the incoming packets on a NETCONN_RAW. */
 #define DEFAULT_ACCEPTMBOX_SIZE			64		/** mailbox size for the incoming connections in case of TCP listen. */
 
 #define MEMP_NUM_TCPIP_MSG_INPKT		75		/** Number of struct tcpip_msg, which are used for incoming packets. */

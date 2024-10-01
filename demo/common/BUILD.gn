@@ -116,6 +116,13 @@ source_set("common") {
             "unit_test/unit_test_shell.c"
         ]
     }
+    if (CONFIG_HTTP_CLIENT) {
+        if (CONFIG_NET_SHELL) {
+            sources += [
+            "net/src/pmtud.c",
+            ]
+        }
+    }
     if (CONFIG_SIGMA_TRAFFIC) {    
         sources += [
             "wificert/sigma_traffic/sigma_shell.c",
@@ -155,6 +162,12 @@ source_set("common") {
     if (CONFIG_GPIO_SHELL) {
         include_dirs += ["peripherals/gpio", "peripherals/i2c", "//modules/console"]
         sources += gpio_demo_src
+    }
+
+    if (CONFIG_NET) {    
+        sources += [
+            "net/src/pmtud_demo.c",
+        ]
     }
 
     if (CONFIG_HTTP_CLIENT_DEMO) {    
