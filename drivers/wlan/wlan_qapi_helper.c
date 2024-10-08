@@ -989,3 +989,51 @@ qapi_Status_t wlan_get_edcca_threshold(uint8_t *edcca_threshold)
 	*edcca_threshold = (value >> QWLAN_AGC_TH_EDET_TH20_OFFSET);
 	return QAPI_OK;
 }
+
+qapi_Status_t wlan_set_tx_power(qapi_WLAN_Set_Txpower_Params_t txpower_params)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_TX_POWER_CMD *cmd = &p_cxt->tx_power;
+	
+	if(cmd == NULL)
+    {
+        return QAPI_ERROR;
+    }
+	memset(cmd, 0, sizeof(WMI_SET_TX_POWER_CMD));
+	
+	cmd->txpower = txpower_params.txpower;
+	cmd->policy = txpower_params.policy;
+
+	wmi_cmd_send(WMI_SET_TX_POWER, cmd, sizeof(WMI_SET_TX_POWER));
+	
+	if(p_cxt->wlan_set_param_block_mode) 
+	{
+		p_cxt->param_id = WIFI_PARAM_SET_TX_POWER;
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else 
+	{
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+
+	qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+	error = get_wlan_qapi_error();
+	qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+
+	return error;
+}
+
+qapi_Status_t wlan_get_tx_power(qapi_WLAN_Get_Power_Evt_t *txpower_params)
+{
+	qapi_Status_t ret = QAPI_ERROR;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	if(txpower_params == NULL)
+		return ret;
+		
+	ret = wmi_get_tx_power();
+	if (ret == QAPI_OK) {
+    	memscpy(txpower_params,sizeof(qapi_WLAN_Get_Power_Evt_t),&(p_cxt->get_tx_power_result),sizeof(qapi_WLAN_Get_Power_Evt_t));
+	}
+	
+	return ret;
+}

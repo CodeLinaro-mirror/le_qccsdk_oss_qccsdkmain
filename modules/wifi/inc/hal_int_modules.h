@@ -93,6 +93,13 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define SIFS_2_4ghz 10                /* short interframe space 10us for 2.4ghz 802.11n */
 #define SIFS_5ghz   16                /* short interframe space 16us for 5ghz 802.11n */
 
+//set power policy
+#define SAFE 0
+#define FREERUN 1
+
+//restore power to default value
+#define RESTORE_DEFAULT 100
+
 extern uint8_t hal_staid;
 extern uint8_t delstaidx;
 
@@ -597,6 +604,9 @@ void hal_mod_wmmparam_print();
 uint8_t hal_get_staid(uint8_t mode,uint8_t staid);
 void hal_mod_tpe_desc_api(uint8_t sta_id,nt_hal_sta_tx_rate_t *value);
 void hal_mod_tpe_desc_pm_set(nt_hal_bss_t *bss,uint8_t pm);
+void hal_mod_tpe_tx_power_set(uint8_t sta, nt_hal_sta_tx_power_t *value);
+void hal_mod_tpe_tx_power_get(uint8_t sta,nt_hal_sta_tx_power_t *value);
+void hal_mod_tpe_rate_get(uint8_t sta, nt_hal_sta_tx_rate_t *value);
 
 
 #ifdef NT_FN_CONCURRENCY
@@ -946,6 +956,11 @@ TSF_BSS2_MODE
 
 #define RPE_WAIT_4_DUP_DET 0x10
 #define TPEM_WAIT_GET_RPE_INFO 0x4
+
+/* init for reg power, ctl power and target power */
+#define QAPI_REG_POWER_MAX  200
+#define QAPI_CTL_POWER_MAX  200
+#define QAPI_TARGET_POWER_MAX  200
 
 /*
  *  Beacon TSF compensation = Preamble   +   MPDU Header                 +  Extra Delay

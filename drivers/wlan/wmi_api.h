@@ -19,6 +19,7 @@
 #define WLAN_WMI_CMD_SIG_MASK_GET_RATE				0x1000
 #define WLAN_WMI_CMD_SIG_MASK_SEND_RAW				0x2000
 #define WLAN_WMI_CMD_SIG_MASK_SET_MGMT_FILTER		0x4000
+#define WLAN_WMI_CMD_SIG_MASK_GET_TX_POWER		    0x8000
 
 extern qapi_Status_t wmi_cmd_send (WMI_COMMAND_ID cmd_id, void *p_data, uint32_t data_len);
 extern qapi_Status_t wmi_dev_cmd_send (WMI_COMMAND_ID cmd_id, uint8_t dev_id, void *p_data, uint32_t data_len);
@@ -40,6 +41,7 @@ extern qapi_Status_t wmi_set_rate (void);
 extern qapi_Status_t wmi_get_rate (void);
 extern qapi_Status_t wmi_send_raw (void);
 extern qapi_Status_t wmi_set_mgmt_filter (void);
+extern qapi_Status_t wmi_get_tx_power (void);
 
 #endif //__WMI_API_H__
 

@@ -368,6 +368,12 @@ typedef struct nt_hal_sta_rate_stat_s{
 	uint16_t t_rate_ppdu_ack_to;
 } nt_hal_sta_rate_stat_t;
 
+typedef struct nt_hal_sta_tx_power_s{
+	uint8_t p_power;
+	uint8_t s_power;
+	uint8_t t_power;
+} nt_hal_sta_tx_power_t;
+
 nt_status_t hal_rates_init(void);
 
 void nt_hal_sta_tx_rate_update(nt_hal_bss_t* bss, nt_hal_sta_t * sta);
@@ -377,6 +383,9 @@ void nt_hal_r2p_tbl_update(void);
 void nt_hal_fix_rts_rate(uint32_t write, uint32_t fix_rate);
 void hal_reduce_tx_pwr_if_wired(uint8_t reduce_by);
 void nt_hal_rate_tbl_restore(void);
+int8_t nt_hal_tx_pwr_update(uint8_t tx_power, uint8_t policy);
+void nt_hal_rtbl_print(void);
+void nt_hal_cal_txpwr_get(void);
 
 
 /* @brief: This API is used to set the protection if any legacy stations join

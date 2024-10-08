@@ -168,6 +168,11 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
             ret = wlan_set_edcca_threshold(device_ID, edcca_threshold);
             break;
         }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_TX_POWER_IN_DBM:{
+            qapi_WLAN_Set_Txpower_Params_t txPwr_Params = *((qapi_WLAN_Set_Txpower_Params_t *)data);
+            ret = wlan_set_tx_power(txPwr_Params);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_TX_POWER_IN_DBM */
+        }
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;
@@ -429,6 +434,11 @@ qapi_Status_t qapi_WLAN_Get_Param (uint8_t __attribute__((__unused__)) device_ID
                 return QAPI_WLAN_ERR_EINVAL;
             }
             wlan_get_edcca_threshold(edcca_threshold);
+            break;
+        }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_TX_POWER_IN_DBM: {
+            qapi_WLAN_Get_Power_Evt_t *power = (qapi_WLAN_Get_Power_Evt_t *)data;
+            wlan_get_tx_power(power);
             break;
         }
 		default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
