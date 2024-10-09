@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 /*========================================================================
  *
  * @brief WiFi FW (qca5321/7321 family) specific initializations and APIs
@@ -80,7 +85,7 @@ extern volatile size_t g_SPI_host_read_pos;
  *
  */
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
-static void wifi_fw_defaults_table_init(void)
+void wifi_fw_defaults_table_init(void)
 {
     /* Table that is to be exposed to Apps systems to be initialized here */
     memset(&g_fw_defaults_table, 0, sizeof(wifi_fw_defaults_t));
@@ -245,10 +250,10 @@ void wifi_fw_module_init(void)
 
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
     /* Initialize the ring interface */
-    ringif_init();
+   // ringif_init();
 
     /* Update Fermion defaults Table to be used by Apps */
-    wifi_fw_defaults_table_init();
+   // wifi_fw_defaults_table_init();
 #endif
 
 #if defined(UNIT_TEST_SUPPORT) && defined(SUPPORT_RING_IF)
