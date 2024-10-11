@@ -185,5 +185,9 @@ source_set("common") {
         include_dirs += ["//modules/net/mqtt_client"]
     }
 
+    if (CONFIG_SNTP_CLIENT) { 
+        sources += ["//modules/net/sntp/sntp.c",]
+    }
+
 }
 

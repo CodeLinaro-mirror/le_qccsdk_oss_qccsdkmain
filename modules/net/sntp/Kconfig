@@ -1,0 +1,8 @@
+config SNTP_CLIENT
+    bool "enable SNTP client"
+    default n
+
+config SNTP_CLIENT_DEMO
+    depends on SNTP_CLIENT
+    bool "enable SNTP client demo"
+    default n

@@ -115,4 +115,6 @@ declare_args() {
 
     CONFIG_CPR_ENABLE = true
     CONFIG_RNG_TEST = false
+    CONFIG_SNTP_CLIENT = false
+    CONFIG_SNTP_CLIENT_DEMO = false
 }
