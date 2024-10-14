@@ -61,8 +61,8 @@ static ip_addr_t* pmtud_target;
 static u16_t icmp_seq_num = 0;
 static u16_t ip_identification;
 
-#define MIN_MTU           1000
-#define LOCAL_MTU         1500
+#define MIN_MTU           68     // minimum MTU size in bytes (RFC 1191, Sect.3)
+#define LOCAL_MTU         1500   
 #define TIMEOUT           900000
 #define MTU_MUX_RETRY     10
 
@@ -100,11 +100,11 @@ static void pmtud_prepare_echo(icmp_echo_header *icmp_header, u16_t packet_size)
 
     icmpm_2_icmpg(icmp_header)->chksum = 0;
 
-    icmpm_2_icmpg(icmp_header)->id     = lwip_htons(0x1234);
+    icmpm_2_icmpg(icmp_header)->id     = lwip_htons(0x1);
 
     icmpm_2_icmpg(icmp_header)->seqno  = lwip_htons(++icmp_seq_num);
   
-    // /* fill the additional data buffer with some data */
+    /* fill the additional data buffer with some data */
     for(i = 0; i < icmp_len; i++) {
         ((char*)icmp_header)[sizeof(struct icmp_echo_header) + i] = (char)i;
     }
@@ -165,14 +165,17 @@ pmtud_send(int32_t s, const ip_addr_t *addr, int32_t packet_size)
  * @param buffer receive buffer.
  * @return handle the icmp echo response.
  */
-int32_t handle_icmp_response(char *buffer)
+static int32_t handle_icmp_response(char *buffer, const ip_addr_t *addr)
 {
     struct ip_hdr *ip_header = (struct ip_hdr *)buffer;
     struct icmp_echo_header *icmp_header = (struct icmp_echo_header *)(buffer + (IPH_HL(ip_header) * 4));
 	// returns 1 if the packet comes from the specified host and it's valid
 	if (ICMPH_TYPE(icmpm_2_icmp(icmp_header)) == ICMP_ER) // valid if the source addr is server's
 	{
-        PMTUD_PRINTF("receive from server\n");
+        if ((ip_header->src.addr) != (ip_2_ip4(addr)->addr))
+        {
+			return 0; // discard it
+        } 
 	}
 	else if (ICMPH_TYPE(icmpm_2_icmp(icmp_header)) == ICMP_DUR) // some kind of error occurred
 	{
@@ -205,7 +208,7 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
     int32_t new_mtu;
     new_mtu = MTU_ERR_TIMEOUT;  // we do not know if the server is up and reachable
     int32_t low = MIN_MTU;
-    int32_t high = LOCAL_MTU - IP_HLEN;
+    int32_t high = LOCAL_MTU - IP_HLEN - sizeof(struct icmp_echo_header);
     int32_t status = 0;
 
     pmtud_target = (ip_addr_t *)ip_addr;
@@ -258,7 +261,8 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
             PMTUD_PRINTF("Timeout occurred! No data available.\n");
             retry_counter++;
             high = current_mtu - 1;
-        } else {
+        } 
+        else {
             recv_len = lwip_recvfrom(s, buffer, LOCAL_MTU, 0, (struct sockaddr*)&from, &fromlen);
             if (recv_len < 0) {
                 // timeout: packet got lost or server is down
@@ -267,15 +271,16 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
                         printf("no response, invalid MTU size\n");
                         retry_counter = MTU_MUX_RETRY;
                         // update the mtu
-                        low = current_mtu + 1;
+                        high = current_mtu - 1;
                     }
                     continue;
                 }
                 PMTUD_PRINTF("Socket recv failed");
                 status = MTU_ERR_SOCK;
+                goto fail;
             }
             // a packet has been received, check if it's valid
-            res = handle_icmp_response(buffer);
+            res = handle_icmp_response(buffer, pmtud_target);
             if (res > 0) // success, the packet comes from the server and it's valid
             {
                 PMTUD_PRINTF("valid\n");
@@ -306,7 +311,7 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
 	}
     closesocket(s);
     free(buffer);
-    return new_mtu + IP_HLEN;
+    return new_mtu + IP_HLEN + sizeof(struct icmp_echo_header);
 fail:
     free(buffer);
     return status;

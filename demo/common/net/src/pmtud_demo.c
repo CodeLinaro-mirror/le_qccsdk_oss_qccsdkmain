@@ -51,7 +51,7 @@ qapi_Status_t pmtud_demo(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
 
     mtu = qapi_Path_MTU_Discover(&ip_addr);
     if (mtu < 0) {
-        printf("the path mtu discover failed.");
+        printf("timeout: the path mtu discover failed.");
         return QAPI_ERROR;
     }
 

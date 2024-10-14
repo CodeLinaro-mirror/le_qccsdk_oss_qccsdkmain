@@ -116,13 +116,7 @@ source_set("common") {
             "unit_test/unit_test_shell.c"
         ]
     }
-    if (CONFIG_HTTP_CLIENT) {
-        if (CONFIG_NET_SHELL) {
-            sources += [
-            "net/src/pmtud.c",
-            ]
-        }
-    }
+    
     if (CONFIG_SIGMA_TRAFFIC) {    
         sources += [
             "wificert/sigma_traffic/sigma_shell.c",
@@ -167,6 +161,7 @@ source_set("common") {
     if (CONFIG_NET) {    
         sources += [
             "net/src/pmtud_demo.c",
+            "net/src/pmtud.c",
         ]
     }
 

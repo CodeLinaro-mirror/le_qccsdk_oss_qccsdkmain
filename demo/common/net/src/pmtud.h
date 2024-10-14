@@ -47,7 +47,6 @@ typedef struct icmp_echo_header {
 /*-------------------------------------------------------------------------
  * Function Definitions
  *-----------------------------------------------------------------------*/
-int32_t handle_icmp_response(char *buffer);
 int32_t qapi_Path_MTU_Discover(ip_addr_t *ip_addr);
 
 #endif // PMTUD_H
