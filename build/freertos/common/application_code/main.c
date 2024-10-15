@@ -548,8 +548,12 @@ fw_logger_init();
 #endif
 #ifdef PLATFORM_FERMION
 #ifndef EMULATION_BUILD
-    wifi_fw_pmic_init();
+    wifi_fw_pmic_init_pfm_openloop();
+	
+#ifndef CBC_CX_VOLTAGE_WAR
     wifi_fw_cpr_init();
+#endif /*CBC_CX_VOLTAGE_WAR */
+
 #endif /* EMULATION_BUILD */
 #endif /* PLATFORM_FERMION */
 
@@ -784,7 +788,15 @@ qcspi_hfc_init();
 #ifdef HALPHY_CBC_SUPPORT
     /* cold boot calibration call */
     halphy_cbc();
+    nt_socpm_nop_delay(4000);
 #endif /* HALPHY_CBC_SUPPORT */
+
+    wifi_fw_pmic_init();
+    //nt_socpm_nop_delay(4000);
+
+#ifdef CBC_CX_VOLTAGE_WAR
+    wifi_fw_cpr_init();
+#endif // CBC_CX_VOLTAGE_WAR
 
 #ifdef IMAGE_FERMION
     wifi_fw_gpio_init(FALSE);

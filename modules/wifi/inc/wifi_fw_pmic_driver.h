@@ -1,4 +1,7 @@
 /**********************************************************************************************
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved. 
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
  * @file wifi_fw_pmic_driver.h
  * @brief WiFi FW PMIC related declarations
  *
@@ -25,6 +28,8 @@
  ********************************************************************************************/
 
 void wifi_fw_pmic_init(void);
+
+void wifi_fw_pmic_init_pfm_openloop(void);
 
 void wifi_fw_pmic_pre_sleep_config(sleep_mode mode);
 
