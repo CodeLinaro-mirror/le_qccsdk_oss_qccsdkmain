@@ -1,6 +1,9 @@
-
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
+
 
 #ifndef OS_INC_NT_OSAL_H_
 #define OS_INC_NT_OSAL_H_

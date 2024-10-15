@@ -1,4 +1,8 @@
 #!/usr/bin/python
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 import struct
 import xml.etree.ElementTree as ET

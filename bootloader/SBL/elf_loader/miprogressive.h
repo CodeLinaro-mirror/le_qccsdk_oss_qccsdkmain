@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef __MI_PROGRESSIVE_H__
 #define __MI_PROGRESSIVE_H__
 /* The latest ELF documentation is at http://www.caldera.com/developers/gabi/latest/ch5.pheader.html

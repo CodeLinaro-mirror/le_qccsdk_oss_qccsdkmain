@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 // $QTI_LICENSE_QDN_C$
 
 #ifndef __QAPI_WLAN_COEX_H__

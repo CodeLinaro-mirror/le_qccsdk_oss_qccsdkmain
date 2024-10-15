@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef __FERMION_HWIO_BASE_H__
 #define __FERMION_HWIO_BASE_H__
 

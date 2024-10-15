@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 // h_file_build_identifier = 2024May22  
 /** ************************************************************************
  * adu.h:	ADU module header file. This file is auto generated from

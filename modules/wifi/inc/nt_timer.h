@@ -1,5 +1,8 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
 #ifndef SME_MLME_INC_NT_TIMER_H_
 #define SME_MLME_INC_NT_TIMER_H_
 

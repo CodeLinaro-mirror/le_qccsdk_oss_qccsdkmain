@@ -1,6 +1,9 @@
-
 /*
- */
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
+
 
 #ifndef _PBL_SYSTEM_NT_BL_VECTOR_TABLE_H_
 #define _PBL_SYSTEM_NT_BL_VECTOR_TABLE_H_

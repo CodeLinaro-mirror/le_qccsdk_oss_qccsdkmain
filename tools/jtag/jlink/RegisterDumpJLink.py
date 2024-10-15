@@ -1,3 +1,7 @@
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 # Script to take register dump using J-Link from the generated register definitions from Qualcomm IP Catalog
 

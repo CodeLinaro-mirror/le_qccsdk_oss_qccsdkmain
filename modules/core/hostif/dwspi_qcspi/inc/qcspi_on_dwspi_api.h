@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*========================================================================
 * @file qcspi_on_dwspi_api.h
 * @brief APIs related to SPI slave SW

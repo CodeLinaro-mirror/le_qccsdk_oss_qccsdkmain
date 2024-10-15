@@ -1,5 +1,8 @@
 /*
- */
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 
 #ifndef NEUTRINO_PBL_SYSTEM_NT_BL_EVENTHANDLER_H_
 #define NEUTRINO_PBL_SYSTEM_NT_BL_EVENTHANDLER_H_

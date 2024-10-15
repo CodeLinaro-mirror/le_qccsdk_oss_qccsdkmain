@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef _FERM_I2C_HAL_
 #define __FERM_I2C_HAL_
 #include "qccx.h"

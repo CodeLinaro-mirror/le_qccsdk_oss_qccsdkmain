@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #include<nt_hw.h>
 #include<hal_int_sys.h>
 #include "hal_int_cfg.h"

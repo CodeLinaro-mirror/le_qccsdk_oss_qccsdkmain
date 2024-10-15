@@ -2,7 +2,6 @@
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
-
 /*========================================================================
 * @file data_ring_hdlr.h
 * @brief Data ring header parameters and function declarations

@@ -1,5 +1,8 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
 
 #ifndef _CM_API_H_
 #define _CM_API_H_

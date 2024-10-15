@@ -1,5 +1,8 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
 
 #ifndef _IF_EAPOL_H_
 #define _IF_EAPOL_H_

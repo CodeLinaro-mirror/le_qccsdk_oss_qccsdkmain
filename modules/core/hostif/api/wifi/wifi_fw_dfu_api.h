@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*========================================================================
 * @file wifi_fw_dfu_api.h
 * @brief Wi-Fi Firmware DFU APIs and structures for transfering commands and data

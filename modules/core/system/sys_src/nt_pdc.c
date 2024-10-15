@@ -1,5 +1,8 @@
 /*
- */
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 
 #include "nt_pdc.h"
 #include "nt_pdc_driver.h"

@@ -1,4 +1,6 @@
 #===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
 #===============================================================================
 
 usage: sigma_dut.exe [-h] -ip IP -p PORT -S INTERFACE -s SERIAL_PORT [-t TEST] [-v]
