@@ -1,4 +1,7 @@
 /*========================================================================
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved. 
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
  * @file halphy_rx.h
  * @brief MACROs, FLAGs, utility functions header for Halphy
  * ======================================================================*/
@@ -70,7 +73,7 @@ typedef enum mod_type /* WLAN OFDM modulation type */
 
 /* Halphy Cal Algorithm version. Change this if there is any update in Cal Alogorithm,
  * So that CalDB stored in RRAM get updated*/
-#define HALPHY_CAL_VERSION 31
+#define HALPHY_CAL_VERSION 32
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))

@@ -1,5 +1,7 @@
 /*========================================================================
-
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved. 
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*
 * @file fwconfig_QCP7321.h
 * @brief feature flag definitions of NT code base required for Fermion
 * ======================================================================*/
@@ -252,6 +254,15 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 
 /* This flags enables rssi brach threshold monitor in DTIM sleep and exit with the same reason to give event for host */
 #define SUPPORT_RSSI_BREACH_THRESHOLD_MONITOR 
+
+
+/* EVM is degrading by 2dB for 5G/6G channels in Fermion 2.0.2 if CX voltage is set to 545mv 
+    during Cold Boot Calibration
+    WAR for VIFERMION-490 where CPR will be initialized after Cold Boot Calibration
+*/
+#define CBC_CX_VOLTAGE_WAR
+
+
 #ifdef NT_DEBUG
 /* To Enable JTAG debugging post MCU sleep */
 // #define FEATURE_FERMION_SLP_DBG
