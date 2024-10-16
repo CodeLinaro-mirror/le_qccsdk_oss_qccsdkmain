@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 /*========================================================================
 * @brief Ring Service api function definitions
 *=======================================================================*/
@@ -319,9 +324,14 @@ uint8_t ringif_f2a_num_elems_to_clear(ring_ctx_t *p_ring_ctx)
     }
     
     ring_rd_idx = *p_ring_ctx->p_read_idx;
-    if(ring_rd_idx >= p_ring_ctx->ring_idx_to_clear) {
+    if(ring_rd_idx > p_ring_ctx->ring_idx_to_clear) {
         return (ring_rd_idx - p_ring_ctx->ring_idx_to_clear);
-    } else {
+    } else if (ring_rd_idx == p_ring_ctx->ring_idx_to_clear) {
+	    if ((*p_ring_ctx->p_write_idx == ring_rd_idx) && (p_ring_ctx->ring_idx_clear_pending == 1)){			
+            return p_ring_ctx->ring_num_elem;
+	    }
+		return 0;
+	} else {
         return (p_ring_ctx->ring_num_elem + ring_rd_idx - p_ring_ctx->ring_idx_to_clear);
     }
 }
@@ -363,6 +373,7 @@ bool ringif_f2a_pkt_attach(uint8_t ring_id, uint32_t *p_buf_start, uint32_t *p_b
     p_write_element->info = info;
 
     *p_ring_ctx->p_write_idx = (curr_write_idx + 1) % p_ring_ctx->ring_num_elem;
+	p_ring_ctx->ring_idx_clear_pending = 1;
     ringif_stats_f2a_attach_succ(ring_id, 1);
 
     RINGIF_PRINT_LOG_INFO("ringif_f2a_pkt_attach (old_w_idx:%d new_w_idx:%d p_write_element:%x) ", 
@@ -473,6 +484,8 @@ uint8_t ringif_a2f_process_pkts(uint8_t ring_id, _pfn_process pfn_process, _pfn_
 
     idx = read_idx;
     while(1) {
+	wr_idx = *p_ring_ctx->p_write_idx;
+
         if(idx == wr_idx) {
             break;
         }
@@ -708,7 +721,9 @@ bool ringif_f2a_clear_used_bufs(uint8_t ring_id, _pfn_clear_elem pfn_clear_elem)
 
     if(p_ring_ctx->ring_idx_to_clear ==  read_idx) {
         RINGIF_PRINT_LOG_INFO("ringif_f2a_clear_used_bufs already cleared (id%d), p_ring_ctx->ring_idx_to_clear:%d\r\n", ring_id, p_ring_ctx->ring_idx_to_clear);
-        return TRUE;
+		if ((*p_ring_ctx->p_write_idx != read_idx) || (p_ring_ctx->ring_idx_clear_pending == 0)) {
+			return TRUE;            		    
+		}
     }
 
     idx = p_ring_ctx->ring_idx_to_clear;
@@ -730,6 +745,7 @@ bool ringif_f2a_clear_used_bufs(uint8_t ring_id, _pfn_clear_elem pfn_clear_elem)
         num_cleared++;
         idx = (idx + 1) % p_ring_ctx->ring_num_elem;
 
+	    read_idx = *p_ring_ctx->p_read_idx;
         if(idx == read_idx)
             break;
     }
@@ -742,7 +758,9 @@ bool ringif_f2a_clear_used_bufs(uint8_t ring_id, _pfn_clear_elem pfn_clear_elem)
         if( qurt_timer_start(ringif_timer, RING_IF_TIMEOUT) != NT_TIMER_SUCCESS) {
               RINGIF_PRINT_LOG_ERR("ringif_f2a_clear_used_bufs restart timer FAIL");
         }
-    }
+    } else {
+		p_ring_ctx->ring_idx_clear_pending = 0;
+	}
 
     return TRUE;
 }
