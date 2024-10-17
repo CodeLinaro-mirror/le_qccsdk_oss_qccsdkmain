@@ -1,0 +1,33 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+qat_inc = [
+    "src",
+    "//modules/qat",
+]
+
+qat_src = [
+    "src/qat_demo_main.c"
+]
+if (CONFIG_QAT_COMMON_DEMO) {
+    qat_src += [
+        "src/qat_common_demo.c",
+    ]
+}
+
+not_needed("*", [ ])
+
+config("_config") {
+    if (image_name == "FERMION_QAT_DEMO") {
+        include_dirs = qat_inc
+    }
+}
+
+source_set("qat_demo") {
+    if (image_name == "FERMION_QAT_DEMO") {
+        sources = qat_src
+    }
+}

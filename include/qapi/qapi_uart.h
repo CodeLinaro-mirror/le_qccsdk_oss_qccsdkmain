@@ -1,3 +1,7 @@
+/*
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef __QAPI_UART_H__
 #define __QAPI_UART_H__
@@ -54,6 +58,7 @@ GLOBAL FUNCTIONS:
    qapi_UART_Open
    qapi_UART_Receive
    qapi_UART_Transmit
+   qapi_UART_Open_With_Rx_Timeout
 
 ==================================================================================================*/
 
@@ -241,6 +246,31 @@ qapi_Status_t qapi_UART_Transmit
    char*					buf, 
    uint32_t					bytes_To_Tx, 
    uint32_t*				sent
+);
+
+/**
+ * Initializes the UART port. Not to be called from ISR context.
+ *
+ * Opens the UART port and configures the corresponding clocks, interrupts, and GPIO with Rx timeout.
+ * 
+ * @note1hang Do not call this API from ISR context.
+ * 
+ * @param[in] id ID of the port to be opened.
+ * @param[in] config Structure that holds all configuration data.
+ * @param[in] config timeout of Rx thread
+ 
+ * @return 
+ * QAPI_OK      Port open successful. \n
+ * QAPI_ERR_XX   Port open failed, for err code refer the api_Status_t.
+ *  
+ *  
+ */
+
+qapi_Status_t qapi_UART_Open_With_Rx_Timeout
+(
+   qapi_UART_Instance_t		instance,
+   qapi_UART_Open_Config_t*   config,
+   uint32_t 				timeout
 );
 
 /** @} */ /* end_addtogroup qapi_uart */

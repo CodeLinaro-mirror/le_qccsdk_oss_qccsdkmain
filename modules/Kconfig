@@ -9,4 +9,4 @@ source "./modules/net/httpc/Kconfig"
 source "./modules/net/mbedtls/Kconfig"
 source "./modules/wifi/Kconfig"
 source "./modules/net/sntp/Kconfig"
-
+source "./modules/qat/Kconfig"

@@ -336,7 +336,7 @@ static void shell_init (void)
 #endif
 
 #if (CONFIG_UART_SHELL)
-	extern void uart_shell_init (void);
+ 	extern void uart_shell_init (void);
 	uart_shell_init();
 #endif
 
@@ -445,6 +445,11 @@ int main(
         vRegisterCLICommands();
 	#endif
 #endif
+#endif
+
+#if (CONFIG_QAT)
+	extern void qat_module_init (void);
+	qat_module_init();
 #endif
 
 #ifdef SUPPORT_FERMION_LOGGER

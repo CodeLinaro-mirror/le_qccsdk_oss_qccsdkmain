@@ -1,5 +1,8 @@
-/**
- */
+/*
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #include <string.h>
 #include <stdio.h>
 #include "fwconfig_cmn.h"
@@ -371,9 +374,63 @@ uart_status uart_open(uart_instance instance, uart_config *config)
 #elif CONFIG_SOC_QCC730V2
     dev->hal = (uart_hal *)(QCC730V2_UART_BASE_BASE);
 #endif
-
 	uart_xfr_init(&dev->tx, tx_buf, sizeof(tx_buf), portMAX_DELAY, UART_TX_DIR, (UART_HW_FIFO_SIZE / 2));
 	uart_xfr_init(&dev->rx, rx_buf, sizeof(rx_buf), portMAX_DELAY, UART_RX_DIR, (UART_HW_FIFO_SIZE / 2));
+	
+	dev->state = UART_INIT;
+
+	status = uart_configure(dev, config);
+
+	if (status != UART_SUCCESS) {
+		UART_PRINTF("uart_open configure failed %d\n", status);
+		dev->state = UART_UNINIT;
+		return	status;
+	}
+
+	UART_DUMP(dev, UART_DUMP_CONF | UART_DUMP_REG);
+
+	return UART_SUCCESS;
+}
+
+uart_status uart_open_with_rx_timeout(uart_instance instance, uart_config *config, uint32_t timeout)
+{
+	uart_dev *dev;
+	uint8_t enable = 1;
+	uart_status status;
+
+	dev = uart_get_dev(instance);
+
+	if (dev == NULL || config == NULL) {
+		UART_PRINTF("uart_open param invalid\n");
+		return	UART_ERROR_NULL_PTR;
+	}
+	
+	if ((dev->state & UART_INIT) != 0) {
+		UART_PRINTF("uart_open device already opened\n");
+		return	UART_ERROR_DEVICE_STATE;
+	}
+
+#if CONFIG_BOARD_QCC730_UART_ENABLE
+	status = uart_platform(enable);
+#else
+    #warning "CONFIG_BOARD_QCC730_UART_ENABLE should be defined. See board_defconfig"
+    status = UART_ERROR;
+#endif
+
+	if (status != UART_SUCCESS) {
+		UART_PRINTF("uart_open platform enable failed %d\n", status);
+		return	status;
+	}
+
+	memset(dev, 0 , sizeof(uart_dev));
+	
+#if CONFIG_SOC_QCC730V1
+    dev->hal = (uart_hal *)(QCC730V1_UART_BASE_BASE);
+#elif CONFIG_SOC_QCC730V2
+    dev->hal = (uart_hal *)(QCC730V2_UART_BASE_BASE);
+#endif
+	uart_xfr_init(&dev->tx, tx_buf, sizeof(tx_buf), portMAX_DELAY, UART_TX_DIR, (UART_HW_FIFO_SIZE / 2));
+	uart_xfr_init(&dev->rx, rx_buf, sizeof(rx_buf), timeout, UART_RX_DIR, (UART_HW_FIFO_SIZE / 2));
 	
 	dev->state = UART_INIT;
 
@@ -608,7 +665,7 @@ uart_status uart_transmit(uart_instance instance, uint8_t *buf, uint32_t size, u
 	}
 
 	*sent = 0; 
-		
+
 	UART_PRINTF("uart_transmit start to enqueue\r\n");
 	while (size > 0) {
 		status = uart_tx_ring_enqueue(&dev->tx, *buf);		
@@ -668,7 +725,7 @@ uart_status uart_receive(uart_instance instance, uint8_t *buf, uint32_t size, ui
 		status = uart_rx_ring_dequeue(&dev->rx, buf++);
 
 		if (status) {
-			UART_PRINTF("uart_receive rx ring dequeued err %d\r\n", status);
+			//UART_PRINTF("uart_receive rx ring dequeued err %d\r\n", status);
 			break;
 		} else {
 			dequeued ++;

@@ -122,4 +122,8 @@ declare_args() {
     CONFIG_GENERATE_MATTER_LIB=false
     CONFIG_MATTER_LIGHTING_DEMO=false
     CONFIG_MATTER_SWITCH_DEMO=false
+
+    CONFIG_QAT=false
+    CONFIG_QAT_COMMON_DEMO=false
+
 }
