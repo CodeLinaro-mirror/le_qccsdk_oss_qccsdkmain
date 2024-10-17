@@ -22,7 +22,8 @@ image_list = [
     'FERMION_NVM_PROGRAMMER',
     'FERMION_WIFI_LIB',
     'FERMION_FS_DEMO',
-    'FERMION_MQTT_DEMO']
+    'FERMION_MQTT_DEMO',
+	'FERMION_MATTER_DEMO']
 proj_conf = { 
     'FERMION_IOE_QCLI_DEMO':'demo/qcli_demo/prj.conf',
     'FERMION_SBL':'demo/qcli_demo/prj.conf',
@@ -33,6 +34,7 @@ proj_conf = {
     'FERMION_NVM_PROGRAMMER':'demo/qcli_demo/prj.conf',
     'FERMION_FS_DEMO':'demo/fs_demo/prj.conf',
     'FERMION_MQTT_DEMO':'demo/mqtt_demo/prj.conf',
+	'FERMION_MATTER_DEMO':'demo/matter_demo/prj.conf',
 }
 default_build_output = 'build'
 gn_path = '/pkg/qct/software/ubuntu/matter_tool'
@@ -371,6 +373,12 @@ def execute_gn_build(image = 'FERMION'):
     #with open(os.path.join(log_path,'build-ninja.log'), 'w') as outp:
     execute_cmd(cmd, os.path.join(log_path,'build-ninja.log'))
 
+@log_to_file_deco(True)
+def init_matter():
+    logging.info("Update Matter submodules")
+    cmd = ['python', 'tools/matter/init_matter.py']
+    execute_cmd(cmd)
+
 def sign_image(build_output= '',image='FERMION_IOE_QCLI_DEMO'):
 
     image_type = 'app'
@@ -434,6 +442,8 @@ def start_build(image = 'FERMION_WIFI_LIB', out_dir = default_build_output):
             gen_gn_main_config()
             gen_from_xml()
             gen_mib_from_xml()
+        if image == 'FERMION_MATTER_DEMO':
+            init_matter()
         execute_gn_build(image)
         # sign image if need
         if main_options.sign:

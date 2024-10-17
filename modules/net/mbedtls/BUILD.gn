@@ -35,6 +35,7 @@ mbedtls_src = [
     "../../../../comp/mbedtls/library/error.c",
     "../../../../comp/mbedtls/library/gcm.c",
     "../../../../comp/mbedtls/library/hmac_drbg.c",
+    "../../../../comp/mbedtls/library/hkdf.c",
     "../../../../comp/mbedtls/library/md.c",
     "../../../../comp/mbedtls/library/md5.c",
     "../../../../comp/mbedtls/library/memory_buffer_alloc.c",

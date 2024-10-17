@@ -1,0 +1,117 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+
+import("//build_overrides/chip.gni")
+import("//build_overrides/nlassert.gni")
+import("//build_overrides/nlio.gni")
+import("${chip_root}/src/platform/device.gni")
+
+static_library("libLight")
+{
+  sources = [
+    "src/matter.cpp",
+    "common/zapgen/zap-generated/access.h",
+    "common/zapgen/zap-generated/gen_config.h",
+    "common/zapgen/zap-generated/endpoint_config.h",
+    "common/zapgen/zap-generated/IMClusterCommandHandler.cpp",
+    "common/app/PluginApplicationCallbacks.h",
+    "common/app/callback-stub.cpp",
+    "common/app/cluster-init-callback.cpp",
+
+    "${chip_root}/src/app/clusters/barrier-control-server/barrier-control-server.h",
+    "${chip_root}/src/app/clusters/basic-information/basic-information.h",
+    "${chip_root}/src/app/clusters/color-control-server/color-control-server.h",
+    "${chip_root}/src/app/clusters/door-lock-server/door-lock-server.h",
+    "${chip_root}/src/app/clusters/groups-server/groups-server.h",
+    "${chip_root}/src/app/clusters/identify-server/identify-server.h",
+    "${chip_root}/src/app/clusters/level-control/level-control.h",
+    "${chip_root}/src/app/clusters/on-off-server/on-off-server.h",
+    "${chip_root}/src/app/clusters/scenes-server/ExtensionFieldSets.h",
+    "${chip_root}/src/app/clusters/scenes-server/ExtensionFieldSetsImpl.h",
+    "${chip_root}/src/app/clusters/scenes-server/SceneHandlerImpl.h",
+    "${chip_root}/src/app/clusters/scenes-server/SceneTable.h",
+    "${chip_root}/src/app/clusters/scenes-server/SceneTableImpl.h",
+    "${chip_root}/src/app/clusters/scenes-server/scenes-server.h",
+    "${chip_root}/src/app/util/binding-table.cpp",
+    "${chip_root}/src/app/util/binding-table.h",
+    "${chip_root}/src/app/util/generic-callback-stubs.cpp",
+    "${chip_root}/src/app/util/privilege-storage.cpp",
+    "${chip_root}/zzz_generated/app-common/app-common/zap-generated/attributes/Accessors.cpp",
+    "${chip_root}/src/app/reporting/reporting.cpp",
+    "${chip_root}/src/app/util/DataModelHandler.cpp",
+    "${chip_root}/src/app/util/attribute-storage.cpp",
+    "${chip_root}/src/app/util/attribute-table.cpp",
+    "${chip_root}/src/app/util/ember-compatibility-functions.cpp",
+    "${chip_root}/src/app/util/util.cpp",
+    "${chip_root}/src/app/clusters/access-control-server/access-control-server.cpp",
+    "${chip_root}/src/app/clusters/administrator-commissioning-server/administrator-commissioning-server.cpp",
+    "${chip_root}/src/app/clusters/basic-information/basic-information.cpp",
+    "${chip_root}/src/app/clusters/color-control-server/color-control-server.cpp",
+    "${chip_root}/src/app/clusters/descriptor/descriptor.cpp",
+    "${chip_root}/src/app/clusters/diagnostic-logs-server/diagnostic-logs-server.cpp",
+    "${chip_root}/src/app/clusters/diagnostic-logs-server/diagnostic-logs-server.h",
+    "${chip_root}/src/app/clusters/diagnostic-logs-server/BDXDiagnosticLogsProvider.cpp",
+    "${chip_root}/src/app/clusters/diagnostic-logs-server/BDXDiagnosticLogsProvider.h",
+    "${chip_root}/src/app/clusters/diagnostic-logs-server/DiagnosticLogsProviderDelegate.h",
+    "${chip_root}/src/app/clusters/ethernet-network-diagnostics-server/ethernet-network-diagnostics-server.cpp",
+    "${chip_root}/src/app/clusters/fixed-label-server/fixed-label-server.cpp",
+    "${chip_root}/src/app/clusters/general-commissioning-server/general-commissioning-server.cpp",
+    "${chip_root}/src/app/clusters/general-diagnostics-server/general-diagnostics-server.cpp",
+    "${chip_root}/src/app/clusters/group-key-mgmt-server/group-key-mgmt-server.cpp",
+    "${chip_root}/src/app/clusters/groups-server/groups-server.cpp",
+    "${chip_root}/src/app/clusters/identify-server/identify-server.cpp",
+    "${chip_root}/src/app/clusters/level-control/level-control.cpp",
+    "${chip_root}/src/app/clusters/localization-configuration-server/localization-configuration-server.cpp",
+    "${chip_root}/src/app/clusters/network-commissioning/network-commissioning.cpp",
+    "${chip_root}/src/app/clusters/occupancy-sensor-server/occupancy-sensor-server.cpp",
+    "${chip_root}/src/app/clusters/on-off-server/on-off-server.cpp",
+    "${chip_root}/src/app/clusters/operational-credentials-server/operational-credentials-server.cpp",
+    "${chip_root}/src/app/clusters/ota-requestor/ota-requestor-server.cpp",
+    "${chip_root}/src/app/clusters/ota-requestor/BDXDownloader.cpp",
+    "${chip_root}/src/app/clusters/ota-requestor/BDXDownloader.h",
+    "${chip_root}/src/app/clusters/ota-requestor/DefaultOTARequestor.cpp",
+    "${chip_root}/src/app/clusters/ota-requestor/DefaultOTARequestorDriver.cpp",
+    "${chip_root}/src/app/clusters/ota-requestor/DefaultOTARequestorStorage.cpp",
+    "${chip_root}/src/app/clusters/ota-requestor/DefaultOTARequestorStorage.h",
+    "${chip_root}/src/app/clusters/ota-requestor/DefaultOTARequestorUserConsent.h",
+    "${chip_root}/src/app/clusters/ota-requestor/ExtendedOTARequestorDriver.cpp",
+    "${chip_root}/src/app/clusters/ota-requestor/OTARequestorStorage.h",
+    "${chip_root}/src/app/clusters/ota-requestor/OTATestEventTriggerHandler.cpp",
+    "${chip_root}/src/app/clusters/ota-requestor/OTATestEventTriggerHandler.h",
+    "${chip_root}/src/app/clusters/scenes-server/scenes-server.cpp",
+    "${chip_root}/src/app/clusters/scenes-server/ExtensionFieldSetsImpl.cpp",
+    "${chip_root}/src/app/clusters/scenes-server/SceneHandlerImpl.cpp",
+    "${chip_root}/src/app/clusters/scenes-server/SceneTableImpl.cpp",
+    "${chip_root}/src/app/clusters/software-diagnostics-server/software-diagnostics-server.cpp",
+    "${chip_root}/src/app/clusters/switch-server/switch-server.cpp",
+    "${chip_root}/src/app/clusters/thread-network-diagnostics-server/thread-network-diagnostics-server.cpp",
+    "${chip_root}/src/app/clusters/thread-network-diagnostics-server/thread-network-diagnostics-provider.cpp",
+    "${chip_root}/src/app/clusters/thread-network-diagnostics-server/thread-network-diagnostics-provider.h",
+    "${chip_root}/src/app/clusters/time-format-localization-server/time-format-localization-server.cpp",
+    "${chip_root}/src/app/clusters/user-label-server/user-label-server.cpp",
+    "${chip_root}/src/app/clusters/wifi-network-diagnostics-server/wifi-network-diagnostics-server.cpp",
+  ]
+
+  public_deps = [
+    "${chip_root}/examples/providers:device_info_provider",
+    "${chip_root}/src/access:access",
+    "${chip_root}/src/app:app",
+    "${chip_root}/src/app/common:attribute-type",
+    "${chip_root}/src/app/common:cluster-objects",
+    "${chip_root}/src/app/common:enums",
+    "${chip_root}/src/app/util:types",
+    "${chip_root}/src/controller:controller",
+    "${chip_root}/src/lib/core:core",
+    "${chip_root}/src/lib/support:support",
+    "${chip_root}/src/protocols/secure_channel:secure_channel",
+  ]
+
+  include_dirs = [
+    "//common/",
+    "//common/zapgen",    
+  ]
+
+  complete_static_lib = true
+  output_name = "libLIGHT"
+}
+

@@ -893,6 +893,12 @@ void nt_dpm_add_dev_to_stack(device_t *dev)
     if(IPADDR_TYPE_V4 == nt_dpm_get_ip_ver(netif)) {
         netif_add(netif, (const ip4_addr_t*)ip_2_ip4(&_ip_address[role]), (const ip4_addr_t*)ip_2_ip4(&netmask[role]),
                 (const ip4_addr_t*)ip_2_ip4(&default_gw[role]), (void *)dev, nt_ethernetif_init, tcpip_input);
+#if LWIP_IPV6
+        netif->ip6_autoconfig_enabled = 1;
+        netif_create_ip6_linklocal_address(netif,1);
+        netif_ip6_addr_set(netif, 1, (const ip6_addr_t*)ip_2_ip6(&ip_address[role]));
+        netif_ip6_addr_set_state(netif,1,IP6_ADDR_VALID);
+#endif
     }
 #endif /* LWIP_IPV4 */
 #if LWIP_IPV6

@@ -14,7 +14,7 @@
 #include <stddef.h>
 
 
-#define configUART_COMMAND_CONSOLE_STACK_SIZE		( 1024 )
+#define configUART_COMMAND_CONSOLE_STACK_SIZE		( 2048 )
 #define configUART_COMMAND_CONSOLE_TASK_PRIORITY	( 7U )
 
 /*-------------------------------------------------------------------------
