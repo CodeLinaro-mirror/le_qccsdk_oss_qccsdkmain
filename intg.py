@@ -69,8 +69,9 @@ if args.nrepo == False:
 #build sdk and generate package
 if args.fsdk==True or (os.getenv("CRM_BUILDID")!=None):
     if not is_HY11_build:
-        cUtils.rmtree('SRC-IOE-SDK')
-        cUtils.python_script_op(script='tools/pack/pack_sdk.py')
+        #cUtils.rmtree('SRC-IOE-SDK')
+        #cUtils.python_script_op(script='tools/pack/pack_sdk.py')
+        print("no need to pack from here\r\n")
     else:
         print("HY_11 build, no need to pack\r\n")
 	
