@@ -480,6 +480,8 @@ int http_client_stop(void)
         if (g_httpc_ctxt->lh)
         {
             qurt_mutex_delete((qurt_mutex_t *)g_httpc_ctxt->lh);
+            free(g_httpc_ctxt->lh);
+            g_httpc_ctxt->lh = NULL;
         }
         free(g_httpc_ctxt);
         g_httpc_ctxt = NULL;
@@ -1197,6 +1199,7 @@ static void sslContextFree( SSLContext_t * pSslContext )
     mbedtls_entropy_free( &( pSslContext->entropyContext ) );
     mbedtls_ctr_drbg_free( &( pSslContext->ctrDrbgContext ) );
     mbedtls_ssl_config_free( &( pSslContext->config ) );
+    free(pSslContext);
 }
 
 static int sslSetCredentials( httpclient_sess *sess, SSLContext_t * pSslContext )
@@ -1361,6 +1364,7 @@ int http_client_sslconnect(httpclient_sess *sess)
     if(ret != 0)
     {
         sslContextFree(sess->sslCtx);
+        sess->sslCtx = NULL;
         htdbgprintf("http_client_sslconnect fail, ctx init fail.\n");
         return -1;
     }
@@ -1369,6 +1373,7 @@ int http_client_sslconnect(httpclient_sess *sess)
     if(ret != 0)
     {
         sslContextFree(sess->sslCtx);
+        sess->sslCtx = NULL;
         htdbgprintf("http_client_sslconnect fail, set credential fail.\n");
         return -1;
     }
@@ -1377,6 +1382,7 @@ int http_client_sslconnect(httpclient_sess *sess)
     if(ret != 0)
     {
         sslContextFree(sess->sslCtx);
+        sess->sslCtx = NULL;
         htdbgprintf("http_client_sslconnect fail, ssl setup fail.\n");
         return -1;
     }
@@ -1385,6 +1391,7 @@ int http_client_sslconnect(httpclient_sess *sess)
     if(ret != 0)
     {
         sslContextFree(sess->sslCtx);
+        sess->sslCtx = NULL;
         htdbgprintf("http_client_sslconnect fail, ssl handshake fail, ret:%x.\n", ret);
         return -1;
     }
