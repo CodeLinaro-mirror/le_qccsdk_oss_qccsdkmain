@@ -324,6 +324,9 @@ i2c_status i2c_close(i2c_instance instance)
 
 	i2c_hal_disable(dev->hal);
 
+	if(dev->sync_sem)
+		nt_osal_semaphore_delete(dev->sync_sem);
+		
 	status = i2c_platform(enable);
 
 	if (status != I2C_SUCCESS) {
