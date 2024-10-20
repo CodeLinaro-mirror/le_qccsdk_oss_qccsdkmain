@@ -81,7 +81,7 @@ source_set("drivers") {
         ]
     }
     
-    if (CONFIG_QCSPI_HFC_TEST) {
+    if (CONFIG_RING_IF_ONLY) {
         sources += [
              "hfc/qapi_hfc.c",
         ]

@@ -362,7 +362,7 @@ bool ringif_f2a_pkt_attach(uint8_t ring_id, uint32_t *p_buf_start, uint32_t *p_b
     p_write_element = p_ring_ctx->p_ring_base + curr_write_idx * p_ring_ctx->ring_elem_size;
 
     if((p_write_element->p_buf != NULL) || (p_write_element->p_buf_start != NULL)) {
-        RINGIF_PRINT_LOG_ERR("ringif_f2a_pkt_attach(ring:%d) FAIL as old pkt not cleared yet at idx: %d\r\n", (uint32_t) ring_id, curr_write_idx);
+        //RINGIF_PRINT_LOG_ERR("ringif_f2a_pkt_attach(ring:%d) FAIL as old pkt not cleared yet at idx: %d\r\n", (uint32_t) ring_id, curr_write_idx);
         ringif_stats_f2a_attach_fail(ring_id, 1);
         return FALSE;
     }

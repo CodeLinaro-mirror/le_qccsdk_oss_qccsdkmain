@@ -26,6 +26,9 @@
 #define QCSPI_HFC_THREAD_PRIO               6
 #define HFC_HEADER_SIZE                     sizeof(hfc_msg_t)
 
+extern unsigned int _ln_RAM_ferm_multiuse_gpio_assert_info_addr;
+uint32_t *f2a_gpio_assert_info = (uint32_t *)&_ln_RAM_ferm_multiuse_gpio_assert_info_addr;
+
 static qurt_pipe_t qcspi_hfc_data_queue;
 
 #ifdef CONFIG_QCSPI_HFC_TEST    
@@ -176,6 +179,16 @@ qbool_t data_svc_hfc_send_config(uint32_t *p_buf, uint16_t len)
 uint32_t data_svc_hfc_get_max_msg_num(void)
 {
     return MAX_NUM_A2F_CTRL_RING_ELEMS + MAX_NUM_A2F_DATA_RING_ELEMS;
+}
+
+uint32_t data_svc_set_gpio_assert_info(uint32_t info)
+{
+    if (*f2a_gpio_assert_info != info)
+    {
+        *f2a_gpio_assert_info = info;
+        ringif_indicate_to_host(0, RING_DIR_F2A);	
+    }
+
 }
 
 int hfc_rx_raw_ether(struct pbuf *p, struct netif *netif)

@@ -56,5 +56,14 @@ qapi_Status_t qapi_hfc_sendto_host_data_pkt(void* p_buff, uint8_t *payload, uint
  * FALSE -- On failure.
  */
 qbool_t qapi_hfc_sendto_host_config_pkt(uint32_t *p_buf, uint16_t len);
+
+/**
+ * @brief API to be used to set wlan state.
+ * @return  
+ * QAPI_OK -- On success.\n
+ * QAPI_ERROR -- On failure.
+ */
+qapi_Status_t qapi_hfc_set_gpio_assert_info(f2a_event_type event);
+
 #endif /* QAPI_HFC_H */
 

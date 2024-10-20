@@ -17,6 +17,11 @@
 #include "mgmt_filter_demo.h"
 #endif
 
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE
+#include "data_svc_hfc.h"
+#include "qapi_hfc.h"
+#endif
+
 #define WIFI_SHELL_INFO 1
 #define WIFI_SHELL_LOG  0
 
@@ -181,6 +186,23 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
     }
 }
 
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE
+int qcspi_hfc_send_wlan_event(uint32_t event_id)
+{
+    f2a_event_type info;
+	if (event_id == QAPI_WLAN_CONNECT_CB_E) {
+        info = WLAN_CONNECT_EVENT;
+	} else if (event_id == QAPI_WLAN_DISCONNECT_CB_E) {
+        info = WLAN_DISCONNECT_EVENT;
+	} else {
+        return -1;
+	}
+	
+	qapi_hfc_set_gpio_assert_info(info);
+	return 0;  
+}
+#endif
+
 static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, void __unused *pApplicationContext, void *payload, uint32_t payload_Length)
 {
     wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
@@ -221,7 +243,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
                 p_cxt->active_device, cxnInfo->bss_Connection_Status, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
             if (e_wpa_ver==QAPI_WLAN_AUTH_WPA_PSK_E || e_wpa_ver==QAPI_WLAN_AUTH_WPA2_PSK_E) {
                 info_printf("4 way handshake success for device=1\n");
-            }
+            }	
         } else {
 			info_printf("WiFi disconnect reason code is %d\n", cxnInfo->reason_code);
 			if(cxnInfo->bss_Connection_Status) {
@@ -237,6 +259,10 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
         info_printf("ssid = %s\n", p_cxt->ssid);
         info_printf("assoc_id=%d\n", cxnInfo->assoc_id);
         info_printf("host_initiated=%d\n", cxnInfo->host_initiated);
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE		
+        qcspi_hfc_send_wlan_event(QAPI_WLAN_CONNECT_CB_E);
+#endif		
+		
         break;
     }
     case QAPI_WLAN_DISCONNECT_CB_E: {
@@ -248,6 +274,9 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
         if(p_cxt->ssid_length) 
             info_printf("devId %d disconnected from ssid = %s\n", p_cxt->active_device, p_cxt->ssid);
 
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE		
+        qcspi_hfc_send_wlan_event(QAPI_WLAN_DISCONNECT_CB_E);
+#endif		
         break;
     }
 	case QAPI_WLAN_CHANNEL_SWITCH_CB_E: {
