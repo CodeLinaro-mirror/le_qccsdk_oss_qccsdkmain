@@ -1,0 +1,30 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+qat_inc = []
+
+qat_src = []
+
+
+qat_inc += [
+    ".",
+]
+
+qat_src += [
+    "qat.c",
+    "qat_uart.c",
+    "qat_util.c",
+]
+
+
+config("_config") {
+    include_dirs = qat_inc
+}
+
+source_set("qat") {
+    sources = qat_src
+}
