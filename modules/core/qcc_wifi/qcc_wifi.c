@@ -1,10 +1,32 @@
 /*
  */
+#include "autoconf.h"
 #include "fwconfig_cmn.h"
 #include "nt_flags.h"
 #include "nt_osal.h"
 #include "nt_common.h"
 #include "nt_wfm_wmi_interface.h"
+#include <stdint.h>
+
+struct libwifi_qos_null_kconfig_t{
+    uint8_t enable;
+    uint8_t retry_count;
+    uint16_t socmp_nop_delay;
+};
+
+struct libwifi_qos_null_kconfig_t g_libwifi_qos_null_kconfig_t;
+
+
+void libwifi_kconfig_install(void)
+{
+#ifdef CONFIG_ACK_TIMEOUT_MODIFY_ENABLE
+    g_libwifi_qos_null_kconfig_t.enable = TRUE;
+#else
+    g_libwifi_qos_null_kconfig_t.enable = FALSE;
+#endif
+    g_libwifi_qos_null_kconfig_t.retry_count = CONFIG_QOS_NULL_DATA_MAX_RETRY_COUNT;
+    g_libwifi_qos_null_kconfig_t.socmp_nop_delay = CONFIG_QOS_NULL_DATA_RETRY_DELAY;
+}
 
 NT_BOOL wmi_pdev_utf_cmd(wmi_msg_struct_t* msg)
 {

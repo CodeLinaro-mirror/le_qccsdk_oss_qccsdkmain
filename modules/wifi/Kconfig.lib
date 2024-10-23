@@ -7,5 +7,19 @@ config WIFILIB_6GHZ
 config MGMT_FILTER_DEMO 
     bool "enable management frames filter DEMO"
     default n 
+    
+config ACK_TIMEOUT_MODIFY_ENABLE
+    bool "enable set ack timeout"
+    default y
+
+config QOS_NULL_DATA_MAX_RETRY_COUNT
+    hex "set qos null data max retry count"
+    default 20 if ACK_TIMEOUT_MODIFY_ENABLE = n
+    default 2 if ACK_TIMEOUT_MODIFY_ENABLE = y
+
+config QOS_NULL_DATA_RETRY_DELAY
+    hex "set qos null data retry delay"
+    default 100 if ACK_TIMEOUT_MODIFY_ENABLE = n
+    default 3000 if ACK_TIMEOUT_MODIFY_ENABLE = y
 
 endmenu

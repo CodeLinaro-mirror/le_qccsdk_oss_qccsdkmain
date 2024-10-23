@@ -774,6 +774,9 @@ qcspi_hfc_init();
         nt_app_inter_tcp_uplink_traffic();
 #endif // NT_FN_INTER_TCP_INTERVAL
 #endif
+    extern void libwifi_kconfig_install(void);
+    libwifi_kconfig_install();
+
     halphy_bdf_init((uint32_t *)bdf_addr);
     if(app_mode == APP_MODE_FTM)
     {
