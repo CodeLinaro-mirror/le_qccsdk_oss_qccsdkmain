@@ -25,9 +25,11 @@ static qapi_Status_t Init(uint32_t __attribute__((__unused__)) Parameter_Count, 
 static qapi_Status_t Get(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
 
-    uint32_t returned_data= 0;
-    returned_data = nt_pget_rng();
-    printf("rng data is 0x%x\r\n",returned_data);
+    uint32_t rng_data= 0;
+    char buffer[100];
+    rng_data = nt_pget_rng();
+    snprintf(buffer, sizeof(buffer), "rng data is 0x%08x", rng_data);
+    printf("%s\r\n", buffer);
     return QAPI_OK;
 }
 
