@@ -1,7 +1,7 @@
 [
   {
     "1": "Used and updated by extension, you should not change it manually if you don't know why",
-    "prjName": "fermionSDK",
+    "prjName": "qcc730SDK",
     "IDEVer": "^0.5.6",
     "sdkName": "qccsdk_qcc730",
     "sdkVer": "1.0.0",
@@ -75,7 +75,7 @@
   },
   {
     "2": "Used and updated by extension, you should not change it manually if you don't know why",
-    "prjName": "fermionCliDemo",
+    "prjName": "qcc730CliDemo",
     "IDEVer": "^0.5.6",
     "sdkName": "qccsdk_qcc730",
     "sdkVer": "1.0.0",
@@ -150,7 +150,7 @@
   },
   {
     "3": "Used and updated by extension, you should not change it manually if you don't know why",
-    "prjName": "fermionPosixDemo",
+    "prjName": "qcc730PosixDemo",
     "IDEVer": "^0.5.6",
     "sdkName": "qccsdk_qcc730",
     "sdkVer": "1.0.0",
@@ -225,7 +225,7 @@
   },
   {
     "4": "Used and updated by extension, you should not change it manually if you don't know why",
-    "prjName": "fermionSbl",
+    "prjName": "qcc730Sbl",
     "IDEVer": "^0.5.6",
     "sdkName": "qccsdk_qcc730",
     "sdkVer": "1.0.0",
@@ -297,7 +297,7 @@
   },
   {
     "5": "Used and updated by extension, you should not change it manually if you don't know why",
-    "prjName": "fermionHelloWorld",
+    "prjName": "qcc730HelloWorld",
     "IDEVer": "^0.5.6",
     "sdkName": "qccsdk_qcc730",
     "sdkVer": "1.0.0",
@@ -372,7 +372,7 @@
   },
   {
     "6": "Used and updated by extension, you should not change it manually if you don't know why",
-    "prjName": "fermionNVMPrg",
+    "prjName": "qcc730NVMPrg",
     "IDEVer": "^0.5.6",
     "sdkName": "qccsdk_qcc730",
     "sdkVer": "1.0.0",
