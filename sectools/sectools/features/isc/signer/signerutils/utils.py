@@ -1,8 +1,7 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
-
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 def get_sw_id(signing_attributes):
     if (hasattr(signing_attributes, "anti_rollback_version") and

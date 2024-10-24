@@ -1,7 +1,8 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
+
 """Definitions for the crypto module.
 
 **MOD_* Modules:** IDs available for discovery. These are passed to the factory.

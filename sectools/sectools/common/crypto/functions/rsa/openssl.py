@@ -1,7 +1,8 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
+
 import re
 from sectools.common.crypto import utils
 from sectools.common.crypto.discovery.openssl import OpenSSLDiscoveryImpl, OPENSSL_PKEYUTL_FIXED_VERSION_MIN

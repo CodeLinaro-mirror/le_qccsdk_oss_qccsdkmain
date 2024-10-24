@@ -1,7 +1,7 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 from sectools.common.utils.datautils.enumerated_types import ENABLE
 from sectools.features.isc.cfgparser.defines import ENUMERATED_DEBUG_MAPPING

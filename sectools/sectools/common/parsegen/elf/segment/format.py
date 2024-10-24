@@ -1,7 +1,7 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 from sectools.common.parsegen.elf.header.format import Elf32_Ehdr, Elf64_Ehdr
 from sectools.common.parsegen.elf.header.ident import ELFCLASS32, ELFCLASS64,\

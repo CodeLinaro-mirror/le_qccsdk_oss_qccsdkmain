@@ -1,7 +1,7 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 """Parses the config file specific to secimage. Provides all the
 functionalities from :mod:`sectools.common.utils.c_config`. Once the config is parsed,

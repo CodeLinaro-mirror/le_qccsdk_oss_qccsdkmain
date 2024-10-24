@@ -1,7 +1,7 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 from sectools.common.parsegen import PAD_BYTE_1
 from sectools.common.parsegen.pmbl.defines import FLASH_CODE_WORD, MAGIC_NUM
