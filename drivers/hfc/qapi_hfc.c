@@ -67,5 +67,21 @@ uint32_t qapi_hfc_get_max_msg_num(void)
     return data_svc_hfc_get_max_msg_num();
 }
 
+/**
+ * @brief API to be used to set wlan state.
+ * @return  
+ * QAPI_OK -- On success.\n
+ * QAPI_ERROR -- On failure.
+ */
+qapi_Status_t qapi_hfc_set_gpio_assert_info(f2a_event_type event)
+{
+    if(data_svc_set_gpio_assert_info(event) == 0)
+    {
+        return QAPI_OK;
+    }
+	
+    return QAPI_ERROR;
+}
+
 #endif //SUPPORT_RING_IF
 

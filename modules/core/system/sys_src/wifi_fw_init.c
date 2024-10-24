@@ -18,7 +18,7 @@
 #include "nt_common.h"
 #include "nt_hw.h"
 #include "nt_gpio_api.h"
-
+#include "nt_mem.h"
 #ifdef IMAGE_FERMION
 #include "timer_test.h"
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
@@ -92,10 +92,16 @@ void wifi_fw_defaults_table_init(void)
 
     g_fw_defaults_table.table_hdr = WIFI_FW_TABLE_HDR_PATTERN;
     g_fw_defaults_table.table_len = sizeof(wifi_fw_defaults_t);
-    g_fw_defaults_table.reserved1 = 0;
+    g_fw_defaults_table.reserved0 = 0;
 
     g_fw_defaults_table.wifi_fw_maj_ver = WIFI_FW_MAJOR_VER;
     g_fw_defaults_table.wifi_fw_min_ver = WIFI_FW_MINOR_VER;
+
+    nt_get_macid(&g_fw_defaults_table.mac_addr[0]);
+	/*get the mac address of wlan st1 device*/
+    g_fw_defaults_table.mac_addr[IEEE80211_ADDR_LENGTH-1]+=1;
+	
+    g_fw_defaults_table.reserved1 = 0;
 
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
     g_fw_defaults_table.num_a2f_rings = ringif_max_num_a2f_rings();
