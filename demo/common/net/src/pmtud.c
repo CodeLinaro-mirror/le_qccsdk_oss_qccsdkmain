@@ -63,8 +63,8 @@ static u16_t ip_identification;
 
 #define MIN_MTU           68     // minimum MTU size in bytes (RFC 1191, Sect.3)
 #define LOCAL_MTU         1500   
-#define TIMEOUT           900000
-#define MTU_MUX_RETRY     10
+#define TIMEOUT           100000
+#define MTU_MUX_RETRY     3
 
 /**
  * PMTU_DEBUG: Enable debugging for PMTUD.
@@ -259,8 +259,13 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
         } 
         else if (sel == 0) {
             PMTUD_PRINTF("Timeout occurred! No data available.\n");
-            retry_counter++;
-            high = current_mtu - 1;
+            if(--retry_counter == 0) 
+            {
+                retry_counter = MTU_MUX_RETRY;
+                // update the mtu
+                high = current_mtu - 1;
+            }
+            
         } 
         else {
             recv_len = lwip_recvfrom(s, buffer, LOCAL_MTU, 0, (struct sockaddr*)&from, &fromlen);
@@ -268,7 +273,7 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
                 // timeout: packet got lost or server is down
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     if (--retry_counter == 0) {
-                        printf("no response, invalid MTU size\n");
+                        PMTUD_PRINTF("no response, invalid MTU size\n");
                         retry_counter = MTU_MUX_RETRY;
                         // update the mtu
                         high = current_mtu - 1;
@@ -311,7 +316,7 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
 	}
     closesocket(s);
     free(buffer);
-    return new_mtu + IP_HLEN + sizeof(struct icmp_echo_header);
+    return new_mtu > 0 ? (new_mtu + IP_HLEN + sizeof(struct icmp_echo_header)) : new_mtu;
 fail:
     free(buffer);
     return status;
