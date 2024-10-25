@@ -1,8 +1,7 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
-
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 from sectools.common.utils import c_config
 from sectools.common.utils.c_logging import logger
 from sectools.common.utils.c_misc import get_dups_in_list
