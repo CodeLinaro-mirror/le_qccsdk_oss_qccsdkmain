@@ -7,4 +7,14 @@ config MBEDTLS_PKA_TEST
     bool "enable test for Mbedtls PKA"
     depends on MBEDTLS_USE_PKA
     default y
+config MBEDTLS_AES_ALT
+    bool "enable aes alt"
+    default y
+config MBEDTLS_CCM_ALT
+    bool "enable ccm alt"
+    depends on MBEDTLS_AES_ALT
+    default y
+config MBEDTLS_SHA_ALT
+    bool "enable sha1 sha256 alt"
+    default y
 endmenu

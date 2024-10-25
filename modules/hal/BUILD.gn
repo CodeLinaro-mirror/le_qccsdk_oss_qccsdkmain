@@ -45,6 +45,12 @@ source_set("hal") {
         "qcc730/security/nt_security_ip.c",
         "qcc730/security/nt_prng.c",
         "qcc730/security/nt_prng_integration.c",
+        "qcc730/security/CeCL.c",
+        "qcc730/security/CeCL_Clk.c",
+        "qcc730/security/CeEL.c",
+        "qcc730/security/CeEL_Dm.c",
+        "qcc730/security/CeML.c",
+        "qcc730/security/CeEL_Env.c",
     ]
     if (CONFIG_QTIMER) {
         sources += [ "qcc730/qtmr/ferm_qtmr.c" ]

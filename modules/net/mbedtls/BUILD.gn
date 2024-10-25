@@ -103,6 +103,33 @@ else {
     ]
 }
 
+if(CONFIG_MBEDTLS_AES_ALT || CONFIG_MBEDTLS_CCM_ALT) {
+    mbedtls_src += [
+        "../../../../comp/mbedtls/port/aes_common.c",
+        "../../../../comp/mbedtls/port/qccaes.c",
+    ]
+}
+
+if(CONFIG_MBEDTLS_AES_ALT) {
+    mbedtls_src += [
+        "../../../../comp/mbedtls/port/aes_alt.c",
+    ]
+}
+
+if(CONFIG_MBEDTLS_CCM_ALT) {
+    mbedtls_src += [
+        "../../../../comp/mbedtls/port/ccm_alt.c",
+        "../../../../comp/mbedtls/port/aes_ccm.c",
+    ]
+}
+
+if(CONFIG_MBEDTLS_SHA_ALT) {
+    mbedtls_src += [
+        "../../../../comp/mbedtls/port/sha_alt.c",
+        "../../../../comp/mbedtls/port/qcc_digest.c",
+    ]
+}
+
 config("_config") {
     include_dirs = mbedtls_inc
 }

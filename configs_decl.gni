@@ -127,4 +127,8 @@ declare_args() {
     CONFIG_QAT=false
     CONFIG_QAT_COMMON_DEMO=false
 
+    CONFIG_MBEDTLS_AES_ALT = false
+    CONFIG_MBEDTLS_CCM_ALT = false
+    CONFIG_MBEDTLS_SHA_ALT = false
+
 }

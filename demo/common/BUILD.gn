@@ -59,6 +59,9 @@ crypto_demo_src = [
     "crypto/crypto_demo.c",
 ]
 
+qcc_demo_src = [
+    "qcc/qcc_demo.c",
+]
 not_needed("*", [ ])
 
 config("_config") {
@@ -76,6 +79,9 @@ source_set("common") {
 
     sources += crypto_demo_src
     include_dirs += ["//demo/common/crypto"]
+
+    sources += qcc_demo_src
+    include_dirs += ["//demo/common/qcc"]
 
     if (CONFIG_NET) {
         if (CONFIG_NET_SHELL) {
