@@ -9,12 +9,12 @@ config MBEDTLS_PKA_TEST
     default y
 config MBEDTLS_AES_ALT
     bool "enable aes alt"
-    default y
+    default n
 config MBEDTLS_CCM_ALT
     bool "enable ccm alt"
     depends on MBEDTLS_AES_ALT
-    default y
+    default n
 config MBEDTLS_SHA_ALT
     bool "enable sha1 sha256 alt"
-    default y
+    default n
 endmenu
