@@ -50,5 +50,7 @@ extern qapi_Status_t wlan_set_edcca_threshold(uint8_t device_ID, uint8_t edcca_t
 extern qapi_Status_t wlan_get_edcca_threshold(uint8_t *edcca_threshold);
 extern qapi_Status_t wlan_set_tx_power(qapi_WLAN_Set_Txpower_Params_t txpower_params);
 extern qapi_Status_t wlan_get_tx_power(qapi_WLAN_Get_Power_Evt_t *txpower_params);
+extern qapi_Status_t wlan_set_bmiss_threshold(uint8_t device_ID, uint8_t bmiss_threshold);
+extern qapi_Status_t wlan_get_bmiss_threshold(uint8_t *bmiss_threshold);
 #endif //WLAN_QAPI_HELPER_H
 
