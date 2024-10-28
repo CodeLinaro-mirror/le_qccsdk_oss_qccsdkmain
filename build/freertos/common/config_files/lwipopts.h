@@ -69,6 +69,8 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 
 #define MEMP_NUM_TCPIP_MSG_INPKT		75		/** Number of struct tcpip_msg, which are used for incoming packets. */
 
+#define MEMP_NUM_NETBUF                 8       /** Number of struct netbufs. */
+
 #define IP_REASS_MAXAGE                 3
 
 #define CHECKSUM_GEN_IP                 1
