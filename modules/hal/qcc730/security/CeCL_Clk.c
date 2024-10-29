@@ -42,7 +42,7 @@ when         who     what, where, why
  *       hence the clock request using DAL API's is not required. 
  */
 
-CeCLErrorType CeClClockEnable(void) //pka_enable_clock
+CeCLErrorType CeClClockEnable(void)
 {
   QCC730V2_CCU_BASE_Type *ccu = QCC730V2_CCU_BASE;
   ccu->ccu.CCU_R_CCU_ENABLE_CLK.bit.QCC_ENABLE_CLK = 1;
