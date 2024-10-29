@@ -404,11 +404,7 @@ CeCLErrorType CeCLIOCtlGetHashCntx(CeCLHashAlgoCntxType *ctx_ptr)
    ctx_ptr->auth_iv[6] = HW_REG_RD(CECL_CE_AUTH_IV6);
    ctx_ptr->auth_iv[7] = HW_REG_RD(CECL_CE_AUTH_IV7);
 
-  HAL_REG_WR(CECL_CE_AUTH_SEG_SIZE, 0);
-  HAL_REG_WR(CECL_CE_ENCR_SEG_SIZE, 0);
-  HAL_REG_WR(CECL_CE_SEG_SIZE, 0);
-  HAL_REG_WR(CECL_CE_AUTH_SEG_START, 0);
-  HAL_REG_WR(CECL_CE_ENCR_SEG_START, 0);
+
 #if 0
    int i;
    for(i=0; i<8; i++)

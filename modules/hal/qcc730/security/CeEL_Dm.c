@@ -612,13 +612,10 @@ CeELErrorType CeElCryptoShaDxeXfer( uint32 *buff_in,
     for(i=0;i<buff_in_len;i++)
     {
         {
+            while( !(HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_REG) & QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_DIN_RDY_MASK));
+
             HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_IN_REG,buff_in[i]);
         }
-
-        //for(j = 0; j < 4; j++) 
-        //{
-        //    //buff_out[j+i] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_OUT_REG+(j*4));
-        //}
     }
     return CEEL_ERROR_SUCCESS;
 }

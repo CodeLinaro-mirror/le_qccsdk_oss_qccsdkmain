@@ -40,7 +40,7 @@ static qapi_Status_t Command_Unit_Test(uint32_t Parameter_Count, QAPI_Console_Pa
 const QAPI_Console_Command_t Qcc_Command_List[] =
 {
     /* cmd_function                     cmd_string      usage_string              description */
-    {Command_Unit_Test,                 "selftest",     "\n\selftest <Module> <verbose>",      "Run qcc selftest, module: aes, ccm, sha1, sha256, all"},
+    {Command_Unit_Test,                 "selftest",     "\n selftest <Module> <verbose>",      "Run qcc selftest, module: aes, ccm, sha1, sha256, all"},
 };
 
 const QAPI_Console_Command_Group_t Qcc_Command_Group =

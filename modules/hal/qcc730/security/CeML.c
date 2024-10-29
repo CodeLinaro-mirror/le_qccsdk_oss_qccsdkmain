@@ -355,7 +355,8 @@ CeMLErrorType CeMLDeInit (void)
   CeElMutexEnter();
   CeElDeInit(); 
   CeClDeinit();
-  CeElDisableClock();
+  //DO NOT disable QCC CLK
+  //CeElDisableClock();
   CeElMutexExit();
   return CEML_ERROR_SUCCESS;
 }
@@ -441,13 +442,13 @@ CeMLErrorType  _CeMlHashUpdate (CeMLHashAlgoCntxType *ctx_ptr,
     }
   
     ret_val = CeElCryptoShaDxeXfer(inIoVec.iov->pvBase, inIoVec.iov->dwLen, outIoVec.iov->pvBase, outIoVec.iov->dwLen);
+    while( !(HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_REG) & QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_OPERATION_DONE_MASK));
     if (CEML_ERROR_SUCCESS != ret_val) 
     {
 	   //ctx_ptr->non_blocking_ptr.pending_dm_request = 0;
        break;
     }
   
-    usleep(20);
     //Read HASH context
     // ret_val = (CeMLErrorType)CeCLIOCtlGetHashCntx((CeCLHashAlgoCntxType*) (&(ctx_ptr->ctx)));
     pdwActualOut = sizeof(CeCLHashAlgoCntxType);
