@@ -117,6 +117,13 @@ nt_status_t wlan_send_probe_req(devh_t *dev, uint8_t *dstAddr, uint8_t *bssid,
 void wlan_set_beacon_threshold(devh_t *dev, uint8_t count);
 
 /**
+ * @brief function for getting beacon miss threshold
+ * @params  count : Beacon miss count value intending to get.
+ * @retval None
+ */
+void wlan_get_beacon_threshold(devh_t *dev, uint8_t *count);
+
+/**
  * @brief Invalidate TBTT estimate for device
  * @Param  : dev : device structure pointer
  * @Return : none

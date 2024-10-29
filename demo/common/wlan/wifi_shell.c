@@ -1929,6 +1929,7 @@ static qapi_Status_t setApplicationIe(uint32_t __attribute__((__unused__)) Param
 
 #define RT_IDX_11B_LONG_1_MBPS 0
 #define RT_IDX_11A_6_MBPS 1
+#define RT_IDX_11A_12_MBPS 2
 // use this command after 2G connection
 static qapi_Status_t setAntiInfParam(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
@@ -1948,6 +1949,13 @@ static qapi_Status_t setAntiInfParam(uint32_t __attribute__((__unused__)) Parame
 
     ba_win_size_cfg.ack_timeout = 128; //128us, should less than 4096
     ba_win_size_cfg.delay = 10; //10 * 2 * SM clock cycles, should less than 64
+
+    if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid)
+    {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    rts_rate = Parameter_List[0].Integer_Value;
 
     if (0 != qapi_WLAN_Set_Param (deviceId,
                                 __QAPI_WLAN_PARAM_GROUP_WIRELESS,
@@ -1969,7 +1977,7 @@ static qapi_Status_t setAntiInfParam(uint32_t __attribute__((__unused__)) Parame
                                 FALSE))
     {
         info_printf("fix RTS rate fail\r\n");
-        info_printf("0:1Mbps  1:6Mbps\r\n");
+        info_printf("0:1Mbps  1:6Mbps 2:12Mbps\r\n");
         return -1;
     }
 
@@ -2237,6 +2245,60 @@ static qapi_Status_t getEdccaThreshold(uint32_t __attribute__((__unused__)) Para
     return QAPI_OK;
 }
 
+static qapi_Status_t setBmissThreshold(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint8_t bmiss;
+    if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_List[0].Integer_Value > UINT8_MAX || Parameter_List[0].Integer_Value < 0) {
+        info_printf("beacon miss threshold need set 0-255\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    bmiss = Parameter_List[0].Integer_Value;
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_BMISS_CONFIG,
+                                &bmiss,
+                                sizeof(bmiss),
+                                FALSE))
+    {
+        info_printf("set bmiss threshold fail, check the wlan connection or data validation\r\n");
+        return QAPI_ERROR;
+    }
+    info_printf("bmiss threshold is set to %d\n",bmiss);
+    return QAPI_OK;
+}
+
+static qapi_Status_t getBmissThreshold(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t length;
+    uint8_t deviceId = get_active_device();
+    uint8_t bmiss_threshold;
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        /* edca should be set after connectting */
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
+    length = sizeof(bmiss_threshold);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_BMISS_CONFIG,
+                                &bmiss_threshold,
+                                &length)){
+        info_printf("get bmiss threshold fail for device %d\n",deviceId);
+        return QAPI_ERROR;
+    } else {
+        info_printf("bmiss threshold:%d\r\n", bmiss_threshold);
+    }
+    return QAPI_OK;
+}
+
 const QAPI_Console_Command_t wifi_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -2280,7 +2342,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 	{ setMgmtFilter,	"setMgmtFilter",        "0:None, 1:Asso Resp, 2:Probe Resp, 3:Asso and Probe Resp, -1:print mgmt frames",  "Set management frames filter"},
 #endif	
 	{ setApplicationIe, "setApplicationIe", "<0:beacon/1:probe request/2:probe response/3:asssociation request> <IE starting with dd>",  "Set application specified IE in specified management frame. Every input character is a nibble which means every 2 character is a byte, two characters are converted into a hex number before putting it in the frame. The length of application specified IE should be multiple of 2. if user has single digit value he need to prepend with 0 for ex: 0x5 should be 0x05. To remove IE, input only 'dd'"},
-	{ setAntiInfParam,	"setAntiInfParam",        "",  "Set default anti-interference parameters to improve throughput in noisy environment"},
+	{ setAntiInfParam,	"setAntiInfParam",        "0: 1M RTS, 1: 6M RTS, 2: 12M RTS",  "Set default anti-interference parameters to improve 2g throughput in noisy environment"},
 	{ getAntiInfParam,	"getAntiInfParam",        "",  "Get default anti-interference parameters"},
     { setEdcaParam, "setEdcaParam",        "<qtid:0~7 or 255> <aifsn> <cwmin:exp> <cwmax:exp> <txop_limit>",  "set edca params for qtids, 255:all tids"},
     { getEdcaParam, "getEdcaParam",        "<qtid:0~7 or 255>",  "Get Edca parameters for qtid, 255:tid0"},
@@ -2288,6 +2350,8 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { getEdccaThreshold, "getEdccaThreshold", "", "get the EDCCA threshold"},
     { SetTxPower,           "SetTxPower",     "<txPower> [<policy = 0:SAFETY>]",   "Set the transmit power in dbm. The default policy is SAFETY(SAFETY is the minimum value among reg domain, CTL and target power). Set value to 100 to restore default settings. Tx power range, xpa: 10-SAFETY; ipa:3-SAFETY"   },
     { GetTxPower,           "GetTxPower",     "",                                  "Get the transmit power, reg_power, target power and CTL power"   },
+    { setBmissThreshold, "setBmissThreshold", "<bmiss_threshold: 0~255>", "set beacon miss threshold"},
+    { getBmissThreshold, "getBmissThreshold", "", "get beacon miss threshold"},
 
 };
 
