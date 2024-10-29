@@ -185,6 +185,8 @@ WAR_COEX_VIFERMION285
 
 #define COMPENSATE_AON_PROG_DELAY
 
+#define ENABLE_MCS4_RX /* enable MCS4 RX for 2.0 HW to be able to solve IOP issue */
+
 #ifdef NT_FN_LFS
 #undef NT_FN_LFS /* LFS is not needed for Fermion Image */
 #endif
