@@ -2286,7 +2286,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { getEdcaParam, "getEdcaParam",        "<qtid:0~7 or 255>",  "Get Edca parameters for qtid, 255:tid0"},
     { setEdccaThreshold, "setEdccaThreshold", "<EDCCA value, euqals real value plus 100>", "set EDCCA threshold to filter the non-wifi signal"},
     { getEdccaThreshold, "getEdccaThreshold", "", "get the EDCCA threshold"},
-    { SetTxPower,           "SetTxPower",     "<txPower> [<policy = 0:SAFETY>]",   "Set the transmit power in dbm. The default policy is SAFETY. Set value to 100 to restore default settings."   },
+    { SetTxPower,           "SetTxPower",     "<txPower> [<policy = 0:SAFETY>]",   "Set the transmit power in dbm. The default policy is SAFETY(SAFETY is the minimum value among reg domain, CTL and target power). Set value to 100 to restore default settings. Tx power range, xpa: 10-SAFETY; ipa:3-SAFETY"   },
     { GetTxPower,           "GetTxPower",     "",                                  "Get the transmit power, reg_power, target power and CTL power"   },
 
 };
