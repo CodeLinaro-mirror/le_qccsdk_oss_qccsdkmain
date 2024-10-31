@@ -13,8 +13,6 @@
 GENERAL DESCRIPTION
   This header file contains declarations and definitions for the boot
   error handler interface.
-    
-Copyright 2023 by QUALCOMM Technologies Incorporated.  All Rights Reserved.
 ============================================================================*/
 
 /*===========================================================================
