@@ -98,8 +98,26 @@ static_library("libSwitch")
   ]
 
   public_deps = [
-    "${chip_root}/examples/light-switch-app/light-switch-common",
     "${chip_root}/examples/providers:device_info_provider",
+    "${chip_root}/src/access:access",
+    "${chip_root}/src/app:app",
+    "${chip_root}/src/app/common:attribute-type",
+    "${chip_root}/src/app/common:cluster-objects",
+    "${chip_root}/src/app/common:enums",
+    "${chip_root}/src/app/icd/server:configuration-data",
+    "${chip_root}/src/app/icd/server:icd-server-config",
+    "${chip_root}/src/app/icd/server:monitoring-table",
+    "${chip_root}/src/app/icd/server:notifier",
+    "${chip_root}/src/app/util:types",
+    "${chip_root}/src/controller:controller",
+    "${chip_root}/src/lib/core:core",
+    "${chip_root}/src/lib/support:support",
+    "${chip_root}/src/protocols/secure_channel:secure_channel",
+  ]
+
+  include_dirs = [
+    "//common/",
+    "//common/zapgen",
   ]
 
   complete_static_lib = true
