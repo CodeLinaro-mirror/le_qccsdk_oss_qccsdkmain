@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*========================================================================
 * @file ring_ctx_holder.h
 * @brief Ring Context Holder param and struct definitions
@@ -81,6 +85,7 @@ typedef struct ring_ctx {
     uint8_t ring_elem_size;       /* Actual size of each ring elem */
     uint8_t ring_num_elem;    /* Maximum number of Ring Elements */
     uint8_t ring_idx_to_clear;
+    uint8_t ring_idx_clear_pending;
 
     void *pfn_post2thread;
     void *p_usr_ctx;

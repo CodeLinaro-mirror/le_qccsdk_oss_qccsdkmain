@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*========================================================================
  *
  * @brief WiFi FW (qca5321/7321 family) specific initializations and APIs
@@ -13,7 +17,7 @@
 #include "nt_common.h"
 #include "nt_hw.h"
 #include "nt_gpio_api.h"
-
+#include "nt_mem.h"
 #ifdef IMAGE_FERMION
 #include "timer_test.h"
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
@@ -80,17 +84,23 @@ extern volatile size_t g_SPI_host_read_pos;
  *
  */
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
-static void wifi_fw_defaults_table_init(void)
+void wifi_fw_defaults_table_init(void)
 {
     /* Table that is to be exposed to Apps systems to be initialized here */
     memset(&g_fw_defaults_table, 0, sizeof(wifi_fw_defaults_t));
 
     g_fw_defaults_table.table_hdr = WIFI_FW_TABLE_HDR_PATTERN;
     g_fw_defaults_table.table_len = sizeof(wifi_fw_defaults_t);
-    g_fw_defaults_table.reserved1 = 0;
+    g_fw_defaults_table.reserved0 = 0;
 
     g_fw_defaults_table.wifi_fw_maj_ver = WIFI_FW_MAJOR_VER;
     g_fw_defaults_table.wifi_fw_min_ver = WIFI_FW_MINOR_VER;
+
+    nt_get_macid(&g_fw_defaults_table.mac_addr[0]);
+	/*get the mac address of wlan st1 device*/
+    g_fw_defaults_table.mac_addr[IEEE80211_ADDR_LENGTH-1]+=1;
+	
+    g_fw_defaults_table.reserved1 = 0;
 
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
     g_fw_defaults_table.num_a2f_rings = ringif_max_num_a2f_rings();
@@ -245,10 +255,10 @@ void wifi_fw_module_init(void)
 
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
     /* Initialize the ring interface */
-    ringif_init();
+   // ringif_init();
 
     /* Update Fermion defaults Table to be used by Apps */
-    wifi_fw_defaults_table_init();
+   // wifi_fw_defaults_table_init();
 #endif
 
 #if defined(UNIT_TEST_SUPPORT) && defined(SUPPORT_RING_IF)

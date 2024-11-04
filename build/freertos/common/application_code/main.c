@@ -336,7 +336,7 @@ static void shell_init (void)
 #endif
 
 #if (CONFIG_UART_SHELL)
-	extern void uart_shell_init (void);
+ 	extern void uart_shell_init (void);
 	uart_shell_init();
 #endif
 
@@ -447,6 +447,11 @@ int main(
 #endif
 #endif
 
+#if (CONFIG_QAT)
+	extern void qat_module_init (void);
+	qat_module_init();
+#endif
+
 #ifdef SUPPORT_FERMION_LOGGER
 fw_logger_init();
 #endif //SUPPORT_FERMION_LOGGER
@@ -548,8 +553,12 @@ fw_logger_init();
 #endif
 #ifdef PLATFORM_FERMION
 #ifndef EMULATION_BUILD
-    wifi_fw_pmic_init();
+    wifi_fw_pmic_init_pfm_openloop();
+	
+#ifndef CBC_CX_VOLTAGE_WAR
     wifi_fw_cpr_init();
+#endif /*CBC_CX_VOLTAGE_WAR */
+
 #endif /* EMULATION_BUILD */
 #endif /* PLATFORM_FERMION */
 
@@ -765,6 +774,9 @@ qcspi_hfc_init();
         nt_app_inter_tcp_uplink_traffic();
 #endif // NT_FN_INTER_TCP_INTERVAL
 #endif
+    extern void libwifi_kconfig_install(void);
+    libwifi_kconfig_install();
+
     halphy_bdf_init((uint32_t *)bdf_addr);
     if(app_mode == APP_MODE_FTM)
     {
@@ -784,7 +796,15 @@ qcspi_hfc_init();
 #ifdef HALPHY_CBC_SUPPORT
     /* cold boot calibration call */
     halphy_cbc();
+    nt_socpm_nop_delay(4000);
 #endif /* HALPHY_CBC_SUPPORT */
+
+    wifi_fw_pmic_init();
+    //nt_socpm_nop_delay(4000);
+
+#ifdef CBC_CX_VOLTAGE_WAR
+    wifi_fw_cpr_init();
+#endif // CBC_CX_VOLTAGE_WAR
 
 #ifdef IMAGE_FERMION
     wifi_fw_gpio_init(FALSE);

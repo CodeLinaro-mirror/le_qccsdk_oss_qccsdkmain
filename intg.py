@@ -34,6 +34,8 @@ def apps_build (board_name, ext_demo=False):
         cUtils.python_script_op(script='qccsdk.py set -S=demo/posix_demo build')
         cUtils.python_script_op(script='qccsdk.py set -S=demo/fs_demo build')
         cUtils.python_script_op(script='qccsdk.py set -S=demo/qcli_demo build')
+        cUtils.python_script_op(script='qccsdk.py set -S=demo/matter_demo build')
+        cUtils.python_script_op(script='qccsdk.py set -S=demo/qat_demo build')
 
 def set_default ():
 	cUtils.python_script_op(script='qccsdk.py set -b=qcc730v2_evb11_hostless')
@@ -68,8 +70,9 @@ if args.nrepo == False:
 #build sdk and generate package
 if args.fsdk==True or (os.getenv("CRM_BUILDID")!=None):
     if not is_HY11_build:
-        cUtils.rmtree('SRC-IOE-SDK')
-        cUtils.python_script_op(script='tools/pack/pack_sdk.py')
+        #cUtils.rmtree('SRC-IOE-SDK')
+        #cUtils.python_script_op(script='tools/pack/pack_sdk.py')
+        print("no need to pack from here\r\n")
     else:
         print("HY_11 build, no need to pack\r\n")
 	

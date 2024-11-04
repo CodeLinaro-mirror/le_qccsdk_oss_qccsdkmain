@@ -30,12 +30,17 @@
 
 #include "ping.h"
 #include "iperf.h"
+#include "pmtud_demo.h"
 #include "safeAPI.h"
 #include "ssl_demo.h"
 #include "httpc_demo.h"
 
 #ifdef CONFIG_MQTT_CLIENT_DEMO
 #include "mqtt_client_demo.h"
+#endif
+
+#ifdef CONFIG_SNTP_CLIENT_DEMO
+#include "lwip/apps/sntp.h"
 #endif
 
 static ip_addr_t default_ip_address[MAX_ROLE];
@@ -861,6 +866,110 @@ static qapi_Status_t dhcpv4s(uint32_t Parameter_Count, QAPI_Console_Parameter_t 
 #endif
 }
 
+#ifdef CONFIG_SNTP_CLIENT_DEMO
+static qapi_Status_t sntpc(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+	uint8_t id = 0;
+	char msg_name_too_long[] = "Domain name or address cannot be more then 64 bytes\n";
+	char msg_op_class[] = "the operating class for SNTP client should be 0 or 1";
+	char *cmd = NULL;	
+	char *ptr = NULL;
+	ip_addr_t ip_addr;
+
+    /* sntpc */
+    if (Parameter_Count == 0)
+    {
+        uint8_t i = 0;
+        uint8_t started;
+		const char *name = NULL;
+		const ip_addr_t *addr = NULL;
+
+        started = sntp_enabled();
+        info_printf("SNTP client is %s.\n", started ? "started" : "stopped");
+
+		for(i = 0;i < SNTP_MAX_SERVERS;i++)
+		{
+			name = sntp_getservername(i);
+			addr = sntp_getserver(i);
+			info_printf("%d; %s		%s", i, name != NULL ? name : "****", addr != NULL ? ipaddr_ntoa(addr) : "****");
+			if(sntp_getkodreceived(i) != 0)
+			{
+				printf("	KOD");
+			}
+			printf("\n");
+		}
+
+        /* If not started, we want to display cmd syntax */
+        if (!started)
+        {
+            return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+        }
+		
+        return QAPI_OK;
+    }	
+
+	cmd = Parameter_List[0].String_Value;
+	/* Sntpc  start */
+    if (strncmp(cmd, "start", 5) == 0)
+    {
+        sntp_init();
+    }
+    /* Sntpc  stop */
+    else if (strncmp(cmd, "stop", 4) == 0)
+    {
+        sntp_stop();
+    }
+	/* Sntpc  set operating class */
+    else if (strncmp(cmd, "setOpMode", 9) == 0)
+    {
+    	uint8_t opMode = 0;
+		if(Parameter_Count >= 2 && Parameter_List[1].Integer_Is_Valid)
+		{
+			opMode = Parameter_List[1].Integer_Value;
+			if(opMode < 2)
+			{
+				sntp_setoperatingmode(opMode);
+				return QAPI_OK;
+			}
+		}
+		info_printf("\n%s\n", msg_op_class);
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+	/* Sntpc  setServer <IP addr | name> [id] */
+    else if (strncmp(cmd, "setServer", 8) == 0)
+    {
+    	if( Parameter_Count >= 3 && Parameter_List[2].Integer_Is_Valid)
+    	{
+    		id = Parameter_List[2].Integer_Value;
+			if(id >= SNTP_MAX_SERVERS)
+			{
+				info_printf("id exceed the max number of SNTP servers");
+				return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+			}
+    	}
+		
+    	if( Parameter_Count >= 2){
+        	ptr = Parameter_List[1].String_Value;
+			if(strlen(ptr) > 64)
+			{
+				info_printf("\n%s\n", msg_name_too_long);
+				return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+			}
+        	if(ipaddr_aton(ptr, &ip_addr))
+			{
+				sntp_setserver(id, &ip_addr);
+        	}
+			else
+			{
+				sntp_setservername(id, ptr);
+			}
+			return QAPI_OK;
+    	}
+    }
+	return QAPI_OK;
+}
+#endif
+
 const QAPI_Console_Command_t net_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -904,6 +1013,15 @@ const QAPI_Console_Command_t net_shell_cmds[] =
                                     "\nMQTT Client: Set up and configure MQ Telemetry Transport client"},
 #endif
 
+    {pmtud_demo, "pmtud",    "\n\nType \"pmtud\" to get mtu on the path to dst\n",
+                                    "\nMTUD Client: Type command. For example \"pmtud --dst\".\n"},
+#ifdef CONFIG_SNTP_CLIENT_DEMO
+	{sntpc,		"sntpc",	"\n\nsntpc\n" \
+							"sntpc [start|stop]\n" \
+							"sntpc setOpMode <0|1>\n" \
+							"sntpc setServer <IP addr|name> [id]",
+								"\nSNTP client start or stop, configure"}
+#endif
 };
 
 const QAPI_Console_Command_Group_t net_shell_cmd_group = {NET_SHELL_GROUP_NAME, sizeof(net_shell_cmds) / sizeof(QAPI_Console_Command_t), net_shell_cmds};

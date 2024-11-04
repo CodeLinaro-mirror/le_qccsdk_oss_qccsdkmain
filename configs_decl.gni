@@ -20,6 +20,7 @@ declare_args() {
     CONFIG_RING_IF = false
     CONFIG_RING_IF_ONLY = false
     CONFIG_QCSPI_HFC_TEST = false
+    CONFIG_QCSPI_HFC_ETH_ENABLE = false
     CONFIG_SAP_POWERSAVE = false
     CONFIG_WFM_EN = false
     CONFIG_DEBUG_STATS = false
@@ -115,4 +116,19 @@ declare_args() {
 
     CONFIG_CPR_ENABLE = true
     CONFIG_RNG_TEST = false
+    CONFIG_SNTP_CLIENT = false
+    CONFIG_SNTP_CLIENT_DEMO = false
+    CONFIG_NET_SSL_DEMO = false
+    CONFIG_MATTER_ENABLE=false
+    CONFIG_GENERATE_MATTER_LIB=false
+    CONFIG_MATTER_LIGHTING_DEMO=false
+    CONFIG_MATTER_SWITCH_DEMO=false
+
+    CONFIG_QAT=false
+    CONFIG_QAT_COMMON_DEMO=false
+
+    CONFIG_MBEDTLS_AES_ALT = false
+    CONFIG_MBEDTLS_CCM_ALT = false
+    CONFIG_MBEDTLS_SHA_ALT = false
+
 }

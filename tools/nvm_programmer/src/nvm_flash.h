@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef _NVM_FLASH_H_
 #define _NVM_FLASH_H_
 #ifdef CONFIG_BOARD_QCC730_QSPI_ENABLE

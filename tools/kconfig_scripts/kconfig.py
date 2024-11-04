@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 # Writes/updates the zephyr/.config configuration file by merging configuration
 # files passed as arguments, e.g. board *_defconfig and application prj.conf

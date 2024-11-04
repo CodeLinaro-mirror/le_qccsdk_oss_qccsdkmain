@@ -1,0 +1,54 @@
+#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+#import("${root_build_dir}/mainconfig.gni")
+import("//configs_decl.gni")
+
+matter_demo_inc = [
+    "src",
+]
+
+matter_demo_src = [
+    "src/matter_main.c",
+    "src/sbrk.c",
+]
+
+not_needed("*", [ ])
+
+if (CONFIG_MATTER_ENABLE) {
+    matter_demo_src += [
+        "src/matter_demo.c",
+    ]
+}
+
+config("_config") {
+    if (image_name == "FERMION_MATTER_DEMO" ) {
+        include_dirs = matter_demo_inc
+    }
+}
+
+source_set("matter_demo") {
+    if (image_name == "FERMION_MATTER_DEMO" ) {
+        sources = matter_demo_src
+    }
+
+    #public_deps = [":gen_matter_lib"]
+}
+
+if (CONFIG_MATTER_ENABLE) {
+  if (CONFIG_GENERATE_MATTER_LIB) {
+    print("Generating Matter lib...")
+    if (CONFIG_MATTER_LIGHTING_DEMO) {
+      result = exec_script("//tools/matter/gn_matter.py", ["lighting-app"], "list lines")  
+      foreach(item, result) {
+        print(item)
+      }
+    }
+    else if (CONFIG_MATTER_SWITCH_DEMO) {
+      result = exec_script("//tools/matter/gn_matter.py", ["light-switch-app"], "list lines")  
+      foreach(item, result) {
+        print(item)
+      }
+    }
+  }
+}

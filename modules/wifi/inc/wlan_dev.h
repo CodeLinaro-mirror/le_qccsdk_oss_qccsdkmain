@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef _WLAN_DEV_H_
 #define _WLAN_DEV_H_
@@ -505,6 +509,10 @@ typedef struct dev_common_s {
     phyrf_reg_rule_struct       *Reg_Rules;
     phyrf_reg_exchange_struct   *reg_info;
 #endif /* SUPPORT_REGULATORY */
+
+    /*for getting tx power*/
+    wlan_tx_power_t             power;
+    
 } dev_common_t;
 
 typedef struct devh_s {

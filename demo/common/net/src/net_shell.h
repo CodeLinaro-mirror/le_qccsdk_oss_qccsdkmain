@@ -1,5 +1,8 @@
 /*
- */
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef __NET_SHELL_H__ // [
 #define __NET_SHELL_H__
 
@@ -16,9 +19,6 @@
 
 /* enable Iperf fucnion */
 #define CONFIG_NET_IPERF
-
-/* enable SSL tool */
-#define CONFIG_NET_SSL_DEMO
 
 #if NET_SHELL_INFO
 #define info_printf(msg,...)     printf(NET_SHELL_GROUP_PRINTF_SUFFIX msg, ##__VA_ARGS__)

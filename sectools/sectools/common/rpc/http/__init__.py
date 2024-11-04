@@ -1,7 +1,8 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
+
 from future.moves.urllib.request import urlopen, Request
 from future.moves.urllib.error import HTTPError, URLError
 

@@ -4,7 +4,7 @@
  */
 
 #include "nt_osal.h"
-#include "mbedtls/config.h"
+#include "mbedtls/mbedtls_config.h"
 #include "nt_prng.h"
 #include "string.h"
 

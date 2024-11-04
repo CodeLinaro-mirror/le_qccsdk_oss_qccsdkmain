@@ -1,7 +1,7 @@
-# ===============================================================================
-#
-#
-# ===============================================================================
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 from sectools.features.isc.parsegen.ewm.format import SecParseGenEwm
 from sectools.features.isc.parsegen.elf_mbn_v6 import ElfMbnV6

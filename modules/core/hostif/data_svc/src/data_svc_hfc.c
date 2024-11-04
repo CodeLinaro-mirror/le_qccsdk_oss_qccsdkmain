@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*========================================================================
 *
 * @brief Function definitions for hfc connections
@@ -9,6 +13,8 @@
 * ----------------------------------------------------------------------*/
 #include <stdlib.h>
 #include "unistd.h"
+#include "netif.h"
+#include "pbuf.h"
 #include "data_svc_priv.h"
 #include "data_svc_hfc_priv.h"
 #include "data_svc_hfc.h"
@@ -19,12 +25,39 @@
 #define QCSPI_HFC_THREAD_PRIO               6
 #define HFC_HEADER_SIZE                     sizeof(hfc_msg_t)
 
+extern unsigned int _ln_RAM_ferm_multiuse_gpio_assert_info_addr;
+uint32_t *f2a_gpio_assert_info = (uint32_t *)&_ln_RAM_ferm_multiuse_gpio_assert_info_addr;
+
 static qurt_pipe_t qcspi_hfc_data_queue;
 
 #ifdef CONFIG_QCSPI_HFC_TEST    
 extern qurt_pipe_t qcspi_hfc_test_queue;
 #endif
 
+#if defined(CONFIG_QCSPI_HFC_ETH_ENABLE)
+/*
+*Get pbuf used for hfc receive
+*@param p_element :   pointer to ring element
+*@param len       :   length of payload
+*@return          :   TRUE if buffer allocated
+*                 :   FALSE if buffer not allocated
+*/
+bool data_svc_get_hfc_data_buff(void* p_element, uint16_t len)
+{
+    configASSERT(NULL != p_element);
+    ring_element_t* p_elem = (ring_element_t *)p_element;
+    struct pbuf* p_pbuf = pbuf_alloc(PBUF_RAW, len, PBUF_RAM);
+    if(p_pbuf != NULL)
+    {
+        p_elem->p_buf=p_pbuf->payload;
+        p_elem->p_buf_start=p_pbuf;
+        p_elem->len=len;
+        return TRUE;
+    }
+
+    return FALSE;	
+}
+#else
 /*
 *Get buffer used for hfc receive
 *@param p_element :   pointer to ring element
@@ -34,28 +67,21 @@ extern qurt_pipe_t qcspi_hfc_test_queue;
 */
 bool data_svc_get_hfc_data_buff(void* p_element, uint16_t len)
 {
-
     configASSERT(NULL != p_element);
-
-    ring_element_t* p_elem=(ring_element_t *)p_element;
-
-    void* p_buf = nt_osal_allocate_memory(len + HFC_HEADER_SIZE);
-	RINGIF_PRINT_LOG_INFO("allocate hfc buf %x len %d\r\n", (uint32_t)p_buf, len);
-
-    if(p_buf != NULL)
+    ring_element_t* p_elem = (ring_element_t *)p_element;
+    uint32_t* buf = nt_osal_allocate_memory(len);
+    if(buf != NULL)
     {
-        p_elem->p_buf_start=p_buf;
+        p_elem->p_buf=buf;
+        p_elem->p_buf_start=buf;
         p_elem->len=len;
-        p_elem->p_buf=(uint32_t*)((uint8_t*)p_buf + HFC_HEADER_SIZE);
-
         return TRUE;
     }
-    else
-    {
-        return FALSE;
-    }
+
+    return FALSE;	
 }
 
+#endif
 /*
 *Free buffer used for hfc receive
 *@param p_element :   pointer to ring element
@@ -154,12 +180,51 @@ uint32_t data_svc_hfc_get_max_msg_num(void)
     return MAX_NUM_A2F_CTRL_RING_ELEMS + MAX_NUM_A2F_DATA_RING_ELEMS;
 }
 
-/*
-*process the hfc packet from Host
-*@param p_element :   pointer to ring element
-*@return          :   TRUE on sucess
-*                 :   FALSE on else
-*/
+uint32_t data_svc_set_gpio_assert_info(uint32_t info)
+{
+    if (*f2a_gpio_assert_info != info)
+    {
+        *f2a_gpio_assert_info = info;
+        ringif_indicate_to_host(0, RING_DIR_F2A);	
+    }
+
+}
+
+int hfc_rx_raw_ether(struct pbuf *p, struct netif *netif)
+{
+	uint8_t *buf = (uint8_t *)nt_osal_allocate_memory(p->len);
+
+	if (p->next != NULL || p->len>1600)
+	    printf("[%s][%d]: buff size %d %d next 0x%x\n", __func__, __LINE__, PBUF_POOL_BUFSIZE, p->len, p->next);
+
+	memcpy(buf, p->payload, p->len);
+
+	if (data_svc_hfc_recv_data_pkt(buf, buf, p->len, 0) != QAPI_OK)
+		nt_osal_free_memory(buf);
+ 
+ 	return 0;
+}
+
+static int hfc_tx_raw_ethernet(uint8_t *buff, int len)
+{
+	struct netif *netif = netif_find("st1");
+
+	if (netif) {
+		struct pbuf *pb = (struct pbuf*)buff;
+		if (pb) {	
+			pb->len = pb->tot_len = len;
+			netif->linkoutput(netif, pb);
+			pbuf_free(pb);
+		} else {
+			printf("[%s][%d]: pbuf_alloc failed\n", __func__, __LINE__);
+ 		}
+	} else {
+		printf("[%s][%d]: netif not found\n", __func__, __LINE__);
+	}
+	
+	return 0;
+}
+
 bool process_hfc_data_pkt(void* p_element)
 {
     RINGIF_PRINT_LOG_INFO("hfc: Processing hfc packet\r\n");
@@ -170,7 +235,7 @@ bool process_hfc_data_pkt(void* p_element)
 	    return FALSE;
 	}
 	
-#ifndef CONFIG_QCSPI_HFC_TEST
+#if (!defined(CONFIG_QCSPI_HFC_TEST) && !defined(CONFIG_QCSPI_HFC_ETH_ENABLE))
 	uint16_t i;
 	uint8_t* p =(uint8_t*)(p_elem->p_buf);
 
@@ -182,6 +247,8 @@ bool process_hfc_data_pkt(void* p_element)
 	}
 	printf("\r\n");
 	nt_osal_free_memory(p_elem->p_buf_start);
+#elif defined(CONFIG_QCSPI_HFC_ETH_ENABLE)
+    hfc_tx_raw_ethernet(p_elem->p_buf_start, p_elem->len);
 #else
     RINGIF_PRINT_LOG_INFO("recv test demo data buf %x len %d:  \r\n", (uint32_t)p_elem->p_buf_start, p_elem->len);			
     data_svc_hfc_queue_send(p_elem, HFC_DATA_MSG);
@@ -255,6 +322,14 @@ void qcspi_hfc_init(void)
     uint32_t ret_val;
     nt_osal_task_handle_t  hfc_task_hdl;
     RINGIF_PRINT_LOG_INFO("qcspi_hfc_init");
+	
+    extern void ringif_init(void);
+	/* Initialize the ring interface */
+    ringif_init();
+
+    extern void wifi_fw_defaults_table_init(void);
+    /* Update Fermion defaults Table to be used by Apps */
+    wifi_fw_defaults_table_init();
 
     ret_val =  (uint32_t)nt_qurt_thread_create(qcspi_hfc_thread, "qcspi_hfc_thread", QCSPI_HFC_THREAD_STACKSIZE, NULL, QCSPI_HFC_THREAD_PRIO, &hfc_task_hdl);
     if(ret_val != pdPASS)

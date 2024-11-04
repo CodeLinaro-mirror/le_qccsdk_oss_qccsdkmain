@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /******************************************************************************
  * @file    fdi_rmc.h
  * @brief   Interface for using Fermion Debug Infra on RAM MIN CODE

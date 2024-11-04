@@ -1,8 +1,12 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef _OTA_TFTP_H_
 #define _OTA_TFTP_H_
 
-/**********************************************************************************************************/
+
 /* Preprocessor Definitions and Constants											                      */
 /**********************************************************************************************************/
 /*

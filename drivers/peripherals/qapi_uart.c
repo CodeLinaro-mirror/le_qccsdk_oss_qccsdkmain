@@ -1,13 +1,14 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 /** 
     @file  qapi_uart.c
     @brief UART QAPI implementation
  */
 
-/*==================================================================================================
 
-
-==================================================================================================*/
 
 /*==================================================================================================
                                            INCLUDE FILES
@@ -84,6 +85,28 @@ qapi_Status_t qapi_UART_Receive
 
 	return UART_ErrorMap(u_status);
 }
+
+/*==================================================================================================
+
+FUNCTION: qapi_UART_Open_With_Rx_Timeout
+
+DESCRIPTION:
+
+==================================================================================================*/
+qapi_Status_t qapi_UART_Open_With_Rx_Timeout
+(
+	qapi_UART_Instance_t		instance,
+	qapi_UART_Open_Config_t		*config,
+	uint32_t					timeout
+)
+{
+	uart_status u_status;
+
+    u_status = uart_open_with_rx_timeout((uart_instance)instance, (uart_config *)config, timeout);
+
+	return UART_ErrorMap(u_status);
+}
+
 
 /*==================================================================================================
 

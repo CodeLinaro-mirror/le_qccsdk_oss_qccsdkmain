@@ -1,0 +1,61 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+
+import("//build_overrides/chip.gni")
+import("//build_overrides/fermion.gni")
+import("${chip_root}/build/chip/buildconfig_header.gni")
+import("${chip_root}/src/platform/device.gni")
+
+assert(chip_device_platform == "fermion")
+
+config("fermion_config"){
+  include_dirs = [
+    "${fermion_root}/build/freertos/common/config_files",
+    "${fermion_root}/modules/core/common",
+    "${fermion_root}/modules/wifi/inc",
+    "${fermion_root}/include/",
+    "${fermion_root}/include/qapi/common",
+    "${fermion_root}/include/qapi/wlan",
+    "${fermion_root}/../comp/freertos/FreeRTOS/Source/include",
+    "${fermion_root}/../comp/freertos/FreeRTOS/Source/portable/GCC/ARM_CM4F",
+    "${fermion_root}/../comp/mbedtls/include",
+    "${fermion_root}/../comp/lwip/src/include",
+    "${fermion_root}/../comp/lwip/src/portable",
+    "${fermion_root}/output/qcc730v2_evb11_hostless/FERMION_MATTER_DEMO/DEBUG",
+    "${fermion_root}/modules/fs",
+    "${fermion_root}/lib/libc/include",
+  ]
+}
+
+static_library("fermion") {
+  sources = [
+    "${chip_root}/src/platform/FreeRTOS/SystemTimeSupport.cpp",
+    "${chip_root}/src/platform/SingletonConfigurationManager.cpp",
+    "CHIPDevicePlatformConfig.h",
+    "CHIPDevicePlatformEvent.h",
+    "ConfigurationManagerImpl.cpp",
+    "ConfigurationManagerImpl.h",
+    "ConnectivityManagerImpl.cpp",
+    "ConnectivityManagerImpl.h",
+    "ConnectivityManagerImpl_WiFi.cpp",
+    "DiagnosticDataProviderImpl.cpp",
+    "DiagnosticDataProviderImpl.h",
+    "FermionConfig.cpp",
+    "FermionConfig.h",
+    "FermionUtils.cpp",
+    "FermionUtils.h",
+    "InetPlatformConfig.h",
+    "KeyValueStoreManagerImpl.cpp",
+    "KeyValueStoreManagerImpl.h",
+    "Logging.cpp",
+    "NetworkCommissioningDriver.cpp",
+    "NetworkCommissioningDriver.h",
+    "PlatformManagerImpl.cpp",
+    "PlatformManagerImpl.h",
+    "CHIPPlatformConfig.h",
+  ]
+
+  public_deps = [
+    "${chip_root}/src/platform:platform_base",
+  ]
+}

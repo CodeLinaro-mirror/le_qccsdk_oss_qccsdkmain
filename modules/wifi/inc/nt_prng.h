@@ -1,9 +1,12 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+/*
  * prng.h
  *
  */
-/*
-*/
+
 
 #ifndef CORE_SYSTEM_HCAL_INC_NT_PRNG_H_
 #define CORE_SYSTEM_HCAL_INC_NT_PRNG_H_

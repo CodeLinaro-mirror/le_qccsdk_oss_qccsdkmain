@@ -1286,16 +1286,16 @@ Command ID to fix RTS rate in 2G when operating in Station mode.
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G           85
 
 /**
-Command ID to adjust contention window size when operating in Station mode.
+Command ID to adjust edca parameters when operating in Station mode.
 
 @note1hang This parameter can only be used with qapi_WLAN_Set_Param().
 
-@param[in] qapi_WLAN_Contention_Window_Params_t  Set contention window size for queue 0-7.
+@param[in] qapi_WLAN_Edca_Params_t  Set edca parameters for queue 0-7.
 
 @sa
-#qapi_WLAN_Contention_Window_Params_t
+#qapi_WLAN_Edca_Params_t
 */
-#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW           86
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM           86
 
 /**
 Command ID to adjust PER upper threshold when operating in Station mode.
@@ -1326,6 +1326,15 @@ Command ID to adjust BA window size when operating in Station mode.
 @param[in] uint32_t  change slot time to 9us/20us.
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME           89
+
+/**
+Command ID to adjust EDCCA threshold when operating in Station mode.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+Set EDCCA threshold to 0-100.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCCA_THRESHOLD     90
 
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE                0
 

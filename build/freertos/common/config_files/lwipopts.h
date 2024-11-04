@@ -64,9 +64,12 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #define MEMP_NUM_UDP_PCB                8		/** Maximum number of PCB allocation for UDP allowed at any instance in system */
 #define DEFAULT_TCP_RECVMBOX_SIZE		64		/** mailbox size for the incoming packets on a NETCONN_TCP. */
 #define DEFAULT_UDP_RECVMBOX_SIZE		64		/** mailbox size for the incoming packets on a NETCONN_UDP. */
+#define DEFAULT_RAW_RECVMBOX_SIZE		64		/** mailbox size for the incoming packets on a NETCONN_RAW. */
 #define DEFAULT_ACCEPTMBOX_SIZE			64		/** mailbox size for the incoming connections in case of TCP listen. */
 
 #define MEMP_NUM_TCPIP_MSG_INPKT		75		/** Number of struct tcpip_msg, which are used for incoming packets. */
+
+#define MEMP_NUM_NETBUF                 8       /** Number of struct netbufs. */
 
 #define IP_REASS_MAXAGE                 3
 
@@ -146,6 +149,10 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 
 #ifdef HTTPS_SERVER
 #define PBUF_POOL_SIZE                  16
+#elif CONFIG_MATTER_ENABLE
+#define PBUF_POOL_SIZE                  8
+#define MEMP_STATS                      0
+#define LWIP_DISABLE_TCP_SANITY_CHECKS  1
 #else
 #define PBUF_POOL_SIZE                  0
 #endif

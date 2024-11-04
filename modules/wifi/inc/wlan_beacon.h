@@ -1,5 +1,8 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
 //
 // This file contains the internal structures and definitions used by
 // the beacon module.
@@ -112,6 +115,13 @@ nt_status_t wlan_send_probe_req(devh_t *dev, uint8_t *dstAddr, uint8_t *bssid,
  * @retval None
  */
 void wlan_set_beacon_threshold(devh_t *dev, uint8_t count);
+
+/**
+ * @brief function for getting beacon miss threshold
+ * @params  count : Beacon miss count value intending to get.
+ * @retval None
+ */
+void wlan_get_beacon_threshold(devh_t *dev, uint8_t *count);
 
 /**
  * @brief Invalidate TBTT estimate for device

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*========================================================================
 * @file data_ring_hdlr.h
 * @brief Data ring header parameters and function declarations
@@ -17,11 +21,11 @@
 /*------------------------------------------------------------------------
 * Preprocessor Definitions and Constants
 * ----------------------------------------------------------------------*/
-#define DATA_RING_BUFF_SIZE         1400
+#define DATA_RING_BUFF_SIZE         1600
 
 /* Keeping A2F elements to minimum to avoid allocating too many buffers */
 /* in the beginning. anyway during refill more will be allocated */
-#define MAX_NUM_A2F_DATA_RING_ELEMS 8
+#define MAX_NUM_A2F_DATA_RING_ELEMS 20
 #define MAX_NUM_F2A_DATA_RING_ELEMS 32
 
 #define TOTAL_NUM_DATA_RING_ELEMS (MAX_NUM_A2F_DATA_RING_ELEMS + MAX_NUM_F2A_DATA_RING_ELEMS)

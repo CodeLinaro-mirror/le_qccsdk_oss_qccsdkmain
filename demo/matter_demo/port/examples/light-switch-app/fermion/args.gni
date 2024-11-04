@@ -1,0 +1,26 @@
+import("//build_overrides/chip.gni") 
+
+target_os = "freertos"
+chip_device_platform = "fermion"
+lwip_platform = "external"
+host_cpu = "arm"
+
+arm_cpu = "cortex-m4"
+arm_arch = "armv7e-m"
+
+chip_crypto = "mbedtls"
+chip_external_mbedtls = true
+chip_config_network_layer_ble = false
+chip_inet_config_enable_ipv4 = false
+chip_stack_lock_tracking = "none" 
+
+chip_device_project_config_include = "<CHIPProjectConfig.h>"
+chip_system_project_config_include = "<CHIPProjectConfig.h>"
+chip_project_config_include = "<CHIPProjectConfig.h>"
+chip_inet_project_config_include = "<CHIPProjectConfig.h>"
+
+chip_project_config_include_dirs = [ "//include" ]
+chip_device_platform_config_include = "<CHIPDevicePlatformConfig.h>"
+chip_platform_config_include = "<CHIPPlatformConfig.h>"
+chip_inet_platform_config_include = "<InetPlatformConfig.h>"
+chip_system_platform_config_include = "<SystemPlatformConfig.h>"

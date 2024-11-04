@@ -14,6 +14,7 @@ import re
 
 image_list = [ 
     'FERMION_SBL',
+	'FERMION_HOSTED_SBL',
     'FERMION_IOE_QCLI_DEMO',
     'FERMION_FTM',
     'FERMION_HELLO_WORLD',
@@ -21,16 +22,21 @@ image_list = [
     'FERMION_NVM_PROGRAMMER',
     'FERMION_WIFI_LIB',
     'FERMION_FS_DEMO',
-    'FERMION_MQTT_DEMO']
+    'FERMION_MQTT_DEMO',
+    'FERMION_MATTER_DEMO',
+    'FERMION_QAT_DEMO']
 proj_conf = { 
     'FERMION_IOE_QCLI_DEMO':'demo/qcli_demo/prj.conf',
     'FERMION_SBL':'demo/qcli_demo/prj.conf',
+	'FERMION_HOSTED_SBL':'demo/qcli_demo/prj.conf',
     'FERMION_FTM':'demo/ftm/ftm_prj.conf',
     'FERMION_HELLO_WORLD':'demo/hello_world/prj.conf',
     'FERMION_POSIX_DEMO':'demo/posix_demo/prj.conf',
     'FERMION_NVM_PROGRAMMER':'demo/qcli_demo/prj.conf',
     'FERMION_FS_DEMO':'demo/fs_demo/prj.conf',
     'FERMION_MQTT_DEMO':'demo/mqtt_demo/prj.conf',
+    'FERMION_MATTER_DEMO':'demo/matter_demo/prj.conf',
+    'FERMION_QAT_DEMO':'demo/qat_demo/prj.conf'
 }
 default_build_output = 'build'
 gn_path = '/pkg/qct/software/ubuntu/matter_tool'
@@ -256,6 +262,9 @@ def pre_build_script(variant_name = 'FERMION_QCLI_DEMO', variant_image_id = 'MM'
     if variant_image_id == 'SBL':
         pre_build_script = 'sbl_prebuild.py'
         cmd = [ 'python', 'build/freertos/eclipse-gcc/Scripts/' + pre_build_script, '.', variant_name, variant_image_id ]
+    if variant_image_id == 'HOSTED_SBL':
+        pre_build_script = 'sbl_prebuild.py'
+        cmd = [ 'python', 'build/freertos/eclipse-gcc/Scripts/' + pre_build_script, '.', variant_name, variant_image_id ]
     #cmd = [ 'python', 'tools/host_tools/dev_cfg/' + pre_build_script, '.',
     #    variant_name, variant_image_id,
     #]
@@ -315,6 +324,9 @@ def execute_gn_build(image = 'FERMION'):
     if image == 'FERMION_SBL':
         variant_image_id = 'SBL'
         pre_build_script(image, variant_image_id)
+    if image == 'FERMION_HOSTED_SBL':
+        variant_image_id = 'HOSTED_SBL'
+        pre_build_script(image, variant_image_id)
         #logging.warning('image=%s ....' %(image))
     # gn gen
     #gn_args = '--args='
@@ -363,11 +375,19 @@ def execute_gn_build(image = 'FERMION'):
     #with open(os.path.join(log_path,'build-ninja.log'), 'w') as outp:
     execute_cmd(cmd, os.path.join(log_path,'build-ninja.log'))
 
+@log_to_file_deco(True)
+def init_matter():
+    logging.info("Update Matter submodules")
+    cmd = ['python', 'tools/matter/init_matter.py']
+    execute_cmd(cmd)
+
 def sign_image(build_output= '',image='FERMION_IOE_QCLI_DEMO'):
 
     image_type = 'app'
     if image =='FERMION_SBL':
         image_type = 'sbl'
+    elif image =='FERMION_HOSTED_SBL':
+        image_type = 'hosted_sbl'
     else:
         image_type = 'app'
 
@@ -424,6 +444,8 @@ def start_build(image = 'FERMION_WIFI_LIB', out_dir = default_build_output):
             gen_gn_main_config()
             gen_from_xml()
             gen_mib_from_xml()
+        if image == 'FERMION_MATTER_DEMO':
+            init_matter()
         execute_gn_build(image)
         # sign image if need
         if main_options.sign:

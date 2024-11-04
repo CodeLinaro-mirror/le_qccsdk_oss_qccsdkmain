@@ -1,0 +1,107 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+import("//configs_decl.gni")
+
+sbl_dir = "//bootloader/HOSTED_SBL"
+core_dir = "//../comp/qcc730/core"
+kernel_dir = "//../comp/freertos/FreeRTOS/Source"
+qurt_dir = "//../comp/qurt/FreeRTOS/2.0"
+posix_dir = "//../comp/posix/"
+posix_fr_inc_dir ="//../comp/posix/FreeRTOS-Plus-POSIX/include"
+posix_fr_port_inc_dir ="//../comp/posix/FreeRTOS-Plus-POSIX/include/Portable"
+mbedtls_dir = "//../comp/mbedtls"
+
+inc_list = [
+  "${sbl_dir}/system",
+  "${sbl_dir}/elf_loader",
+  "${sbl_dir}/include",
+  "${sbl_dir}/src",
+  "${core_dir}/hostif/api/wifi",
+  "${core_dir}/system/inc",
+  "${core_dir}/wifi/mlm/include",
+  "${sbl_dir}/common",
+  "${sbl_dir}/sbl_auth/inc",
+  "${sbl_dir}/sbl_auth/rollback",
+  "${sbl_dir}/sbl_mpu",
+  "${kernel_dir}/include",
+  "${kernel_dir}/portable/GCC/ARM_CM4F",
+  "${posix_dir}",
+  "${posix_fr_inc_dir}",
+  "${posix_fr_port_inc_dir}",
+  "//build/freertos/common/config_files",
+  "${mbedtls_dir}/include",
+  "${mbedtls_dir}/include/mbedtls",
+  "//include",
+  "//lib/misc/inc",
+  "//arch/arm/system/include/cmsis",
+  "//lib/libc/include",
+  "//include",
+  "${qurt_dir}",
+  "//modules/hal/inc",
+  "//modules/hal/qcc730/qspi",
+  "//modules/hal/qcc730/flash",
+  "//modules/hal/qcc730/qtmr",
+  "//modules/core/hostif/api/wifi",
+  "../../comp/posix/include",
+]
+
+pbl_dep_src = [
+#  "${sbl_dir}/elf_loader/boot_elf_loader.c",
+#  "${sbl_dir}/elf_loader/boot_elf_mem.c",
+  "${sbl_dir}/system/nt_bl_rram_dxe.c",
+  "${sbl_dir}/debug/boot_print.c",
+  "${sbl_dir}/debug/boot_log.c",
+]
+
+core_src = [
+  "//lib/libc/source/safeAPI.c",
+]
+
+mbedtls_src = [
+  "${mbedtls_dir}/library/sha256.c",
+  "${mbedtls_dir}/library/platform_util.c",
+]
+
+sbl_src = [
+  "system/nt_bl_uart.c",
+  "system/nt_bl_mem.c",
+  "system/sbl_storage.c",
+#  "system/sbl_flash_fwd.c",
+  "system/rram_fdt.c",
+  "system/nt_gpio.c",
+  "system/qcspi_slave.c",
+  "src/sbl_main.c",
+  "src/wifi_fw_sys_img_loader.c",
+#  "sbl_auth/sbl_auth.c",
+#  "sbl_auth/rollback/boot_rollback_version.c",
+#  "sbl_auth/rollback/boot_rollback_version_impl.c",
+]
+
+if (CONFIG_MPU_ENABLE)
+{
+ # sbl_src += [ "${sbl_dir}/sbl_mpu/sbl_mpu.c", ]
+}
+source_set("HOSTED_SBL") {
+    sources = pbl_dep_src
+    sources += core_src
+    sources += mbedtls_src
+    sources += sbl_src
+    if (CONFIG_BOARD_QCC730_QSPI_ENABLE) {
+#        sources += [ "//modules/hal/qcc730/qspi/ferm_qspi.c" ]
+#        sources += [ "//modules/hal/qcc730/flash/ferm_flash_config.c" ]
+#        sources += [ "//modules/hal/qcc730/flash/ferm_flash.c" ]
+    }
+    include_dirs = inc_list
+    defines = [
+        "SBL_BUILD",
+        "P_DEBUG",
+        "CONFIG_NON_OS",
+        "__LINUX_ERRNO_EXTENSIONS__",
+    ]
+    if (CONFIG_FLASH_XIP_SUPPORT) {
+       defines += [
+            "FLASH_XIP_SUPPORT",
+       ]
+   }
+}

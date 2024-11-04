@@ -1,6 +1,9 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
- /*
- */
+ 
 #ifndef CORE_SYSTEM_INC_FERM_PROF_DEMO_H_
 #define CORE_SYSTEM_INC_FERM_PROF_DEMO_H_
 #include "qapi_types.h"

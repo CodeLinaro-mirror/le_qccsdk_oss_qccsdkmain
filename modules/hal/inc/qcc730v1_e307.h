@@ -1,4 +1,8 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+/*
  *
  * @file     c:/work/src/toolsrc/misc/scripts/totalcommands/cmsis_gen_q/output/qcc730v1.h
  * @brief    CMSIS HeaderFile

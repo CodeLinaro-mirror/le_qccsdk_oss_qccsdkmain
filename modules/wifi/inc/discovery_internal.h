@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef __DISCOVERY_INTERNAL_H__
 #define __DISCOVERY_INTERNAL_H__
@@ -142,31 +146,31 @@ typedef struct dc_dev_ctx {
 
 #if defined(CONFIG_CHANNEL_SCHEDULER_1)
 
-    SEARCH_STATE                   search_state;
+Â Â Â  SEARCH_STATEÂ Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  search_state;
 
-    CSERV_COMPLETION_CB            cb_fn;
+Â Â Â  CSERV_COMPLETION_CBÂ Â Â Â Â Â Â Â Â Â Â  cb_fn;
 
-    void                          *cb_arg;
+Â Â Â  voidÂ Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  *cb_arg;
 
-    CSERV_COMPLETION_CB            beacon_update_comp_cb;
+Â Â Â  CSERV_COMPLETION_CBÂ Â Â Â Â Â Â Â Â Â Â  beacon_update_comp_cb;
 
-    A_TIMER                        beacon_update_timer;
+Â Â Â  A_TIMERÂ Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  beacon_update_timer;
 
-    A_TIMER                        min_chdwell_timer;
+Â Â Â  A_TIMERÂ Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  min_chdwell_timer;
 
-    A_TIMER                        deterministic_scan_timer;
+Â Â Â  A_TIMERÂ Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  deterministic_scan_timer;
 
-    A_UINT32                       deterministic_scan_interval;
+Â Â Â  A_UINT32Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  deterministic_scan_interval;
 
-    A_UINT32                       chdwell_minact_duration;
+Â Â Â  A_UINT32Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  chdwell_minact_duration;
 
-    A_UINT32                       chdwell_maxact_duration;
+Â Â Â  A_UINT32Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  chdwell_maxact_duration;
 
-    A_UINT32                       chdwell_pas_duration;
+Â Â Â  A_UINT32Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  chdwell_pas_duration;
 
-    A_UINT8                        chdwell_maxact_conf_by_user;
+Â Â Â  A_UINT8Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  chdwell_maxact_conf_by_user;
 
-    A_UINT8                        channel_op_requested;
+Â Â Â  A_UINT8Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  channel_op_requested;
 
 #endif
 

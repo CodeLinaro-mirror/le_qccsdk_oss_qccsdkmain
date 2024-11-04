@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /**********************************************************************************************
  * @file wifi_fw_pmu_ts_cfg.c
  * @brief PMU Temperature Sensor Configurations and Trims

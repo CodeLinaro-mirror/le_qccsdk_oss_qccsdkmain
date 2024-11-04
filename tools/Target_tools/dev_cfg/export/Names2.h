@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /** System Generated File
 *  Don't Change Manually */
 #ifndef CORE_DEV_CFG_INC_NT_DEVCFG_STRUCTURE_H_

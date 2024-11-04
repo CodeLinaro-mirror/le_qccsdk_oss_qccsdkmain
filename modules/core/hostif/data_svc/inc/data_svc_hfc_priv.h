@@ -1,13 +1,10 @@
 #ifndef DATA_SVC_HFC_PRIV_H
 #define DATA_SVC_HFC_PRIV_H
 
-/*========================================================================
-* Copyright (c) 2024 Qualcomm Technologies, Inc.
-* All Rights Reserved.
-* Confidential and Proprietary - Qualcomm Technologies, Inc.
-*
-*========================================================================*/
-
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 /*------------------------------------------------------------------------
 * Include Files

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*========================================================================
 * @file wifi_fw_table_api.h
 * @brief WiFi Firmware initialization table APIs/Defs to be shared with Apps
@@ -113,10 +117,13 @@ WIFI_FW_STRUCT_SIZE_SYNC(wifi_fw_dfu_defaults_t, (60));
 typedef struct wifi_fw_defaults {
 uint32_t table_hdr; /* Table Header pattern for host verification */
 uint16_t table_len; /* Table length for host verification */
-uint16_t reserved1;
+uint16_t reserved0;
 
 uint16_t  wifi_fw_maj_ver;  /* WLAN Firmware Major version for Host verification */
 uint16_t  wifi_fw_min_ver;  /* WLAN Firmware Minor version for Host verification */
+
+uint8_t mac_addr[IEEE80211_ADDR_LENGTH];  /*WLAN Device Mac Address*/ 
+uint16_t reserved1;
 
 uint8_t num_a2f_rings;  /* Number of rings supported in A2F direction  */
 uint8_t num_f2a_rings;  /* Number of rings supported in F2A direction  */
@@ -185,6 +192,6 @@ uint16_t  wifi_fw_log_entry_size;
 uint16_t reserved5;
 } wifi_fw_defaults_t;
 WIFI_FW_STRUCT_4BYTE_ALLIGN_CHECK(wifi_fw_defaults_t)
-WIFI_FW_STRUCT_SIZE_SYNC(wifi_fw_defaults_t, (104))
+WIFI_FW_STRUCT_SIZE_SYNC(wifi_fw_defaults_t, (112))
 
 #endif /* WIFI_FW_TABLE_API_H */

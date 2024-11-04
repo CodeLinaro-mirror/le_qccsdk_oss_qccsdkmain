@@ -1,6 +1,8 @@
 #!/usr/bin/python
-
-######################################################################################
+#===============================================================================
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#===============================================================================
 
 ######################################################################################
 # The primary use of this script is to invoke gen_part_table.py and gen_fwd_table.py

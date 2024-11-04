@@ -1,5 +1,8 @@
 /*
- */
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 
 #ifndef __QCLI_PAL_H__
 #define __QCLI_PAL_H__
@@ -14,7 +17,7 @@
 #include <stddef.h>
 
 
-#define configUART_COMMAND_CONSOLE_STACK_SIZE		( 1024 )
+#define configUART_COMMAND_CONSOLE_STACK_SIZE		( 2048 )
 #define configUART_COMMAND_CONSOLE_TASK_PRIORITY	( 7U )
 
 /*-------------------------------------------------------------------------

@@ -1,4 +1,8 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+/*
  * nt_wifi_cfg_lib.h
  *
  *  Created on: 06-Dec-2022

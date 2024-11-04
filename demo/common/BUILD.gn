@@ -59,6 +59,9 @@ crypto_demo_src = [
     "crypto/crypto_demo.c",
 ]
 
+qcc_demo_src = [
+    "qcc/qcc_demo.c",
+]
 not_needed("*", [ ])
 
 config("_config") {
@@ -76,6 +79,9 @@ source_set("common") {
 
     sources += crypto_demo_src
     include_dirs += ["//demo/common/crypto"]
+
+    sources += qcc_demo_src
+    include_dirs += ["//demo/common/qcc"]
 
     if (CONFIG_NET) {
         if (CONFIG_NET_SHELL) {
@@ -116,6 +122,7 @@ source_set("common") {
             "unit_test/unit_test_shell.c"
         ]
     }
+    
     if (CONFIG_SIGMA_TRAFFIC) {    
         sources += [
             "wificert/sigma_traffic/sigma_shell.c",
@@ -157,6 +164,13 @@ source_set("common") {
         sources += gpio_demo_src
     }
 
+    if (CONFIG_NET) {    
+        sources += [
+            "net/src/pmtud_demo.c",
+            "net/src/pmtud.c",
+        ]
+    }
+
     if (CONFIG_HTTP_CLIENT_DEMO) {    
         include_dirs += ["//include/qapi", "net/src"]
         sources += [
@@ -170,6 +184,10 @@ source_set("common") {
 
     if (CONFIG_MQTT_CLIENT_DEMO) {
         include_dirs += ["//modules/net/mqtt_client"]
+    }
+
+    if (CONFIG_SNTP_CLIENT) { 
+        sources += ["//modules/net/sntp/sntp.c",]
     }
 
 }

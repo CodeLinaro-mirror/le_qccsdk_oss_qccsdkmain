@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*========================================================================
  *
  * @file wlan_regulatory.h
@@ -85,6 +89,7 @@ uint8_t wlan_regulatory_unpack(dev_common_t *pDevCmn, uint8_t freq_band);
 
 NT_BOOL wlan_regulatory_set_country_code(dev_common_t *pDevCmn, uint32_t country_code);
 uint8_t wlan_regulatory_find_num_ch(dev_common_t *pDevCmn, uint8_t num_reg_rules, uint8_t reg_rule_offset, uint8_t ch_min_bw);
+int8_t wlan_regulatory_set_tx_power(uint8_t dbm, uint8_t policy);
 
 #endif /* SUPPORT_REGULATORY */
 #endif /* _wlan_regulatory_H_ */

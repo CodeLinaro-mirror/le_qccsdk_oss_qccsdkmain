@@ -197,7 +197,6 @@ static void iperf_upgrade_rx_thread_priority(void)
         {
             nt_qurt_thread_set_priority(iperf_rx_thread_handle[thread_index], iperf_rx_thread_priority+1); /*increase udp rx thread priority in multi-thread context*/
         }
-		printf("Toby: rx thread upgraded\r\n");
     }
 
     return;

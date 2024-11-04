@@ -1,6 +1,10 @@
 
  /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
+
+ 
 #ifndef CORE_SYSTEM_INC_FERM_UART_H_
 #define CORE_SYSTEM_INC_FERM_UART_H_
 #include <stdint.h>
@@ -164,5 +168,7 @@ uart_status uart_close(uart_instance instance);
 uart_status uart_open(uart_instance instance, uart_config *config);
 uart_status uart_transmit(uart_instance instance, uint8_t *buf, uint32_t size, uint32_t *sent);
 uart_status uart_receive(uart_instance instance, uint8_t *buf, uint32_t size, uint32_t *recv);
+uart_status uart_open_with_rx_timeout(uart_instance instance, uart_config *config, uint32_t timeout);
+
 #endif
 

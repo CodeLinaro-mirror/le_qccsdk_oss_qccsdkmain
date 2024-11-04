@@ -74,5 +74,8 @@ config("_config") {
 source_set("lwip") {
     sources = []
     sources += lwip_src
-    cflags_c = [ "-w", ]
+    cflags_c = ["-w"]
+    if (!CONFIG_MATTER_ENABLE) {
+        cflags_c += [ "-O3"]
+    }
 }

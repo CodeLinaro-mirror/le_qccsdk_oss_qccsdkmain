@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 /*----------------------------------------------------------------------------*
  * @file wlan_sleep_clk_cal.c
  * @brief Implementation of Active Mode Sleep Clock Calibration

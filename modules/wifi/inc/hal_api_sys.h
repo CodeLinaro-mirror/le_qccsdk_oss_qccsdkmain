@@ -1,5 +1,8 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
 
 #ifndef  _HAL_API_SYS_H_
 #define  _HAL_API_SYS_H_
@@ -242,6 +245,10 @@ typedef struct nt_hal_bss_s
 
 	// Broadcast DPU descriptor index allocated by HAL and used for broadcast/multicast packets.
 	uint8_t  bcast_dpu_desc_idx;
+
+#ifdef ENABLE_MCS4_RX 
+    uint8_t mcs4_rx_enabled;
+#endif /*ENABLE_MCS4_RX*/
 
 	#if 0
 		// MAC Rate Set

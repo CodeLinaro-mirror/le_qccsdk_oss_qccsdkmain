@@ -1,0 +1,8 @@
+menu "qat setting"
+config QAT
+    bool "enable QAT"
+    default n
+config QAT_COMMON_DEMO
+    bool "enable QAT COMMON DEMO"
+    default n
+endmenu

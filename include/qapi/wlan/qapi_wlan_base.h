@@ -2357,6 +2357,32 @@ typedef struct //qapi_WLAN_App_Ie_Params_s
 
 /**
 @ingroup qapi_wlan
+Enum declaration for Tx Power setting policy.
+*/
+typedef enum  {
+    QAPI_WLAN_POLLICY_SECURITY_E = 0,  /**< Security policy. */
+	QAPI_WLAN_POLICY_NUM_E			   /**< Number of policy. */
+} qapi_WLAN_TX_Power_Policy_e;
+
+/**
+@ingroup qapi_wlan
+Macro definitions for restoring TX power to default value.
+*/
+#define QAPI_TX_POWER_RESTORE  100
+
+/**
+@ingroup qapi_wlan
+Data structure for Tx Power.
+*/
+typedef struct //qapi_WLAN_Set_Txpower_Params_t
+{
+    uint8_t txpower;  
+    qapi_WLAN_TX_Power_Policy_e policy;
+} qapi_WLAN_Set_Txpower_Params_t;
+
+
+/**
+@ingroup qapi_wlan
 Data structure for Rx A-MPDU.
 */
 typedef struct //qapi_WLAN_Rx_Aggrx_Params_s
@@ -2643,6 +2669,13 @@ typedef struct {
     qapi_WLAN_Reg_t reg_rules[QAPI_MAX_REG_RULES];
 } qapi_WLAN_Reg_Evt_t;
 
+typedef struct {
+    uint8_t reg_power;
+    uint8_t ctl_power;
+    uint16_t target_power;
+    uint16_t real_power;
+} qapi_WLAN_Get_Power_Evt_t;
+
 //set_rate
 typedef struct {
     uint8_t ra_ON;
@@ -2663,13 +2696,15 @@ typedef struct {
 
 /**
 @ingroup qapi_wlan
-Set STA contention window size.
+Set STA edca param, including aifsn/cw_min/cw_max/txoplimit.
 */
 typedef struct {
     uint8_t qid;
+    uint8_t aifsn;
     uint16_t cw_min;
     uint16_t cw_max;
-}qapi_WLAN_Contention_Window_Params_t;
+    uint16_t txop_limit;
+}qapi_WLAN_Edca_Params_t;
 
 /**
 @ingroup qapi_wlan
@@ -2960,9 +2995,6 @@ typedef enum {
     QAPI_WLAN_FTM_LOAD_BD /**< Load board data. */
 } qapi_WLAN_FTM_CMD_e;
 
-/**
-@ingroup qapi_wlan
-Sends the TLV1 command buffer to the KF UTF.
 
 /**
 @ingroup qapi_wlan

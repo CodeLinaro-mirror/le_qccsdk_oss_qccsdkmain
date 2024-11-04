@@ -16,6 +16,10 @@ config QCSPI_HFC_TEST
         bool "Enable QCSPI Slave HFC test demo. if QCSPI HFC test demo is not needed , please default to n"
         default n
 
+config QCSPI_HFC_ETH_ENABLE 
+        bool "Enable QCSPI Slave HFC Viertual Ethernet interface. if QCSPI HFC ETH is not needed , please default to n"
+        default n
+
 config WATCH_DOG_ENABLE
 	bool "Watch Dog function. Please default to n"
 	default n

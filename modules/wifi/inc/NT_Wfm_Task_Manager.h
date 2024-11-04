@@ -1,5 +1,8 @@
 /*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
 
 #ifndef WFM_INC_NT_WFM_TASK_MANAGER_H_
 #define WFM_INC_NT_WFM_TASK_MANAGER_H_

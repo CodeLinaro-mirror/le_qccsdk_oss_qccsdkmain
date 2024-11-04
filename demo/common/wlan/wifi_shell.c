@@ -17,6 +17,11 @@
 #include "mgmt_filter_demo.h"
 #endif
 
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE
+#include "data_svc_hfc.h"
+#include "qapi_hfc.h"
+#endif
+
 #define WIFI_SHELL_INFO 1
 #define WIFI_SHELL_LOG  0
 
@@ -181,6 +186,23 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
     }
 }
 
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE
+int qcspi_hfc_send_wlan_event(uint32_t event_id)
+{
+    f2a_event_type info;
+	if (event_id == QAPI_WLAN_CONNECT_CB_E) {
+        info = WLAN_CONNECT_EVENT;
+	} else if (event_id == QAPI_WLAN_DISCONNECT_CB_E) {
+        info = WLAN_DISCONNECT_EVENT;
+	} else {
+        return -1;
+	}
+	
+	qapi_hfc_set_gpio_assert_info(info);
+	return 0;  
+}
+#endif
+
 static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, void __unused *pApplicationContext, void *payload, uint32_t payload_Length)
 {
     wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
@@ -221,7 +243,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
                 p_cxt->active_device, cxnInfo->bss_Connection_Status, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
             if (e_wpa_ver==QAPI_WLAN_AUTH_WPA_PSK_E || e_wpa_ver==QAPI_WLAN_AUTH_WPA2_PSK_E) {
                 info_printf("4 way handshake success for device=1\n");
-            }
+            }	
         } else {
 			info_printf("WiFi disconnect reason code is %d\n", cxnInfo->reason_code);
 			if(cxnInfo->bss_Connection_Status) {
@@ -237,6 +259,10 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
         info_printf("ssid = %s\n", p_cxt->ssid);
         info_printf("assoc_id=%d\n", cxnInfo->assoc_id);
         info_printf("host_initiated=%d\n", cxnInfo->host_initiated);
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE		
+        qcspi_hfc_send_wlan_event(QAPI_WLAN_CONNECT_CB_E);
+#endif		
+		
         break;
     }
     case QAPI_WLAN_DISCONNECT_CB_E: {
@@ -248,6 +274,9 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
         if(p_cxt->ssid_length) 
             info_printf("devId %d disconnected from ssid = %s\n", p_cxt->active_device, p_cxt->ssid);
 
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE		
+        qcspi_hfc_send_wlan_event(QAPI_WLAN_DISCONNECT_CB_E);
+#endif		
         break;
     }
 	case QAPI_WLAN_CHANNEL_SWITCH_CB_E: {
@@ -1145,6 +1174,85 @@ static qapi_Status_t GetCountryCode(uint32_t __attribute__((__unused__)) Paramet
     return ret;
 }
 
+qapi_Status_t set_tx_power(uint32 txpower, qapi_WLAN_TX_Power_Policy_e policy)
+{
+	qapi_Status_t ret = QAPI_OK;
+    qapi_WLAN_Set_Txpower_Params_t set_tx_power_cfg;
+    set_tx_power_cfg.txpower = txpower;
+    set_tx_power_cfg.policy = policy;
+     
+    ret = qapi_WLAN_Set_Param(get_active_device(),
+                        __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                        __QAPI_WLAN_PARAM_GROUP_WIRELESS_TX_POWER_IN_DBM,
+                        &set_tx_power_cfg,
+                        sizeof(set_tx_power_cfg),
+                        FALSE);
+
+    return ret;
+}
+
+static qapi_Status_t SetTxPower(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	qapi_Status_t ret = QAPI_OK;
+	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+	uint8_t policy = 0;
+	
+    if (0 == p_cxt->wlan_enabled)
+    {
+        info_printf("Enable WLAN before set tx power\r\n");
+        return QAPI_ERROR;
+    }
+
+	if ((!Parameter_List) || ( Parameter_Count < 1 ))
+    {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_Count == 2)
+    {
+        policy = Parameter_List[1].Integer_Value;
+    }
+	if (policy >= QAPI_WLAN_POLICY_NUM_E)
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+
+	ret = set_tx_power( Parameter_List[0].Integer_Value, policy);
+    
+	if(ret != QAPI_OK) {
+		info_printf("set tx power to %d fail\n", Parameter_List[0].Integer_Value);
+	}
+	return ret;
+}
+
+static qapi_Status_t GetTxPower(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+	
+    if (0 == p_cxt->wlan_enabled)
+    {
+        info_printf("Enable WLAN before get tx power\r\n");
+        return QAPI_ERROR;
+    }
+
+	uint8_t deviceId = get_active_device();
+    qapi_WLAN_Get_Power_Evt_t power;
+    uint32_t length = sizeof(power);
+
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_TX_POWER_IN_DBM,
+                                &power,
+                                &length)){
+        info_printf("get tx power fail for device %d\n",deviceId);
+        return QAPI_ERROR;
+    } else {
+        info_printf("get real_power: %d dbm\r\n", power.real_power);
+        info_printf("get ctl_power: %d dbm\r\n", power.ctl_power);
+        info_printf("get reg_power: %d dbm\r\n", power.reg_power);
+        info_printf("get target_power: %d dbm\r\n", power.target_power);
+    }
+    return QAPI_OK;
+}
+
 #if CONFIG_DEBUG_CMD_XPA
 extern uint8_t halphy_xpa_enabled(uint8_t enable, uint8_t band);
 extern uint8_t halphy_xpa_enable(uint8_t enable, uint8_t band);
@@ -1821,23 +1929,33 @@ static qapi_Status_t setApplicationIe(uint32_t __attribute__((__unused__)) Param
 
 #define RT_IDX_11B_LONG_1_MBPS 0
 #define RT_IDX_11A_6_MBPS 1
+#define RT_IDX_11A_12_MBPS 2
 // use this command after 2G connection
 static qapi_Status_t setAntiInfParam(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
     uint8_t deviceId = get_active_device();
     uint32_t enable = 1;
     uint32_t rts_rate = RT_IDX_11B_LONG_1_MBPS;
-    qapi_WLAN_Contention_Window_Params_t cw_size_cfg;
+    qapi_WLAN_Edca_Params_t edca_param_cfg;
     uint32_t threshold = 60;
     qapi_WLAN_BA_Window_Params_t ba_win_size_cfg;
     uint32_t slot_time = 20;
 
-    cw_size_cfg.qid = 0xff; //set queue 0 - 7
-    cw_size_cfg.cw_min = 0x04;
-    cw_size_cfg.cw_max = 0x0f;
+    edca_param_cfg.qid = 0xff; //set queue 0 - 7
+    edca_param_cfg.aifsn = 0x3;
+    edca_param_cfg.cw_min = 0x2;  // cwmin = 2^2 -1
+    edca_param_cfg.cw_max = 0x4;  // cwmax = 2^4 - 1
+    edca_param_cfg.txop_limit = 200;
 
     ba_win_size_cfg.ack_timeout = 128; //128us, should less than 4096
     ba_win_size_cfg.delay = 10; //10 * 2 * SM clock cycles, should less than 64
+
+    if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid)
+    {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    rts_rate = Parameter_List[0].Integer_Value;
 
     if (0 != qapi_WLAN_Set_Param (deviceId,
                                 __QAPI_WLAN_PARAM_GROUP_WIRELESS,
@@ -1859,18 +1977,18 @@ static qapi_Status_t setAntiInfParam(uint32_t __attribute__((__unused__)) Parame
                                 FALSE))
     {
         info_printf("fix RTS rate fail\r\n");
-        info_printf("0:1Mbps  1:6Mbps\r\n");
+        info_printf("0:1Mbps  1:6Mbps 2:12Mbps\r\n");
         return -1;
     }
 
     if (0 != qapi_WLAN_Set_Param (deviceId,
                                 __QAPI_WLAN_PARAM_GROUP_WIRELESS,
-                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW,
-                                &cw_size_cfg,
-                                sizeof(cw_size_cfg),
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM,
+                                &edca_param_cfg,
+                                sizeof(edca_param_cfg),
                                 FALSE))
     {
-        info_printf("set contention window size fail\r\n");
+        info_printf("set edca param fail\r\n");
         info_printf("set qid = 0xff for all queue; set qid = 0-7 for single queue\r\n");
         return -1;
     }
@@ -1921,12 +2039,12 @@ static qapi_Status_t getAntiInfParam(uint32_t __attribute__((__unused__)) Parame
     uint8_t deviceId = get_active_device();
     uint32_t enable;
     uint32_t rts_rate;
-    qapi_WLAN_Contention_Window_Params_t cw_size_cfg;
+    qapi_WLAN_Edca_Params_t edca_param_cfg;
     uint32_t threshold;
     qapi_WLAN_BA_Window_Params_t ba_win;
     uint32_t slot_time;
     uint32_t length;
-    cw_size_cfg.qid = 0xff;
+    edca_param_cfg.qid = 0xff;
     length = sizeof(enable);
     if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
                                 __QAPI_WLAN_PARAM_GROUP_WIRELESS,
@@ -1954,16 +2072,16 @@ static qapi_Status_t getAntiInfParam(uint32_t __attribute__((__unused__)) Parame
         info_printf("RTS rate: %dMbps\r\n", rts_rate);
     }
 
-    length = sizeof(cw_size_cfg);
+    length = sizeof(edca_param_cfg);
     if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
                                 __QAPI_WLAN_PARAM_GROUP_WIRELESS,
-                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_CONTENTION_WINDOW,
-                                &cw_size_cfg,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM,
+                                &edca_param_cfg,
                                 &length)){
         info_printf("get contention window size fail for device %d\n",deviceId);
         return -1;
     } else {
-        info_printf("contention window size -- qid:%d, cw_min:%d, cw_max:%d\r\n", cw_size_cfg.qid, cw_size_cfg.cw_min, cw_size_cfg.cw_max);
+        info_printf("contention window size -- qid:%d, cw_min:%d, cw_max:%d\r\n", edca_param_cfg.qid, edca_param_cfg.cw_min, edca_param_cfg.cw_max);
     }
 
     length = sizeof(threshold);
@@ -2002,6 +2120,183 @@ static qapi_Status_t getAntiInfParam(uint32_t __attribute__((__unused__)) Parame
         info_printf("slot time:%dus\r\n", slot_time);
     }
     return 0;
+}
+
+static qapi_Status_t setEdcaParam(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    qapi_WLAN_Edca_Params_t edca_param_cfg;
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        /* edca should be set after connectting */
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+    if(Parameter_Count < 5 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid ||
+        !Parameter_List[2].Integer_Is_Valid || !Parameter_List[3].Integer_Is_Valid || !Parameter_List[4].Integer_Is_Valid)
+    {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    edca_param_cfg.qid = Parameter_List[0].Integer_Value;
+    edca_param_cfg.aifsn = Parameter_List[1].Integer_Value;
+    edca_param_cfg.cw_min = Parameter_List[2].Integer_Value;
+    edca_param_cfg.cw_max = Parameter_List[3].Integer_Value;
+    edca_param_cfg.txop_limit = Parameter_List[4].Integer_Value;
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM,
+                                &edca_param_cfg,
+                                sizeof(edca_param_cfg),
+                                FALSE))
+    {
+        info_printf("set edca param fail, check the wlan connection\r\n");
+        info_printf("set qid = 0xff for all queue; set qid = 0-7 for single queue\r\n");
+        return QAPI_ERROR;
+    }
+        return QAPI_OK;
+}
+
+static qapi_Status_t getEdcaParam(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t length;
+    uint8_t deviceId = get_active_device();
+    qapi_WLAN_Edca_Params_t edca_param_cfg;
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        /* edca should be set after connectting */
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+    if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid)
+    {
+        info_printf("need a valid qtid: 0~7 or 255");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    edca_param_cfg.qid = Parameter_List[0].Integer_Value;
+    length = sizeof(edca_param_cfg);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                    __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+				    __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM,
+                                    &edca_param_cfg,
+                                    &length)){
+        info_printf("get edcca param fail for device %d\n",deviceId);
+        return QAPI_ERROR;
+    } else {
+        info_printf("edca param -- qid:%d, aifs:%d cw_min:%d, cw_max:%d, txop_limit:%d\r\n",
+            edca_param_cfg.qid, edca_param_cfg.aifsn, edca_param_cfg.cw_min, edca_param_cfg.cw_max, edca_param_cfg.txop_limit);
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t setEdccaThreshold(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint8_t edcca_param_cfg;
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        /* edca should be set after connectting */
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+    if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid)
+    {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    edcca_param_cfg = Parameter_List[0].Integer_Value;
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCCA_THRESHOLD,
+                                &edcca_param_cfg,
+                                sizeof(edcca_param_cfg),
+                                FALSE))
+    {
+        info_printf("set edcca param fail, check the wlan connection or data validation\r\n");
+        info_printf("default edcca thres is 38\r\n");
+        return QAPI_ERROR;
+    }
+    info_printf("edcca threshold is set to %ddBm\n",edcca_param_cfg - 100);
+    return QAPI_OK;
+}
+
+static qapi_Status_t getEdccaThreshold(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t length;
+    uint8_t deviceId = get_active_device();
+    uint8_t edcca_threshold;
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        /* edca should be set after connectting */
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
+    length = sizeof(edcca_threshold);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                    __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                    __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCCA_THRESHOLD,
+                                    &edcca_threshold,
+                                    &length)){
+        info_printf("get edcca threshold fail for device %d\n",deviceId);
+        return QAPI_ERROR;
+    } else {
+        info_printf("edcca threshold:%d\r\n", edcca_threshold);
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t setBmissThreshold(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint8_t bmiss;
+    if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_List[0].Integer_Value > UINT8_MAX || Parameter_List[0].Integer_Value < 0) {
+        info_printf("beacon miss threshold need set 0-255\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    bmiss = Parameter_List[0].Integer_Value;
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_BMISS_CONFIG,
+                                &bmiss,
+                                sizeof(bmiss),
+                                FALSE))
+    {
+        info_printf("set bmiss threshold fail, check the wlan connection or data validation\r\n");
+        return QAPI_ERROR;
+    }
+    info_printf("bmiss threshold is set to %d\n",bmiss);
+    return QAPI_OK;
+}
+
+static qapi_Status_t getBmissThreshold(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t length;
+    uint8_t deviceId = get_active_device();
+    uint8_t bmiss_threshold;
+    if(!pg_wifi_shell_cxt->wlan_enabled) {
+        /* edca should be set after connectting */
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
+    length = sizeof(bmiss_threshold);
+    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_BMISS_CONFIG,
+                                &bmiss_threshold,
+                                &length)){
+        info_printf("get bmiss threshold fail for device %d\n",deviceId);
+        return QAPI_ERROR;
+    } else {
+        info_printf("bmiss threshold:%d\r\n", bmiss_threshold);
+    }
+    return QAPI_OK;
 }
 
 const QAPI_Console_Command_t wifi_shell_cmds[] =
@@ -2047,8 +2342,17 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 	{ setMgmtFilter,	"setMgmtFilter",        "0:None, 1:Asso Resp, 2:Probe Resp, 3:Asso and Probe Resp, -1:print mgmt frames",  "Set management frames filter"},
 #endif	
 	{ setApplicationIe, "setApplicationIe", "<0:beacon/1:probe request/2:probe response/3:asssociation request> <IE starting with dd>",  "Set application specified IE in specified management frame. Every input character is a nibble which means every 2 character is a byte, two characters are converted into a hex number before putting it in the frame. The length of application specified IE should be multiple of 2. if user has single digit value he need to prepend with 0 for ex: 0x5 should be 0x05. To remove IE, input only 'dd'"},
-	{ setAntiInfParam,	"setAntiInfParam",        "",  "Set default anti-interference parameters to improve throughput in noisy environment"},
+	{ setAntiInfParam,	"setAntiInfParam",        "0: 1M RTS, 1: 6M RTS, 2: 12M RTS",  "Set default anti-interference parameters to improve 2g throughput in noisy environment"},
 	{ getAntiInfParam,	"getAntiInfParam",        "",  "Get default anti-interference parameters"},
+    { setEdcaParam, "setEdcaParam",        "<qtid:0~7 or 255> <aifsn> <cwmin:exp> <cwmax:exp> <txop_limit>",  "set edca params for qtids, 255:all tids"},
+    { getEdcaParam, "getEdcaParam",        "<qtid:0~7 or 255>",  "Get Edca parameters for qtid, 255:tid0"},
+    { setEdccaThreshold, "setEdccaThreshold", "<EDCCA value, euqals real value plus 100>", "set EDCCA threshold to filter the non-wifi signal"},
+    { getEdccaThreshold, "getEdccaThreshold", "", "get the EDCCA threshold"},
+    { SetTxPower,           "SetTxPower",     "<txPower> [<policy = 0:SAFETY>]",   "Set the transmit power in dbm. The default policy is SAFETY(SAFETY is the minimum value among reg domain, CTL and target power). Set value to 100 to restore default settings. Tx power range, xpa: 10-SAFETY; ipa:3-SAFETY"   },
+    { GetTxPower,           "GetTxPower",     "",                                  "Get the transmit power, reg_power, target power and CTL power"   },
+    { setBmissThreshold, "setBmissThreshold", "<bmiss_threshold: 0~255>", "set beacon miss threshold"},
+    { getBmissThreshold, "getBmissThreshold", "", "get beacon miss threshold"},
+
 };
 
 const QAPI_Console_Command_Group_t wifi_shell_cmd_group = {WLAN_SHELL_GROUP_NAME, sizeof(wifi_shell_cmds) / sizeof(QAPI_Console_Command_t), wifi_shell_cmds};

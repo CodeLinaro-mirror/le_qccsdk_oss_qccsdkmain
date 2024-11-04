@@ -7,8 +7,10 @@ import("//configs_decl.gni")
 is_pbl = false
 is_ioe_pbl = false
 is_sbl = false
+is_hosted_sbl = false
 is_nvm_programmer = false
 is_ftm = false
+is_matter = false
 need_fs = false
 elf_dir = "bin"
 build_type = "__DEBUG_BUILD"
@@ -21,6 +23,10 @@ if (image_name == "FERMION_SBL") {
     is_sbl = true
 }
 
+if (image_name == "FERMION_HOSTED_SBL") {
+    is_hosted_sbl = true
+}
+
 if (image_name == "FERMION_NVM_PROGRAMMER") {
     is_nvm_programmer = true
 }
@@ -29,11 +35,15 @@ if (image_name == "FERMION_FTM") {
     is_ftm = true
 }
 
+if (image_name == "FERMION_MATTER_DEMO") {
+    is_matter = true
+}
+
 if (image_name == "FERMION") {
     CONFIG_LIBWIFI_CORE = false
 }
 
-if (image_name =="FERMION_FS_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO" || image_name == "FERMION_MQTT_DEMO") {
+if (image_name =="FERMION_FS_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO" || image_name == "FERMION_MQTT_DEMO" || image_name == "FERMION_MATTER_DEMO" || image_name == "FERMION_QAT_DEMO") {
     need_fs = true
 }
 
@@ -53,6 +63,10 @@ projects_pbl = [
 
 projects_sbl = [
     "//bootloader/SBL",
+]
+
+projects_hosted_sbl = [
+    "//bootloader/HOSTED_SBL",
 ]
 
 projects_nvm_programmer = [
@@ -83,7 +97,10 @@ projects_common = [
     "//arch/arm/system",
     "//demo/fs_demo",
     "//demo/mqtt_demo",
+    "//demo/matter_demo",
+    "//demo/qat_demo",
     "//modules/net/mqtt_client",
+    "//modules/qat",
 ]
 
 projects_wifi_core = [
@@ -99,7 +116,7 @@ not_needed("*", [ ])
 
 config("common_define") {
     defines = [ "SCALE_INCLUDES", "CRM_BUILD_NUM=${build_id}", "IMAGE_FERMION",
-        "CONFIG_WLAN=1", "CONFIG_NET=1", "CONFIG_FWUP_DEMO=1",
+        "CONFIG_WLAN=1", "CONFIG_NET=1", "CONFIG_FWUP_DEMO=1"
     ]
 
     defines += [ "DFU_BUILD", "PLATFORM_FERMION", "PHYDEVLIB_PRODUCT_FERMION", "PHYDEVLIB_IOT", "FERMION_SILICON"]
@@ -149,6 +166,7 @@ config("common_inc") {
     include_dirs += [ "../comp/backoffAlgorithm/source/include",]
     include_dirs += [ "//demo/common/net/src",]
     include_dirs += [ "//drivers/lowpower",]
+    include_dirs += [ "modules/qat",]
 }
 
 config("default_config") {
@@ -156,7 +174,7 @@ config("default_config") {
         ":common_define",
         ":common_inc",
     ]
-    if (!is_pbl && !is_sbl && !is_nvm_programmer) {
+    if (!is_pbl && !is_sbl && !is_hosted_sbl && !is_nvm_programmer) {
         foreach(prj, projects_common) {
             prj_cfg = string_join("", [ prj, ":_config" ])
             configs += [ prj_cfg ]
@@ -179,6 +197,9 @@ config("linker_config") {
     if (is_pbl) {
         ldflags += [ "-Tfrn_pbl.ld" ]
     } else if (is_sbl) {
+        ldflags += [ "-Tfrn_ioe_sbl.ld" ]
+        ldflags += [ "--start-group", rebase_path("bootloader/SBL/src/pbl_patch.o"), "--end-group" ]
+    } else if (is_hosted_sbl) {
         ldflags += [ "-Tfrn_ioe_sbl.ld" ]
         ldflags += [ "--start-group", rebase_path("bootloader/SBL/src/pbl_patch.o"), "--end-group" ]
     } else if (is_nvm_programmer) {
@@ -207,6 +228,20 @@ config("linker_config") {
     ldflags += [ "-Tlibs.ld" ]
     ldflags += [ "-n", "--gc-sections" ]
     ldflags += [ "-Map", rebase_path("${root_build_dir}/${elf_dir}/${image_name}.map") ]
+
+    if ( (is_matter) && (CONFIG_MATTER_ENABLE) )
+    {
+        if (CONFIG_MATTER_LIGHTING_DEMO)
+        {
+            libs += [ "//../comp/matter/examples/lighting-app/fermion/output/obj/lib/libLIGHT.a" ]
+        }
+        else if (CONFIG_MATTER_SWITCH_DEMO)
+        {
+            libs += [ "//../comp/matter/examples/light-switch-app/fermion/output/obj/lib/libSWITCH.a" ]
+        }
+        libs += [ "stdc++_nano", "stdc++" ]
+    }
+
     libs += [ "c_nano", "nosys", "m", "gcc" ]
     lib_dirs += [ "${lib_c_nano_path[0]}", "${lib_gcc_path[0]}" ]
 }
@@ -224,6 +259,8 @@ executable("elf_target") {
         public_deps += projects_pbl
     } else if (is_sbl) {
         public_deps += projects_sbl
+    } else if (is_hosted_sbl) {
+        public_deps += projects_hosted_sbl        
     } else if (is_nvm_programmer) {
         public_deps += projects_nvm_programmer
     } else {
