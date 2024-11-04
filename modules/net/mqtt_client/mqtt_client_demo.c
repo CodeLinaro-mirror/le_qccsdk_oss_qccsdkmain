@@ -165,7 +165,6 @@
 
 MQTTClientSession_t mqtt_client_sess[MQTT_DEMO_SESSION_NUM];
 MQTTClientCMD_t mqtt_client_cmd [MQTT_DEMO_SESSION_NUM];
-static TaskHandle_t mqttc_task_handle = NULL;
 bool mqttThreadCreated = false;
 /*-------------------------------------------------------------------------
  * Private Function Declarations
@@ -1241,6 +1240,7 @@ void mqtt_client_process_cmd(uint32_t sessionIndex)
 void mqttc_task(void __attribute__((__unused__))*pvParameters)
 {
     uint32 sessionIndex;
+    bool delThread;
     MQTTStatus_t mqttStatus = MQTTSuccess;
 
     MQTTClientSession_t *pMqttClientSess;
@@ -1334,10 +1334,23 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
             /*Allow small delay to allow other thread to run*/
             qurt_thread_sleep(150);
         }
+
+        delThread = true;
+        for (uint32 index = 0; index < MQTT_DEMO_SESSION_NUM; index++)
+        {
+            if (mqtt_client_sess[index].mqttState != MQTT_INIT)
+            {
+                delThread = false;
+                break; 
+            }
+        }
+
+        if (delThread == true) {
+            nt_osal_thread_delete(NULL);
+            mqttThreadCreated = false;
+        }
     }
     while (1);
-
-    nt_osal_thread_delete(NULL);
 }
 
 static void mqtt_client_help()
@@ -1908,18 +1921,6 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
     pMqttClientSess->lwtInfo.dup = false;
     pMqttClientSess->lwtInfo.retain = false;
 
-    if (mqttThreadCreated == false)
-    {
-        if (nt_qurt_thread_create(mqttc_task, "mqtt_client_task", 2048, pMqttClientSess, 6, mqttc_task_handle) != pdPASS)
-        {
-            MQTT_CLIENT_PRINTF("MQTT main thread create fail\n");
-        }
-        else
-        {
-            mqttThreadCreated = true;
-        }
-    }
-
     int returnStatus = EXIT_SUCCESS;
 
     returnStatus = initializeMqtt(pMqttClientSess);
@@ -1938,6 +1939,18 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
     else
     {
         pMqttClientSess->mqttState = MQTT_DISCONNECT;
+    }
+
+    if (mqttThreadCreated == false)
+    {
+        if (nt_qurt_thread_create(mqttc_task, "mqtt_client_task", 2048, pMqttClientSess, 6, NULL) != pdPASS)
+        {
+            MQTT_CLIENT_PRINTF("MQTT main thread create fail\n");
+        }
+        else
+        {
+            mqttThreadCreated = true;
+        }
     }
 
 end:
@@ -2359,10 +2372,8 @@ qapi_Status_t mqttc_destroy(uint32_t sessionIndex)
         return QAPI_ERR_INVALID_PARAM;
     }
 
-    pMqttClientSess->mqttState = MQTT_INIT;
     cleanupMqttSession(pMqttClientSess);
-    nt_osal_thread_delete(mqttc_task_handle);
-    mqttThreadCreated = false;
+    pMqttClientSess->mqttState = MQTT_INIT;
     /* Log message indicating destroy successfully. */
     MQTT_CLIENT_PRINTF("MQTT session:%d destroy successfully.\n",
                        pMqttClientSess->sessionIndex);
