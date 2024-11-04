@@ -34,9 +34,6 @@ config WATCH_DOG_BITE_TIME
 	depends on WATCH_DOG_ENABLE
 	default 5
 
-config CPR_ENABLE
-	bool "Core Power Reduction support, please default to n"
-	default n
 
 endmenu
 endmenu
