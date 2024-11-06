@@ -222,6 +222,8 @@ static void UartRxTasks(void *Task_Uart)
 		Uart_Rcv_Buff = (char *)nt_osal_allocate_memory(INPUT_BUFFER_SIZE);
 		if (Uart_Rcv_Buff == NULL)
 			return ;
+
+		memset(Uart_Rcv_Buff, 0, INPUT_BUFFER_SIZE);
 		
 		Status = qapi_UART_Receive(Uart->Instance, Uart_Rcv_Buff, INPUT_BUFFER_SIZE, &Recved);
 		if (Recved > 0) {
