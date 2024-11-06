@@ -1208,6 +1208,12 @@ static qapi_Status_t SetTxPower(uint32_t __attribute__((__unused__)) Parameter_C
 		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
+    if(Parameter_List[0].Integer_Value > UINT8_MAX)
+    {
+        info_printf("set tx power to %d fail\n", Parameter_List[0].Integer_Value);
+        return QAPI_ERROR;
+    }
+
     if (Parameter_Count == 2)
     {
         policy = Parameter_List[1].Integer_Value;
