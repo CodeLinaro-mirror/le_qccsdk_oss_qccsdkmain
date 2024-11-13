@@ -77,6 +77,8 @@ CHIP_ERROR Application_Init(void)
 	sWiFiNetworkCommissioningInstance.Init();
 #endif
 
+    PrintOnboardingCodes(chip::RendezvousInformationFlags(chip::RendezvousInformationFlag::kOnNetwork));
+
     return CHIP_NO_ERROR;
 }
 
