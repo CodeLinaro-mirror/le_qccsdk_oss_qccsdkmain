@@ -129,8 +129,9 @@ CHIP_ERROR FermionUtils::SetPersistentStationProvision(char* ssid, char* passwor
 	if ((strlen(ssid) >= kMaxWiFiSSIDLength) || (strlen(password) >= kMaxWiFiKeyLength))
 		return CHIP_ERROR_MESSAGE_TOO_LONG;
 
-	strlcpy(wifi_credentials, password, kMaxWiFiKeyLength);
 	strlcpy(wifi_ssid, ssid, kMaxWiFiSSIDLength);
+	if(strlen(password) > 0)
+		strlcpy(wifi_credentials, password, kMaxWiFiKeyLength);
 
 	return CHIP_NO_ERROR;
 }
@@ -214,16 +215,30 @@ CHIP_ERROR FermionUtils::ConnectNetwork(const char *ssid, uint8_t ssidLen, const
 {
     qapi_Status_t ret= QAPI_OK;
 	matter_wifi_cxt_t *p_cxt = &g_matter_wifi_cxt;
-	qapi_WLAN_Auth_Mode_e wpa_ver = QAPI_WLAN_AUTH_WPA2_PSK_E;
-	qapi_WLAN_Crypt_Type_e e_cipher = QAPI_WLAN_CRYPT_AES_CRYPT_E;
+	qapi_WLAN_Auth_Mode_e wpa_ver;
+	qapi_WLAN_Crypt_Type_e e_cipher;
 	uint8_t deviceId = p_cxt->active_device;
 
     if(!p_cxt->wlan_enabled) {
         return CHIP_ERROR_INTERNAL;
     }
-    if ((passphraseLen < 8) || (passphraseLen > 63))
-        return CHIP_ERROR_INTERNAL;
+	
+    if (passphraseLen > 63)
+		return CHIP_ERROR_INTERNAL;
 
+	if ((passphraseLen < 8) && (passphraseLen != 0))
+		return CHIP_ERROR_INTERNAL;
+
+	if (passphraseLen == 0)
+	{
+		wpa_ver = QAPI_WLAN_AUTH_NONE_E;
+		e_cipher = QAPI_WLAN_CRYPT_NONE_E;
+	}
+	else
+	{
+		wpa_ver = QAPI_WLAN_AUTH_WPA2_PSK_E;
+		e_cipher = QAPI_WLAN_CRYPT_AES_CRYPT_E;
+	}
     qapi_WLAN_Set_Param (0, __QAPI_WLAN_PARAM_GROUP_WIRELESS,
         __QAPI_WLAN_PARAM_GROUP_WIRELESS_SSID,
         (void *)ssid, ssidLen, QAPI_WLAN_NO_WAIT_E);
