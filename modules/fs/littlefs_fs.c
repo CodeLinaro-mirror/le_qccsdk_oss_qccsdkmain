@@ -17,6 +17,8 @@
 #include "littlefs_fs.h"
 #include "fs.h"
 #include "fs_sys.h"
+#include <stdio.h>
+#include "autoconf.h"
 
 #undef DEBUG_LFS
 #define DEBUG_LFS
@@ -231,6 +233,9 @@ int littlefs_init_cfg(struct lfs_config *cfg, uint32_t id)
 
     uint32_t ret = 0;
     ret = get_fs_partition_info(id, &fs_start_addr, &fs_size);
+#ifdef CONFIG_MATTER_ENABLE
+    fs_size = 0x20000;//enlarge fs_size for Matter demo
+#endif
     if (ret != QAPI_OK)
         goto out;
 
