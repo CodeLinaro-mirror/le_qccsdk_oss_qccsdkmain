@@ -553,7 +553,7 @@ fw_logger_init();
 #endif
 #ifdef PLATFORM_FERMION
 #ifndef EMULATION_BUILD
-    wifi_fw_pmic_init_pfm_openloop();
+    wifi_fw_pmic_init(cpr_openloop);
 	
 #ifndef CBC_CX_VOLTAGE_WAR
     wifi_fw_cpr_init();
@@ -799,7 +799,7 @@ qcspi_hfc_init();
     nt_socpm_nop_delay(4000);
 #endif /* HALPHY_CBC_SUPPORT */
 
-    wifi_fw_pmic_init();
+    wifi_fw_pmic_init(cpr_closeloop);
     //nt_socpm_nop_delay(4000);
 
 #ifdef CBC_CX_VOLTAGE_WAR
