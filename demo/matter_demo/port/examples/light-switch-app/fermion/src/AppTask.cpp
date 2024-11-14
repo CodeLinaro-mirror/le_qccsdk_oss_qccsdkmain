@@ -7,14 +7,16 @@
 #include "AppTask.h"
 #include "binding-handler.h"
 
-#include <app/clusters/network-commissioning/network-commissioning.h>
 #if CHIP_DEVICE_CONFIG_ENABLE_WIFI
 #include <platform/fermion/NetworkCommissioningDriver.h>
 #endif
 
 #include <app/clusters/bindings/BindingManager.h>
+#include <app/clusters/network-commissioning/network-commissioning.h>
+#include <app/server/OnboardingCodesUtil.h>
 #include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <DeviceInfoProviderImpl.h>
+#include <setup_payload/SetupPayload.h>
 
 #define APP_TASK_STACK_SIZE (4096)
 #define APP_TASK_PRIORITY 2
@@ -88,6 +90,8 @@ CHIP_ERROR AppTask::Init()
 #if CHIP_DEVICE_CONFIG_ENABLE_WIFI
     sWiFiNetworkCommissioningInstance.Init();
 #endif
+
+    PrintOnboardingCodes(chip::RendezvousInformationFlags(chip::RendezvousInformationFlag::kOnNetwork));
 
 	if (CHIP_NO_ERROR != InitBindingHandler())
     {
