@@ -11,7 +11,7 @@
       <props id="6" id_name="NT_DEVCFG_CONN_ADDBA_RESP_TIMM" helptext="default-add ba resp timer" type="0x00000002"> 1 </props>
       <props id="7" id_name="NT_DEVCFG_CONN_MIC_ERR_TIMM" helptext="default-mic error timer" type="0x00000002"> 60 </props>
       <props id="8" id_name="NT_DEVCFG_CONN_TKIP_WAIT_TIMM" helptext="default-tkip countermeasure timer" type="0x00000002"> 50 </props>
-	  <props id="9" id_name="NT_DEVCFG_CONN_CONSECUTIVE_BMISS_THRESHOLD" min="15" max="15" helptext="default-beacon miss threshold to initiate reconnect" type="0x00000002"> 15 </props>
+	  <props id="9" id_name="NT_DEVCFG_CONN_CONSECUTIVE_BMISS_THRESHOLD" min="30" max="30" helptext="default-beacon miss threshold to initiate reconnect" type="0x00000002"> 30 </props>
       <props id="10" id_name="NT_DEVCFG_CONN_MODIFIED_BEACON_INTERVAL" min="100" max="100" helptext="modified beacon interval" type="0x00000002"> 100 </props>
 	  <props id="11" id_name="NT_DEVCFG_CONN_STA_INACT_INTERVAL" min="0" max="0" helptext="sta inactivity interval in secs" type="0x00000002"> 0 </props>
       <props id="12" id_name="NT_DEVCFG_CONN_PS_STA_INACT_FACTOR" helptext="power save sta inactivity factor" type="0x00000002"> 10 </props>
