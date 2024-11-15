@@ -149,6 +149,8 @@ static QAT_Command_Status_t Extend_Command_Info(uint32_t Op_Type, uint32_t Param
 		    return rc;
 		}
 
+		memset(buffer, 0, VERSION_STR_BUFFER_LENGTH);
+
 		if(qapi_Heap_Status(&hs) != QAPI_OK)
 	    {   
 	        QAT_Response_Str(QAT_RC_ERROR, NULL);
@@ -236,11 +238,15 @@ static QAT_Command_Status_t Extend_Command_Write_Memory(uint32_t Op_Type, uint32
       case QAT_OP_EXEC:		     /* AT+WRTMEM */
       {	
 	     buffer = malloc(WRTMEM_STR_BUFFER_LENGTH);
+		 
          if(!buffer)
          {
              QAT_Response_Str(QAT_RC_ERROR, NULL);
              return rc;
          }
+
+		 memset(buffer, 0, WRTMEM_STR_BUFFER_LENGTH);
+		 
 		 snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+WRTMEM: <addr>,<size:1|2|4>,<value>\r\nmem: 0x%08x for test\r\n",&mem_test);
 		 rc = QAT_Response_Str(QAT_RC_OK, buffer);
 		 memset((void*)buffer, 0, WRTMEM_STR_BUFFER_LENGTH);
@@ -268,17 +274,24 @@ static QAT_Command_Status_t Extend_Command_Write_Memory(uint32_t Op_Type, uint32
          }
 		 
 		 if (size == 1)
+		 {
  	        *(uint8_t *)addr = data;
+		 }
  	     else if (size == 2)
+ 	     {
  	        *(uint16_t *)addr = data;
+ 	     }
  	     else if (size == 4)
+ 	     {
  	        *(uint32_t *)addr = data;
+ 	     }
  	     else{
 			rc = QAT_Response_Str(QAT_RC_ERROR, "Wrong Input, AT+WRTMEM? for hint\r\n");
             return rc;
 		 }
 
-    	 snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "Writting, Address = 0x%08x , Width = %d  Data = 0x%08x(%d)\r\n",addr,size,data,data);
+		 snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "Writting, Address = 0x%08x , Width = %d  Data = 0x%0*x(%d)\r\n",addr,size,size*2,data,data);
+		 
          rc = QAT_Response_Str(QAT_RC_OK, buffer);
          memset((void*)buffer, 0, WRTMEM_STR_BUFFER_LENGTH);
          free(buffer);
@@ -317,11 +330,15 @@ static QAT_Command_Status_t Extend_Command_Read_Memory(uint32_t Op_Type, uint32_
       case QAT_OP_EXEC:		     /* AT+RDMEM */
       {	
 		 buffer = malloc(WRTMEM_STR_BUFFER_LENGTH);
+		 
          if(!buffer)
          {
              QAT_Response_Str(QAT_RC_ERROR, NULL);
              return rc;
          }
+
+		 memset(buffer, 0, WRTMEM_STR_BUFFER_LENGTH);
+		 
 		 snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+RDMEM: <addr>,<size:1|2|4>\r\nmem: 0x%08x for test\r\n",&mem_test);
 		 rc = QAT_Response_Str(QAT_RC_OK, buffer);
 		 memset((void*)buffer, 0, WRTMEM_STR_BUFFER_LENGTH);
@@ -339,25 +356,34 @@ static QAT_Command_Status_t Extend_Command_Read_Memory(uint32_t Op_Type, uint32_
 		 
 		 addr = Parameter_List[0].Integer_Value;
  	     size = Parameter_List[1].Integer_Value;
- 	     if (size == 1)
- 	        data = *(uint8_t *)addr;
- 	     else if (size == 2)
- 	        data = *(uint16_t *)addr;
- 	     else if (size == 4)
- 	        data = *(uint32_t *)addr;
- 	     else{
-			rc = QAT_Response_Str(QAT_RC_ERROR, "Wrong Input, AT+RDMEM? for hint\r\n");
-            return rc;
-		 }
-		 
+
 		 buffer = malloc(WRTMEM_STR_BUFFER_LENGTH);
          if(!buffer)
          {
              QAT_Response_Str(QAT_RC_ERROR, NULL);
              return rc;
          }
-
-    	 snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "Read, Address = 0x%08x , Width = %d  Data = 0x%08x(%d)\r\n",addr,size,data,data);
+		 
+		 memset(buffer, 0, WRTMEM_STR_BUFFER_LENGTH);
+		 
+ 	     if (size == 1)
+		 {
+ 	        data = *(uint8_t *)addr;
+ 	     }
+ 	     else if (size == 2)
+ 	     {
+ 	        data = *(uint16_t *)addr;
+ 	     }
+ 	     else if (size == 4)
+ 	     {
+ 	        data = *(uint32_t *)addr;
+ 	     }
+ 	     else{
+			rc = QAT_Response_Str(QAT_RC_ERROR, "Wrong Input, AT+RDMEM? for hint\r\n");
+            return rc;
+		 }
+		 
+		 snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "Read, Address = 0x%08x , Width = %d  Data = 0x%0*x(%d)\r\n",addr,size,size*2,data,data);
          rc = QAT_Response_Str(QAT_RC_OK, buffer);
          memset((void*)buffer, 0, WRTMEM_STR_BUFFER_LENGTH);
          free(buffer);
@@ -405,6 +431,8 @@ static QAT_Command_Status_t Extend_Command_Cmd(uint32_t Op_Type, uint32_t Parame
              QAT_Response_Str(QAT_RC_ERROR, NULL);
              return rc;
          }
+
+		 memset(buffer, 0, CMD_STR_BUFFER_LENGTH);
 		 
 	 	 while(Current_Entry)
 	 	 {

@@ -33,27 +33,37 @@ static qapi_Status_t platform_reset(uint32_t __attribute__((__unused__)) paramet
 static qapi_Status_t read_mem(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     uint32_t data, size, addr;
+	
     if( Parameter_Count != 2 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
     addr = Parameter_List[0].Integer_Value;
     size = Parameter_List[1].Integer_Value;
     if (size == 1)
+	{
         data = *(uint8_t *)addr;
+		
+    }
     else if (size == 2)
+    {
         data = *(uint16_t *)addr;
+    }
     else if (size == 4)
+    {
         data = *(uint32_t *)addr;
+    }
     else
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
-
-    printf("Reading, Address = 0x%08x , Width = %d  Data = 0x%08x(%d)",addr,size,data,data);
+	
+    printf("Reading, Address = 0x%08x , Width = %d  Data = 0x%0*x(%d)",addr,size,size*2,data,data);
+	
     return QAPI_OK;
 }
 
 static qapi_Status_t write_mem(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     uint32_t data, size, addr;
+	
     if( Parameter_Count != 3 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid|| !Parameter_List[2].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
@@ -61,15 +71,22 @@ static qapi_Status_t write_mem(uint32_t Parameter_Count, QAPI_Console_Parameter_
     size = Parameter_List[1].Integer_Value;
     data = Parameter_List[2].Integer_Value;
     if (size == 1)
+    {
         *(uint8_t *)addr = data;
+    }
     else if (size == 2)
+    {
         *(uint16_t *)addr = data;
+    }
     else if (size == 4)
+    {
         *(uint32_t *)addr = data;
+    }
     else
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
-
-    printf("Writting, Address = 0x%08x , Width = %d  Data = 0x%08x(%d)",addr,size,data,data);
+	
+	printf("Writting, Address = 0x%08x , Width = %d  Data = 0x%0*x(%d)",addr,size,size*2,data,data);
+	
     return QAPI_OK;
 }
 #endif
