@@ -280,6 +280,15 @@ static ip_addr_t sntp_last_server_address;
 static struct sntp_time sntp_last_timestamp_sent;
 #endif /* SNTP_CHECK_RESPONSE >= 2 */
 
+#if SNTP_SERVER_DNS
+struct sntp_dns_addr
+{
+  u8_t addr[68];
+  u8_t resolve;
+};
+static struct sntp_dns_addr sntp_dns_servers[SNTP_MAX_SERVERS];
+#endif
+
 #if defined(LWIP_DEBUG) && !defined(sntp_format_time)
 /* Debug print helper. */
 static const char *
@@ -933,7 +942,9 @@ sntp_setservername(u8_t idx, const char *server)
 {
   LWIP_ASSERT_CORE_LOCKED();
   if (idx < SNTP_MAX_SERVERS) {
-    sntp_servers[idx].name = server;
+    memset(sntp_dns_servers[idx].addr, 0, 68);
+    memscpy(sntp_dns_servers[idx].addr, strlen(server), server, strlen(server));
+    sntp_servers[idx].name = sntp_dns_servers[idx].addr;
 #if SNTP_SUPPORT_MULTIPLE_SERVERS
     sntp_servers[idx].kod_received = 0;
 #endif
