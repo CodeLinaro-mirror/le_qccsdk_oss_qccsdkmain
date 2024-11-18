@@ -16,8 +16,11 @@
 #include <string.h>
 #include <stddef.h>
 
-
+#ifdef CONFIG_MATTER_ENABLE
 #define configUART_COMMAND_CONSOLE_STACK_SIZE		( 2048 )
+#else
+#define configUART_COMMAND_CONSOLE_STACK_SIZE		( 1024 )
+#endif
 #define configUART_COMMAND_CONSOLE_TASK_PRIORITY	( 7U )
 
 /*-------------------------------------------------------------------------
