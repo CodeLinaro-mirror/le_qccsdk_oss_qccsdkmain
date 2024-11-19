@@ -198,7 +198,8 @@ void nt_gpio_preset(void)
     else
     {
         /* - IOPAD configuration - */
-        #if CONFIG_BOARD_QCC730_UART_GPIO_OPTION == 3
+
+        #if 0
         /* UART: GPIO1 GPIO3*/
         uint32_t regval = NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PU_REG); // pu
         NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, regval & 0xF9F80000); //0-18,25,26 : no pu
@@ -210,11 +211,14 @@ void nt_gpio_preset(void)
         regval = NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PU_REG); // pu
         NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, regval | 0x0002C000); //0-18,25,26 : no pu, 14/15/17: pd
         #endif
-        #if CONFIG_BOARD_QCC730_UART_GPIO_OPTION == 1
-        /* UART: GPIO13 GPIO14*/
-        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG,  0xAEB0A); 
-        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG,  0x1514F0); 
-        #endif
+		
+		/* UART op3: GPIO1 GPIO3*/
+		/* UART op1: GPIO13 GPIO14*/
+		/* UART op0: GPIO11 GPIO12*/
+		/* UART op2: GPIO9 GPIO10*/
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG,  CONFIG_BOARD_QCC730_GPIO_DEFAULT_PU_STATE); 
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG,  CONFIG_BOARD_QCC730_GPIO_DEFAULT_PD_STATE); 
+        
     }
         
     #ifndef FERMION_SILICON
