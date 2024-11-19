@@ -16,11 +16,21 @@ qat_inc += [
 
 qat_src += [
     "qat.c",
-    "qat_uart.c",
     "qat_util.c",
 ]
 
-
+if (CONFIG_QAT_TRANSMISSION_MODULE == 0)
+{
+    qat_src += [
+        "qat_uart.c",
+]
+}
+else if(CONFIG_QAT_TRANSMISSION_MODULE == 1)
+{
+    qat_src += [
+        "qat_spi.c",
+]
+}
 config("_config") {
     include_dirs = qat_inc
 }
