@@ -214,7 +214,7 @@ static int32_t handle_icmp_response(char *buffer, const ip_addr_t *addr)
 *
 * @param ip_addr Destination IP address.
 * @param mtu the return data to take the mtu from handle.
-* @return The discovered Path MTU size.
+* @return The discovered Path MTU size if it > 0, or return error code.
 */
 
 int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
@@ -225,7 +225,6 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
     new_mtu = MTU_ERR_TIMEOUT;  // we do not know if the server is up and reachable
     int32_t low = MIN_MTU;
     int32_t high = LOCAL_MTU - IP_HLEN - sizeof(struct icmp_echo_header);
-    int32_t status = 0;
     icmp_seq_num = 0;
 
     pmtud_target = (ip_addr_t *)ip_addr;
@@ -255,7 +254,7 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
     icmp_buffer = malloc(LOCAL_MTU);
     if (icmp_buffer == NULL) {
         PMTUD_PRINTF("icmp_buffer error");
-        return MTU_ERR_SOCK;
+        return MTU_ERR_BUFFER;
     }
 
     while (low <= high)
@@ -271,8 +270,8 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
         {
             PMTUD_PRINTF("packet too big for local interface\n");
             low = current_mtu - 1;
-            status = MTU_ERR_SOCK;
-            goto fail;
+            new_mtu = MTU_ERR_STATUS;
+            goto exit;
         }
 
         FD_SET(s, &fds);
@@ -304,8 +303,8 @@ retry:
             if (recv_len < 0)
             {
                 PMTUD_PRINTF("Socket recv failed");
-                status = MTU_ERR_SOCK;
-                goto fail;
+                new_mtu = MTU_ERR_STATUS;
+                goto exit;
             }
 
             // a packet has been received, check if it's valid
@@ -356,13 +355,10 @@ retry:
         }
     }
 
+exit:
     closesocket(s);
     free(icmp_buffer);
     return new_mtu > 0 ? (new_mtu + IP_HLEN + sizeof(struct icmp_echo_header)) : new_mtu;
-fail:
-    free(icmp_buffer);
-    return status;
-
 }
 
 /**
