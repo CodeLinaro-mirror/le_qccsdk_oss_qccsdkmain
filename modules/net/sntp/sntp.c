@@ -280,6 +280,8 @@ static ip_addr_t sntp_last_server_address;
 static struct sntp_time sntp_last_timestamp_sent;
 #endif /* SNTP_CHECK_RESPONSE >= 2 */
 
+static u32_t sntp_last_time_sent = 0;
+
 #if SNTP_SERVER_DNS
 struct sntp_dns_addr
 {
@@ -380,6 +382,7 @@ sntp_initialize_request(struct sntp_msg *req)
     req->transmit_timestamp[1] = frac;
   }
 #endif /* SNTP_CHECK_RESPONSE >= 2 || SNTP_COMP_ROUNDTRIP */
+  sntp_last_time_sent = (u32_t)hres_timer_curr_time_ms();
 }
 
 /**
@@ -480,6 +483,7 @@ sntp_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr,
   u8_t mode;
   u8_t stratum;
   err_t err;
+  u32_t sntp_time_recv = (u32_t)hres_timer_curr_time_ms();;
 
   LWIP_UNUSED_ARG(arg);
   LWIP_UNUSED_ARG(pcb);
@@ -541,6 +545,8 @@ sntp_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr,
   pbuf_free(p);
 
   if (err == ERR_OK) {
+    printf("sntp request sent %d, sntp response receive %d, interval %d ms\n", 
+	    sntp_last_time_sent, sntp_time_recv, (sntp_time_recv - sntp_last_time_sent));
     /* correct packet received: process it it */
     sntp_process(&timestamps);
 
