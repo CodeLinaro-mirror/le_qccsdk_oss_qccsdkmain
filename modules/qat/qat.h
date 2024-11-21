@@ -80,7 +80,7 @@
    @return QCLI group handle that can be used for the platform abstraction to
            print to the console.
 */
-qbool_t QAT_Initialize(void);
+qbool_t QAT_TxTask_Initialize(void);
 
 /**
    @brief Passes characters input from the command line to the QCLI module for

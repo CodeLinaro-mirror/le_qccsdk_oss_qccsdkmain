@@ -13,6 +13,8 @@
 #include "qapi_version.h"
 #include "qat.h"
 #include "qat_api.h"
+#include "qat_uart.h"
+
 #include "qurt_internal.h"
 #include "nt_osal.h"
 #include "qurt_mutex.h"
@@ -41,7 +43,8 @@ QAT_Transfer_Mode_t QAT_Transfer_Mode = QAT_Transfer_Mode_AT_COMMAND_E;
 QAT_Transfer_Mode_Handle_t QAT_Transfer_Mode_Handle = NULL;
 uint32_t QAT_Echo_Enable=0;
 qurt_signal_t  qat_task_start;
-nt_osal_task_handle_t  qat_uart_tx_task_hdl = NULL;
+nt_osal_task_handle_t  qat_tx_task_hdl = NULL;
+nt_osal_task_handle_t  qat_rx_task_hdl = NULL;
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -71,7 +74,14 @@ extern size_t memsmove(void *Dest, size_t DestSize, const void *Src, size_t SrcS
 extern qbool_t PAL_Take_Lock(void);
 extern void PAL_Release_Lock(void);
 extern int32_t QCLI_Memcmpi(const void *Source1, const void *Source2, uint32_t Size);
+
+extern void UartRxTasks();
+extern void SPIRxTasks();
+
 void QAT_Response_Event(char *Command_Name, char *Buffer, int rc_code);
+qapi_Status_t QAT_Output(uint32_t Length, const char *Buffer);
+
+qbool_t (*Process_Input_Data_Handle)(uint32_t Length, char *Buffer);
 
 char *QAT_Result_Str[]=
 {
@@ -913,7 +923,27 @@ QAT_Command_Status_t QAT_Response_Str(int Ret_Code, char *Buffer)
    return QAT_STATUS_SUCCESS_E;
 }
 
-static void QAT_Uart_TxTasks(void *arg)
+qapi_Status_t QAT_Output(uint32_t Length, const char *Buffer)
+{
+   uint8_t ret = QAPI_OK;
+   
+   if((Length != 0) && (Buffer != NULL))
+   {
+#if (CONFIG_QAT_TRANSMISSION_MODULE == 0)  
+	 QAT_UART_Output(Length, Buffer);
+#else if(CONFIG_QAT_TRANSMISSION_MODULE == 1)  
+     QAT_SPI_Output(Length, Buffer);
+#endif
+   }
+   else
+   {
+		ret = QAPI_ERR_INVALID_PARAM;
+   }
+
+    return ret;
+}
+
+static void QAT_TxTasks(void *arg)
 {
    QAT_Tx_Queue_t *Next=NULL;
    uint32_t signal;
@@ -942,7 +972,7 @@ static void QAT_Uart_TxTasks(void *arg)
 }
 
 
-qbool_t QAT_Initialize(void)
+qbool_t QAT_TxTask_Initialize(void)
 {
 	uint32_t ret_val;
 	
@@ -950,7 +980,7 @@ qbool_t QAT_Initialize(void)
    memset(&HTC_Context, 0, sizeof(HTC_Context));
    qurt_mutex_create(&HTC_Context.mutex);
 
-   ret_val =  (uint32_t)nt_qurt_thread_create(QAT_Uart_TxTasks, "qat_uart_tx_task", 1024, NULL, 6, &qat_uart_tx_task_hdl);
+   ret_val =  (uint32_t)nt_qurt_thread_create(QAT_TxTasks, "qat_tx_task", 1024, NULL, 6, &qat_tx_task_hdl);
    if(ret_val != pdPASS)
    {
   	 printf("QAT: task creation failed out of memory\r\n");
@@ -962,10 +992,59 @@ qbool_t QAT_Initialize(void)
 	if (ret_val != 0)
 	{
 	    printf("failed to create qat_task_start signal", 0);
-		nt_osal_thread_delete(qat_uart_tx_task_hdl);
+		nt_osal_thread_delete(qat_tx_task_hdl);
 		ASSERT(0);
 	}  
    return true;
+}
+void QAT_RxTasks()
+{
+#if (CONFIG_QAT_TRANSMISSION_MODULE == 0)  
+	UartRxTasks();
+#else if (CONFIG_QAT_TRANSMISSION_MODULE == 1)  
+	SPIRxTasks();
+#endif
+
+}
+qbool_t QAT_RxTask_Start()
+{
+    qbool_t Ret_Val = true;
+	uint32_t ret_val;
+
+    ret_val =  (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 1024, NULL, 6, &qat_rx_task_hdl);
+    if(ret_val != pdPASS)
+    {
+   	 printf("QAT: task creation failed out of memory\r\n");
+   	 ASSERT(0);
+    } 
+
+    return Ret_Val;
+}
+
+qbool_t QAT_RxTask_Initialize(void)
+{
+	uint32_t ret_val;
+	
+#if (CONFIG_QAT_TRANSMISSION_MODULE == 0) 
+   Uart_Initialize(UART_HTC_INSTANCE);
+#else if (CONFIG_QAT_TRANSMISSION_MODULE == 1)  
+   SPI_Initialize();
+#endif
+
+   QAT_RxTask_Start();
+
+   return true;
+}
+
+
+void Initialize_QAT_Main(void)
+{
+    Process_Input_Data_Handle = QAT_Process_Input_Data;
+
+	QAT_TxTask_Initialize();
+
+	QAT_RxTask_Initialize();
+
 }
 
 void qat_module_init (void)

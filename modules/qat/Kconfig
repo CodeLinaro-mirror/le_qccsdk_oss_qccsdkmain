@@ -5,4 +5,7 @@ config QAT
 config QAT_COMMON_DEMO
     bool "enable QAT COMMON DEMO"
     default n
+config QAT_TRANSMISSION_MODULE
+    int "change transmission module for QAT. 0:UART, 1:SPI"
+    default 0
 endmenu

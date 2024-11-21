@@ -18,6 +18,7 @@
 
 #include <qat_api.h>
 #include <qat.h>
+#include "qat_uart.h"
 #include "nt_osal.h"
 
 
@@ -25,7 +26,7 @@
  * Preprocessor Definitions and Constants
  *-----------------------------------------------------------------------*/
 //#define UART_HTC_INSTANCE QAPI_UART_INSTANCE_SE2_E
-#define UART_HTC_INSTANCE QAPI_UART_INST_0	
+
 extern void* QCLI_Context;
 
 //#define QAT_LOG_ENABLE
@@ -70,7 +71,7 @@ unsigned char Uart_Rcv_Buff[INPUT_BUFFER_SIZE];
 #else
 #define QAT_TSK_WAIT_TIME       (QAPI_TSK_INFINITE_WAIT)
 #endif
-nt_osal_task_handle_t  qat_uart_rx_task_hdl = NULL;
+//nt_osal_task_handle_t  qat_uart_rx_task_hdl = NULL;
 
 
 /*-------------------------------------------------------------------------
@@ -120,8 +121,7 @@ typedef struct UART_s
  *-----------------------------------------------------------------------*/
 extern int32_t PAL_Uart_Instance_Get(void);
 extern qbool_t QAT_Process_Input_Data(uint32_t Length, char *Buffer);
-extern qbool_t QAT_Initialize(void);
-static UART_t GUartCtrl[QAPI_UART_INSTANCE_MAX];
+UART_t GUartCtrl[QAPI_UART_INSTANCE_MAX];
 //static int32_t ConsoleUartInstance = -1;
 
  /*-------------------------------------------------------------------------
@@ -136,8 +136,8 @@ static UART_t GUartCtrl[QAPI_UART_INSTANCE_MAX];
 qapi_Status_t QAT_Output(uint32_t length, const char *buffer);
 
 /* Internal help functions. */
-static qbool_t UartRxTaskStart(qapi_UART_Instance_t Instance);
-static void UartRxTasks(void *Task_Uart);
+//qbool_t UartRxTaskStart(qapi_UART_Instance_t Instance);
+void UartRxTasks();
 static qbool_t UartEnabled(qapi_UART_Instance_t Instance);
 
 static qapi_Status_t UartInit(qapi_UART_Instance_t Instance, uint32_t BaudRate, qapi_UART_Parity_Mode_e ParityMode,
@@ -148,7 +148,8 @@ static qapi_Status_t UartInit(qapi_UART_Instance_t Instance, uint32_t BaudRate, 
 /* Callback functions. */
 //static void UartRxCbCommon(unsigned int Instance, uint32_t Status, unsigned int Length, void *CbCtxt);
 
-qbool_t (*Process_Input_Data_Handle)(uint32_t Length, char *Buffer);
+extern qbool_t (*Process_Input_Data_Handle)(uint32_t Length, char *Buffer);
+
 
 
 /*-------------------------------------------------------------------------
@@ -165,13 +166,12 @@ qbool_t Uart_Initialize(qapi_UART_Instance_t Instance)
         Ret_Val = false;
 		return Ret_Val;
     }
-    
-    printf("Start uart %d task...\n", Instance);
-    GUartCtrl[Instance].WorkMode = WORK_MODE_SILENT;//WORK_MODE_ECHO; //
-    Ret_Val = UartRxTaskStart(Instance);
+
+	GUartCtrl[UART_HTC_INSTANCE].WorkMode = WORK_MODE_SILENT;//WORK_MODE_ECHO; //
     
     return Ret_Val;
 }
+
 /*
 qbool_t Deinitialize_Uart_Htc(qapi_UART_Instance_t Instance)
 {
@@ -197,7 +197,7 @@ qbool_t Deinitialize_Uart_Htc(qapi_UART_Instance_t Instance)
     return true;
 }
 */
-static void UartRxTasks(void *Task_Uart)
+void UartRxTasks()
 {
     uint32_t Len = INPUT_BUFFER_SIZE, RemainLen = 0;
     UART_t *Uart;
@@ -206,15 +206,16 @@ static void UartRxTasks(void *Task_Uart)
 	uint32_t Total = 0;
 	uint8_t end_char_found = 0;
 	char *Uart_Rcv_Buff = NULL;
-
-	Uart = (UART_t *)Task_Uart;
-	if (NULL == Uart)
+	
+    Uart = INSTANCE_2_UART(UART_HTC_INSTANCE);
+	
+    if (NULL == Uart)
     {
         /*assert*/
         printf("UART Instance %d does not exist.\n", Uart->Instance);
         return ;
     }
-    
+	
 	while(1)
 	{
 		end_char_found = 0;
@@ -246,26 +247,6 @@ static void UartRxTasks(void *Task_Uart)
 		
 		nt_osal_free_memory((char*)Uart_Rcv_Buff);
 	}
-}
-
-
-static qbool_t UartRxTaskStart(qapi_UART_Instance_t Instance)
-{
-    UART_t *Uart = NULL;
-	uint32_t ret_val;
-	
-	
-    Uart = INSTANCE_2_UART(Instance);
-    if (NULL == Uart)
-    {
-        return false;
-    }
-    ret_val =  (uint32_t)nt_qurt_thread_create(UartRxTasks, "UartRxTasks", 1024, Uart, 6, &qat_uart_rx_task_hdl);
-    if(ret_val != pdPASS)
-    {
-   	 printf("QAT: task creation failed out of memory\r\n");
-   	 ASSERT(0);
-    } 
 }
 
 static qapi_Status_t UartInit(qapi_UART_Instance_t Instance, uint32_t BaudRate, qapi_UART_Parity_Mode_e ParityMode,
@@ -362,41 +343,39 @@ static qbool_t UartEnabled(qapi_UART_Instance_t Instance)
 
     return Uart->Enabled;
 }
-
-qapi_Status_t QAT_Output(uint32_t Length, const char *Buffer)
+void QAT_UART_Output(uint32_t Length, const char *Buffer)
 {
-    uint32_t Remain = 0, Sent = 0, Offset = 0;
-
-    if((Length != 0) && (Buffer != NULL))
+	uint32_t Remain = 0, Sent = 0, Offset = 0;
+	char *Buffer_bk = NULL;
+	
+	Buffer_bk = (char *)nt_osal_allocate_memory(Length);
+	if(!Buffer_bk)
+	{	
+	   return ;
+	}
+	
+	memset((void*)Buffer_bk, 0, Length);
+	memcpy(Buffer_bk, Buffer, Length);
+	
+	if((Length != 0) && (Buffer != NULL))
     {
-        Remain = Length;
-        do
-        {
-            /* Transmit the data. */
-            if(qapi_UART_Transmit(UART_HTC_INSTANCE, (char *)(Buffer + Offset), Remain, &Sent) == QAPI_OK)
-            {
-                Remain = Remain - Sent;
-                Offset += Sent;
-                GUartCtrl[UART_HTC_INSTANCE].TxBytes += Sent;
-            }
-            else
-            {
-                //uart transmit error
-                ;
-            }
-        }while(Remain);
-    }
+		Remain = Length;
+	    do
+	    {
+	        /* Transmit the data. */
+	        if(qapi_UART_Transmit(UART_HTC_INSTANCE, (char *)(Buffer_bk + Offset), Remain, &Sent) == QAPI_OK)
+	        {
+	            Remain = Remain - Sent;
+	            Offset += Sent;
+	            GUartCtrl[UART_HTC_INSTANCE].TxBytes += Sent;
+	        }
+	        else
+	        {
+	            //uart transmit error
+	            ;
+	        }
+	    }while(Remain);
+	}
 
-    return QAPI_OK;
+	nt_osal_free_memory((void*)Buffer_bk);
 }
-
-void Initialize_QAT_Main(void)
-{
-    Process_Input_Data_Handle = QAT_Process_Input_Data;
-
-	QAT_Initialize();
-
-    Uart_Initialize(UART_HTC_INSTANCE);
-
-}
-
