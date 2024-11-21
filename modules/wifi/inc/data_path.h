@@ -811,6 +811,7 @@ uint8_t nt_dpm_process_bar_frames(p_ndpA ad, uint8_t *frame);
 
 sta_entry_t *nt_dpm_find_sta_entry_from_staidx(p_ndpA ad, uint8_t sta_id);
 sta_entry_t *nt_dpm_find_sta_entry_for_eth_pkt(p_ndpA ad, uint8_t *src_mac_addr, uint8_t *dest_mac_addr);
+void *nt_dpm_allocate_buffer_pool(uint32_t length);
 void *nt_dpm_allocate_buffer(uint32_t length);
 void nt_dpm_free_buffer(void *buf);
 void *nt_dpm_calloc_buffer(uint32_t num, uint32_t size);
