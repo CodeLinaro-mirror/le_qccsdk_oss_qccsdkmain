@@ -19,6 +19,7 @@
 extern "C"
 {
 #include "qapi/qapi_wlan.h"
+qbool_t get_device_connect_state(void);
 }
 
 //using namespace ::chip::DeviceLayer::NetworkCommissioning;
@@ -260,3 +261,7 @@ CHIP_ERROR FermionUtils::ConnectNetwork(const char *ssid, uint8_t ssidLen, const
 		return CHIP_ERROR_INTERNAL;
 }
 
+qbool_t get_device_connect_state(void)
+{
+    return g_matter_wifi_cxt.connected;
+}
