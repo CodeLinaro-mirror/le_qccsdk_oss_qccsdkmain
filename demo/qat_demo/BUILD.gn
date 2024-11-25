@@ -12,9 +12,20 @@ qat_inc = [
 qat_src = [
     "src/qat_demo_main.c"
 ]
+
 if (CONFIG_QAT_COMMON_DEMO) {
     qat_src += [
         "src/qat_common_demo.c",
+    ]
+}
+
+if (CONFIG_QAT_TCPIP_DEMO) {
+    qat_inc += [
+        "//modules/net/lwip",
+    ]
+
+    qat_src += [
+        "src/qat_tcpip_demo.c",
     ]
 }
 

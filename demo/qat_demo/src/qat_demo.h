@@ -9,5 +9,6 @@
  * - start the mgmt_frame_recv_thread
  */
 void Initialize_QAT_Common_Demo(void);
+void Initialize_QAT_TCPIP_Demo(void);
 
 #endif /* QAT_DEMO_H */

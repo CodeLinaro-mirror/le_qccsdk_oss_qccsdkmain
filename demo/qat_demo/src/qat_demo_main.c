@@ -21,6 +21,7 @@ void app_init(void)
     //register app console commands here if have
 #ifdef CONFIG_QAT_COMMON_DEMO
     Initialize_QAT_Common_Demo();
+    Initialize_QAT_TCPIP_Demo();
 #endif 
 
     UART_SEND_DIRECT("app_init over\r\n");

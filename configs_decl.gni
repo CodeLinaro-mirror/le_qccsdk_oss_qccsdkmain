@@ -126,6 +126,7 @@ declare_args() {
 
     CONFIG_QAT=false
     CONFIG_QAT_COMMON_DEMO=false
+    CONFIG_QAT_TCPIP_DEMO=false
 
     CONFIG_QAT_TRANSMISSION_MODULE=0
 
