@@ -63,6 +63,15 @@ source_set("drivers") {
                 "wlan/wlan_drv.c",
             ]
         }
+        else if (CONFIG_MATTER_ENABLE) {
+            sources += [
+                "wlan/qapi_wlan_base.c",
+                "wlan/qapi_wlan_param_group.c",
+                "wlan/wlan_qapi_helper.c",
+                "wlan/wmi_api.c",
+                "wlan/wlan_drv.c",
+            ]
+        }
     }
     if (CONFIG_BOARD_QCC730_QSPI_ENABLE) {
         sources += [
