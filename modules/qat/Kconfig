@@ -8,4 +8,7 @@ config QAT_COMMON_DEMO
 config QAT_TRANSMISSION_MODULE
     int "change transmission module for QAT. 0:UART, 1:SPI"
     default 0
+config QAT_TCPIP_DEMO
+    bool "enable QAT TCPIP DEMO"
+    default n
 endmenu
