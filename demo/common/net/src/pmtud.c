@@ -64,7 +64,7 @@ char *icmp_buffer;
 
 #define MIN_MTU           68     // minimum MTU size in bytes (RFC 1191, Sect.3)
 #define LOCAL_MTU         1500
-#define TIMEOUT           100000
+#define TIMEOUT           150000
 #define MTU_MUX_RETRY     3
 
 /**
@@ -178,15 +178,15 @@ static int32_t handle_icmp_response(char *buffer, const ip_addr_t *addr)
     struct ip_hdr *ip_header = (struct ip_hdr *)buffer;
     struct icmp_echo_header *icmp_header = (struct icmp_echo_header *)(buffer + (IPH_HL(ip_header) * 4));
 
+    if (icmpm_2_icmpg(icmp_header)->seqno != lwip_htons(icmp_seq_num))
+    {
+        PMTUD_PRINTF("error sequence\n");
+        return 0;
+    }
+
     // returns 1 if the packet comes from the specified host and it's valid
     if (ICMPH_TYPE(icmpm_2_icmp(icmp_header)) == ICMP_ER && (icmpm_2_icmpg(icmp_header)->id == lwip_htons(0x1))) // valid if the source addr is server's
     {
-        if (icmpm_2_icmpg(icmp_header)->seqno != lwip_htons(icmp_seq_num))
-        {
-            PMTUD_PRINTF("error sequence\n");
-            return 0;
-        }
-
         if ((ip_header->src.addr) != (ip_2_ip4(addr)->addr))
         {
             PMTUD_PRINTF("error dst\n");
@@ -269,11 +269,12 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
         else
         {
             PMTUD_PRINTF("packet too big for local interface\n");
-            low = current_mtu - 1;
+            high = current_mtu - 1;
             new_mtu = MTU_ERR_STATUS;
             goto exit;
         }
 
+retry:
         FD_SET(s, &fds);
         sel = select(s + 1, &fds, NULL, NULL, &timeout);
 
@@ -285,7 +286,6 @@ int32_t Path_MTU_Discover(ip_addr_t *ip_addr)
         
         else if (sel == 0)
         {
-retry:
             if (--retry_counter == 0)
             {
                 retry_counter = MTU_MUX_RETRY;
