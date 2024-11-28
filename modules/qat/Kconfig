@@ -11,4 +11,7 @@ config QAT_TRANSMISSION_MODULE
 config QAT_TCPIP_DEMO
     bool "enable QAT TCPIP DEMO"
     default n
+config QAT_WLAN_DEMO
+    bool "enable QAT WLAN DEMO"
+    default n
 endmenu
