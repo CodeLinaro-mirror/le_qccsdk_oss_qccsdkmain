@@ -1346,8 +1346,8 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
         }
 
         if (delThread == true) {
-            nt_osal_thread_delete(NULL);
             mqttThreadCreated = false;
+            nt_osal_thread_delete(NULL);
         }
     }
     while (1);
