@@ -21,6 +21,7 @@ declare_args() {
     CONFIG_RING_IF_ONLY = false
     CONFIG_QCSPI_HFC_TEST = false
     CONFIG_QCSPI_HFC_ETH_ENABLE = false
+    CONFIG_QCSPI_HFC_ATCMD_ENABLE = false
     CONFIG_SAP_POWERSAVE = false
     CONFIG_WFM_EN = false
     CONFIG_DEBUG_STATS = false

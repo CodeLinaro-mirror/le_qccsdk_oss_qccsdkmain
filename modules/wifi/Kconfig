@@ -20,6 +20,10 @@ config QCSPI_HFC_TEST
         bool "Enable QCSPI Slave HFC test demo. if QCSPI HFC test demo is not needed , please default to n"
         default n
 
+config QCSPI_HFC_ATCMD_ENABLE 
+        bool "Enable AT command over QCSPI. if AT Command over QCSPI is not needed , please default to n"
+        default n
+
 config WATCH_DOG_ENABLE
 	bool "Watch Dog function. Please default to n"
 	default n

@@ -7,7 +7,7 @@
 #define __QAT_SPI_H__
 
 
-void QAT_SPI_Output(uint32_t Length, const char *Buffer);
+int QAT_SPI_Output(uint32_t Length, const char *Buffer);
 
 
 #endif
