@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#include "wlan_dev.h"
 #include "wlan_drv.h"
 #include "wlan_qapi_helper.h"
 #include "wlan_ra.h"
@@ -663,6 +664,9 @@ qapi_Status_t wlan_set_rts_cts(uint8_t device_ID, uint32_t enable)
 	qapi_Status_t error = QAPI_OK;
 	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+	extern devh_t *gdevp;
+
+	gdevp->anti_param.rts_enable = enable;
 
 	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
 	cmd->pdev_param_id = WIFI_PARAM_SET_RTS_CTS;
@@ -695,9 +699,12 @@ qapi_Status_t wlan_set_rts_rate(uint8_t device_ID, uint32_t rate)
 	qapi_Status_t error = QAPI_OK;
 	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+	extern devh_t *gdevp;
 
 	if (rate > 2)
 		return QAPI_ERR_INVALID_PARAM;
+
+	gdevp->anti_param.rts_rate = rate;
 
 	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
 	cmd->pdev_param_id = WIFI_PARAM_SET_RTS_RATE_2G;
@@ -736,9 +743,16 @@ qapi_Status_t wlan_set_edca_param(uint8_t device_ID, uint8_t qid, uint8_t aifsn,
 	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
 	qapi_WLAN_Edca_Params_t edca_para;
+	extern devh_t *gdevp;
 
 	if ((qid >= 8) && (qid != 0xff))
 		return QAPI_ERR_INVALID_PARAM;
+
+	gdevp->anti_param.qid = qid;
+	gdevp->anti_param.aifsn = aifsn;
+	gdevp->anti_param.cw_min = cw_min;
+	gdevp->anti_param.cw_max = cw_max;
+	gdevp->anti_param.txop_limit = txop_limit;
 
 	edca_para.qid = qid;
 	edca_para.aifsn = aifsn;
@@ -855,9 +869,12 @@ qapi_Status_t wlan_set_per_upper_threshold(uint8_t device_ID, uint32_t threshold
 	qapi_Status_t error = QAPI_OK;
 	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+	extern devh_t *gdevp;
 
 	if (threshold > 100)
 		return QAPI_ERR_INVALID_PARAM;
+
+	gdevp->anti_param.threshold = threshold;
 
 	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
 	cmd->pdev_param_id = WIFI_PARAM_SET_PER_UPPER_THRESHOLD;
@@ -889,9 +906,13 @@ qapi_Status_t wlan_set_ba_win_size(uint8_t device_ID, uint16_t ack_timeout, uint
 	qapi_Status_t error = QAPI_OK;
 	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+	extern devh_t *gdevp;
 
 	if (ack_timeout >= 4096|| delay >= 64)
 		return QAPI_ERR_INVALID_PARAM;
+
+	gdevp->anti_param.ack_timeout = ack_timeout;
+	gdevp->anti_param.delay = delay;
 
 	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
 	cmd->pdev_param_id = WIFI_PARAM_SET_BA_WIN_SIZE;
@@ -927,9 +948,12 @@ qapi_Status_t wlan_set_slot_time(uint8_t device_ID, uint32_t slot_time)
 	qapi_Status_t error = QAPI_OK;
 	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+	extern devh_t *gdevp;
 
 	if (slot_time != 9 && slot_time != 20)
 		return QAPI_ERR_INVALID_PARAM;
+
+	gdevp->anti_param.slot_time = slot_time;
 
 	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
 	cmd->pdev_param_id = WIFI_PARAM_SET_SLOT_TIME;
