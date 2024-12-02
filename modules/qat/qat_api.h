@@ -28,6 +28,7 @@
 #define QAT_OP_HELP              0x00000002
 #define QAT_OP_EXEC              0x00000004
 #define QAT_OP_EXEC_W_PARAM      0x00000008
+#define QAT_OP_EXEC_IN_DATA_MODEL              0x00000010
 
 
 /*-------------------------------------------------------------------------
@@ -49,8 +50,9 @@ typedef enum
 
   QAT_RC_CONNECT_W_PARAMETER = 9,	/*	AT: CONNECT <parameter>	  */
   QAT_RC_QUIET		    = 10,	    /*  AT: No Messages           */
+  QAT_RC_QUIET_NO_CR		    = 11,	    /*  AT: No Messages           */
 
-  QAT_RC_MAX		    = QAT_RC_QUIET,       /*	AT: Max Num   */
+  QAT_RC_MAX,		       /*	AT: Max Num   */
 
 }QAT_Result_Enum_Type;
 

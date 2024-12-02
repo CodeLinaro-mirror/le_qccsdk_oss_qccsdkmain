@@ -14,4 +14,7 @@ config QAT_TCPIP_DEMO
 config QAT_WLAN_DEMO
     bool "enable QAT WLAN DEMO"
     default n
+config QAT_MQTT_DEMO
+    bool "enable QAT MQTT DEMO"
+    default n
 endmenu
