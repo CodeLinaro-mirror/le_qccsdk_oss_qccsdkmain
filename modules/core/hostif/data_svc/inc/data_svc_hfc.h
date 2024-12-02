@@ -49,7 +49,8 @@ typedef struct hfc_msg
 /*------------------------------------------------------------------------
 * Function Declarations
 * ----------------------------------------------------------------------*/
-extern int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint8_t *payload, uint16_t len, uint16_t info);
+extern int32_t data_svc_hfc_send_data_pkt(void* p_buff, uint8_t *payload, uint16_t len, uint16_t info);
+extern int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint16_t *data_len, uint16_t *info);
 extern qbool_t data_svc_hfc_send_config(uint32_t *p_buf, uint16_t len);
 extern uint32_t data_svc_hfc_get_max_msg_num(void);
 extern uint32_t data_svc_set_gpio_assert_info(uint32_t info);

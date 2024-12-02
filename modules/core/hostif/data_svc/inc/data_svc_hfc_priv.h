@@ -34,7 +34,8 @@ typedef struct hfc_cb
 * ----------------------------------------------------------------------*/
 extern bool data_svc_get_hfc_data_buff(void* p_element, uint16_t len);
 extern bool data_svc_free_hfc_data_buff (void* p_element);
-extern int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint8_t *payload, uint16_t len, uint16_t info);
+extern int32_t data_svc_hfc_send_data_pkt(void* p_buff, uint8_t *payload, uint16_t len, uint16_t info);
+extern int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint16_t *data_len, uint16_t *info);
 extern bool process_hfc_data_pkt(void* p_element);
 extern bool process_hfc_config_pkt(void* p_element);
 extern err_t hfc_data_try_callback(hfc_callback_fn fun,void *ctx);

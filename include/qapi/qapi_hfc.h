@@ -48,6 +48,20 @@ uint32_t qapi_hfc_get_max_msg_num(void);
 qapi_Status_t qapi_hfc_sendto_host_data_pkt(void* p_buff, uint8_t *payload, uint16_t len, uint16_t info);
 
 /**
+ * @brief API to be used to receive data packets from Host.
+ *
+ * @param[in]  p_buff    pointer of buffer
+ * @param[in]  payload   pointer of buffer length
+ * @param[out] data_len  pointer of data length
+ * @param[out] info      pointer of extra info
+ * @return  
+ * QAPI_OK -- On success.\n
+ * Error code -- On failure.
+ */
+qapi_Status_t qapi_hfc_recvfrom_host_data_pkt(void* p_buff, uint16_t *buf_len, uint16_t *data_len, uint16_t *info);
+
+
+/**
  * @brief  API to be used to send config packets to host.
  * @param[in]  p_buf    Pointer to the buffer of config packet
  * @param[in]  len      Length of the config packet

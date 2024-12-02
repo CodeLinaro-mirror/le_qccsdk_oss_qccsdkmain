@@ -28,7 +28,7 @@ qapi_Status_t qapi_hfc_sendto_host_data_pkt(void* p_buff, uint8_t *payload, uint
 {
     int error_code = QAPI_OK;
 
-	error_code = data_svc_hfc_recv_data_pkt(p_buff, payload, len, info);
+	error_code = data_svc_hfc_send_data_pkt(p_buff, payload, len, info);
     switch (error_code)
     {
         case -1:
@@ -36,6 +36,38 @@ qapi_Status_t qapi_hfc_sendto_host_data_pkt(void* p_buff, uint8_t *payload, uint
 			break;
         case -2:
 			error_code = QAPI_ERR_NO_RESOURCE;
+			break;
+		default:
+			error_code = QAPI_OK;
+			break;
+    }
+
+	return error_code;
+}
+
+/**
+ * @brief API to be used to receive data packets from Host.
+ *
+ * @param[in] p_buff     pointer of buffer
+ * @param[in] payload    pointer of buffer length
+ * @param[out] data_len  pointer of data length
+ * @param[out] info      pointer of extra info
+ * @return  
+ * QAPI_OK -- On success.\n
+ * Error code -- On failure.
+ */
+qapi_Status_t qapi_hfc_recvfrom_host_data_pkt(void* p_buff, uint16_t *buf_len, uint16_t *data_len, uint16_t *info)
+{
+    int error_code = QAPI_OK;
+
+	error_code = data_svc_hfc_recv_data_pkt(p_buff, buf_len, data_len, info);
+    switch (error_code)
+    {
+        case -1:
+			error_code = QAPI_ERR_INVALID_PARAM;
+			break;
+        case -2:
+			error_code = QAPI_ERR_BOUNDS;
 			break;
 		default:
 			error_code = QAPI_OK;

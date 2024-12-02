@@ -18,6 +18,8 @@
 #include "qapi_status.h"
 #include "qurt_internal.h"
 #include "nt_osal.h"
+#include "data_svc_hfc.h"
+#include "qapi_hfc.h"
 
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -50,7 +52,7 @@ void SPIRxTasks();
  * Function defination
  *-----------------------------------------------------------------------*/
 
-void SPIRxTasks()
+void SPIRxTasks(void *arg)
 {
     uint32_t Len = INPUT_BUFFER_SIZE, RemainLen = 0;
     qapi_Status_t Status = QAPI_OK;
@@ -58,39 +60,31 @@ void SPIRxTasks()
 	uint32_t Total = 0;
 	uint8_t end_char_found = 0;
 	char *SPI_Rcv_Buff = NULL;
-    
-	while(1)
-	{
-		end_char_found = 0;
-		
-		SPI_Rcv_Buff = (char *)nt_osal_allocate_memory(INPUT_BUFFER_SIZE);
-		if (SPI_Rcv_Buff == NULL)
-			return ;
+	uint16_t buf_len = INPUT_BUFFER_SIZE;
+	uint16_t data_len = 0;
+	
+    (void)(arg);
 
-		memset(SPI_Rcv_Buff, 0, INPUT_BUFFER_SIZE);
+ 	SPI_Rcv_Buff = (char *)nt_osal_allocate_memory(INPUT_BUFFER_SIZE);
+	if (SPI_Rcv_Buff == NULL)
+		return ;
 		
-		//Status = qapi_UART_Receive(Uart->Instance, SPI_Rcv_Buff, INPUT_BUFFER_SIZE, &Recved);
-		if (Recved > 0) {
-			Total += Recved;
-		
-	        for(i = 0; i < Recved; i ++)
-	        {
-				if(SPI_Rcv_Buff[i] == PAL_INPUT_END_OF_LINE_CHARACTER)
-					end_char_found = 1;
-	        }
-			if ((i % SPI_RECV_MAX_LEN) == 0) {
-				printf("\r\n");
+    while (1) 
+    {
+	    if (qapi_hfc_recvfrom_host_data_pkt(SPI_Rcv_Buff, &buf_len, &data_len, NULL) == QAPI_OK)
+		{		    
+			*(SPI_Rcv_Buff + data_len) = '\r';
+			printf("\r\nSPIRx cmd %d:", data_len);
+			for (i=0; i<data_len; i++)
+			{
+			    printf("%c", SPI_Rcv_Buff[i]);
 			}
-
-            printf("%c", SPI_Rcv_Buff[i]);
-			//sprintf("\r\n");
-			if(Process_Input_Data_Handle && end_char_found == 1)
-				    Process_Input_Data_Handle(Len, SPI_Rcv_Buff);
-	    }
-		
-		nt_osal_free_memory((char*)SPI_Rcv_Buff);
-		
-	}
+			printf("\r\n");
+			if(Process_Input_Data_Handle)
+		        Process_Input_Data_Handle(data_len+1, SPI_Rcv_Buff);
+			
+		}		
+    }
 }
 
 qbool_t SPI_Initialize()
@@ -102,25 +96,53 @@ qbool_t SPI_Initialize()
     return Ret_Val;
 }
 
-void QAT_SPI_Output(uint32_t Length, const char *Buffer)
+#define HFC_SEND_MAX_RETRY_COUNT                 200
+
+int QAT_SPI_Output(uint32_t Length, const char *Buffer)
 {
-	char *Buffer_bk = NULL;
-		
-	Buffer_bk = (char *)nt_osal_allocate_memory(Length);
+	uint8_t *payload = NULL;
+	int retry_cnt = 0;
+	qapi_Status_t ret = QAPI_OK;
+    uint32_t i;
 	
-	if(!Buffer_bk)
+	payload = (uint8_t *)nt_osal_allocate_memory(Length);
+	
+	if(!payload)
 	{	
 	   return ;
 	}
 	
-	memset((void*)Buffer_bk, 0, Length);
+	memset((void*)payload, 0, Length);
 	
-	if((Length != 0) && (Buffer != NULL))
-    {
-		memcpy(Buffer_bk, Buffer, Length);
-		/*leave for send data to spi*/
+	while (retry_cnt < HFC_SEND_MAX_RETRY_COUNT)
+	{
+    	if((Length != 0) && (Buffer != NULL))
+        {
+    		memcpy(payload, Buffer, Length);
+    		ret = qapi_hfc_sendto_host_data_pkt(payload, payload, Length, 0);
+            if (0 == ret)
+        	{
+    			printf("\r\nSPITx resp %d: %s\r\n", Length, (char*)payload);
+    			break;
+    		} 
+    
+    		if (QAPI_ERR_NO_RESOURCE == ret)
+    		{
+    			/* Temp way to wait for the free elment, which
+    			 * could be optimized to improve the speed. */
+        		nt_osal_delay(10); 
+    			retry_cnt++;
+    			if (retry_cnt >= HFC_SEND_MAX_RETRY_COUNT)
+    			{
+    			    nt_osal_free_memory(payload);
+    			}
+        	}
+    		else
+    		{
+    			 nt_osal_free_memory(payload);
+    		     return -1;
+    		}		
+    	}
 	}
-
-	nt_osal_free_memory((char *)Buffer_bk);
 }
 
