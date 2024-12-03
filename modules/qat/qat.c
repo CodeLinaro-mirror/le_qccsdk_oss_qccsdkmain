@@ -95,6 +95,8 @@ char *QAT_Result_Str[]=
 	"BUSY",
 	"NO ANSWER",
 	"",
+   "OK",
+   "OK",
 };
 
 qbool_t QAT_Transfer_Mode_set(QAT_Transfer_Mode_t Mode, QAT_Transfer_Mode_Handle_t Handle)
@@ -267,7 +269,7 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
                         /* Simply consume the escape character. */
                         memsmove(&(HTC_Context.Input_String[Index]), HTC_Context.Input_Length - Index, &(HTC_Context.Input_String[Index + 1]), HTC_Context.Input_Length - Index - 1);
                      
-                        HTC_Context.Input_String[HTC_Context.Input_Length - 2] = '\0';
+                        HTC_Context.Input_String[HTC_Context.Input_Length - 1] = '\0';
                      
                         HTC_Context.Input_Length --;
                      }
@@ -870,22 +872,33 @@ QAT_Command_Status_t QAT_Response_Str(int Ret_Code, char *Buffer)
       Tx_Queue->Buffer = (uint8_t*)((char*)Tx_Queue + sizeof(QAT_Tx_Queue_t));
       Ptr = (char*)Tx_Queue->Buffer;
       
-      Len = snprintf(Ptr, Buffer_Len, "%s", "\r\n");
-	  Buffer_Len -= Len,
-      Ptr += Len;
-      Tx_Queue->Len = Len;
+      if(Ret_Code != QAT_RC_QUIET_NO_CR)
+      {
+         Len = snprintf(Ptr, Buffer_Len, "%s", "\r\n");
+         Buffer_Len -= Len,
+         Ptr += Len;
+         Tx_Queue->Len = Len;
+      }
       
       if(Buffer && Input_Buffer_Length)
       {
          memcpy(Ptr, Buffer, Input_Buffer_Length); 
          Ptr += Input_Buffer_Length;      
-   
-         memcpy(Ptr, "\r\n", 2);
-         Ptr += 2;
-         Tx_Queue->Len += (Input_Buffer_Length + 2);
+
+         if(Ret_Code != QAT_RC_QUIET_NO_CR)
+         {
+            memcpy(Ptr, "\r\n", 2);
+            Ptr += 2;
+            Tx_Queue->Len += (Input_Buffer_Length + 2);
+         }
+         else
+         {
+            Tx_Queue->Len += (Input_Buffer_Length );
+         }
+
       }	 
          
-      if(Ret_Code != QAT_RC_QUIET)
+      if(Ret_Code != QAT_RC_QUIET && Ret_Code != QAT_RC_QUIET_NO_CR)
       {
          if(QAT_Result_Str[Ret_Code] && strlen(QAT_Result_Str[Ret_Code]))
          {
