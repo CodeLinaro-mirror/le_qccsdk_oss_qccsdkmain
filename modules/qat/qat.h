@@ -127,5 +127,17 @@ typedef struct HTC_Context_s
    qurt_mutex_t 			   mutex;
 } HTC_Context_t;
 
+
+/**
+   Information for the result of a Find_Command() operation.
+*/
+typedef struct Cur_Data_Mode_Cmd_s
+{
+   char cur_data_mode_commnd[20];
+   uint32_t Op_Type;
+   uint32_t	  Parameter_Count;
+   
+} Cur_Data_Mode_Cmd_t;
+
 #endif // ] #ifndef __QAT_H__
 
