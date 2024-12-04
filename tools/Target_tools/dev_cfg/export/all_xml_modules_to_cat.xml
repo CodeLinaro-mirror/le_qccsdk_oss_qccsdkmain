@@ -342,6 +342,8 @@
 
       <props id="22" id_name="NT_DEVCFG_RA_FIXED_TRI_RATE_INDEX" min="0" max="0" helptext="default- tri fixed rate" type="0x00000002"> 0 </props>
 
+      <props id="23" id_name="NT_DEVCFG_RA_MCS4_RX_EN" min="0" max="1" helptext="MCS4 RX is enabled or not" type="0x00000002"> 1 </props>
+
    </device>
 
 </driver>
@@ -384,7 +386,7 @@
 
       <props id="8" id_name="NT_DEVCFG_CONN_TKIP_WAIT_TIMM" helptext="default-tkip countermeasure timer" type="0x00000002"> 50 </props>
 
-	  <props id="9" id_name="NT_DEVCFG_CONN_CONSECUTIVE_BMISS_THRESHOLD" min="15" max="15" helptext="default-beacon miss threshold to initiate reconnect" type="0x00000002"> 15 </props>
+	  <props id="9" id_name="NT_DEVCFG_CONN_CONSECUTIVE_BMISS_THRESHOLD" min="30" max="30" helptext="default-beacon miss threshold to initiate reconnect" type="0x00000002"> 30 </props>
 
       <props id="10" id_name="NT_DEVCFG_CONN_MODIFIED_BEACON_INTERVAL" min="100" max="100" helptext="modified beacon interval" type="0x00000002"> 100 </props>
 

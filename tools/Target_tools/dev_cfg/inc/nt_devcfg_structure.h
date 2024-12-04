@@ -1,7 +1,3 @@
-/*
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
 /** System Generated File
 *  Don't Change Manually */
 #ifndef CORE_DEV_CFG_INC_NT_DEVCFG_STRUCTURE_H_
@@ -161,6 +157,7 @@ uint32 NT_DEVCFG_RA_ON;
 uint32 NT_DEVCFG_RA_FIXED_PRI_RATE_INDEX;
 uint32 NT_DEVCFG_RA_FIXED_SEC_RATE_INDEX;
 uint32 NT_DEVCFG_RA_FIXED_TRI_RATE_INDEX;
+uint32 NT_DEVCFG_RA_MCS4_RX_EN;
 uint32 NT_DEVCFG_WIFISEC_AUTH_INTER_FRM_TIMER;
 uint32 NT_DEVCFG_WIFISEC_AUTH_RETRY_COUNT;
 uint32 NT_DEVCFG_WIFISEC_SUPPL_SESSION_TIMER;
