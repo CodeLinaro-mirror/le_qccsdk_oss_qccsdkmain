@@ -53,6 +53,10 @@ static QAT_Command_Status_t Extend_Command_SetModeOption(uint32_t Op_Type, uint3
 static QAT_Command_Status_t Extend_Command_EventMessage(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_PyhMode(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_CountryCode(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_ANTIINF(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_EDCA(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_EDCCATHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_BMISSTHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 
 /* The following is the complete command list for the QAT common command demo. */
 /** List of global commands that are supported when in a group. */
@@ -71,6 +75,10 @@ static QAT_Command_t QAT_Wifi_Command_List[] =
    {"+WEVT",     Extend_Command_EventMessage,      QAT_OP_EXEC_W_PARAM | QAT_OP_QUERY},
    {"+CWPHYMODE",Extend_Command_PyhMode,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC | QAT_OP_QUERY},
    {"+CWCOUNTRY",Extend_Command_CountryCode,  QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC | QAT_OP_QUERY},
+   {"+ANTIINF",  Extend_Command_ANTIINF,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+   {"+EDCA",     Extend_Command_EDCA,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+   {"+EDCCATHR", Extend_Command_EDCCATHR,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+   {"+BMISSTHR", Extend_Command_BMISSTHR,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
 };
 
 typedef struct wifi_shell_cxt_s {
@@ -97,6 +105,7 @@ typedef struct wifi_shell_cxt_s {
 #define SCAN_PRINT_BUFFER_LENGTH					     3200					     
 #define SCAN_MODE_BLOCKING      1
 #define SCAN_MODE_UNBLOCKING    2
+#define CMD_STR_BUFFER_LENGTH					        1024
 
 static wifi_shell_cxt_t g_wifi_shell_cxt;
 static wifi_shell_cxt_t *pg_wifi_shell_cxt;
@@ -1497,7 +1506,527 @@ static QAT_Command_Status_t Extend_Command_Disconnect(uint32_t Op_Type, uint32_t
    rc = QAT_Response_Str(QAT_RC_OK, NULL);
    return rc;
 }
+/**
+   @brief ANTIINF
 
+   This command will change the current group to its parent. No parameters are
+   expected for this command.
+
+   @param[in] Op_Type          The input command type.
+   @param[in] Parameter_Count  Number of parameters that were entered into the
+                               command line.
+   @param[in] Parameter_List   List of parameters entered into the command line.
+*/
+#define RT_IDX_11B_LONG_1_MBPS 0
+#define RT_IDX_11A_6_MBPS 1
+#define RT_IDX_11A_12_MBPS 2
+static QAT_Command_Status_t Extend_Command_ANTIINF(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+	char buffer[CMD_STR_BUFFER_LENGTH]={0};
+	QAT_Command_Status_t rc = QAT_STATUS_SUCCESS_E;
+	int offset = 0;
+    uint8_t deviceId = qat_get_active_device();
+	uint32_t enable = 1;
+	uint32_t rts_rate = RT_IDX_11B_LONG_1_MBPS;
+	qapi_WLAN_Edca_Params_t edca_param_cfg;
+	uint32_t threshold = 60;
+	uint32_t slot_time = 20;
+	
+   switch (Op_Type)
+   {
+	  case QAT_OP_EXEC:		     /* AT+ANTIINF */
+      {	
+		rc = QAT_Response_Str(QAT_RC_OK, "AT+ANTIINF=<0: 1M RTS|1:6M RTS|2: 12M RTS>\r\n"\
+										 "AT+ANTIINF?: get ANTIINF");
+		break;
+      }
+      case QAT_OP_QUERY:		     /* AT+ANTIINF? */
+      {	
+	    qapi_WLAN_BA_Window_Params_t ba_win;
+	    uint32_t length = 0;
+		
+	    edca_param_cfg.qid = 0xff;
+	    length = sizeof(enable);
+	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS,
+	                                &enable,
+	                                &length))
+	    {
+	        memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);                        
+	        snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+ANTIINF:get RTS enable fail for device %d",deviceId);
+	        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+	        return rc;
+	    }
+		
+	    length = sizeof(rts_rate);
+	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G,
+	                                &rts_rate,
+	                                &length))
+	    {
+			memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);
+			snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+ANTIINF:get RTS enable fail for device %d",deviceId);
+	        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+	        return rc;
+	    }
+
+	    length = sizeof(edca_param_cfg);
+	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM,
+	                                &edca_param_cfg,
+	                                &length))
+	    {
+	        memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);
+			snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+ANTIINF:get contention window size fail for device %d",deviceId);
+	        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+	        return rc;
+	    }
+
+	    length = sizeof(threshold);
+	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD,
+	                                &threshold,
+	                                &length))
+	    {
+	        memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);
+			snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+ANTIINF:get per upper threshold fail for device %d",deviceId);
+	        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+	        return rc;
+	    }
+		
+	    length = sizeof(ba_win);
+	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW,
+	                                &ba_win,
+	                                &length))
+	    {
+	        memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);
+			snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+ANTIINF:get per upper ba window size fail for device %d",deviceId);
+	        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+	        return rc;
+	    }
+
+	    length = sizeof(slot_time);
+	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME,
+	                                &slot_time,
+	                                &length))
+	    {
+	        memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);
+			snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+ANTIINF:get slot time fail for device %d",deviceId);
+	        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+	        return rc;
+	    } 
+
+		offset = snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+ANTIINF:%s,%d,%d,%d,%d,%d,%d,%d,%d"\
+													,enable?"enable":"disable",rts_rate, edca_param_cfg.qid, edca_param_cfg.cw_min, edca_param_cfg.cw_max,threshold, ba_win.ack_timeout, 2 * ba_win.delay, slot_time);
+		rc = QAT_Response_Str(QAT_RC_OK, buffer);	
+		break;
+      }
+	  case QAT_OP_EXEC_W_PARAM:		     /* AT+ANTIINF= */
+      {	
+		qapi_WLAN_BA_Window_Params_t ba_win_size_cfg;
+		
+		edca_param_cfg.qid = 0xff; //set queue 0 - 7
+		edca_param_cfg.aifsn = 0x3;
+		edca_param_cfg.cw_min = 0x2;  // cwmin = 2^2 -1
+		edca_param_cfg.cw_max = 0x4;  // cwmax = 2^4 - 1
+		edca_param_cfg.txop_limit = 200;
+
+		ba_win_size_cfg.ack_timeout = 128; //128us, should less than 4096
+		ba_win_size_cfg.delay = 10; //10 * 2 * SM clock cycles, should less than 64
+
+	    rts_rate = Parameter_List[0].Integer_Value;
+
+	    if (0 != qapi_WLAN_Set_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS,
+	                                &enable,
+	                                sizeof(enable),
+	                                FALSE))
+	    {
+	        rc = QAT_Response_Str(QAT_RC_ERROR, "+ANTIINF:Enable RTS/CTS fail\r\n"\
+											    "1:enable  0:disable");
+	        return rc;
+	    }
+
+	    if (0 != qapi_WLAN_Set_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G,
+	                                &rts_rate,
+	                                sizeof(rts_rate),
+	                                FALSE))
+	    {
+
+			rc = QAT_Response_Str(QAT_RC_ERROR, "+ANTIINF:fix RTS rate fail\r\n"\
+											    "0:1Mbps  1:6Mbps 2:12Mbps");
+	        return rc;
+	    }
+
+	    if (0 != qapi_WLAN_Set_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM,
+	                                &edca_param_cfg,
+	                                sizeof(edca_param_cfg),
+	                                FALSE))
+	    {
+			rc = QAT_Response_Str(QAT_RC_ERROR, "+ANTIINF:set edca param fail\r\n"\
+											    "set qid = 0xff for all queue; set qid = 0-7 for single queue");
+	        return rc;
+
+	    }
+
+	    if (0 != qapi_WLAN_Set_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_PER_UPPER_THRESHOLD,
+	                                &threshold,
+	                                sizeof(threshold),
+	                                FALSE))
+	    {
+	        rc = QAT_Response_Str(QAT_RC_ERROR, "+ANTIINF:set per upper threshold fail\r\n"\
+											    "threshold should less than 100");
+	        return rc;
+	    }
+
+	    if (0 != qapi_WLAN_Set_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW,
+	                                &ba_win_size_cfg,
+	                                sizeof(ba_win_size_cfg),
+	                                FALSE))
+	    {
+	        rc = QAT_Response_Str(QAT_RC_ERROR, "+ANTIINF:set per upper threshold fail\r\n" \
+												"ack_timeout should less than 4096\r\n" \
+											    "delay should less than 64");
+	        return rc;
+	    }
+
+	    if (0 != qapi_WLAN_Set_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SLOT_TIME,
+	                                &slot_time,
+	                                sizeof(slot_time),
+	                                FALSE))
+	    {
+	        rc = QAT_Response_Str(QAT_RC_ERROR, "+ANTIINF:set slot time fail\r\n" \
+												"aet slot time to 9us or 20us");
+	        return rc;
+	    }
+
+	    rc = QAT_Response_Str(QAT_RC_OK, NULL);
+	    break;
+	  }
+      
+      default:
+         ;
+   }
+
+   return rc;
+}
+
+/**
+   @brief ANTIINF
+
+   This command will change the current group to its parent. No parameters are
+   expected for this command.
+
+   @param[in] Op_Type          The input command type.
+   @param[in] Parameter_Count  Number of parameters that were entered into the
+                               command line.
+   @param[in] Parameter_List   List of parameters entered into the command line.
+*/
+static QAT_Command_Status_t Extend_Command_EDCA(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+   char buffer[CMD_STR_BUFFER_LENGTH]={0};
+   QAT_Command_Status_t rc = QAT_STATUS_SUCCESS_E;
+   int offset = 0;
+   uint8_t deviceId = qat_get_active_device();
+   qapi_WLAN_Edca_Params_t edca_param_cfg;
+   char* cmd = NULL;
+   
+   switch (Op_Type)
+   {
+	  case QAT_OP_EXEC:		     /* AT+EDCA */
+      {	
+		rc = QAT_Response_Str(QAT_RC_OK, "AT+EDCA=setparam,<qtid:0~7 or 255>,<aifsn>,<cwmin:exp>,<cwmax:exp>,<txop_limit>\r\n"\
+										 "AT+EDCA=getparam,<qtid:0~7 or 255>");
+		break;
+      }
+	  case QAT_OP_EXEC_W_PARAM:		     /* AT+EDCA= */
+      {	
+		memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);
+		
+		if(!pg_wifi_shell_cxt->wlan_enabled) {
+	        /* edca should be set after connectting */
+	        rc = QAT_Response_Str(QAT_RC_ERROR, "+EDCA:wlan is not enabled");
+			return rc;
+	    }
+		
+		cmd = Parameter_List[0].String_Value;
+		if(strncmp(cmd, "setparam", 8) == 0)
+		{
+			if(Parameter_Count < 6 || !Parameter_List || !Parameter_List[1].Integer_Is_Valid || !Parameter_List[2].Integer_Is_Valid ||
+	        !Parameter_List[3].Integer_Is_Valid || !Parameter_List[4].Integer_Is_Valid || !Parameter_List[5].Integer_Is_Valid)
+		    {
+		        return QAT_Response_Str(QAT_RC_ERROR, "+EDCA:AT+EDCA=setparam,<qtid:0~7 or 255>,<aifsn>,<cwmin:exp>,<cwmax:exp>,<txop_limit>");
+		    }
+
+		    edca_param_cfg.qid = Parameter_List[1].Integer_Value;
+		    edca_param_cfg.aifsn = Parameter_List[2].Integer_Value;
+		    edca_param_cfg.cw_min = Parameter_List[3].Integer_Value;
+		    edca_param_cfg.cw_max = Parameter_List[4].Integer_Value;
+		    edca_param_cfg.txop_limit = Parameter_List[5].Integer_Value;
+
+		    if (0 != qapi_WLAN_Set_Param (deviceId,
+		                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+		                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM,
+		                                &edca_param_cfg,
+		                                sizeof(edca_param_cfg),
+		                                FALSE))
+		    {
+		        offset = snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+EDCA:set edca param fail, check the wlan connection\r\n"\
+																				"set qid = 0xff for all queue; set qid = 0-7 for single queue\r\n");
+				return QAT_Response_Str(QAT_RC_ERROR, buffer);
+			}
+			rc = QAT_Response_Str(QAT_RC_OK, NULL);
+		}
+	    else if(strncmp(cmd, "getparam", 8) == 0)
+	    {
+			uint32_t length = 0;
+			
+			if(Parameter_Count < 2 || !Parameter_List || !Parameter_List[1].Integer_Is_Valid)
+		    {
+				rc = QAT_Response_Str(QAT_RC_ERROR, "+EDCA:AT+EDCA=getparam,<qtid:0~7 or 255>");
+		        return rc;
+		    }
+
+		    edca_param_cfg.qid = Parameter_List[1].Integer_Value;
+		    length = sizeof(edca_param_cfg);
+			
+		    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+		                                    __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+						    __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCA_PARAM,
+		                                    &edca_param_cfg,
+		                                    &length))
+		    {
+		        offset = snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+EDCA:get edcca param fail for device %d",deviceId);
+				rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+		        return rc;
+		    } 
+			else
+			{
+		        offset = snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+EDCA:%d,%d,%d,%d,%d",
+		            edca_param_cfg.qid, edca_param_cfg.aifsn, edca_param_cfg.cw_min, edca_param_cfg.cw_max, edca_param_cfg.txop_limit);
+				rc = QAT_Response_Str(QAT_RC_OK, buffer);
+			}
+		}
+	    
+	    break;
+	  }
+      
+      default:
+         ;
+   }
+
+   return rc;
+}
+/**
+   @brief ANTIINF
+
+   This command will change the current group to its parent. No parameters are
+   expected for this command.
+
+   @param[in] Op_Type          The input command type.
+   @param[in] Parameter_Count  Number of parameters that were entered into the
+                               command line.
+   @param[in] Parameter_List   List of parameters entered into the command line.
+*/
+static QAT_Command_Status_t Extend_Command_EDCCATHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+   char buffer[CMD_STR_BUFFER_LENGTH]={0};
+   QAT_Command_Status_t rc = QAT_STATUS_SUCCESS_E;
+   int offset = 0;
+   uint8_t deviceId = qat_get_active_device();
+   uint8_t edcca_threshold;
+   
+   switch (Op_Type)
+   {
+	  case QAT_OP_EXEC:		     /* AT+EDCCATHR */
+      {	
+		rc = QAT_Response_Str(QAT_RC_OK, "AT+EDCCATHR=<EDCCA value, euqals real value plus 100>\r\n"\
+										 "AT+EDCCATHR?: get EDCCATHR");
+		break;
+      }
+	  case QAT_OP_EXEC_W_PARAM:		     /* AT+EDCCA= */
+      {	
+		memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);
+		
+		if(!pg_wifi_shell_cxt->wlan_enabled) 
+		{
+	        /* edcca should be set after connectting */
+	        rc = QAT_Response_Str(QAT_RC_ERROR, "+EDCCATHR:wlan is not enabled");
+			return rc;
+	    }
+		
+		if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid)
+	    {
+	        return rc = QAT_Response_Str(QAT_RC_ERROR, "+EDCCATHR: AT+EDCA=<EDCCA value, euqals real value plus 100>");
+	    }
+
+	    edcca_threshold = Parameter_List[0].Integer_Value;
+
+	    if (0 != qapi_WLAN_Set_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCCA_THRESHOLD,
+	                                &edcca_threshold,
+	                                sizeof(edcca_threshold),
+	                                FALSE))
+	    {
+	        offset = snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+EDCCATHR: set edcca param fail, check the wlan connection or data validation\r\n"\
+																			"default edcca thres is 38");
+	        return QAT_Response_Str(QAT_RC_ERROR, buffer);
+	    }
+	    rc = QAT_Response_Str(QAT_RC_OK, NULL);
+	    break;
+	  }
+	  case QAT_OP_QUERY:		     /* AT+EDCCA? */
+      {	
+		uint32_t length = 0;
+		
+		if(!pg_wifi_shell_cxt->wlan_enabled) 
+		{
+	        /* edcca should be set after connectting */
+	        rc = QAT_Response_Str(QAT_RC_ERROR, "+EDCCA:wlan is not enabled");
+			return rc;
+	    }
+
+	    length = sizeof(edcca_threshold);
+	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+	                                    __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                    __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCCA_THRESHOLD,
+	                                    &edcca_threshold,
+	                                    &length))
+	    {
+	        offset = snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+EDCCA: get edcca threshold fail for device %d",deviceId);
+	        return QAT_Response_Str(QAT_RC_ERROR, buffer);
+	    } 
+		else 
+		{
+	        offset = snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+EDCCA:%d", edcca_threshold);
+			rc = QAT_Response_Str(QAT_RC_OK, buffer);
+	    }
+		break;
+	  }
+      
+      default:
+         ;
+   }
+
+   return rc;
+}
+/**
+   @brief ANTIINF
+
+   This command will change the current group to its parent. No parameters are
+   expected for this command.
+
+   @param[in] Op_Type          The input command type.
+   @param[in] Parameter_Count  Number of parameters that were entered into the
+                               command line.
+   @param[in] Parameter_List   List of parameters entered into the command line.
+*/
+static QAT_Command_Status_t Extend_Command_BMISSTHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+   char buffer[CMD_STR_BUFFER_LENGTH]={0};
+   QAT_Command_Status_t rc = QAT_STATUS_SUCCESS_E;
+   int offset = 0;
+   uint8_t deviceId = qat_get_active_device();
+   uint8_t bmiss_threshold;
+   
+   switch (Op_Type)
+   {
+	  case QAT_OP_EXEC:		     /* AT+BMISSTHR */
+      {	
+		rc = QAT_Response_Str(QAT_RC_OK, "AT+BMISSTHR=<bmiss_threshold: 0~255>\r\n"\
+										 "AT+BMISSTHR?: get BMISSTHR");
+		break;
+      }
+	  case QAT_OP_EXEC_W_PARAM:		     /* AT+BMISSTHR= */
+      {	
+		memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);
+		
+		if(!pg_wifi_shell_cxt->wlan_enabled) 
+		{
+	        /* edcca should be set after connectting */
+	        rc = QAT_Response_Str(QAT_RC_ERROR, "+BMISSTHR:wlan is not enabled");
+			return rc;
+	    }
+		
+		if(Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid)
+	    {
+	        return rc = QAT_Response_Str(QAT_RC_ERROR, "+BMISSTHR:AT+BMISSTHR=<bmiss_threshold: 0~255>");
+	    }
+
+		if (Parameter_List[0].Integer_Value > UINT8_MAX || Parameter_List[0].Integer_Value < 0) 
+		{
+	        return rc = QAT_Response_Str(QAT_RC_ERROR, "+BMISSTHR:AT+BMISSTHR=<bmiss_threshold: 0~255>");
+	    }
+		
+	    bmiss_threshold = Parameter_List[0].Integer_Value;
+
+	    if (0 != qapi_WLAN_Set_Param (deviceId,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_BMISS_CONFIG,
+	                                &bmiss_threshold,
+	                                sizeof(bmiss_threshold),
+	                                FALSE))
+	    {
+	        return QAT_Response_Str(QAT_RC_ERROR, "+BMISSTHR:set bmiss threshold fail, check the wlan connection or data validation");
+	    }
+	    rc = QAT_Response_Str(QAT_RC_OK, NULL);
+	    break;
+	  }
+	  case QAT_OP_QUERY:		     /* AT+BMISSTHR? */
+      {	
+		uint32_t length = 0;
+		
+		if(!pg_wifi_shell_cxt->wlan_enabled) 
+		{
+	        /* edcca should be set after connectting */
+	        rc = QAT_Response_Str(QAT_RC_ERROR, "+BMISSTHR:wlan is not enabled");
+			return rc;
+	    }
+
+	    length = sizeof(bmiss_threshold);
+	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+	                                    __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+	                                    __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_BMISS_CONFIG,
+	                                    &bmiss_threshold,
+	                                    &length))
+	    {
+	        offset = snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+BMISSTHR: get bmiss threshold fail for device %d\n",deviceId);
+	        return QAT_Response_Str(QAT_RC_ERROR, buffer);
+	    } 
+		else 
+		{
+	        offset = snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+BMISSTHR:%d", bmiss_threshold);
+			rc = QAT_Response_Str(QAT_RC_OK, buffer);
+	    }
+		break;
+	  }
+      
+      default:
+         ;
+   }
+
+   return rc;
+}
 void Initialize_QAT_Wlan_Demo (void)
 {
 	qbool_t RetVal;
