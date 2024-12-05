@@ -181,6 +181,7 @@ qbool_t QAT_Register_Command_Group(QAT_Command_t *Command_Group, uint32_t Number
 qbool_t QAT_Unregister_Command_Group(QAT_Command_t *Command_Group);
 
 qbool_t QAT_Transfer_Mode_set(QAT_Transfer_Mode_t Mode, QAT_Transfer_Mode_Handle_t Handle);
+qbool_t QAT_Data_Transfer_Mode_Handle(uint32_t Length, uint8_t *Buffer);
 
 
 QAT_Command_Status_t QAT_Response_Str(int Ret_Code, char *Buffers);

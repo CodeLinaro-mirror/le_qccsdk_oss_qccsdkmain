@@ -276,6 +276,8 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 qapi_Status_t mqttc_subscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 qapi_Status_t mqttc_unsubscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_publishRaw_Cache(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_publishRaw_Block(uint32_t len, char* block_buf);
 qapi_Status_t mqttc_disconnect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 qapi_Status_t mqttc_destroy(uint32_t sessionIndex);
 qapi_Status_t mqttc_connect_info_query(void);

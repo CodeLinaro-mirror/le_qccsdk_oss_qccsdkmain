@@ -39,6 +39,8 @@ extern void* QCLI_Context;
 /* QAT signals */
 #define QAT_EVENT_TXQ 0x1
 
+#define QAT_STR_BUFFER_LENGTH					  128
+
 QAT_Transfer_Mode_t QAT_Transfer_Mode = QAT_Transfer_Mode_AT_COMMAND_E;
 QAT_Transfer_Mode_Handle_t QAT_Transfer_Mode_Handle = NULL;
 uint32_t QAT_Echo_Enable=0;
@@ -62,6 +64,7 @@ HTC_Context_t HTC_Context;
 const char Rel_Date[] = __DATE__;
 const char Rel_Time[] = __TIME__;
 
+Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
 /*-------------------------------------------------------------------------
  * Function Declarations
  *-----------------------------------------------------------------------*/
@@ -99,6 +102,85 @@ char *QAT_Result_Str[]=
    "OK",
 };
 
+static void Process_RAW_Data(void)
+{
+   qbool_t Result;
+   Find_Result_t Find_Result;
+   Result = Find_Command_By_String(Cur_Data_Mode_Cmd.cur_data_mode_commnd, &Find_Result);
+   if(!Result)
+   {
+      printf("Command search failed: %s\n", Cur_Data_Mode_Cmd.cur_data_mode_commnd);
+      QAT_Response_Str(QAT_RC_ERROR, NULL);
+   }
+
+   if(QAT_STATUS_SUCCESS_E  != 
+            (*(Find_Result.Command->Command_Function))(QAT_OP_EXEC_IN_DATA_MODEL, HTC_Context.Input_Length, (QAT_Parameter_t*) HTC_Context.Input_String))
+   {
+      Result = false;
+   }
+}
+
+qbool_t QAT_Data_Transfer_Mode_Handle(uint32_t Length, uint8_t *Buffer)
+{
+     qbool_t Result = true;
+
+   if(QAT_Transfer_Mode == QAT_Transfer_Mode_ONLINE_DATA_E)
+   {
+      if((Length) && (Buffer))
+      {
+         /* pause the event sendind */
+         if(HTC_Context.Input_Length == 0)
+         {
+            ;
+         }
+         
+         /* Process all received data. */
+         while(Length)
+         {
+            /* Check for a valid character, which here is any non control
+                  code lower ASCII (0x20 ' ' to 0x7E '~'). */
+            if((*Buffer >= ' ') && (*Buffer <= '~'))
+            {
+               /* Make sure that the command buffer can fit the character. */
+               if(HTC_Context.Input_Length < QAT_MAXIMUM_COMMAND_STRING_LENGTH)
+               {
+                  if(QAT_Echo_Enable)
+                  {
+                     QAT_Output(1, Buffer);
+                  }
+                  
+                  HTC_Context.Input_String[HTC_Context.Input_Length] = Buffer[0];
+                  HTC_Context.Input_Length++;
+            
+               }
+            }
+ 
+            /* Move to the next character in the buffer. */
+            Buffer ++;
+            Length --;
+         }
+
+         if(Length == 0)
+         {
+            if(strncmp(HTC_Context.Input_String,"+++",strlen("+++")) == 0)
+            {
+               QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+               QAT_Response_Str(QAT_RC_OK, NULL);
+            }
+            else if(HTC_Context.Input_Length > 0)
+            {
+               /*Data block is complete, process it now. */
+               Process_RAW_Data();
+            }
+            /* Set the command length back to zero in preparation of the next
+            command and display the prompt. */
+            memset(HTC_Context.Input_String, '\0', HTC_Context.Input_Length);
+            HTC_Context.Input_Length = 0;
+         }
+      }
+   }
+}
+
 qbool_t QAT_Transfer_Mode_set(QAT_Transfer_Mode_t Mode, QAT_Transfer_Mode_Handle_t Handle)
 {
    QAT_Transfer_Mode = Mode;
@@ -126,6 +208,7 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
    uint32_t      Index = *Command_Index;
    uint8_t *Command_Name;
    qbool_t  Sub_Command = false;
+   char buffer[QAT_STR_BUFFER_LENGTH];
    
    Result = true;
    Command_Name = NULL;
