@@ -73,7 +73,6 @@ void SPIRxTasks(void *arg)
     {
 	    if (qapi_hfc_recvfrom_host_data_pkt(SPI_Rcv_Buff, &buf_len, &data_len, NULL) == QAPI_OK)
 		{		    
-			*(SPI_Rcv_Buff + data_len) = '\r';
 			printf("\r\nSPIRx cmd %d:", data_len);
 			for (i=0; i<data_len; i++)
 			{
@@ -81,7 +80,7 @@ void SPIRxTasks(void *arg)
 			}
 			printf("\r\n");
 			if(Process_Input_Data_Handle)
-		        Process_Input_Data_Handle(data_len+1, SPI_Rcv_Buff);
+		        Process_Input_Data_Handle(data_len, SPI_Rcv_Buff);
 			
 		}		
     }
