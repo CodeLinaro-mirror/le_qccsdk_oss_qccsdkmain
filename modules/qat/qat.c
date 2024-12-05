@@ -791,9 +791,8 @@ static qbool_t Find_Command_By_String(uint8_t *Command_Name, Find_Result_t *Find
       Command_Group = &Current_Entry->Command_Group;
       for(Index = 0; Index < Command_Group->Command_Count; Index++)
       {
-		 if(!QCLI_Memcmpi(Command_Group->Command_List[Index].Command_String, 
-                           Command_Name, 
-                           strlen(Command_Name)))
+		 if((strlen(Command_Group->Command_List[Index].Command_String) == strlen(Command_Name)) && 
+            (!QCLI_Memcmpi(Command_Group->Command_List[Index].Command_String, Command_Name, strlen(Command_Name))))
          {
             Find_Result->Command = &Command_Group->Command_List[Index];
             return true;
