@@ -202,6 +202,8 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 /* Enable socket send timeout */
 #define LWIP_SO_SNDTIMEO 				1
 
+#define LWIP_SO_RCVBUF                  1
+
 /* the number of struct netconns. */
 #define MEMP_NUM_NETCONN                8
 #endif /* LWIP_HDR_LWIPOPTS_H__ */

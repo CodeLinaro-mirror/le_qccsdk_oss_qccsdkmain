@@ -21,8 +21,12 @@ void app_init(void)
     //register app console commands here if have
 #ifdef CONFIG_QAT_COMMON_DEMO
     Initialize_QAT_Common_Demo();
+#endif 
+
+#ifdef CONFIG_QAT_TCPIP_DEMO
     Initialize_QAT_TCPIP_Demo();
 #endif 
+
 #ifdef CONFIG_QAT_MQTT_DEMO
     Initialize_QAT_Mqtt_Demo();
 #endif 
