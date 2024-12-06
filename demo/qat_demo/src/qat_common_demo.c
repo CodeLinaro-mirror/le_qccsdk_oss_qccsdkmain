@@ -124,7 +124,7 @@ static QAT_Command_Status_t Extend_Command_Version(uint32_t Op_Type, uint32_t Pa
              return rc;
          }
          memset((void*)buffer, 0, VERSION_STR_BUFFER_LENGTH);
-         snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+VER:%d.%d.%d,%d,%d.%d.%d,%s,%s,%d.%d,%d.%d.%d,0x%x,0x%x %x,%s - %s\r\n", 
+         snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+GMR:%d.%d.%d,%d,%d.%d.%d,%s,%s,%d.%d,%d.%d.%d,0x%x,0x%x %x,%s - %s\r\n", 
                   QAPI_VERSION_MAJOR, QAPI_VERSION_MINOR, QAPI_VERSION_NIT, CRM_BUILD_NUM,
                   WIFI_FW_VER_MAJOR,WIFI_FW_VER_MINOR,WIFI_FW_VER_COUNT,WIFI_FW_VARIANT_NAME,
                   CONFIG_QCCSDK_BOARD_NAME, 
@@ -185,7 +185,7 @@ static QAT_Command_Status_t Extend_Command_Info(uint32_t Op_Type, uint32_t Param
 		    return rc;
 	    }
 		
-		snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+INFO:%dC,%dmV,%8d,%8d,%8d,%8d"
+		snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+INFO:%d,%d,%8d,%8d,%8d,%8d"
 		, pmu_ts_get_current_temperature(), tv_monitor_get_vbat_mV()
 		, hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes); 
 		
