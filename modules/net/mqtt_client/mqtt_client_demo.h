@@ -91,7 +91,7 @@
 /**
 * @brief The maximum number of retries for connecting to server.
 */
-#define CONNECTION_RETRY_MAX_ATTEMPTS            ( 5U )
+#define CONNECTION_RETRY_MAX_ATTEMPTS            ( 3U )
 
 /**
  * @brief The maximum back-off delay (in milliseconds) for retrying connection to server.

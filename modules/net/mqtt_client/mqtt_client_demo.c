@@ -2940,7 +2940,12 @@ qapi_Status_t mqttc_disconnect(uint32_t Parameter_Count, QAPI_Console_Parameter_
 
     index ++;
     MQTTClientCMD_t *pMqttCommand = &mqtt_client_cmd[sessionIndex];
-
+    MQTTClientSession_t *pMqttClientSess = &mqtt_client_sess[sessionIndex];
+    if(pMqttClientSess->mqttState == MQTT_FORCE_DISCONNECT)
+    {
+        MQTT_CLIENT_PRINTF("MQTT state:%d, already disconnected\n", pMqttClientSess->mqttState);
+        goto fail;
+    }
     pMqttCommand->cmd_type = MQTT_CMD_DISC;
 
     return QAPI_OK;
