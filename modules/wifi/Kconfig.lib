@@ -80,4 +80,8 @@ config PEAKW_11A_1_5G
     default 0x62 if HEAVY_CLIP_LEVEL_5G = 1
     default 0xFF if HEAVY_CLIP_LEVEL_5G = 2
 
+config SRRC_BAND_EDGE_SUPPORT
+    bool "enable band edge adjust for ch12 and ch13"
+    default y
+
 endmenu
