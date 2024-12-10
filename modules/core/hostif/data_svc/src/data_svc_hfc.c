@@ -28,15 +28,14 @@
 extern unsigned int _ln_RAM_ferm_multiuse_gpio_assert_info_addr;
 uint32_t *f2a_gpio_assert_info = (uint32_t *)&_ln_RAM_ferm_multiuse_gpio_assert_info_addr;
 
+/*The queue used for receive data from Host*/
 static qurt_pipe_t qcspi_hfc_data_queue;
 
-#ifdef CONFIG_QCSPI_HFC_ATCMD_ENABLE
-qurt_pipe_t qcspi_hfc_recv_queue;
-#endif
+/*The queue used for QCC730 Application receiving data from Ring buffer*/
+static qurt_pipe_t qcspi_hfc_recv_queue;
 
-#ifdef CONFIG_QCSPI_HFC_TEST    
-extern qurt_pipe_t qcspi_hfc_test_queue;
-#endif
+/*The queue used for hfc receiving msg from host*/
+static qurt_pipe_t qcspi_hfc_msg_queue;
 
 #if defined(CONFIG_QCSPI_HFC_ETH_ENABLE)
 /*
@@ -147,21 +146,21 @@ int32_t data_svc_hfc_send_data_pkt(void* p_buff, uint8_t *payload, uint16_t len,
 @param data_len :   pointer of data length
 @param info     :   pointer of extra info
 */
-int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint16_t *data_len, uint16_t *info)
+int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint32_t timeout, uint16_t *data_len, uint16_t *info)
 {
     bool b_result = FALSE;
 	uint16_t len = 0;
     hfc_msg_t msg;
-	int ret = 0;
+	int ret = QAPI_ERR_TIMEOUT;
 
 	RINGIF_PRINT_LOG_INFO("data_svc_hfc_recv_data_pkt p_buff %x buf_len %d\r\n", (uint32_t)p_buff, buf_len);
 
     if ((NULL == p_buff) || (NULL == buf_len) || (0 == *buf_len) || (NULL == data_len))
     {
-        return -1;
+        return QAPI_ERR_INVALID_PARAM;
     }
 	
-	if (nt_osal_queue_msg_receive(qcspi_hfc_recv_queue, &msg, portMAX_DELAY) == NT_QUEUE_SUCCESS) 
+	if (nt_osal_queue_msg_receive(qcspi_hfc_recv_queue, &msg, timeout) == NT_QUEUE_SUCCESS) 
 	{
 	    len = msg.len;
 	    if (msg.len > *buf_len)
@@ -175,6 +174,34 @@ int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint16_t *da
 		    *info = msg.id;
 		}
 		memcpy(p_buff, msg.data, len);
+		ret = QAPI_OK;
+	}
+	
+    return ret;
+}
+
+
+/*
+*
+@param p_buff   :   pointer of buffer
+@param buf_len  :   pointer of buffer length
+@param data_len :   pointer of data length
+@param info     :   pointer of extra info
+*/
+int32_t data_svc_hfc_recv_msg(hfc_msg_t *msg, uint32_t timeout)
+{
+    bool b_result = FALSE;
+	uint16_t len = 0;
+	int ret = QAPI_ERR_TIMEOUT;
+
+    if (NULL == msg)
+    {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+	
+	if (nt_osal_queue_msg_receive(qcspi_hfc_msg_queue, msg, portMAX_DELAY) == NT_QUEUE_SUCCESS) 
+	{
+        ret = QAPI_OK;
 	}
 	
     return ret;
@@ -204,7 +231,7 @@ int32_t data_svc_hfc_queue_send(ring_element_t *p_elem, hfc_msg_type_t type)
     msg.len= p_elem->len;
     msg.buf = p_elem->p_buf_start;
 #ifdef CONFIG_QCSPI_HFC_TEST    
-    if(NT_QUEUE_FAIL == nt_osal_queue_send(qcspi_hfc_test_queue, (void*)&msg, portMAX_DELAY))
+    if(NT_QUEUE_FAIL == nt_osal_queue_send(qcspi_hfc_msg_queue, (void*)&msg, portMAX_DELAY))
     {
         RINGIF_PRINT_LOG_ERR("hfc queue send fail", 0);
     }
@@ -223,11 +250,6 @@ int32_t data_svc_hfc_queue_send(ring_element_t *p_elem, hfc_msg_type_t type)
 qbool_t data_svc_hfc_send_config(uint32_t *p_buf, uint16_t len)
 {
     return ringif_send_hfc_config(p_buf, len);
-}
-
-uint32_t data_svc_hfc_get_max_msg_num(void)
-{
-    return MAX_NUM_A2F_CTRL_RING_ELEMS + MAX_NUM_A2F_DATA_RING_ELEMS;
 }
 
 uint32_t data_svc_set_gpio_assert_info(uint32_t info)
@@ -299,7 +321,7 @@ bool process_hfc_data_pkt(void* p_element)
 	nt_osal_free_memory(p_elem->p_buf_start);
 #elif defined(CONFIG_QCSPI_HFC_ETH_ENABLE)
     hfc_tx_raw_ethernet(p_elem->p_buf_start, p_elem->len);
-#else defined(CONFIG_QCSPI_HFC_ATCMD_ENABLE)
+#else
     //RINGIF_PRINT_LOG_INFO("recv atcmd buf %x len %d:  \r\n", (uint32_t)p_elem->p_buf_start, p_elem->len);			
     data_svc_hfc_queue_send(p_elem, HFC_DATA_MSG);
 #endif
@@ -396,6 +418,14 @@ void qcspi_hfc_init(void)
       A_ASSERT(0);
     } 
 
+    qcspi_hfc_msg_queue = nt_qurt_pipe_create(TOTAL_NUM_DATA_RING_ELEMS, sizeof(hfc_msg_t));
+    if (qcspi_hfc_msg_queue == NULL)
+    {
+      RINGIF_PRINT_LOG_ERR("failed to create qcspi_hfc_msg_queue", 0);
+      nt_osal_thread_delete(hfc_task_hdl);
+      A_ASSERT(0);
+    } 
+
 #ifdef CONFIG_QCSPI_HFC_ATCMD_ENABLE
 	qcspi_hfc_recv_queue = nt_qurt_pipe_create(TOTAL_NUM_DATA_RING_ELEMS, sizeof(hfc_msg_t));
 	if (qcspi_hfc_recv_queue == NULL)
@@ -405,6 +435,7 @@ void qcspi_hfc_init(void)
       A_ASSERT(0);
     } 
 #endif	
+
 }
 #endif //SUPPORT_RING_IF
 

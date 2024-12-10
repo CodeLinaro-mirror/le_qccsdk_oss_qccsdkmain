@@ -62,6 +62,7 @@ void SPIRxTasks(void *arg)
 	char *SPI_Rcv_Buff = NULL;
 	uint16_t buf_len = INPUT_BUFFER_SIZE;
 	uint16_t data_len = 0;
+	uint32_t timeout = HFC_MAX_DELAY;
 	
     (void)(arg);
 
@@ -71,7 +72,7 @@ void SPIRxTasks(void *arg)
 		
     while (1) 
     {
-	    if (qapi_hfc_recvfrom_host_data_pkt(SPI_Rcv_Buff, &buf_len, &data_len, NULL) == QAPI_OK)
+	    if (qapi_hfc_recvfrom_host_data_pkt(SPI_Rcv_Buff, &buf_len, timeout, &data_len, NULL) == QAPI_OK)
 		{		    
 			printf("\r\nSPIRx cmd %d:", data_len);
 			for (i=0; i<data_len; i++)

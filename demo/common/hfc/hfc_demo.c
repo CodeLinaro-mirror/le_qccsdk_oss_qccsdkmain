@@ -31,7 +31,6 @@
 #endif
 
 hfc_data_test_stats hfc_data_test_result;
-qurt_pipe_t qcspi_hfc_test_queue;
 
 int qcspi_hfc_process_test_data(hfc_msg_t* msg)
 {
@@ -166,7 +165,7 @@ static void qcspi_hfc_test_thread(void *arg)
     
     while (1) 
     {
-		if (nt_osal_queue_msg_receive(qcspi_hfc_test_queue, &msg, portMAX_DELAY) == NT_QUEUE_SUCCESS) 
+		if (qapi_hfc_recvfrom_host_msg(&msg, portMAX_DELAY) == QAPI_OK) 
 		{
 			HFC_TEST_PRINT("RingIf: hfc msg type %d id %d (p_buf: %x len:%d data:%x) \r\n", msg.type, msg.id, (uint32_t)msg.buf, msg.len, (uint32_t)msg.data);
 			if (HFC_DATA_MSG == msg.type)
@@ -217,15 +216,6 @@ void Initialize_qcspi_hfc_Demo(void)
     if(ret_val != pdPASS)
     {
   	  HFC_TEST_PRINT("RingIfErr: task creation failed out of memory\r\n");
-  	  ASSERT(0);
-    } 
-
-    max_hfc_msg_num = qapi_hfc_get_max_msg_num();
-    qcspi_hfc_test_queue = nt_qurt_pipe_create(max_hfc_msg_num, sizeof(hfc_msg_t));
-    if (qcspi_hfc_test_queue == NULL)
-    {
-  	  HFC_TEST_PRINT("failed to create qcspi_hfc_test_queue", 0);
-  	  nt_osal_thread_delete(hfc_test_task_hdl);
   	  ASSERT(0);
     }  
 }
