@@ -767,6 +767,9 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
 	            snprintf(buffer, NORMAL_RESPONSE_BUFFER_LENGTH, "+DNSC:FAIL,%d.\n",result);
 				rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
 	        }
+			else{
+				rc = QAT_Response_Str(QAT_RC_OK, NULL);
+			}
 			
 	    }
 		else if (strcmp(cmd, "gethostbyname2") == 0) 
@@ -805,6 +808,9 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
 	            snprintf(buffer, NORMAL_RESPONSE_BUFFER_LENGTH, "+DNSC:FAIL,%d.\n",result);
 				rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
 	        }
+			else{
+				rc = QAT_Response_Str(QAT_RC_OK, NULL);
+			}
 	    }
 		else
 		{
