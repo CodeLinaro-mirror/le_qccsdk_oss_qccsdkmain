@@ -5,9 +5,6 @@
 #ifndef DATA_SVC_HFC_H
 #define DATA_SVC_HFC_H
 
-
-
-
 /*------------------------------------------------------------------------
 * Include Files
 * ----------------------------------------------------------------------*/
@@ -50,9 +47,9 @@ typedef struct hfc_msg
 * Function Declarations
 * ----------------------------------------------------------------------*/
 extern int32_t data_svc_hfc_send_data_pkt(void* p_buff, uint8_t *payload, uint16_t len, uint16_t info);
-extern int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint16_t *data_len, uint16_t *info);
+extern int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint32_t timeout, uint16_t *data_len, uint16_t *info);
+extern int32_t data_svc_hfc_recv_msg(hfc_msg_t *msg, uint32_t timeout);
 extern qbool_t data_svc_hfc_send_config(uint32_t *p_buf, uint16_t len);
-extern uint32_t data_svc_hfc_get_max_msg_num(void);
 extern uint32_t data_svc_set_gpio_assert_info(uint32_t info);
 #endif /* DATA_SVC_HFC_H */
 
