@@ -64,7 +64,7 @@ static QAT_Command_t QAT_MQTT_Command_List[] =
    // {"+MQTTSNI",   Extend_Command_MqttSni,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
    {"+MQTTCONN",   Extend_Command_MqttConn,   QAT_OP_EXEC|QAT_OP_QUERY|QAT_OP_EXEC_W_PARAM},
    {"+MQTTPUB",   Extend_Command_MqttPub,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
-   {"+MQTTRAWPUB",   Extend_Command_MqttPubRaw,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
+   {"+MQTTPUBRAW",   Extend_Command_MqttPubRaw,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
    {"+MQTTSUB",   Extend_Command_MqttSub,   QAT_OP_EXEC|QAT_OP_QUERY|QAT_OP_EXEC_W_PARAM},
    {"+MQTTUNSUB",   Extend_Command_MqttUnSub,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
    {"+MQTTDISCONN",   Extend_Command_MqttDisconnect,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
@@ -286,7 +286,7 @@ static QAT_Command_Status_t Extend_Command_MqttPubRaw(uint32_t Op_Type, uint32_t
    {
       case QAT_OP_EXEC:		     /* AT+WRTMEM */
       {	
-         snprintf(buffer, MQTT_STR_BUFFER_LENGTH, "+MQTTRAWPUB=<session_id>,<\"topic\">,<length>,<qos_level>,<retain>\r\n");
+         snprintf(buffer, MQTT_STR_BUFFER_LENGTH, "+MQTTPUBRAW=<session_id>,<\"topic\">,<length>,<qos_level>,<retain>\r\n");
          rc = QAT_Response_Str(QAT_RC_OK, buffer);
          memset((void*)buffer, 0, MQTT_STR_BUFFER_LENGTH);
          break;
@@ -315,7 +315,7 @@ static QAT_Command_Status_t Extend_Command_MqttPubRaw(uint32_t Op_Type, uint32_t
                rc = QAT_Response_Str(QAT_RC_OK, NULL);
                
                extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
-               memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+MQTTRAWPUB",strlen("+MQTTRAWPUB"));
+               memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+MQTTPUBRAW",strlen("+MQTTPUBRAW"));
 
                QAT_Transfer_Mode_set(QAT_Transfer_Mode_ONLINE_DATA_E,QAT_Data_Transfer_Mode_Handle);
                QAT_Response_Str(QAT_RC_OK, NULL);
@@ -323,7 +323,7 @@ static QAT_Command_Status_t Extend_Command_MqttPubRaw(uint32_t Op_Type, uint32_t
                QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
 
             }else{
-               snprintf(buffer, MQTT_STR_BUFFER_LENGTH, "+MQTTRAWPUB:FAIL,%d\r\n",result);
+               snprintf(buffer, MQTT_STR_BUFFER_LENGTH, "+MQTTPUBRAW:FAIL,%d\r\n",result);
                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
             }
 
@@ -343,7 +343,7 @@ static QAT_Command_Status_t Extend_Command_MqttPubRaw(uint32_t Op_Type, uint32_t
          {
             // rc = QAT_Response_Str(QAT_RC_OK, NULL);
          }else{
-            snprintf(buffer, MQTT_STR_BUFFER_LENGTH, "+MQTTRAWPUB:FAIL,%d\r\n",result);
+            snprintf(buffer, MQTT_STR_BUFFER_LENGTH, "+MQTTPUBRAW:FAIL,%d\r\n",result);
             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
          }
 
