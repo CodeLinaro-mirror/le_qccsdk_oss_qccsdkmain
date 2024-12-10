@@ -110,6 +110,7 @@ static void Process_RAW_Data(void)
    if(!Result)
    {
       printf("Command search failed: %s\n", Cur_Data_Mode_Cmd.cur_data_mode_commnd);
+      QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
       QAT_Response_Str(QAT_RC_ERROR, NULL);
    }
 
