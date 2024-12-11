@@ -441,5 +441,80 @@
       "win": [],
       "linux": []
     }
+  },
+  {
+    "7": "Used and updated by extension, you should not change it manually if you don't know why",
+    "prjName": "qcc730QATDemo",
+    "IDEVer": "^0.5.6",
+    "sdkName": "qccsdk_qcc730",
+    "sdkVer": "1.0.0",
+    "activated": true,
+    "chipID": "QCC730",
+    "chipVersion": "v2",
+    "chipTarget": "QCC730",
+    "toolchainName": "arm-none-eabi-gcc",
+    "sdkPath": "c:\\Users\\wenwshen\\Documents\\fermion_ferrit_3700\\qccsdk",
+    "demoPath": "./demo",
+    "demoRTOS": "",
+    "demoChipBoard": "mqm730x",
+    "demoBuildScriptWin": "qccsdk.py",
+    "demoBuildScriptLinux": "qccsdk.py",
+    "demoFlashScriptWin": "qccsdk.py",
+    "demoFlashScriptLinux": "qccsdk.py",
+    "cfgSetScriptWin": "qccsdk.py",
+    "cfgSetScriptLinux": "qccsdk.py",
+    "defaultDemo": "FERMION_QAT_DEMO",
+    "defaultDemoPathName": "qat_demo",
+    "buildRunPath": "./",
+    "flashRunPath": "./",
+    "entryFun": "app_main",
+    "elfName": "FERMION_QAT_DEMO.elf",
+    "elfPath": "./output/${demoChipBoard}/${defaultDemo}/DEBUG/bin/${elfName}",
+    "gdbInitFilePath": "./tools/jtag/openocd/ch347/gdb_for_qccide.gdbinit",
+    "openocdGdbServerFilePath": "./tools/jtag/openocd/ch347/qcc730.cfg",
+    "boardList": [
+      "cqm730x",
+      "cqm730i",
+      "mqm730x",
+      "mqm730i",
+      "mqm405x",
+      "mqm405i",
+      "qcc730v2_socket",
+      "qcc730v2_evb11_hostless",
+      "qcc730v2_evb13_hostless",
+      "qcc730v2_evb12_hostless"
+    ],
+    "incPaths": [
+      "./demo/qat_demo",
+      "./output/${demoChipBoard}/${defaultDemo}"
+    ],
+    "SET_CFG_PATTERN": {
+      "win": [
+        "",
+        "python ${cfgSetScriptWin} set --board=${demoChipBoard}",
+        "",
+        "python ${cfgSetScriptWin} set --appdir=${demoPath}/${defaultDemoPathName}"
+      ],
+      "linux": []
+    },
+    "BUILD_IMAGE_PATTERN": {
+      "win": [
+        "python qccsdk.py set --appdir=demo/${defaultDemoPathName} build --build"
+      ],
+      "linux": []
+    },
+    "CLEAN_IMAGE_PATTERN": {
+      "win": [
+        "python qccsdk.py set --appdir=demo/${defaultDemoPathName} build --clean"
+      ],
+      "linux": []
+    },
+    "FLASH_PATTERN": {
+      "win": [
+        "python qccsdk.py set --appdir=demo/${defaultDemoPathName} flash --flash",
+        "python qccsdk.py set --appdir=demo/${defaultDemoPathName} flash --flash --bdf --reset"
+      ],
+      "linux": []
+    }
   }
 ]
