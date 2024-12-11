@@ -9,9 +9,14 @@
 #include "icmp.h"
 #include "sockets.h"
 #include "queue.h"
+#include "autoconf.h"
+
+#ifndef QAT_MAX_MTU_PACKET_SIZE
+#define QAT_MAX_MTU_PACKET_SIZE         1452
+#endif	
 
 #ifndef QAT_CIRCULAR_BUFFER_SIZE
-#define QAT_CIRCULAR_BUFFER_SIZE        2048
+#define QAT_CIRCULAR_BUFFER_SIZE        (QAT_MAX_MTU_PACKET_SIZE * CONFIG_QAT_CB_SIZE_MTU_MULTIPLIER)
 #endif			    
 
 typedef struct icmp_echo_hdr icmp_echo_hdr;
@@ -27,6 +32,12 @@ typedef enum {
 	INACTIVE,
 	ACTIVE
 } qat_connect_status;
+
+typedef enum {
+	QAT_CLIENT = 0,
+	QAT_TCP_SERVER = 1,
+	QAT_UDP_SERVER = 2
+} device_state;
 
 typedef enum{
 	DHCP_TURN_ON = 0,
