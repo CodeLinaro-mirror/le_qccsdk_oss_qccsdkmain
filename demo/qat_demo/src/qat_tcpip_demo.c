@@ -33,6 +33,7 @@ static QAT_Command_Status_t Extend_Command_DHCPv4c(uint32_t Op_Type, uint32_t Pa
 static QAT_Command_Status_t Extend_Command_SetStation(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_Start(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_Close(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_Send(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_SendData(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_RecvType(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_RecvData(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
@@ -50,6 +51,7 @@ static QAT_Command_t QAT_TCPIP_Command_List[] =
     {"+CIPSTART",       Extend_Command_Start,           QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
     {"+CIPCLOSE",       Extend_Command_Close,           QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM},
     {"+CIPSENDDATA",    Extend_Command_SendData,        QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM},
+    {"+CIPSEND",        Extend_Command_Send,            QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM},
     {"+CIPRECVTYPE",    Extend_Command_RecvType,        QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
     {"+CIPRECVDATA",    Extend_Command_RecvData,        QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM},
     {"+CIPSERVER",      Extend_Command_Server,          QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM},
@@ -77,8 +79,6 @@ static QAT_Command_t QAT_TCPIP_Command_List[] =
 
 #define QAT_CMD_IP_BUFFER_LENGTH					256
 #define QAT_INPUT_BUFFER_LENGTH                     512
-#define QAT_CLIENT_CB_SIZE                          20
-
 #define TIMEOUT_TV_SEC					            1
 #define TIMEOUT_TV_USEC					            0
 #define QAT_IP_PRINTF(...) printf(__VA_ARGS__)
@@ -102,7 +102,8 @@ static u32_t qat_ping_recv_count;
 static uint32_t ping_count;
 static uint32_t ping_delay;
 static size_t ping_size;
-
+static uint32_t data_mode_max_len = 0;
+static uint32_t data_mode_total_send_len = 0;
 // static CircularBuffer *client_cb = NULL;
 static QueueHandle_t client_queue = NULL;
 qurt_mutex_t client_mutex;
@@ -118,8 +119,14 @@ qurt_mutex_t server_mutex;
 server_ctx_t g_listen_clients[QAT_CLIENT_MAX_CONNECTIONS] = {0};
 CircularBuffer *server_cb;
 
+static QueueHandle_t udp_server_queue = NULL;
+qurt_mutex_t udp_server_mutex;
+server_ctx_t g_listen_udp_clients[QAT_CLIENT_MAX_CONNECTIONS] = {0};
+CircularBuffer *udp_server_cb;
+
 bool ipd_message_print_flag = true;
 bool server_ipd_message_print_flag = true;
+bool udp_server_ipd_message_print_flag = true;
 /*-------------------------------------------------------------------------
  * Function Definitions
  *-----------------------------------------------------------------------*/
@@ -691,7 +698,7 @@ static int CreateConnection(int link_id, int protocol_type, ip_addr_t *ip_addr, 
 
 
 void cleanGlobalQueue(QueueHandle_t globalQueue, int idx) {
-    QueueHandle_t tempQueue = xQueueCreate(QAT_CLIENT_CB_SIZE, sizeof(QueueElem));
+    QueueHandle_t tempQueue = xQueueCreate(CONFIG_QAT_CB_QUEUE_MAX_LENGTH, sizeof(QueueElem));
     QueueElem elem;
     while (xQueueReceive(globalQueue, &elem, 0) == pdPASS) {
         if (elem.id != idx) {
@@ -746,8 +753,8 @@ static void client_recv_thread(void *arg)
             ipd_message_print_flag = true;
             qurt_mutex_unlock(&client_mutex);
             memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
-            snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:CLOSED,%d\r\n", *p_id);
-            QAT_Response_Str(QAT_RC_QUIET, buffer);
+            snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:CLOSED:%d\r\n", *p_id);
+            QAT_Response_Str(QAT_RC_OK, buffer);
             break;
         }
 
@@ -767,7 +774,7 @@ static void client_recv_thread(void *arg)
         {
             memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
             if(*p_id == elem.id){
-                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD: %d, %d\r\n", elem.id, elem.len);
+                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD:%c,%d,%d\r\n", 'C', elem.id, elem.len);
                 QAT_Response_Str(QAT_RC_QUIET, buffer);
                 qurt_mutex_lock(&client_mutex);
                 ipd_message_print_flag = false;
@@ -802,7 +809,7 @@ static void client_recv_thread(void *arg)
                     }
                     else{
                         input_buf[recv_bytes] = '\0';
-                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD: %d, %d: %s\r\n", *p_id, recv_bytes, input_buf);
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD:%c,%d,%d,%s\r\n", 'C', *p_id, recv_bytes, input_buf);
                         QAT_Response_Str(QAT_RC_QUIET, buffer);
                     }
                 }else{
@@ -853,7 +860,7 @@ client_recv_fail:
     qurt_mutex_lock(&client_mutex);
     ipd_message_print_flag = true;
     qurt_mutex_unlock(&client_mutex);
-    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:CLOSED, %d\r\n", *p_id);
+    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:CLOSED:%d\r\n", *p_id);
     QAT_Response_Str(QAT_RC_ERROR, buffer);
     free(buffer);
     nt_osal_thread_delete(NULL);
@@ -977,7 +984,7 @@ static QAT_Command_Status_t Extend_Command_Start(uint32_t Op_Type, uint32_t Para
 
             port = Parameter_List[3].Integer_Value;
             if(CreateConnection(link_id, protocol_type, &ip_addr, port) == QAT_ERROR){
-                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPSTART:Create connection failed!\r\n");
+                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:FAILED:%d\r\n", link_id);
                 goto end;
             }
 
@@ -985,7 +992,7 @@ static QAT_Command_Status_t Extend_Command_Start(uint32_t Op_Type, uint32_t Para
             {
                 closesocket(g_client_conns_t[link_id].sockfd);
                 CleanupClientConnInfo(link_id);
-                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPSTART:Create client recv task failed!\r\n");
+                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:FAILED:%d\r\n", link_id);
                 goto end;
             }
 
@@ -1049,9 +1056,94 @@ static QAT_Command_Status_t Extend_Command_Close(uint32_t Op_Type, uint32_t Para
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
                 return rc;
             }
-
             g_client_conns_t[link_id].thread_quit = true;
             sys_msleep(TIMEOUT_TV_SEC * QAT_TIME_SEC_TO_MS + 2* TIMEOUT_TV_SEC/QAT_TIME_SEC_TO_MS);         // wait for g_client_conns_t[link_id].thread_quit be valid
+            break;
+        }
+    }
+    return rc;
+}
+
+static QAT_Command_Status_t Extend_Command_Send(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+    int link_id, sockfd;
+    int total_sent, sent_bytes;
+    char *output_buf = NULL;
+    int data_mode_one_send_len;
+    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+    char buffer[QAT_CMD_IP_BUFFER_LENGTH] = {0};
+    switch (Op_Type)
+    {        
+        case QAT_OP_EXEC:
+        {
+            QAT_Response_Str(QAT_RC_OK, "+CIPSEND=<link id>,<len>\r\n");
+            break;
+        }
+        case QAT_OP_EXEC_W_PARAM:
+        {
+            if( (Parameter_Count != 2) || (!Parameter_List) || (!Parameter_List[0].Integer_Is_Valid) 
+                    || (!Parameter_List[1].Integer_Is_Valid))
+            {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPSEND:Invalid input parameter!\r\n");
+                return rc;
+            }
+
+            link_id = Parameter_List[0].Integer_Value;
+            // check if link_id is valid
+            if (link_id < 0 || link_id >= QAT_CLIENT_MAX_CONNECTIONS) {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPSEND:The value of link id must be an integer between 0 and 3\r\n");
+                return rc;
+            }
+
+            // check if link_id is active
+            if (g_client_conns_t[link_id].active == INACTIVE) {
+                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPSEND:link id %d is not active\r\n", link_id);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+                return rc;
+            }
+
+            data_mode_max_len = Parameter_List[1].Integer_Value;
+            if(data_mode_max_len < 0){
+                QAT_Response_Str(QAT_RC_ERROR,"+CIPSEND:The len parameter must be greater than or equal to 0.\r\n");
+                return rc;
+            }
+            extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
+            memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+CIPSEND",strlen("+CIPSEND"));
+
+            QAT_Transfer_Mode_set(QAT_Transfer_Mode_ONLINE_DATA_E,QAT_Data_Transfer_Mode_Handle);
+            QAT_Response_Str(QAT_RC_OK, NULL);
+            snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, ">\r\n");
+            QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+            break;
+        }
+        case QAT_OP_EXEC_IN_DATA_MODEL:
+        {
+            output_buf = (char*)Parameter_List;
+            data_mode_one_send_len = (Parameter_Count <= (data_mode_max_len - data_mode_total_send_len))? 
+                                    Parameter_Count : (data_mode_max_len - data_mode_total_send_len);
+
+            total_sent = 0;
+            sockfd = g_client_conns_t[link_id].sockfd;
+
+            while(total_sent < data_mode_one_send_len){
+                sent_bytes = send(sockfd, output_buf + total_sent, data_mode_one_send_len - total_sent, 0);
+                if(sent_bytes < 0){
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND FAILED, %d\r\n", link_id);
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    return rc;
+                }
+                total_sent += sent_bytes;
+            }
+
+            data_mode_total_send_len += data_mode_one_send_len;
+            if(data_mode_total_send_len >= data_mode_max_len)
+            {
+                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND DONE:%d\r\n", link_id);
+                rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                data_mode_total_send_len = 0;
+                data_mode_max_len = 0;
+                QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+            }
             break;
         }
     }
@@ -1105,13 +1197,14 @@ static QAT_Command_Status_t Extend_Command_SendData(uint32_t Op_Type, uint32_t P
 
             // check if link_id is valid
             if (link_id < 0 || link_id >= QAT_CLIENT_MAX_CONNECTIONS) {
-                QAT_Response_Str(QAT_RC_ERROR, NULL);
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPSENDDATA:The value of link id must be an integer between 0 and 3\r\n");
                 return rc;
             }
 
             // check if link_id is active
             if (g_client_conns_t[link_id].active == INACTIVE) {
-                QAT_Response_Str(QAT_RC_ERROR, NULL);
+                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPSENDDATA:link id %d is not active\r\n", link_id);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
                 return rc;
             }
 
@@ -1127,7 +1220,7 @@ static QAT_Command_Status_t Extend_Command_SendData(uint32_t Op_Type, uint32_t P
             while(total_sent < sent_len){
                 sent_bytes = send(sockfd, output_buf + total_sent, sent_len - total_sent, 0);
                 if(sent_bytes < 0){
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:FAILED, %d\r\n", link_id);
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND FAILED:%d\r\n", link_id);
                     QAT_Response_Str(QAT_RC_ERROR, buffer);
                     return rc;
                 }
@@ -1135,13 +1228,13 @@ static QAT_Command_Status_t Extend_Command_SendData(uint32_t Op_Type, uint32_t P
                 
                 if(sent_count >= DATA_MAX_SEND_COUNT)
                 {
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:FAILED, %d\r\n", link_id);
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND FAILED:%d\r\n", link_id);
                     QAT_Response_Str(QAT_RC_ERROR, buffer);
                     return rc;
                 }
                 sent_count++;
             }
-            snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND DONE, %d\r\n", link_id);
+            snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND DONE:%d\r\n", link_id);
             rc = QAT_Response_Str(QAT_RC_OK, buffer);
         }
     }
@@ -1166,66 +1259,100 @@ static QAT_Command_Status_t Extend_Command_RecvType(uint32_t Op_Type, uint32_t P
     int link_id, recv_type;
     char buffer[QAT_CMD_IP_BUFFER_LENGTH] = {0};
     int offset;
+    int serverFlag;
     switch (Op_Type)
     {
         case QAT_OP_EXEC:
         {
-            QAT_Response_Str(QAT_RC_OK, "+CIPRECVTYPE=<link id>,<receive mode>\r\n");
+            QAT_Response_Str(QAT_RC_OK, "+CIPRECVTYPE=<serverflag>,<link id>,<receive mode>\r\n");
             break;
         }
         case QAT_OP_QUERY:
         {
             offset = 0;
             for(int i = 0; i < QAT_CLIENT_MAX_CONNECTIONS; i++){
-                if(tcpServerThreadCreated || udpServerThreadCreated){
-                    if(g_listen_clients[i].active == ACTIVE){
-                        offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE: %d, %d\r\n", i, g_listen_clients[i].recv_type);
-                    }else{
-                        continue;
-                    }
+                if(g_client_conns_t[i].active == ACTIVE){
+                    offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE:%c,%d,%d\r\n", 'C', i, g_client_conns_t[i].recv_type);
                 }else{
-                    if(g_client_conns_t[i].active == ACTIVE){
-                        offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE: %d, %d\r\n", i, g_client_conns_t[i].recv_type);
-                    }else{
-                        continue;
-                    }
+                    continue;
                 }
             }
   
+            for(int i = 0; i < QAT_CLIENT_MAX_CONNECTIONS; i++){
+               if(g_listen_clients[i].active == ACTIVE){
+                    offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE:%s,%d,%d\r\n", "TS", i, g_listen_clients[i].recv_type);
+                }else{
+                    continue;
+                }
+            }
+
+            for(int i = 0; i < QAT_CLIENT_MAX_CONNECTIONS; i++){
+               if(g_listen_udp_clients[i].active == ACTIVE){
+                    offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE:%s,%d,%d\r\n", "US", i, g_listen_udp_clients[i].recv_type);
+                }else{
+                    continue;
+                }
+            }
             rc = QAT_Response_Str(QAT_RC_OK, buffer);
             break;
         }
         case QAT_OP_EXEC_W_PARAM:
         {
-            if( (Parameter_Count != 2) || !Parameter_List || (!Parameter_List[0].Integer_Is_Valid) || (!Parameter_List[1].Integer_Is_Valid)) 
+            if( (Parameter_Count != 3) || !Parameter_List || (!Parameter_List[0].Integer_Is_Valid) || (!Parameter_List[1].Integer_Is_Valid)
+                    || (!Parameter_List[2].Integer_Is_Valid)) 
             {
                 QAT_Response_Str(QAT_RC_ERROR, NULL);
                 return rc;
             }
 
-            link_id = Parameter_List[0].Integer_Value;
+            serverFlag = Parameter_List[0].Integer_Value;
+            if ((serverFlag != QAT_CLIENT) && (serverFlag != QAT_TCP_SERVER) && (serverFlag != QAT_UDP_SERVER)) {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPRECVTYPE:serverFlag must be an integer between 0 and 2, 0:Client, 1:TCP Server 2:UDP Server\r\n");
+                return rc;
+            }
+            link_id = Parameter_List[1].Integer_Value;
             // check if link_id is valid
             if (link_id < 0 || link_id >= QAT_CLIENT_MAX_CONNECTIONS) {
                 QAT_Response_Str(QAT_RC_ERROR, "+CIPRECVTYPE:The value of link id must be an integer between 0 and 3\r\n");
                 return rc;
             }
-
-            recv_type = Parameter_List[1].Integer_Value == 0 ? RECVTYPE_ACTIVE : RECVTYPE_PASSIVE;
-
-            if(tcpServerThreadCreated || udpServerThreadCreated){
-                if(g_listen_clients[link_id].active == INACTIVE){
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE:link id %d is not active\r\n", link_id);
-                    QAT_Response_Str(QAT_RC_ERROR, buffer);
-                }
-                g_listen_clients[link_id].recv_type = recv_type;
-            }else{
-                if(g_client_conns_t[link_id].active == INACTIVE){
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE:link id %d is not active\r\n", link_id);
-                    QAT_Response_Str(QAT_RC_ERROR, buffer);
-                }
-                g_client_conns_t[link_id].recv_type = recv_type;               
+            recv_type = Parameter_List[2].Integer_Value == 0 ? RECVTYPE_ACTIVE : RECVTYPE_PASSIVE;
+            if ((recv_type != 0) && (recv_type != 1)) {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPRECVTYPE:recv_type must be an integer between 0 and 1, 0:ACTIVE, 1:PASSIVE\r\n");
+                return rc;
             }
-            
+
+            switch(serverFlag){
+                case QAT_TCP_SERVER:
+                {
+                    if(g_listen_clients[link_id].active == INACTIVE){
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE:TCP Server link id %d is not active\r\n", link_id);
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    }
+                    g_listen_clients[link_id].recv_type = recv_type;
+                    break;
+                }
+                case QAT_UDP_SERVER:
+                {
+                    if(g_listen_udp_clients[link_id].active == INACTIVE){
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE:UDP Server link id %d is not active\r\n", link_id);
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    }
+                    g_listen_udp_clients[link_id].recv_type = recv_type;
+                    break;                    
+                }
+                case QAT_CLIENT:
+                {
+                    if(g_client_conns_t[link_id].active == INACTIVE){
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVTYPE:Client link id %d is not active\r\n", link_id);
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    }
+                    g_client_conns_t[link_id].recv_type = recv_type;
+                    break;
+                }
+                default:
+                {}
+            }
             rc = QAT_Response_Str(QAT_RC_OK, NULL);
             break;
         }
@@ -1256,91 +1383,164 @@ static QAT_Command_Status_t Extend_Command_RecvData(uint32_t Op_Type, uint32_t P
     char input_data[QAT_INPUT_BUFFER_LENGTH] = {0};
     char buffer[QAT_INPUT_BUFFER_LENGTH] = {0};
     QueueElem elem;
+    int serverFlag;
+
     switch (Op_Type)
     {
         case QAT_OP_EXEC:
         {
-            QAT_Response_Str(QAT_RC_OK, "+CIPRECVDATA=<link id>,<len>\r\n");
+            QAT_Response_Str(QAT_RC_OK, "+CIPRECVDATA=<serverflag>,<link id>,<len>\r\n");
             break;
         }
         case QAT_OP_EXEC_W_PARAM:
         {
-            if( (Parameter_Count != 2) || !Parameter_List || (!Parameter_List[0].Integer_Is_Valid) || (!Parameter_List[1].Integer_Is_Valid)) 
+            if( (Parameter_Count != 3) || !Parameter_List || (!Parameter_List[0].Integer_Is_Valid) || (!Parameter_List[1].Integer_Is_Valid)
+            || (!Parameter_List[2].Integer_Is_Valid)) 
             {
                 goto recv_fail;
             }
-            /* AT+CIPRECVDATA=<link_id>,<len> */
-            link_id = Parameter_List[0].Integer_Value;
+
+            serverFlag = Parameter_List[0].Integer_Value;
+            if ((serverFlag != QAT_CLIENT) && (serverFlag != QAT_TCP_SERVER) && (serverFlag != QAT_UDP_SERVER)) {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPRECVDATA:serverFlag must be an integer between 0、1、2, 0:Client, 1:TCP Server,2:UDP Server\r\n");
+                goto recv_fail;
+            }
+            link_id = Parameter_List[1].Integer_Value;
             if (link_id < 0 || link_id >= QAT_CLIENT_MAX_CONNECTIONS) {
                 QAT_Response_Str(QAT_RC_ERROR, "+CIPRECVDATA:The value of link id must be an integer between 0 and 3\r\n");
                 goto recv_fail;
             }
-            data_len = Parameter_List[1].Integer_Value;
+            data_len = Parameter_List[2].Integer_Value;
+            switch(serverFlag){
+                case QAT_TCP_SERVER:
+                {
+                    if (g_listen_clients[link_id].active == INACTIVE) {
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:Server link id %d is not active\r\n", link_id);
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        return rc;
+                    }
+                    if (g_listen_clients[link_id].recv_type == RECVTYPE_ACTIVE) {
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:server link id %d is not passive receive type\r\n", link_id);
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        return rc;
+                    }
+                    if(xQueuePeek(server_queue, &elem, 0) == pdFALSE){
+                        goto recv_fail;
+                    }
 
-            if(tcpServerThreadCreated || udpServerThreadCreated){
-                if (g_listen_clients[link_id].active == INACTIVE) {
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:link id %d is not active\r\n", link_id);
-                    QAT_Response_Str(QAT_RC_ERROR, buffer);
-                    return rc;
+                    if (data_len > elem.len) {
+                        goto recv_fail;
+                    }else if(data_len == elem.len){
+                        if(CircularBuffer_Read(server_cb, input_data, data_len) < 0){
+                            goto recv_fail;
+                        }
+                        xQueueReceive(server_queue, &elem, 0);
+                    }else{
+                        if(CircularBuffer_Read(server_cb, input_data, data_len) < 0){
+                            goto recv_fail;
+                        }
+                        size_t remaining_len = elem.len - data_len;
+                        xQueueReceive(server_queue, &elem, 0);
+                        elem.len = remaining_len;
+                        xQueueSendToFront(server_queue, &elem, 0);
+                    }
+                    
+                    input_data[data_len] = '\0';
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:%s,%d,%s\r\n", "TS", data_len, input_data);
+                    QAT_Response_Str(QAT_RC_OK, buffer);
+                    qurt_mutex_lock(&server_mutex);
+                    server_ipd_message_print_flag = true;
+                    qurt_mutex_unlock(&server_mutex);
+                    break;
                 }
+                case QAT_UDP_SERVER:
+                {
+                    if (g_listen_udp_clients[link_id].active == INACTIVE) {
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:Server link id %d is not active\r\n", link_id);
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        return rc;
+                    }
 
-                if (g_listen_clients[link_id].recv_type == RECVTYPE_ACTIVE) {
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:receive type of link id %d is not passive\r\n", link_id);
-                    QAT_Response_Str(QAT_RC_ERROR, buffer);
-                    return rc;
-                }
+                    if (g_listen_udp_clients[link_id].recv_type == RECVTYPE_ACTIVE) {
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:server link id %d is not passive receive type\r\n", link_id);
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        return rc;
+                    }
 
-                if(xQueuePeek(server_queue, &elem, 0) == pdFALSE){
-                    goto recv_fail;
-                }
+                    if(xQueuePeek(udp_server_queue, &elem, 0) == pdFALSE){
+                        goto recv_fail;
+                    }
 
-                if (data_len != elem.len) {
-                    goto recv_fail;
+                    if (data_len > elem.len) {
+                        goto recv_fail;
+                    }else if(data_len == elem.len){
+                        if(CircularBuffer_Read(udp_server_cb, input_data, data_len) < 0){
+                            goto recv_fail;
+                        }
+                        xQueueReceive(udp_server_queue, &elem, 0);
+                    }else{
+                        if(CircularBuffer_Read(udp_server_cb, input_data, data_len) < 0){
+                            goto recv_fail;
+                        }
+                        size_t remaining_len = elem.len - data_len;
+                        xQueueReceive(udp_server_queue, &elem, 0);
+                        elem.len = remaining_len;
+                        xQueueSendToFront(udp_server_queue, &elem, 0);
+                    }
+                    
+                    input_data[data_len] = '\0';
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:%s,%d,%s\r\n", "US", data_len, input_data);
+                    QAT_Response_Str(QAT_RC_OK, buffer);
+                    qurt_mutex_lock(&udp_server_mutex);
+                    udp_server_ipd_message_print_flag = true;
+                    qurt_mutex_unlock(&udp_server_mutex);
+                    break;                   
                 }
+                case QAT_CLIENT:
+                {
+                    if (g_client_conns_t[link_id].active == INACTIVE) {
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:Client link id %d is not active\r\n", link_id);
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        return rc;
+                    }
 
-                if(CircularBuffer_Read(server_cb, input_data, data_len) < 0){
-                    goto recv_fail;
-                }
-                xQueueReceive(server_queue, &elem, 0);
-                input_data[data_len] = '\0';
-                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA: %d, %s \r\n", data_len, input_data);
-                QAT_Response_Str(QAT_RC_OK, buffer);
-                qurt_mutex_lock(&server_mutex);
-                server_ipd_message_print_flag = true;
-                qurt_mutex_unlock(&server_mutex);
-            }else{
-                // check if link_id is active
-                if (g_client_conns_t[link_id].active == INACTIVE) {
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:link id %d is not active\r\n", link_id);
-                    QAT_Response_Str(QAT_RC_ERROR, buffer);
-                    return rc;
-                }
+                    if (g_client_conns_t[link_id].recv_type == RECVTYPE_ACTIVE) {
+                        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:Client link id %d is not passive receive type\r\n", link_id);
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        return rc;
+                    }
 
-                if (g_client_conns_t[link_id].recv_type == RECVTYPE_ACTIVE) {
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:receive type of link id %d is not passive\r\n", link_id);
-                    QAT_Response_Str(QAT_RC_ERROR, buffer);
-                    return rc;
-                }
+                    if(xQueuePeek(client_queue, &elem, 0) == pdFALSE){
+                        goto recv_fail;
+                    }
 
-                if(xQueuePeek(client_queue, &elem, 0) == pdFALSE){
-                    goto recv_fail;
-                }
+                    if (data_len > elem.len) {
+                        goto recv_fail;
+                    }else if(data_len == elem.len){
+                        if(CircularBuffer_Read(g_client_conns_t[link_id].cb, input_data, data_len) < 0){
+                            goto recv_fail;
+                        }
+                        xQueueReceive(client_queue, &elem, 0);
+                    }else{
+                        if(CircularBuffer_Read(g_client_conns_t[link_id].cb, input_data, data_len) < 0){
+                            goto recv_fail;
+                        }
+                        size_t remaining_len = elem.len - data_len;
+                        xQueueReceive(client_queue, &elem, 0);
+                        elem.len = remaining_len;
+                        xQueueSendToFront(client_queue, &elem, 0);
+                    }
 
-                if (data_len != elem.len) {
-                    goto recv_fail;
+                    input_data[data_len] = '\0';
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA:%c, %d, %s\r\n", 'C', data_len, input_data);
+                    QAT_Response_Str(QAT_RC_OK, buffer);
+                    qurt_mutex_lock(&client_mutex);
+                    ipd_message_print_flag = true;
+                    qurt_mutex_unlock(&client_mutex);
+                    break;
                 }
-
-                if(CircularBuffer_Read(g_client_conns_t[link_id].cb, input_data, data_len) < 0){
-                    goto recv_fail;
-                }
-
-                xQueueReceive(client_queue, &elem, 0);
-                input_data[data_len] = '\0';
-                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPRECVDATA: %d, %s \r\n", data_len, input_data);
-                QAT_Response_Str(QAT_RC_OK, buffer);
-                qurt_mutex_lock(&client_mutex);
-                ipd_message_print_flag = true;
-                qurt_mutex_unlock(&client_mutex);
+                default:
+                {}
             }
             break;
         }
@@ -1357,6 +1557,12 @@ static void CleanupListenClientConnInfo(int link_id) {
     memset(&(g_listen_clients[link_id].client_addr), 0, sizeof(struct sockaddr_in));
     g_listen_clients[link_id].active = false;
     g_listen_clients[link_id].recv_type = RECVTYPE_ACTIVE;
+}
+static void CleanupUdpListenClientConnInfo(int link_id) {
+    g_listen_udp_clients[link_id].sockfd = INVALID_FD;
+    memset(&(g_listen_udp_clients[link_id].client_addr), 0, sizeof(struct sockaddr_in));
+    g_listen_udp_clients[link_id].active = false;
+    g_listen_udp_clients[link_id].recv_type = RECVTYPE_ACTIVE;
 }
 
 /*-------------------------------------------------------------------------
@@ -1431,11 +1637,8 @@ static void tcp_server_thread(void *arg)
                         CleanupListenClientConnInfo(index);
                     }
                 }
-                if(!udpServerThreadCreated){
-                    CircularBuffer_Destroy(server_cb);
-                    server_cb = NULL;
-                }
-
+                CircularBuffer_Destroy(server_cb);
+                server_cb = NULL;
                 qurt_mutex_lock(&server_mutex);
                 server_ipd_message_print_flag = true;
                 qurt_mutex_unlock(&server_mutex);
@@ -1470,7 +1673,7 @@ static void tcp_server_thread(void *arg)
         {
             memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
             if(g_listen_clients[elem.id].recv_type == RECVTYPE_PASSIVE){
-                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD: %d, %d\r\n", elem.id, elem.len);
+                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD:%s,%d,%d\r\n", "TS", elem.id, elem.len);
                 QAT_Response_Str(QAT_RC_QUIET, buffer);
                 qurt_mutex_lock(&server_mutex);
                 server_ipd_message_print_flag = false;
@@ -1487,7 +1690,7 @@ static void tcp_server_thread(void *arg)
                 fd_index = find_invalid_socket();
                 if(fd_index == QAT_ERROR)
                 {
-                    QAT_Response_Str(QAT_RC_ERROR, "+EVT:Conn_Exceeded\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, "Conn_Exceeded\r\n");
                     continue;
                 }
                 g_listen_clients[fd_index].sockfd = data_fd;
@@ -1517,7 +1720,7 @@ static void tcp_server_thread(void *arg)
                             continue;
                         }else{
                             input_buf[recv_bytes] = '\0';
-                            snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD: %d, %d : %s\r\n", index, recv_bytes, input_buf);
+                            snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD:%s,%d,%d,%s\r\n", "TS", index, recv_bytes, input_buf);
                             QAT_Response_Str(QAT_RC_QUIET, buffer);
                         }
                     }else{
@@ -1651,9 +1854,9 @@ static QAT_Command_Status_t Extend_Command_Server(uint32_t Op_Type, uint32_t Par
 
 int find_invalid_addr(struct sockaddr_in *client_addr) {
    for (int i = 0; i < QAT_CLIENT_MAX_CONNECTIONS; i++) {
-       if (g_listen_clients[i].active &&
-           (g_listen_clients[i].client_addr.sin_addr.s_addr == client_addr->sin_addr.s_addr) &&
-           (g_listen_clients[i].client_addr.sin_port == client_addr->sin_port)) {
+       if (g_listen_udp_clients[i].active &&
+           (g_listen_udp_clients[i].client_addr.sin_addr.s_addr == client_addr->sin_addr.s_addr) &&
+           (g_listen_udp_clients[i].client_addr.sin_port == client_addr->sin_port)) {
            return i;
        }
    }
@@ -1662,9 +1865,9 @@ int find_invalid_addr(struct sockaddr_in *client_addr) {
 
 int add_udp_client(struct sockaddr_in *client_addr) {
    for (int i = 0; i < QAT_CLIENT_MAX_CONNECTIONS; i++) {
-       if (!g_listen_clients[i].active) {
-           memcpy(&g_listen_clients[i].client_addr, client_addr, sizeof(struct sockaddr_in));
-           g_listen_clients[i].active = true;
+       if (!g_listen_udp_clients[i].active) {
+           memcpy(&g_listen_udp_clients[i].client_addr, client_addr, sizeof(struct sockaddr_in));
+           g_listen_udp_clients[i].active = true;
            return i;
        }
    }
@@ -1700,7 +1903,7 @@ static void udp_server_thread(void *arg)
     int result;
     QueueElem elem;
 
-    server_cb = CircularBuffer_Create();
+    udp_server_cb = CircularBuffer_Create();
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd  < 0) {
         goto udp_fail;
@@ -1723,16 +1926,14 @@ static void udp_server_thread(void *arg)
             }
 
             for (uint8_t i = 0; i < QAT_CLIENT_MAX_CONNECTIONS; i++) {
-                CleanupListenClientConnInfo(i);
+                CleanupUdpListenClientConnInfo(i);
             }
 
-            if(!tcpServerThreadCreated){
-                CircularBuffer_Destroy(server_cb);
-                server_cb = NULL;
-            }
-            qurt_mutex_lock(&server_mutex);
-            server_ipd_message_print_flag = true;
-            qurt_mutex_unlock(&server_mutex);
+            CircularBuffer_Destroy(udp_server_cb);
+            udp_server_cb = NULL;
+            qurt_mutex_lock(&udp_server_mutex);
+            udp_server_ipd_message_print_flag = true;
+            qurt_mutex_unlock(&udp_server_mutex);
             udpServerThreadCreated =false;
             nt_osal_thread_delete(NULL);
             return;
@@ -1748,16 +1949,16 @@ static void udp_server_thread(void *arg)
                 maxfd = fd;
             }
 
-            if((server_ipd_message_print_flag == true) && (uxQueueMessagesWaiting(server_queue) > 0) && 
-                (xQueuePeek(server_queue, &elem, 0) == pdTRUE))
+            if((udp_server_ipd_message_print_flag == true) && (uxQueueMessagesWaiting(udp_server_queue) > 0) && 
+                (xQueuePeek(udp_server_queue, &elem, 0) == pdTRUE))
             {
                 memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
-                if(g_listen_clients[elem.id].recv_type == RECVTYPE_PASSIVE){
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD: %d, %d\r\n", elem.id, elem.len);
+                if(g_listen_udp_clients[elem.id].recv_type == RECVTYPE_PASSIVE){
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPD:%s,%d,%d\r\n", "US", elem.id, elem.len);
                     QAT_Response_Str(QAT_RC_QUIET, buffer);
-                    qurt_mutex_lock(&server_mutex);
-                    server_ipd_message_print_flag = false;
-                    qurt_mutex_unlock(&server_mutex);
+                    qurt_mutex_lock(&udp_server_mutex);
+                    udp_server_ipd_message_print_flag = false;
+                    qurt_mutex_unlock(&udp_server_mutex);
                 }
             }
 
@@ -1767,11 +1968,11 @@ static void udp_server_thread(void *arg)
                 recv_len = recvfrom(fd, input_buf, sizeof(input_buf), 0, (struct sockaddr*)&client_addr, &client_addr_len);
                 if (recv_len < 0) {
                     if (errno == ECONNRESET || errno == ENOTCONN) {
-                        CleanupListenClientConnInfo(client_idx);
+                        CleanupUdpListenClientConnInfo(client_idx);
                     }
                     continue;
                 }else if (recv_len == 0) {
-                    CleanupListenClientConnInfo(client_idx);
+                    CleanupUdpListenClientConnInfo(client_idx);
                 }else{
                     client_idx = find_invalid_addr(&client_addr);
                     if (client_idx == QAT_ERROR) {
@@ -1786,26 +1987,27 @@ static void udp_server_thread(void *arg)
                                     inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
                             continue;
                         }
+                        g_listen_udp_clients[client_idx].active = ACTIVE;
                     }
 
-                    recv_type = g_listen_clients[client_idx].recv_type;
+                    recv_type = g_listen_udp_clients[client_idx].recv_type;
                     if(recv_type == RECVTYPE_ACTIVE){
                         input_buf[recv_len] = '\0';
                         memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
-                        snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPD: %d, %d : %s\r\n", client_idx, recv_len, input_buf);
+                        snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPD:%s,%d,%d,%s\r\n", "US", client_idx, recv_len, input_buf);
                         QAT_Response_Str(QAT_RC_QUIET, buffer);
                     }else{
-                        if (uxQueueSpacesAvailable(server_queue) == 0) {
+                        if (uxQueueSpacesAvailable(udp_server_queue) == 0) {
                             continue;
                         }
-                        result = CircularBuffer_GetFreeSpace(server_cb);
+                        result = CircularBuffer_GetFreeSpace(udp_server_cb);
                         if(result < recv_len){
                             continue;
                         }
                         elem.id = client_idx;
                         elem.len = recv_len;
-                        if(xQueueSend(server_queue, &elem, 0) == pdPASS ){
-                            CircularBuffer_Write(server_cb, input_buf, recv_len);
+                        if(xQueueSend(udp_server_queue, &elem, 0) == pdPASS ){
+                            CircularBuffer_Write(udp_server_cb, input_buf, recv_len);
                         }
                     }
                 }
@@ -1897,10 +2099,12 @@ void Initialize_QAT_TCPIP_Demo (void)
     {
         CleanupClientConnInfo(link_id);
         CleanupListenClientConnInfo(link_id);
+        CleanupUdpListenClientConnInfo(link_id);
     }
-
-    client_queue = xQueueCreate(QAT_CLIENT_CB_SIZE, sizeof(QueueElem));
-    server_queue = xQueueCreate(QAT_CLIENT_CB_SIZE, sizeof(QueueElem));
+    
+    client_queue = xQueueCreate(CONFIG_QAT_CB_QUEUE_MAX_LENGTH, sizeof(QueueElem));
+    server_queue = xQueueCreate(CONFIG_QAT_CB_QUEUE_MAX_LENGTH, sizeof(QueueElem));
+    udp_server_queue = xQueueCreate(CONFIG_QAT_CB_QUEUE_MAX_LENGTH, sizeof(QueueElem));
 
 	RetVal = QAT_Register_Command_Group(QAT_TCPIP_Command_List, TCPIP_COMMAND_LIST_SIZE);
 	if(RetVal == false)
