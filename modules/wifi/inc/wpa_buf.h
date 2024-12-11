@@ -251,6 +251,11 @@ static inline void wpabuf_put_be32(struct wpabuf *buf, uint32_t data)
 	WPA_PUT_BE32(pos, data);
 }
 #endif
+static inline void wpabuf_put_le16(struct wpabuf *buf, uint16_t data)
+{
+	uint8_t *pos = wpabuf_put(buf, 2);
+	WPA_PUT_LE16(pos, data);
+}
 
 void wpabuf_put_data(struct wpabuf *buf, const void *data,
 				   size_t len);

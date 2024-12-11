@@ -589,6 +589,33 @@ typedef struct devh_s {
     unsigned char 				ssid[WMI_MAX_SSID_LEN + 1];
     uint8_t 					ssid_len;
 
+ /**
+	 * sae_pwe - SAE mechanism for PWE derivation
+	 * 0 = hunting-and-pecking loop only
+	 * 1 = hash-to-element only
+	 * 2 = both hunting-and-pecking loop and hash-to-element enabled
+	 */
+    int sae_pwe;
+    struct sae_pt *pt;
+    
+    /**
+	 * sae_password - SAE password
+	 *
+	 * This parameter can be used to set a password for SAE. By default, the
+	 * passphrase value is used if this separate parameter is not used, but
+	 * passphrase follows the WPA-PSK constraints (8..63 characters) even
+	 * though SAE passwords do not have such constraints.
+	 */
+	char *sae_password;
+
+    /**
+	 * sae_password_id - SAE password identifier
+	 *
+	 * This parameter can be used to identify a specific SAE password. If
+	 * not included, the default SAE password is used instead.
+	 */
+    char *sae_password_id;
+
     void                        *pRateCtrl;
 
     void                        *pApDevStruct;

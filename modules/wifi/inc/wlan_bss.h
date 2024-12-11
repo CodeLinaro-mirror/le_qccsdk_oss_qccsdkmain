@@ -100,6 +100,9 @@ typedef struct bss_s {
     uint32_t                    ni_last_rcv_bcn_tstamp;
     uint64_t                    ni_next_dtim_bcn_tsf; // uses AP Tsf to calculcate next bcn tsf
     uint64_t                    ni_next_bcn_tsf; // uses AP Tsf to calculcate next bcn tsf
+#ifdef NT_FN_WPA3
+    uint8_t                     ni_rsnxe_ie[3];         /* rsnx ie */
+#endif
 } bss_t;
 
 
