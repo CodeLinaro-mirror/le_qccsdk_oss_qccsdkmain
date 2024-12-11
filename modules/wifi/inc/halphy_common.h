@@ -91,6 +91,8 @@ typedef enum mod_type /* WLAN OFDM modulation type */
 #define TEMP_RECAL_TEMP_LO 0    /* low tempeature falling below this tempeature re-calibration would be triggered */
 #define TEMP_RECAL_TEMP_HI 60   /* high tempeature falling above this tempeature re-calibration would be triggered */
 #define ROOM_TEMP 25            /* room tempeature */
+#define CH12_FREQ    2467
+#define CH13_FREQ    2472
 /*------------------------------------------------------------------------
  * Function Declarations and Documentation
  * ----------------------------------------------------------------------*/

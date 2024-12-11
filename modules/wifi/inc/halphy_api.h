@@ -76,6 +76,7 @@ typedef struct halphy_handle_s {
     uint8_t prev_recal_temp_region;
     uint16_t prev_recal_channel;
 #endif /* TEMP_BASED_RECAL_SUPPORT */
+    bool bandedge_enable;
 } halphy_handle_t;
 
 #ifdef PHY_MAC_RX_HW_COUNTER_LOGGING

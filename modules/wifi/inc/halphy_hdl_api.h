@@ -99,5 +99,5 @@ void phyrf_tpc_set_finegain_offset_11a(int8_t finegain_offset, uint8_t rate);
 void phyrf_tpc_set_finegain_offset_11n(int8_t finegain_offset, uint8_t rate);
 #endif
 void phyrf_enable_ceb(bool enable);
-
-#endif /* _HALPHY_HDL_API_H_ */
+void phyrf_set_bandedge_correction(bool enable);
+#endif /* SRRC_BAND_EDGE_SUPPORT */

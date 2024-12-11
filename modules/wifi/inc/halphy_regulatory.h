@@ -27,6 +27,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define INVALID_COUNTRY_CODE   0xFFFF
 #define INVALID_6G_SUBDOMAIN   0xFFFF
 #define US_COUNTRY_ID          840
+#define CHINA_COUNTRY_ID       156
 #define WORLD_MODE             96
 #define WMI_REG_CLIENT_MAX     2
 

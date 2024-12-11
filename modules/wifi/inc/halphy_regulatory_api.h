@@ -138,6 +138,7 @@ uint16_t halphy_regulatory_IsCountryCodeValid_internal(uint8_t *alpha);
 uint8_t halphy_get_regdb_customer_version(void);
 void halphy_regulatory_GetDefaultCountryCodeNewRegRules(phyrf_reg_exchange_struct *p_reg_info, void *reg_rules);
 void halphy_regulatory_GetCountryCodeNewRegRules(uint8_t *alpha, phyrf_reg_exchange_struct *p_reg_info, void *reg_rules);
+uint16_t halphy_regulatory_get_country_id(void);
 
 #endif /* SUPPORT_REGULATORY */
 #endif  /* _HALPHY_REGULATORY_API_H_ */
