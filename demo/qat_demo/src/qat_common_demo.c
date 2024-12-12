@@ -50,9 +50,9 @@ static uint32_t mem_test = 123;
 /** List of global commands that are supported when in a group. */
 static QAT_Command_t QAT_Common_Command_List[] =
 {
-	{"+CMD",   Extend_Command_Cmd,      QAT_OP_QUERY},
-	{"+GMR",   Extend_Command_Version,   QAT_OP_EXEC},
-    {"+INFO",  Extend_Command_Info,      QAT_OP_EXEC},
+	{"+CMD",   Extend_Command_Cmd,      QAT_OP_EXEC | QAT_OP_QUERY},
+	{"+GMR",   Extend_Command_Version,   QAT_OP_EXEC | QAT_OP_QUERY},
+    {"+INFO",  Extend_Command_Info,      QAT_OP_EXEC | QAT_OP_QUERY},
     {"+RST",   Extend_Command_Reset,      QAT_OP_EXEC},
     {"+WRTMEM",   Extend_Command_Write_Memory,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
     {"+RDMEM",    Extend_Command_Read_Memory,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
@@ -109,7 +109,13 @@ static QAT_Command_Status_t Extend_Command_Version(uint32_t Op_Type, uint32_t Pa
 
    switch (Op_Type)
    {      
-      case QAT_OP_EXEC: 	     /* AT+GMR */
+	  case QAT_OP_EXEC:
+	  {
+		 rc = QAT_Response_Str(QAT_RC_OK, "AT+GMR: get usage of command\r\n"\
+										 "AT+GMR?: get SDK version\r\n");
+		 break;
+	  }
+	  case QAT_OP_QUERY: 	     /* AT+GMR */
       {
 		 unsigned int otp_version = *(unsigned int *)0x1a002c;
          unsigned int PBL_version = *(unsigned int *)0x200168;
@@ -124,7 +130,7 @@ static QAT_Command_Status_t Extend_Command_Version(uint32_t Op_Type, uint32_t Pa
              return rc;
          }
          memset((void*)buffer, 0, VERSION_STR_BUFFER_LENGTH);
-         snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+GMR:%d.%d.%d,%d,%d.%d.%d,%s,%s,%d.%d,%d.%d.%d,0x%x,0x%x %x,%s - %s\r\n", 
+         snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+GMR:%d.%d.%d,%d,%d.%d.%d,%s,%s,%d.%d,%d.%d.%d,0x%x,0x%x,%x,%s-%s\r\n", 
                   QAPI_VERSION_MAJOR, QAPI_VERSION_MINOR, QAPI_VERSION_NIT, CRM_BUILD_NUM,
                   WIFI_FW_VER_MAJOR,WIFI_FW_VER_MINOR,WIFI_FW_VER_COUNT,WIFI_FW_VARIANT_NAME,
                   CONFIG_QCCSDK_BOARD_NAME, 
@@ -167,7 +173,13 @@ static QAT_Command_Status_t Extend_Command_Info(uint32_t Op_Type, uint32_t Param
 	
 	switch (Op_Type)
    {      
-      case QAT_OP_EXEC: 	     /* AT+INFO */
+	  case QAT_OP_EXEC:
+	  {
+		 rc = QAT_Response_Str(QAT_RC_OK, "AT+INFO: get usage of command\r\n"\
+										 "AT+INFO?: get board information, including temparature, battery voltage, and memory usage\r\n");
+		 break;
+	  }
+	  case QAT_OP_QUERY: 	     /* AT+INFO */
       {
 		buffer = malloc(VERSION_STR_BUFFER_LENGTH);
 
@@ -185,7 +197,7 @@ static QAT_Command_Status_t Extend_Command_Info(uint32_t Op_Type, uint32_t Param
 		    return rc;
 	    }
 		
-		snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+INFO:%d,%d,%8d,%8d,%8d,%8d"
+		snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+INFO:%d,%d,%d,%d,%d,%d"
 		, pmu_ts_get_current_temperature(), tv_monitor_get_vbat_mV()
 		, hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes); 
 		
@@ -458,8 +470,7 @@ static QAT_Command_Status_t Extend_Command_TIME(uint32_t Op_Type, uint32_t Param
 
 	    status = qapi_Core_RTC_Julian_Get(&tm);
 	    if ( QAPI_OK != status ) {
-	        offset += snprintf(buffer+offset, NORMAL_RESPONSE_BUFFER_LENGTH-offset, "Failed on a call to qapi_Core_RTC_Julian_Get(), status=%d\r\n", status);
-	        offset += snprintf(buffer+offset, NORMAL_RESPONSE_BUFFER_LENGTH-offset, "Please note that this is likely happened because the time was not set", status);
+	        offset += snprintf(buffer+offset, NORMAL_RESPONSE_BUFFER_LENGTH-offset, "+TIME:Failed to get time. It would because time is not set");
 	        return QAT_Response_Str(QAT_RC_ERROR, buffer);
 	    }
 
@@ -831,6 +842,7 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
    return rc;
 }
 
+
 /**
    @brief SNTPC
 
@@ -1026,7 +1038,13 @@ static QAT_Command_Status_t Extend_Command_Cmd(uint32_t Op_Type, uint32_t Parame
 
    switch (Op_Type)
    {      
-      case QAT_OP_QUERY: 	     /* AT+CMD */
+	  case QAT_OP_EXEC:
+	  {
+		 rc = QAT_Response_Str(QAT_RC_OK, "AT+CMD: get usage of command\r\n"\
+										 "AT+CMD?: get available AT commands\r\n");
+		 break;
+	  }
+	  case QAT_OP_QUERY: 	     /* AT+CMD */
       {
 		 buffer = malloc(CMD_STR_BUFFER_LENGTH);
 		 
