@@ -57,8 +57,8 @@ static QAT_Command_t QAT_Common_Command_List[] =
     {"+WRTMEM",   Extend_Command_Write_Memory,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
     {"+RDMEM",    Extend_Command_Read_Memory,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
     {"+TIME",     Extend_Command_TIME,      QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM | QAT_OP_QUERY},
-    {"+SLEEP",    Extend_Command_Deep_Sleep,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
-    {"+DNSC",     Extend_Command_DNSC,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+    {"+DSLEEP",    Extend_Command_Deep_Sleep,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+    {"+DNSC",     Extend_Command_DNSC,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC | QAT_OP_QUERY},
     {"+SNTPC",    Extend_Command_SNTPC,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
 };
 /*-------------------------------------------------------------------------
@@ -597,7 +597,7 @@ static QAT_Command_Status_t Extend_Command_Deep_Sleep(uint32_t Op_Type, uint32_t
    {
 	  case QAT_OP_EXEC:		     /* AT+SLEEP */
       {	
-		 snprintf(buffer, NORMAL_RESPONSE_BUFFER_LENGTH, "+SLEEP=<1:AON timer wkup|2:Ext wkup>,<sleep duration in us(min 16000)>");
+		 snprintf(buffer, NORMAL_RESPONSE_BUFFER_LENGTH, "+DSLEEP=<1:AON timer wkup|2:Ext wkup>,<sleep duration in us(min 16000)>");
 		 rc = QAT_Response_Str(QAT_RC_OK, buffer);
          break;
       }
@@ -607,7 +607,7 @@ static QAT_Command_Status_t Extend_Command_Deep_Sleep(uint32_t Op_Type, uint32_t
 		 if (Parameter_Count != 2 || !Parameter_List ||
         	!Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) 
         {
-        	rc = QAT_Response_Str(QAT_RC_ERROR, "+SLEEP=<1:AON timer wkup|2:Ext wkup>,<sleep duration in us(min 16000)>");
+        	rc = QAT_Response_Str(QAT_RC_ERROR, "+DSLEEP=<1:AON timer wkup|2:Ext wkup>,<sleep duration in us(min 16000)>");
 			return rc;
 	    }
 			
@@ -676,7 +676,7 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
 	  case QAT_OP_EXEC:		     /* AT+DNSC */
       {	
 		 snprintf(buffer, NORMAL_RESPONSE_BUFFER_LENGTH, "\nAT+DNSC:  show the usage of command\n\r" \
-		 						"AT+DNSC=dnsshow show the current list of dns servers \n\r" \
+		 						"AT+DNSC?: show the current list of dns servers\n\r" \
                                 "AT+DNSC=addsvr,<ip>: add a DNS server \n\r" \
                                 "AT+DNSC=delsvr,<ip>: delete a DNS server \n\r" \
                                 "AT+DNSC=gethostbyname,<hostname>: resolve a hostname (string) into an IP address \n\r" \
@@ -685,7 +685,21 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
 		 rc = QAT_Response_Str(QAT_RC_OK, buffer);
          break;
       }
-      
+      case QAT_OP_QUERY:		     /* AT+DNSC */
+      {	
+		uint32_t indx;
+		const ip_addr_t * server_addr;
+		
+	  	//get DNS list
+        for(indx = 0; indx< DNS_MAX_SERVERS; indx++) {
+            server_addr = (ip_addr_t *)dns_getserver(indx);
+            if(!ip_addr_isany_val(*server_addr)) {
+                offset += snprintf(buffer+offset, NORMAL_RESPONSE_BUFFER_LENGTH-offset, "+DNSC:%d,%s\r\n",indx, ipaddr_ntoa(server_addr));
+            }
+        }
+        rc = QAT_Response_Str(QAT_RC_OK, buffer);
+         break;
+      }
 	  case QAT_OP_EXEC_W_PARAM:		     /* AT+DNSC= */
       {	
 
@@ -695,18 +709,7 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
 	    ip_addr_t ip_addr;
 
 	    cmd = Parameter_List[0].String_Value;
-		if(strncmp(cmd, "dnsshow", 7) == 0)
-		{
-			//get DNS list
-	        for(indx = 0; indx< DNS_MAX_SERVERS; indx++) {
-	            server_addr = (ip_addr_t *)dns_getserver(indx);
-	            if(!ip_addr_isany_val(*server_addr)) {
-	                offset += snprintf(buffer+offset, NORMAL_RESPONSE_BUFFER_LENGTH-offset, "+DNSC:%d,%s\r\n",indx, ipaddr_ntoa(server_addr));
-	            }
-	        }
-	        rc = QAT_Response_Str(QAT_RC_OK, buffer);
-		}
-	    else if (strncmp(cmd, "addsvr", 6) == 0) 
+		if (strncmp(cmd, "addsvr", 6) == 0) 
 		{
 	        if (Parameter_Count < 2) 
 			{
@@ -841,7 +844,6 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
 
    return rc;
 }
-
 
 /**
    @brief SNTPC
