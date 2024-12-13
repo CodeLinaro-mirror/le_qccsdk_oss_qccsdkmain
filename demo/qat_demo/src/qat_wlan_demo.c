@@ -71,8 +71,8 @@ static QAT_Command_t QAT_Wifi_Command_List[] =
    {"+CWPWD",    Extend_Command_SetWpaPassphrase,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+CWJAP",    Extend_Command_Connect,      QAT_OP_EXEC_W_PARAM | QAT_OP_QUERY | QAT_OP_EXEC},
    {"+CWQAP",    Extend_Command_Disconnect,   QAT_OP_EXEC},
-   {"+CWSOFTAP", Extend_Command_SetModeOption,     QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
-   {"+WEVT",     Extend_Command_EventMessage,      QAT_OP_EXEC_W_PARAM | QAT_OP_QUERY},
+   {"+CWSOFTAP", Extend_Command_SetModeOption,QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+   {"+WEVT",     Extend_Command_EventMessage, QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC | QAT_OP_QUERY},
    {"+CWPHYMODE",Extend_Command_PyhMode,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC | QAT_OP_QUERY},
    {"+CWCOUNTRY",Extend_Command_CountryCode,  QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC | QAT_OP_QUERY},
    {"+ANTIINF",  Extend_Command_ANTIINF,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
@@ -196,13 +196,13 @@ static void scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
       }
 
       if(i!= num_scan - 1) {
-         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "\n \r");
+         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "\r\n");
       } else {
-         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "\r\nshell> ");
+         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "\r\n");
       }
    }
 
-   QAT_Response_Str(QAT_RC_QUIET, buffer);
+   QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
 
    return;
 }
@@ -222,7 +222,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
          }
 
          qapi_WLAN_Scan_Comp_Evt_t *p_scan_compl_evt = (qapi_WLAN_Scan_Comp_Evt_t*)payload;
-         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_scancmplt:%d,%d", p_scan_compl_evt->num_bss_cur, p_cxt->scan_mode);
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_scancmplt");
          if (p_cxt->scan_mode==SCAN_MODE_UNBLOCKING) {
             scan_results(p_scan_compl_evt);
          }
@@ -243,11 +243,9 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
                p_cxt->connected = true;
             offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_conned:%d,%02x-%02x-%02x-%02x-%02x-%02x,",
                p_cxt->active_device, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-            if (e_wpa_ver==QAPI_WLAN_AUTH_WPA_PSK_E || e_wpa_ver==QAPI_WLAN_AUTH_WPA2_PSK_E) {
-               offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "4 way handshake success for device=1\r\n");
-            }
-         } else {
-            offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_disconn: %d,%d,%02x-%02x-%02x-%02x-%02x-%02x,", cxnInfo->reason_code, cxnInfo->bss_Connection_Status,mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+         } else { 
+            strlcpy(p_cxt->ssid, "NA", sizeof(p_cxt->ssid));
+            offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_disconn:%d,%d,%02x-%02x-%02x-%02x-%02x-%02x,", cxnInfo->reason_code, cxnInfo->bss_Connection_Status,mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
          }
          offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "%d,%s,%d,%d",
                   cxnInfo->channel_frequency, p_cxt->ssid, cxnInfo->assoc_id, cxnInfo->host_initiated);
@@ -260,7 +258,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
          }
          
          if(p_cxt->ssid_length) {
-            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_disconcmd: %d, %s", p_cxt->active_device, p_cxt->ssid);
+            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_disconcmd:%d,%s", p_cxt->active_device, p_cxt->ssid);
          }
          break;
       }
@@ -270,17 +268,29 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
             p_cxt->channel_frequency = ecsa->freq;
             snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_switchchan:%d,%d", p_cxt->active_device, ecsa->freq);
          } else {
-            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_switchchan:%d,FAIL, %d", p_cxt->active_device, ecsa->reason);
+            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_switchchan:FAIL,%d,%d", p_cxt->active_device, ecsa->reason);
          }
          break;
+      }
+      case QAPI_WLAN_ENABLE_CB_E: {
+         QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+EVT:wlan_enable");
+         return;
+      }
+      case QAPI_WLAN_SCAN_START_CB_E: {
+         QAT_Response_Str(QAT_RC_QUIET, "+EVT:wlan_scanstart");
+         return;
+      }
+      case QAPI_WLAN_DISABLE_CB_E: {
+          QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+EVT:wlan_disabled\r\n");
+         return;
       }
    }
 
    if (!enable_event_reporting) {
-      QAT_Response_Str(QAT_RC_OK, "+WEVT: Event reporting has been disabled");
+      QAT_Response_Str(QAT_RC_QUIET, "Event reporting has been disabled");
    }
    else {
-      QAT_Response_Str(QAT_RC_OK, buffer);
+      QAT_Response_Str(QAT_RC_QUIET, buffer);
    }
 
    return;
@@ -295,7 +305,7 @@ static QAT_Command_Status_t Extend_Command_EventMessage(uint32_t Op_Type, uint32
    {
       case QAT_OP_QUERY: 	     /* AT+WEVT */
       {
-         snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+WEVT=%d", enable_event_reporting);
+         snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+WEVT:%d", enable_event_reporting);
 		   QAT_Response_Str(QAT_RC_QUIET, buffer);
          break;
       }
@@ -305,6 +315,13 @@ static QAT_Command_Status_t Extend_Command_EventMessage(uint32_t Op_Type, uint32
          enable_event_reporting = Parameter_List[0].Integer_Value;
          break;
       }
+
+      case QAT_OP_EXEC:
+      {
+         QAT_Response_Str(QAT_RC_QUIET, "+WEVT=0/1");
+         break;
+      }
+         
       default:
       ;
    }
@@ -331,13 +348,19 @@ static QAT_Command_Status_t Extend_Command_EventMessage(uint32_t Op_Type, uint32
 static QAT_Command_Status_t Extend_Command_Wifisp(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+   wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+
+   if(p_cxt->wlan_enabled) {
+      rc = QAT_Response_Str(QAT_RC_OK, "+WIFISP: Supported");
+      return rc;
+   }
 
    switch (Op_Type)
    {
       case QAT_OP_EXEC: 	     /* AT+WIFISP */
       {
          if (qapi_WLAN_Enable(true) != QAPI_OK) {
-            QAT_Response_Str(QAT_RC_ERROR, "get wlan mode fail");
+            QAT_Response_Str(QAT_RC_ERROR, "+WIFISP:get wlan mode fail");
             return rc;
          }	
          break;
@@ -346,7 +369,7 @@ static QAT_Command_Status_t Extend_Command_Wifisp(uint32_t Op_Type, uint32_t Par
       ;
    }
    qapi_WLAN_Enable(false);
-   rc = QAT_Response_Str(QAT_RC_OK, NULL);
+   rc = QAT_Response_Str(QAT_RC_OK, "+WIFISP: Supported");
    return rc;
 }
 
@@ -407,7 +430,7 @@ static QAT_Command_Status_t Extend_Command_Enable(uint32_t Op_Type, uint32_t Par
       default:
       ;
    }
-   rc = QAT_Response_Str(QAT_RC_OK, "+CWENABLE:wlan device enabled");
+   rc = QAT_Response_Str(QAT_RC_OK, NULL);
    return rc;
 }
 
@@ -432,15 +455,15 @@ static QAT_Command_Status_t Extend_Command_Disable(uint32_t Op_Type, uint32_t Pa
     qapi_Status_t ret = QAPI_ERROR;
     QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
 
+   if(!p_cxt->wlan_enabled) {
+      rc = QAT_Response_Str(QAT_RC_OK, "+CWQABLE:Wlan is disabled");
+      return rc;
+   }
+
     switch (Op_Type)
     {
       case QAT_OP_EXEC:  /* AT+CWQABLE */
       {
-         if(p_cxt->wlan_enabled == 0) {
-            rc = QAT_Response_Str(QAT_RC_OK, NULL);
-            return rc;
-         }
-
          ret = qapi_WLAN_Enable(false);
          if (QAPI_OK != ret) {
             QAT_Response_Str(QAT_RC_ERROR, "+CWQABLE:cmd failed");
@@ -452,7 +475,7 @@ static QAT_Command_Status_t Extend_Command_Disable(uint32_t Op_Type, uint32_t Pa
       default:
       ;
     }
-    rc = QAT_Response_Str(QAT_RC_OK, "+CWQABLE:wlan device disabled");
+    rc = QAT_Response_Str(QAT_RC_OK, NULL);
     return rc;
 }
 
@@ -478,7 +501,7 @@ static int32_t qat_set_op_mode(char *opmode, char *hiddenSsid)
 			return rc;
 		}
 	}
-	else if(!strcmp(opmode,"station")) {
+	else if(!strcmp(opmode,"sta")) {
 		devMode = DEV_MODE_STATION_E;
 	}
 	#ifdef NT_FN_CONCURRENCY
@@ -546,7 +569,7 @@ static QAT_Command_Status_t Extend_Command_Scan(uint32_t Op_Type, uint32_t Param
 
    if (0 == p_cxt->wlan_enabled)
    {
-      QAT_Response_Str(QAT_RC_ERROR, "Enable WLAN before scan");
+      QAT_Response_Str(QAT_RC_ERROR, "+CWLAP:Enable WLAN before scan");
       return rc;
    }
 
@@ -559,7 +582,7 @@ static QAT_Command_Status_t Extend_Command_Scan(uint32_t Op_Type, uint32_t Param
          if(Parameter_Count >= 1 && Parameter_List[0].Integer_Is_Valid) {
             int32_t param_scan_mode = Parameter_List[0].Integer_Value;
             if((param_scan_mode < SCAN_MODE_BLOCKING) || (param_scan_mode > SCAN_MODE_UNBLOCKING)) {
-               snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWLAP:FAIL, %d", param_scan_mode);
+               snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWLAP:FAIL,%d", param_scan_mode);
                QAT_Response_Str(QAT_RC_ERROR, buffer);
                qurt_mutex_unlock(&p_cxt->wifi_shell_cxt_mutex);
                return rc;
@@ -593,8 +616,6 @@ static QAT_Command_Status_t Extend_Command_Scan(uint32_t Op_Type, uint32_t Param
 	      }
          
       qurt_mutex_unlock(&p_cxt->wifi_shell_cxt_mutex);
-      snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWLAP:%d", p_cxt->scan_mode);
-      QAT_Response_Str(QAT_RC_QUIET, buffer);
 
       if (scan_ssid) {
          ret = qapi_WLAN_Start_Scan(deviceId, &scan_param);
@@ -612,7 +633,11 @@ static QAT_Command_Status_t Extend_Command_Scan(uint32_t Op_Type, uint32_t Param
          qapi_WLAN_Scan_Comp_Evt_t *scan_complete_evt_total = malloc(sizeof(qapi_WLAN_Scan_Comp_Evt_t) + bss_cnt*sizeof(qapi_WLAN_BSS_Scan_Info_t));
          qapi_WLAN_Get_Scan_Results(deviceId, scan_complete_evt_total, &bss_cnt);
          if (scan_complete_evt_total) {
+            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_scanresultstart:%d,%d",bss_cnt, p_cxt->scan_mode);
+            QAT_Response_Str(QAT_RC_QUIET, buffer);
             scan_results(scan_complete_evt_total);
+            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_scanresultend");
+            QAT_Response_Str(QAT_RC_QUIET, buffer);
             free(scan_complete_evt_total);
          } else {
             QAT_Response_Str(QAT_RC_QUIET, "+CWLAP:failed to allocate memory to scan");
@@ -623,7 +648,7 @@ static QAT_Command_Status_t Extend_Command_Scan(uint32_t Op_Type, uint32_t Param
       default:
       ;
    }
-   rc = QAT_Response_Str(QAT_RC_QUIET, NULL);
+   rc = QAT_Response_Str(QAT_RC_OK, NULL);
    return rc;
 }
 
@@ -648,6 +673,11 @@ static QAT_Command_Status_t Extend_Command_SetWpaPassphrase(uint32_t Op_Type, ui
    uint8_t deviceId = qat_get_active_device();
    char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
 
+   if(!pg_wifi_shell_cxt->wlan_enabled) {
+      QAT_Response_Str(QAT_RC_ERROR, "+CWPWD:Enable WLAN before set pwd");
+      return rc;
+   }
+
    switch (Op_Type)
    {
       case QAT_OP_EXEC_W_PARAM: /* AT+CWPWD */
@@ -661,7 +691,7 @@ static QAT_Command_Status_t Extend_Command_SetWpaPassphrase(uint32_t Op_Type, ui
          }
 
          if((len < 8) || (len >64)) {
-            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWPWD:FAIL, %d", len);
+            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWPWD:FAIL,%d", len);
             QAT_Response_Str(QAT_RC_ERROR, buffer);
             return rc;
          }
@@ -719,6 +749,11 @@ static QAT_Command_Status_t Extend_Command_SetWpaParameters(uint32_t Op_Type, ui
    qapi_WLAN_Auth_Mode_e e_wpa_ver;
    qapi_WLAN_Crypt_Type_e e_cipher;
 
+   if(!pg_wifi_shell_cxt->wlan_enabled) {
+      QAT_Response_Str(QAT_RC_ERROR, "+CWWPA:Enable WLAN before set wpa");
+      return rc;
+   }
+
    switch (Op_Type)
    {
       case QAT_OP_EXEC_W_PARAM:   /* AT+CWWPA */
@@ -771,7 +806,7 @@ static QAT_Command_Status_t Extend_Command_SetWpaParameters(uint32_t Op_Type, ui
       }
       case QAT_OP_EXEC:
       {
-         QAT_Response_Str(QAT_RC_QUIET, "+CWWPA=WPA/WPA2/SEA/SAE_WPA2, CCMP, CCMP/TKIP, TKIP");
+         QAT_Response_Str(QAT_RC_QUIET, "+CWWPA=WPA/WPA2/SEA/SAE_WPA2,CCMP,CCMP/TKIP,TKIP");
          break;
       }
       default:
@@ -795,11 +830,6 @@ static int32_t qat_set_channel(int32_t channeldata)
 #else
    QAT_Response_Str(QAT_RC_ERROR, "cannot set 6g channel since 6g is not enabled");
 #endif
-
-   if(!pg_wifi_shell_cxt->wlan_enabled) {
-      QAT_Response_Str(QAT_RC_ERROR, "Enable WLAN before set channel");
-      return 1;
-   }
 
 	ret = qapi_WLAN_Set_Param(deviceId,
 								__QAPI_WLAN_PARAM_GROUP_WIRELESS,
@@ -916,24 +946,18 @@ void qat_regulatory_info(qapi_WLAN_Reg_Evt_t *reg_info)
 
 int32_t qat_get_country_code()
 {
-    qapi_Status_t ret = QAPI_OK;
-    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
-    qapi_WLAN_Reg_Evt_t reg_info;
-    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+   qapi_Status_t ret = QAPI_OK;
+   wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+   qapi_WLAN_Reg_Evt_t reg_info;
+   QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
 	
-    if (0 == p_cxt->wlan_enabled)
-    {
-        QAT_Response_Str(QAT_RC_ERROR, "Enable WLAN before get country code");
-        return rc;
-    }
-	
-    ret = qapi_WLAN_Get_Regulatory_Info(&reg_info);
-    if(ret == QAPI_OK) {
-        qat_regulatory_info(&reg_info);
-    }
+   ret = qapi_WLAN_Get_Regulatory_Info(&reg_info);
+   if(ret == QAPI_OK) {
+      qat_regulatory_info(&reg_info);
+   }
 
-    rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, NULL);
-    return rc;
+   rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, NULL);
+   return rc;
 }
 
 int32_t qat_get_wifi_power_mode()
@@ -969,7 +993,7 @@ int32_t qat_get_wifi_power_mode()
 			strlcat(data, "WNM enabled", sizeof(data));
 		}		
 	}		
-   snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "%s,",data);
+   snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "%s",data);
    rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
 
 	return rc;
@@ -990,7 +1014,7 @@ int32_t qat_get_device_mac_address()
 		return rc;
 	}
 
-	snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "%02x-%02x-%02x-%02x-%02x-%02x,",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+	snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "%02x-%02x-%02x-%02x-%02x-%02x",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
    rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
 
 	return rc;
@@ -1005,11 +1029,6 @@ int32_t qat_get_rssi()
 	uint32_t length = sizeof(rssi);
 	uint32_t deviceId =qat_get_active_device();
 
-    if(!pg_wifi_shell_cxt->wlan_enabled) {
-        QAT_Response_Str(QAT_RC_ERROR, "wlan is not enabled");
-        return rc;
-    }
-
 	ret = qapi_WLAN_Get_Param(deviceId,
 							__QAPI_WLAN_PARAM_GROUP_WIRELESS,
 							__QAPI_WLAN_PARAM_GROUP_WIRELESS_RSSI,
@@ -1020,7 +1039,7 @@ int32_t qat_get_rssi()
       rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
    }
    else{
-      QAT_Response_Str(QAT_RC_QUIET_NO_CR, "NONE,");
+      QAT_Response_Str(QAT_RC_QUIET_NO_CR, "NA");
    }
 
 	return rc;
@@ -1059,13 +1078,13 @@ int32_t qat_get_op_mode()
 	}
 	
 	if(opmode == DEV_MODE_STATION_E) {
-      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, "station,");
+      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, "station");
 	}
 	else if(opmode == DEV_MODE_AP_E) {
-      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, "softap,");
+      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, "softap");
 	}
    else if(opmode == DEV_MODE_NO_CONC_E) {
-      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, "non_softap+station,");
+      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, "non_softap+station");
    }
 
 	return rc;
@@ -1093,6 +1112,12 @@ static QAT_Command_Status_t Extend_Command_PyhMode(uint32_t Op_Type, uint32_t Pa
 	uint8_t deviceId =qat_get_active_device();
 	qapi_WLAN_Phy_Mode_e phyMode = 0;
    char * wmode;
+
+   if (0 == pg_wifi_shell_cxt->wlan_enabled)
+   {
+      QAT_Response_Str(QAT_RC_ERROR, "+CWPHYMODE:Enable WLAN before set phymode");
+      return rc;
+   }
 
    wmode = (char *) Parameter_List[0].String_Value;
    switch(Op_Type) 
@@ -1168,7 +1193,7 @@ static QAT_Command_Status_t Extend_Command_CountryCode(uint32_t Op_Type, uint32_
 	
     if (0 == p_cxt->wlan_enabled)
     {
-        QAT_Response_Str(QAT_RC_ERROR, "Enable WLAN before set country code\r\n");
+        QAT_Response_Str(QAT_RC_ERROR, "+CWCOUNTRY:Enable WLAN before set country code");
         return rc;
     }
 
@@ -1184,7 +1209,7 @@ static QAT_Command_Status_t Extend_Command_CountryCode(uint32_t Op_Type, uint32_
 
 	      ret = set_country_code((char *) Parameter_List[0].String_Value);
 	      if(ret != QAPI_OK) {
-		      snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+COUNTRY: FAIL, %s\n", (char *) Parameter_List[0].String_Value);
+		      snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWCOUNTRY: FAIL, %s\n", (char *) Parameter_List[0].String_Value);
             QAT_Response_Str(QAT_RC_ERROR, NULL);
             return rc;
 	      }
@@ -1222,9 +1247,15 @@ static QAT_Command_Status_t Extend_Command_CountryCode(uint32_t Op_Type, uint32_
 static QAT_Command_Status_t Extend_Command_SetModeOption(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+   qapi_Status_t ret = QAPI_OK;
+   uint8_t deviceId = qat_get_active_device();
+   wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+   char *param = "";
+   char *ssid = "";
+   int ssidlen = 0;
 
    if(pg_wifi_shell_cxt->wlan_enabled == 0) {
-      QAT_Response_Str(QAT_RC_ERROR, "wlan is not enabled");
+      QAT_Response_Str(QAT_RC_ERROR, "+CWSOFTAP:wlan is not enabled");
       return rc;
    }
 
@@ -1232,7 +1263,15 @@ static QAT_Command_Status_t Extend_Command_SetModeOption(uint32_t Op_Type, uint3
    {
       case QAT_OP_EXEC_W_PARAM:    /* AT+CWSOFTAP */
       {
-         if(Parameter_Count < 2 || !Parameter_List) {
+         if(Parameter_Count < 3 || !Parameter_List) {
+            param = (char *) Parameter_List[0].String_Value;
+            if(!strcmp(param,"disable")) {
+               rc = (QAT_Command_Status_t)qat_set_11nht_cap(param);
+               if (rc == QAT_STATUS_SUCCESS_E) {
+                  QAT_Response_Str(QAT_RC_QUIET, "+CWSOFTAP:disabled ap");
+                  return rc;
+               }
+            }
             QAT_Response_Str(QAT_RC_ERROR, "+CWSOFTAP:parameter error");
 		      return rc;
 	      }
@@ -1243,18 +1282,35 @@ static QAT_Command_Status_t Extend_Command_SetModeOption(uint32_t Op_Type, uint3
             return rc;
          }
 
-         sleep(1);
          rc = (QAT_Command_Status_t)qat_set_channel(Parameter_List[1].Integer_Value);
          if (rc != QAT_STATUS_SUCCESS_E) {
             QAT_Response_Str(QAT_RC_ERROR, "+CWSOFTAP:set channel error");
             return rc;
          }
 
+         ssid = Parameter_List[2].String_Value;
+         ssidlen = strlen(ssid);
+         qapi_WLAN_Set_Param (0, __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+            __QAPI_WLAN_PARAM_GROUP_WIRELESS_SSID,
+            (void *)ssid, ssidlen, FALSE);
+
+         ret = qapi_WLAN_Commit(deviceId);
+         if (ret != QAPI_OK) {
+            QAT_Response_Str(QAT_RC_ERROR, NULL);
+            return rc;
+         }
+
+	      if(deviceId == NT_DEV_AP_ID && ret == QAPI_OK) {
+		      memscpy(p_cxt->ssid, ssidlen, ssid, ssidlen);
+            p_cxt->ssid[ssidlen] = 0;
+            p_cxt->ssid_length = ssidlen;
+	      }
+
          break;
       }
       case QAT_OP_EXEC:
       {
-         QAT_Response_Str(QAT_RC_QUIET, "+CWSOFTAP=<param1>,<param2>(param1:disable/ht20, param2:1-14, 36-165)");
+         QAT_Response_Str(QAT_RC_QUIET, "+CWSOFTAP=<param1>,<param2>,<ssid>(param1:disable/ht20, param2:1-14, 36-165)");
          break;
       }
       default:
@@ -1281,7 +1337,7 @@ static QAT_Command_Status_t Extend_Command_SetOperatingMode(uint32_t Op_Type, ui
    char *hidden = "";
 
    if(pg_wifi_shell_cxt->wlan_enabled == 0) {
-      QAT_Response_Str(QAT_RC_ERROR, "wlan is not enabled");
+      QAT_Response_Str(QAT_RC_ERROR, "+CWMODE:wlan is not enabled");
       return rc;
    }
 	
@@ -1290,10 +1346,10 @@ static QAT_Command_Status_t Extend_Command_SetOperatingMode(uint32_t Op_Type, ui
       case QAT_OP_EXEC_W_PARAM:    /* AT+CWMODE */
       {
          if(Parameter_Count < 1 || !Parameter_List) {
-            QAT_Response_Str(QAT_RC_ERROR, "wlan is not enabled");
+            QAT_Response_Str(QAT_RC_ERROR, "+CWMODE:wlan is not enabled");
 		      return rc;
 	      }
-	
+
 	      if(Parameter_Count >= 2) {
             hidden = (char *) Parameter_List[1].String_Value;
          }
@@ -1315,7 +1371,7 @@ static QAT_Command_Status_t Extend_Command_SetOperatingMode(uint32_t Op_Type, ui
       }
       case QAT_OP_EXEC:
       {
-         QAT_Response_Str(QAT_RC_QUIET, "+CWMODE=station/ap");
+         QAT_Response_Str(QAT_RC_QUIET, "+CWMODE=sta/ap");
          break;
       }
       default:
@@ -1347,17 +1403,16 @@ static QAT_Command_Status_t Extend_Command_Connect(uint32_t Op_Type, uint32_t Pa
    char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
    qapi_Status_t ret = QAPI_OK;
 
+   if (0 == p_cxt->wlan_enabled)
+   {
+      QAT_Response_Str(QAT_RC_ERROR, "+CWJAP:Enable WLAN before get the WLAN infomation");
+      return rc;
+   }
+
    switch (Op_Type)
    {
       case QAT_OP_QUERY: /* AT+CWJAP? */
       {
-         wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
-         if (0 == p_cxt->wlan_enabled)
-         {
-            QAT_Response_Str(QAT_RC_ERROR, "Enable WLAN before get the WLAN infomation");
-            return rc;
-         }
-	
          if(p_cxt->connected == true)
          {
             snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWJAP:%s,%d,", p_cxt->ssid, p_cxt->channel_frequency);
@@ -1365,13 +1420,17 @@ static QAT_Command_Status_t Extend_Command_Connect(uint32_t Op_Type, uint32_t Pa
          }
          else 
          {
-            QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+CWJAP:NONE,NONE,");
+            QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+CWJAP:NA,NA,");
          }
 
          qat_get_rssi();
+         QAT_Response_Str(QAT_RC_QUIET_NO_CR, ",");
          qat_get_wifi_power_mode();
+         QAT_Response_Str(QAT_RC_QUIET_NO_CR, ",");
          qat_get_device_mac_address();
+         QAT_Response_Str(QAT_RC_QUIET_NO_CR, ",");
 	      qat_get_op_mode();
+         QAT_Response_Str(QAT_RC_QUIET_NO_CR, ",");
          qat_get_phy_mode();
 
          break;
@@ -1385,11 +1444,6 @@ static QAT_Command_Status_t Extend_Command_Connect(uint32_t Op_Type, uint32_t Pa
 
       case QAT_OP_EXEC_W_PARAM:    /* AT+CWJAP */
       {
-         if(!p_cxt->wlan_enabled) {
-            QAT_Response_Str(QAT_RC_ERROR, "wlan is not enabled ");
-            return rc;
-         }
-
          if( Parameter_Count < 1 || !Parameter_List ) {
             QAT_Response_Str(QAT_RC_ERROR, NULL);
             return rc;
@@ -1454,18 +1508,17 @@ static QAT_Command_Status_t Extend_Command_Connect(uint32_t Op_Type, uint32_t Pa
 static QAT_Command_Status_t Extend_Command_Disconnect(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+   uint8_t deviceId = qat_get_active_device();
+
+   if(!pg_wifi_shell_cxt->wlan_enabled) {
+      QAT_Response_Str(QAT_RC_ERROR, "+CWQAP:wlan is not enabled");
+      return rc;
+   }
    
    switch (Op_Type)
    {
       case QAT_OP_EXEC:     /* AT+CWQAP */
       {
-	      uint8_t deviceId = qat_get_active_device();
-
-         if(!pg_wifi_shell_cxt->wlan_enabled) {
-            QAT_Response_Str(QAT_RC_ERROR, "wlan is not enabled");
-            return rc;
-         }
-
          pg_wifi_shell_cxt->auth = QAPI_WLAN_AUTH_NONE_E;
          qapi_WLAN_Disconnect(deviceId);
          break;
