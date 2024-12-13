@@ -83,7 +83,7 @@
 #define NETWORK_BUFFER_SIZE    ( 1024U )
 
 
-#define MQTT_DEMO_SESSION_NUM          (4U)
+#define MQTT_DEMO_SESSION_NUM          (2U)
 
 
 /**
