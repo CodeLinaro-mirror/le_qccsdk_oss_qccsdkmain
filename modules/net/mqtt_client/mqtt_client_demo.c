@@ -96,7 +96,7 @@
 
 
 
-#define WRTMEM_STR_BUFFER_LENGTH					  1400
+#define WRTMEM_STR_BUFFER_LENGTH					  1500
 
 /*-------------------------------------------------------------------------
  * Variables
@@ -503,6 +503,8 @@ static void handleIncomingPublish(MQTTPublishInfo_t *pPublishInfo,
 
 #ifdef CONFIG_QAT_MQTT_DEMO
     char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    uint32_t offset=0;
+    char* ptr = buffer;
 #endif
 
     /* Process incoming Publish. */
@@ -515,8 +517,8 @@ static void handleIncomingPublish(MQTTPublishInfo_t *pPublishInfo,
             ptopic[i]= pPublishInfo->pTopicName[i];
         }
         ptopic[pPublishInfo->topicNameLength] = '\0';
-        snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBRECV:%d,\"%s\",%d,",sessionIndex,ptopic,pPublishInfo->payloadLength);
-        QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+        offset=snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBRECV:%d,\"%s\",%d,",sessionIndex,ptopic,pPublishInfo->payloadLength);
+        // QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
         free(ptopic);
     }
 
@@ -550,14 +552,15 @@ static void handleIncomingPublish(MQTTPublishInfo_t *pPublishInfo,
 #endif
 
 #ifdef CONFIG_QAT_MQTT_DEMO
-    memset(buffer,0,WRTMEM_STR_BUFFER_LENGTH);
+    // memset(buffer,0,WRTMEM_STR_BUFFER_LENGTH);
+    ptr +=offset;
 #endif
 
     for (size_t i = 0; i < pPublishInfo->payloadLength; i++)
     {
 #ifdef CONFIG_QAT_MQTT_DEMO
         // snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "%c", ((const char *) pPublishInfo->pPayload)[i]);
-        buffer[i] = (char) ((const char *) pPublishInfo->pPayload)[i];
+        ptr[i] = (char) ((const char *) pPublishInfo->pPayload)[i];
       
 #else
         MQTT_CLIENT_PRINTF("%c", ((const char *) pPublishInfo->pPayload)[i]);
