@@ -1037,7 +1037,8 @@ static QAT_Command_Status_t Extend_Command_Cmd(uint32_t Op_Type, uint32_t Parame
    const QAT_Command_Group_t *Command_Group; /**< Command group information. */
    uint8_t command_len = 0;
    uint8_t command_len_total = 0;
-
+   uint8_t total_cmd = 0;
+   
    switch (Op_Type)
    {      
 	  case QAT_OP_EXEC:
@@ -1069,11 +1070,12 @@ static QAT_Command_Status_t Extend_Command_Cmd(uint32_t Op_Type, uint32_t Parame
 			   command_len = strlen(Command_Group->Command_List[Index].Command_String)+1;
 			   
 			   offset += snprintf(buffer+offset, CMD_STR_BUFFER_LENGTH-offset, "+CMD:%d,\"%s\",%d,%d,%d\r\n", 
-			   	Index, Command_Group->Command_List[Index].Command_String,
+			   	total_cmd, Command_Group->Command_List[Index].Command_String,
 			   	(Command_Group->Command_List[Index].Command_Flags & QAT_OP_QUERY),
 			   	(Command_Group->Command_List[Index].Command_Flags & QAT_OP_EXEC)>>2,
 			   	(Command_Group->Command_List[Index].Command_Flags & QAT_OP_EXEC_W_PARAM)>>3
 			   	);
+			   total_cmd++;
 	 	    }        
 	 	    Current_Entry = Current_Entry->Next;
 	 	 }
