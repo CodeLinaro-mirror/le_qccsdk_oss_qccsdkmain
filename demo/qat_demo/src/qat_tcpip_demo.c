@@ -186,30 +186,34 @@ static void qat_ping_recv(int s, char *buffer, char *buf)
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(s, &fds);
-    ret = select(s + 1, &fds, NULL, NULL, &timeout);
-    if (ret > 0) {
-        recv_len = recvfrom(s, buf, QAT_PING_RECV_BUFFER_SIZE, 0, (struct sockaddr*)&src_addr, &src_addr_len);
-        if(recv_len >= (int)(sizeof(struct ip_hdr)+sizeof(struct icmp_echo_hdr))) {
-            inet_addr_to_ip4addr(ip_2_ip4(&from_addr), &src_addr.sin_addr);
-            IP_SET_TYPE_VAL(from_addr, IPADDR_TYPE_V4);
-            struct ip_hdr * ip_header = (struct ip_hdr *)buf;
-            struct icmp_echo_hdr *icmp_header = (struct icmp_echo_hdr *)(buf + (IPH_HL(ip_header) * 4));
-            
-            if ((icmp_header->id == QAT_PING_ID) && (icmp_header->seqno == htons(qat_ping_seq_num)) && (ICMPH_TYPE(icmp_header) == ICMP_ER)) 
-            {
-                qat_ping_recv_count++;
-                memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
-                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPPING:%s,%u,%lu\r\n", ipaddr_ntoa(&from_addr), ntohs(icmp_header->seqno), (sys_now()-qat_ping_time));
-                QAT_Response_Str(QAT_RC_QUIET, buffer);
-                return;
+    do{
+        ret = select(s + 1, &fds, NULL, NULL, &timeout);
+        if (ret > 0) {
+            recv_len = recvfrom(s, buf, QAT_PING_RECV_BUFFER_SIZE, 0, (struct sockaddr*)&src_addr, &src_addr_len);
+            if(recv_len >= (int)(sizeof(struct ip_hdr)+sizeof(struct icmp_echo_hdr))) {
+                inet_addr_to_ip4addr(ip_2_ip4(&from_addr), &src_addr.sin_addr);
+                IP_SET_TYPE_VAL(from_addr, IPADDR_TYPE_V4);
+                struct ip_hdr * ip_header = (struct ip_hdr *)buf;
+                struct icmp_echo_hdr *icmp_header = (struct icmp_echo_hdr *)(buf + (IPH_HL(ip_header) * 4));
+                
+                if ((icmp_header->id == QAT_PING_ID) && (icmp_header->seqno == htons(qat_ping_seq_num))) 
+                {
+                    if(ICMPH_TYPE(icmp_header) != ICMP_ER){
+                        continue;
+                    }
+                    qat_ping_recv_count++;
+                    memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPPING:%s,%u,%lu\r\n", ipaddr_ntoa(&from_addr), ntohs(icmp_header->seqno), (sys_now()-qat_ping_time));
+                    QAT_Response_Str(QAT_RC_QUIET, buffer);
+                    return;
+                }
             }
         }
-    }
-
-    memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
-    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPPING:Request timed out!\r");
-    QAT_Response_Str(QAT_RC_QUIET, buffer);
-    return;
+        memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
+        snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPPING:Request timed out!\r");
+        QAT_Response_Str(QAT_RC_QUIET, buffer);
+        return;
+    }while(1);
 }
 
 /*-------------------------------------------------------------------------
