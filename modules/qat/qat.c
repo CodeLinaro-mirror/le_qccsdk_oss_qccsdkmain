@@ -206,6 +206,7 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
    uint32_t	  i;
    qbool_t 	  Inside_Quotes = false;
    uint8_t Temp_Char;
+   uint8_t is_exec = 0;
    uint32_t      Index = *Command_Index;
    uint8_t *Command_Name;
    qbool_t  Sub_Command = false;
@@ -239,6 +240,7 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
 		 if(HTC_Context.Input_String[Index] == '=')
          {
             *Command_Name = '\0';
+			is_exec = 0;
             HTC_Context.Command_Flag |= QAT_STR_EQ;
             Index ++;
             if(Index < HTC_Context.Input_Length)
@@ -266,12 +268,15 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
             Index ++;
             HTC_Context.Command_Flag |= QAT_STR_QU;
             *(char*)(Command_Name) = '\0';
+			is_exec = 0;
             break;
          }
          else
          {
             Temp_Char = HTC_Context.Input_String[Index];
-            
+
+			is_exec = 1;
+
             if ((Temp_Char >= '0' && Temp_Char <= '9') ||
             ((Temp_Char) >= 'a' && (Temp_Char) <= 'z') ||
             (Temp_Char >= 'A' && Temp_Char <= 'Z') ||
@@ -296,6 +301,8 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
    {
       /* Initialize the find results to the current group state so that it can
       be used to recursively search the groups. */
+      if(is_exec == 1)
+	  	*(char*)(Command_Name) = '\0';
       
       Result = Find_Command_By_String(HTC_Context.Command_Name, &Find_Result);
       if(!Result)
@@ -303,6 +310,8 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
          printf("Command search failed: %s\n", HTC_Context.Command_Name);
          QAT_Response_Str(QAT_RC_ERROR, NULL);
       }
+	  if(is_exec == 1)
+	  	*(char*)(Command_Name) = ';';
    }
    
    /* search parameter if needed */
@@ -792,8 +801,8 @@ static qbool_t Find_Command_By_String(uint8_t *Command_Name, Find_Result_t *Find
       Command_Group = &Current_Entry->Command_Group;
       for(Index = 0; Index < Command_Group->Command_Count; Index++)
       {
-		 if((strlen(Command_Group->Command_List[Index].Command_String) == strlen(Command_Name)) && 
-            (!QCLI_Memcmpi(Command_Group->Command_List[Index].Command_String, Command_Name, strlen(Command_Name))))
+		  if((strlen(Command_Group->Command_List[Index].Command_String) == strlen(Command_Name)) && 
+	            (!QCLI_Memcmpi(Command_Group->Command_List[Index].Command_String, Command_Name, strlen(Command_Name))))
          {
             Find_Result->Command = &Command_Group->Command_List[Index];
             return true;
