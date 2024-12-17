@@ -923,7 +923,7 @@ static int publishToTopicWithQos(MQTTClientSession_t *pMqttClientSess, MQTTClien
                                         MQTT_PROCESS_LOOP_TIMEOUT_MS);
     }
 
-
+    total_send_len_one_raw += pMqttCommand->mqtt_cmd.publish.payloadLength;
     if (returnStatus == EXIT_SUCCESS)
     {
 #ifdef CONFIG_QAT_MQTT_DEMO
@@ -945,6 +945,7 @@ static int publishToTopicWithQos(MQTTClientSession_t *pMqttClientSess, MQTTClien
 
     }
 
+    total_send_len_one_raw = 0;
     memset(pMqttCommand, 0, sizeof(MQTTClientCMD_t));
     return returnStatus;
 }
