@@ -107,7 +107,7 @@ static qapi_Status_t deepsleep(uint32_t Parameter_Count, QAPI_Console_Parameter_
         printf("Ext wakeup indefinite deepsleep supported");
         nt_socpm_en_indef_deep_sleep(TRUE);
     }
-    uint64_t slp_time = (uint64_t)Parameter_List[1].Integer_Value;
+    uint64_t slp_time = (uint64_t)(Parameter_List[1].Integer_Value*1000);
     qapi_pm_enable(1);
     return qapi_deepsleep_enter(Parameter_List[0].Integer_Value, slp_time);
 }
@@ -268,7 +268,7 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
     {pm_enable, "pm_enable", "<1/0>", "Enable/disable system power management\n"},
 //    {test_sleep, "test_sleep", "<1:mcu_sleep|2:lightsleep> <sleep duration in us>", "Cfg and enable sleep\n"},
     {test_sleep, "test_sleep", "", "Not support now\n"},
-    {deepsleep, "deepsleep", "<1:AON timer wkup|2:Ext wkup> <sleep duration in us>", "Cfg and enable deepsleep\n"},
+    {deepsleep, "deepsleep", "<1:AON timer wkup|2:Ext wkup> <sleep duration in ms>", "Cfg and enable deepsleep\n"},
     {slp_clk_cal_cfg, "slp_clk_cal_cfg", "<1/0>", "Enable/disable slp_clk_cal in sleep mode\n"},
     {bmps_enable, "bmps_enable", "<1/0> [timeout in ms to exit BMPS]", "Enable BMPS(DTIM) sleep for WLAN\n"},
     {bmps_ignore_bcmc, "bmps_ignore_bcmc", "<1/0>", "Ignore Bcast/Mcast wakeup during BMPS(DTIM)\n"},
