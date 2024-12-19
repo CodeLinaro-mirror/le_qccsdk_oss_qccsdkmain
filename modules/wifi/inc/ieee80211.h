@@ -481,6 +481,9 @@ enum {
 	IEEE80211_STATUS_ANTI_CLOGGING_TOKEN_REQ	= 76,
 	IEEE80211_STATUS_UNSUPPORTED_FFC_GRP	= 77,
 	IEEE80211_STATUS_UNKNOWN_PASSWORD_IDENTIFIER	= 123,
+#if (defined NT_FN_WPA3)
+    IEEE80211_STATUS_SAE_HASH_TO_ELEMENT    =126,
+#endif
     /*
      *  Below UNDEF code will never be used in
      *  any real 802.11 frames, only reported to

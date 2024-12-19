@@ -28,6 +28,8 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define SAE_COMMIT_MAX_LEN 			(2 + 3 * SAE_MAX_PRIME_LEN)
 #define SAE_CONFIRM_MAX_LEN 		32
 
+#define WLAN_RSNX_CAPAB_SAE_H2E     5
+
 typedef struct sae_temporary_data {
 	uint8_t kck[SAE_KCK_LEN];
 	struct crypto_bignum 			*own_commit_scalar;
@@ -54,6 +56,8 @@ typedef struct sae_temporary_data {
 	struct crypto_bignum 			*order_buf;
 
 	char 							*pw_id;
+	struct wpabuf 					*own_rejected_groups;
+	unsigned int 					own_addr_higher:1;
 } sae_temporary_data;
 
 enum {
@@ -76,7 +80,34 @@ typedef struct sae_data {
 	uint16_t 					rc; 						/* protocol instance variable: Rc (received send-confirm) */
 	struct sae_temporary_data 	*tmp;
 	uint8_t		 				*g_sae_token;
+	unsigned int 				h2e:1;
 } sae_data_t;
+
+typedef struct sae_pt{
+	struct sae_pt *next;
+	int group;
+	struct crypto_ec *ec;
+	struct crypto_ec_point *ecc_pt;
+
+	const struct dh_group *dh;
+	struct crypto_bignum *ffc_pt;
+
+#ifdef CONFIG_SAE_PK
+	u8 ssid[32];
+	size_t ssid_len;
+#endif /* CONFIG_SAE_PK */
+}sae_pt_t;
+
+struct sae_pk {
+	struct wpabuf *m;
+	struct crypto_ec_key *key;
+	int group;
+	struct wpabuf *pubkey; /* DER encoded subjectPublicKey */
+	
+#ifdef CONFIG_TESTING_OPTIONS
+	struct crypto_ec_key *sign_key_override;
+#endif /* CONFIG_TESTING_OPTIONS */
+};
 
 #endif //NT_FN_WPA3
 
