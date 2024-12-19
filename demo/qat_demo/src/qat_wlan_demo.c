@@ -1583,6 +1583,8 @@ static QAT_Command_Status_t Extend_Command_ANTIINF(uint32_t Op_Type, uint32_t Pa
 	    }
 		
 	    length = sizeof(rts_rate);
+	    rts_rate = 0;
+		
 	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
 	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
 	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G,
