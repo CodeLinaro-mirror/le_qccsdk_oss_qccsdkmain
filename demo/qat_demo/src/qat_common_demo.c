@@ -75,7 +75,7 @@ static QAT_Command_t QAT_Common_Command_List[] =
 #define VERSION_STR_BUFFER_LENGTH 					  256
 #define INFO_STR_BUFFER_LENGTH					      256
 #define WRTMEM_STR_BUFFER_LENGTH					  128
-#define CMD_STR_BUFFER_LENGTH					      1024
+#define CMD_STR_BUFFER_LENGTH					      2048
 #define NORMAL_RESPONSE_BUFFER_LENGTH 				  1024
 
 #define DEEP_SLP_WKUP_EXT           				  2
