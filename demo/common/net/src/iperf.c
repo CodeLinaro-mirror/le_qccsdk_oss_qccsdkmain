@@ -1222,7 +1222,12 @@ void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur)
     char *bandwidth_unit = " ";
     uint32_t sec_val1, sec_val2;
     uint32_t bytes = 0;
-
+    
+    if(pCxtPara == NULL)
+    {
+        IPERF_PRINTF("error: illegal pCxtPara.\n");
+        return;
+    }
     msInterval = (cur - prev);
     // pCxtPara->total_bytes += pCxtPara->bytes;
 
@@ -2052,6 +2057,12 @@ void iperf_rx_show_result(void *arg)
     while (1)
     {
         qurt_thread_sleep(iperf_display_interval);
+
+        if(iperf_rx_quit)
+        {
+            IPERF_PRINTF("Warning: iperf_rx_quit, iperf_rx_show_result quit! \n");
+             break;
+        }
 
         app_get_time(&iperf_curr_time);
 

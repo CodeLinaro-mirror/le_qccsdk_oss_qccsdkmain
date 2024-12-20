@@ -28,7 +28,7 @@ qapi_Status_t qapi_hfc_sendto_host_data_pkt(void* p_buff, uint8_t *payload, uint
 {
     int error_code = QAPI_OK;
 
-	error_code = data_svc_hfc_recv_data_pkt(p_buff, payload, len, info);
+	error_code = data_svc_hfc_send_data_pkt(p_buff, payload, len, info);
     switch (error_code)
     {
         case -1:
@@ -46,6 +46,37 @@ qapi_Status_t qapi_hfc_sendto_host_data_pkt(void* p_buff, uint8_t *payload, uint
 }
 
 /**
+ * @brief API to be used to receive data packets from Host.
+ *
+ * @param[in] msg        pointer of msg
+ * @param[in] timeout    timeout in millisecond
+ * @return  
+ * QAPI_OK -- On success.\n
+ * Error code -- On failure.
+ */
+qapi_Status_t qapi_hfc_recvfrom_host_msg(hfc_msg_t *msg, uint32_t timeout)
+{
+	return data_svc_hfc_recv_msg(msg, timeout);
+}
+
+/**
+ * @brief API to be used to receive data packets from Host.
+ *
+ * @param[in] p_buff     pointer of buffer
+ * @param[in] payload    pointer of buffer length
+ * @param[in] timeout    timeout in millisecond
+ * @param[out] data_len  pointer of data length
+ * @param[out] info      pointer of extra info
+ * @return  
+ * QAPI_OK -- On success.\n
+ * Error code -- On failure.
+ */
+qapi_Status_t qapi_hfc_recvfrom_host_data_pkt(void* p_buff, uint16_t *buf_len, uint32_t timeout, uint16_t *data_len, uint16_t *info)
+{
+	return data_svc_hfc_recv_data_pkt(p_buff, buf_len, timeout, data_len, info);
+}
+
+/**
  * @brief  API to be used to send config packets to host.
  * @param[in]  p_buf    Pointer to the buffer of config packet
  * @param[in]  len      Length of the config packet
@@ -58,14 +89,6 @@ qbool_t qapi_hfc_sendto_host_config_pkt(uint32_t *p_buf, uint16_t len)
     return data_svc_hfc_send_config(p_buf, len);
 }
 
-/**
- * @brief API to be used to get the max number of queued messages from Host.
- * @return The max number of queued messages.
- */
-uint32_t qapi_hfc_get_max_msg_num(void)
-{
-    return data_svc_hfc_get_max_msg_num();
-}
 
 /**
  * @brief API to be used to set wlan state.

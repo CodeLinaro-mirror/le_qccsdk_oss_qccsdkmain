@@ -35,8 +35,8 @@ config WATCH_DOG_BITE_TIME
 	default 5
 
 config CPR_ENABLE
-	bool "Core Power Reduction support, please default to n"
-	default n
+	bool "Core Power Reduction support, please default to y"
+	default y
 
 config QTMR_GRAY_CODING_WAR
 	bool "A workaround to fix QTMR clock offset, please default to y"

@@ -33,27 +33,37 @@ static qapi_Status_t platform_reset(uint32_t __attribute__((__unused__)) paramet
 static qapi_Status_t read_mem(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     uint32_t data, size, addr;
+	
     if( Parameter_Count != 2 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
     addr = Parameter_List[0].Integer_Value;
     size = Parameter_List[1].Integer_Value;
     if (size == 1)
+	{
         data = *(uint8_t *)addr;
+		
+    }
     else if (size == 2)
+    {
         data = *(uint16_t *)addr;
+    }
     else if (size == 4)
+    {
         data = *(uint32_t *)addr;
+    }
     else
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
-
-    printf("Reading, Address = 0x%08x , Width = %d  Data = 0x%08x(%d)",addr,size,data,data);
+	
+    printf("Reading, Address = 0x%08x , Width = %d  Data = 0x%0*x(%d)",addr,size,size*2,data,data);
+	
     return QAPI_OK;
 }
 
 static qapi_Status_t write_mem(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     uint32_t data, size, addr;
+	
     if( Parameter_Count != 3 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid|| !Parameter_List[2].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
@@ -61,15 +71,22 @@ static qapi_Status_t write_mem(uint32_t Parameter_Count, QAPI_Console_Parameter_
     size = Parameter_List[1].Integer_Value;
     data = Parameter_List[2].Integer_Value;
     if (size == 1)
+    {
         *(uint8_t *)addr = data;
+    }
     else if (size == 2)
+    {
         *(uint16_t *)addr = data;
+    }
     else if (size == 4)
+    {
         *(uint32_t *)addr = data;
+    }
     else
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
-
-    printf("Writting, Address = 0x%08x , Width = %d  Data = 0x%08x(%d)",addr,size,data,data);
+	
+	printf("Writting, Address = 0x%08x , Width = %d  Data = 0x%0*x(%d)",addr,size,size*2,data,data);
+	
     return QAPI_OK;
 }
 #endif
@@ -131,6 +148,7 @@ qapi_Status_t platform_demo_watchdog_reset(__attribute__((__unused__)) uint32_t 
 static qapi_Status_t platform_demo_get_time(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
     qapi_Time_t tm;
+    time_zone_t zone;
     qapi_Status_t status;
 
     status = qapi_Core_RTC_Julian_Get(&tm);
@@ -140,6 +158,7 @@ static qapi_Status_t platform_demo_get_time(uint32_t __attribute__((__unused__))
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
     }
 
+    qapi_Core_Time_Zone_Get(&zone);
     printf("Julian Time: \r\n");
     printf("year = %d\r\n", tm.year);
     printf("month = %d\r\n", tm.month);
@@ -148,6 +167,7 @@ static qapi_Status_t platform_demo_get_time(uint32_t __attribute__((__unused__))
     printf("minute = %d\r\n", tm.minute);
     printf("second = %d\r\n", tm.second);
     printf("day_Of_Week = %d\r\n", tm.day_Of_Week);
+    printf("UTC%c%02d:%02d\r\n", zone.add_sub?'+':'-', zone.hour, zone.min);
 
     return QAPI_OK;
 }
@@ -470,6 +490,79 @@ platform_demo_setcxoneshot:
     return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 }
 
+void print_usage_set_time_zone()
+{
+    printf("UTC time format should be UTC+XX:XX or UTC-XX:XX\n");
+    printf("Hour from 00 to -12/+13, minute should be 0, 30 or 45\n\r");
+}
+
+static qapi_Status_t platform_demo_time_zone(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    qapi_Status_t status;
+    time_zone_t zone;
+    uint8_t hour = 0, min = 0, add_sub = 0, length = 0;
+    char hr[3], mn[3], parsing_hour_min[10];
+	
+    if ( Parameter_Count != 1 ) {
+        printf("Invalid number of arguments\r\n");
+        goto platform_demo_time_zone_error;
+    }
+	
+    length = strlen(Parameter_List[0].String_Value);
+    if(length != 9 || 0 != strncmp("UTC", Parameter_List[0].String_Value, 3))
+    {
+        goto platform_demo_time_zone_error;
+    }
+	
+    strlcpy(parsing_hour_min, Parameter_List[0].String_Value, sizeof(parsing_hour_min));
+
+    hr[0] = parsing_hour_min[4];
+    hr[1] = parsing_hour_min[5];
+    hr[2] = '\0';
+    hour  = (hr[0] - '0')*10 + (hr[1] - '0');	
+    mn[0] = parsing_hour_min[7];
+    mn[1] = parsing_hour_min[8];
+    mn[2] = '\0';
+    min   = (mn[0] - '0')*10 + (mn[1] - '0');	
+	
+    if(min != 0 && min != 30 && min != 45)
+    {
+        goto platform_demo_time_zone_error;
+    }
+	
+    // valid time zone : -12,-11,...,+13,+14
+    if(parsing_hour_min[3] == '+')
+    {
+        add_sub = 1;
+        if(hour > 14 || (14 == hour && min > 0))
+        {
+            goto platform_demo_time_zone_error;
+        }
+    }
+    else if(parsing_hour_min[3] == '-')
+    {
+        add_sub = 0;
+        if(hour > 12 || (12 == hour && min > 0))
+        {
+            goto platform_demo_time_zone_error;
+        }
+    }
+    else
+    {
+        goto platform_demo_time_zone_error;
+    }
+	
+    zone.hour = hour;
+    zone.min = min;
+    zone.add_sub = add_sub;
+    qapi_Core_Time_Zone_Set(&zone);
+    return QAPI_OK;
+	
+platform_demo_time_zone_error:
+    print_usage_set_time_zone();
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+}
+
 const QAPI_Console_Command_t platform_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -487,6 +580,7 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
     {platform_demo_getcx, "getcx", "\n", "get cx(ULP-SMPS2) related information\n"},
     {platform_demo_calcxoneshot, "calcxoneshot", "<tempC> <vbatmV>", "calculate cx(ULP-SMPS2) oneshot_code accordting to tempC(-40C, 125C) and vbatmV(1600mV, 3600mV)\n"},
     {platform_demo_setcxoneshot, "setcxoneshot", "<oneshot> [tempC] [vbatmV]\n", "if oneshot not zero, just set; else, calculate oneshot according to tempC and vbatmV then set. This will disable cxoneshot update in sleep\n"},
+    {platform_demo_time_zone, "time_zone", "<zone>\n", "set time zone\n"},
 };
 
 const QAPI_Console_Command_Group_t platform_shell_cmd_group = {"platform", sizeof(platform_shell_cmds) / sizeof(QAPI_Console_Command_t), platform_shell_cmds};

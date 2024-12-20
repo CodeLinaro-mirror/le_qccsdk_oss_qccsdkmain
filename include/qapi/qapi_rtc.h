@@ -49,6 +49,15 @@ typedef struct ntp_Time_s {
     uint32_t frac;
 } ntp_Time_t;
 
+/**
+ *  Time zone.
+ */
+typedef struct time_zone_s {
+    uint8_t hour; 
+    uint8_t min;
+	uint8_t add_sub;
+} time_zone_t;
+
 /*-------------------------------------------------------------------------
  * Function Declarations
  *-----------------------------------------------------------------------*/
@@ -91,5 +100,22 @@ qapi_Status_t qapi_Core_RTC_NTP_Get(ntp_Time_t *tm);
 qapi_Status_t qapi_Core_RTC_NTP_Set(ntp_Time_t *tm);
 
 
+/**
+ *  Gets the time zone.
+ *
+ * @param[in] zone  Pointer to a buffer to contain the time zone.
+ *
+ * @return #QAPI_OK on success, or a different code on error.
+ */
+qapi_Status_t qapi_Core_Time_Zone_Get(time_zone_t *zone);
+
+/**
+ *  Sets the time zone.
+ *
+ * @param[in] tm  Pointer to a buffer to contain the time zone.
+ *
+ * @return #QAPI_OK on success, or a different code on error.
+ */
+qapi_Status_t qapi_Core_Time_Zone_Set(time_zone_t *zone);
 #endif /* __QAPI_RTC_H__ */
 

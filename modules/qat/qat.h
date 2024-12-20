@@ -80,7 +80,7 @@
    @return QCLI group handle that can be used for the platform abstraction to
            print to the console.
 */
-qbool_t QAT_Initialize(void);
+qbool_t QAT_TxTask_Initialize(void);
 
 /**
    @brief Passes characters input from the command line to the QCLI module for
@@ -126,6 +126,18 @@ typedef struct HTC_Context_s
    QAT_Tx_Queue_t             *Tx_Queue;
    qurt_mutex_t 			   mutex;
 } HTC_Context_t;
+
+
+/**
+   Information for the result of a Find_Command() operation.
+*/
+typedef struct Cur_Data_Mode_Cmd_s
+{
+   char cur_data_mode_commnd[20];
+   uint32_t Op_Type;
+   uint32_t	  Parameter_Count;
+   
+} Cur_Data_Mode_Cmd_t;
 
 #endif // ] #ifndef __QAT_H__
 

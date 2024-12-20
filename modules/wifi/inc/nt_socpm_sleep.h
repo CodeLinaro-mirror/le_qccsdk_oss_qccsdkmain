@@ -191,6 +191,10 @@ typedef enum sleep_types {
 } sleep_mode;
 #endif /* PLATFORM_FERMION */
 
+typedef enum cpr_types {
+    cpr_openloop = 0, cpr_closeloop = 1
+} cpr_mode_e;
+
 typedef uint64_t (*nt_socpm_min_fptr_t)(uint32_t);
 typedef void     (*nt_socpm_void_fptr_t)(void);
 typedef void     (*nt_socpm_wkup_fptr_t)(soc_wkup_reason);

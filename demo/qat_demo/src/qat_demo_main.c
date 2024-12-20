@@ -23,6 +23,18 @@ void app_init(void)
     Initialize_QAT_Common_Demo();
 #endif 
 
+#ifdef CONFIG_QAT_TCPIP_DEMO
+    Initialize_QAT_TCPIP_Demo();
+#endif 
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    Initialize_QAT_Mqtt_Demo();
+#endif 
+
+#ifdef CONFIG_QAT_WLAN_DEMO
+    Initialize_QAT_Wlan_Demo();
+#endif 
+
     UART_SEND_DIRECT("app_init over\r\n");
 }
 

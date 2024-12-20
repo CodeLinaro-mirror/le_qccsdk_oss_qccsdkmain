@@ -28,6 +28,7 @@
 #define QAT_OP_HELP              0x00000002
 #define QAT_OP_EXEC              0x00000004
 #define QAT_OP_EXEC_W_PARAM      0x00000008
+#define QAT_OP_EXEC_IN_DATA_MODEL              0x00000010
 
 
 /*-------------------------------------------------------------------------
@@ -49,8 +50,9 @@ typedef enum
 
   QAT_RC_CONNECT_W_PARAMETER = 9,	/*	AT: CONNECT <parameter>	  */
   QAT_RC_QUIET		    = 10,	    /*  AT: No Messages           */
+  QAT_RC_QUIET_NO_CR		    = 11,	    /*  AT: No Messages           */
 
-  QAT_RC_MAX		    = QAT_RC_QUIET,       /*	AT: Max Num   */
+  QAT_RC_MAX,		       /*	AT: Max Num   */
 
 }QAT_Result_Enum_Type;
 
@@ -179,6 +181,7 @@ qbool_t QAT_Register_Command_Group(QAT_Command_t *Command_Group, uint32_t Number
 qbool_t QAT_Unregister_Command_Group(QAT_Command_t *Command_Group);
 
 qbool_t QAT_Transfer_Mode_set(QAT_Transfer_Mode_t Mode, QAT_Transfer_Mode_Handle_t Handle);
+qbool_t QAT_Data_Transfer_Mode_Handle(uint32_t Length, uint8_t *Buffer);
 
 
 QAT_Command_Status_t QAT_Response_Str(int Ret_Code, char *Buffers);

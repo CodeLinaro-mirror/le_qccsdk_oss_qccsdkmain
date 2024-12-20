@@ -12,9 +12,39 @@ qat_inc = [
 qat_src = [
     "src/qat_demo_main.c"
 ]
+
 if (CONFIG_QAT_COMMON_DEMO) {
     qat_src += [
         "src/qat_common_demo.c",
+    ]
+}
+
+if (CONFIG_QAT_MQTT_DEMO) {
+    qat_inc += [
+        "//modules/net/mqtt_client",
+        "../../../../comp/backoffAlgorithm/source/include",
+        "../../../../comp/mqtt/source/interface",
+        "../../../../comp/mqtt/source/include",
+    ]
+
+    qat_src += [
+       "src/qat_mqtt_demo.c",
+    ]
+}
+
+if (CONFIG_QAT_TCPIP_DEMO) {
+    qat_inc += [
+        "//modules/net/lwip",
+    ]
+
+    qat_src += [
+        "src/qat_tcpip_demo.c",
+    ]
+}
+
+if (CONFIG_QAT_WLAN_DEMO) {
+    qat_src += [
+        "src/qat_wlan_demo.c",
     ]
 }
 

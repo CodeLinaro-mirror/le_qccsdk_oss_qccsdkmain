@@ -468,7 +468,14 @@ def setup_env():
         os.environ['PATH'] = path_env
 
     if not os.path.exists("/local/mnt/workspace/au_build_version.txt"):
-        build_id = default_build_id
+        print("Not AU build, try to get version from build_version.txt")
+        file_path = os.path.join(os.getcwd(), "build_version.txt")
+        if os.path.exists(file_path):
+            print("build_version.txt exited, get version from it")
+            with open(file_path, "r") as file:
+                build_id = file.readline()
+        else:
+            build_id = default_build_id
     else:
         with open("/local/mnt/workspace/au_build_version.txt", 'r') as file:
             version = file.readline().strip();
@@ -478,6 +485,8 @@ def setup_env():
                 build_id = int(parts[-1])
             except (IndexError, ValueError):
                 build_id = default_build_id
+            with open('build_version.txt', 'w') as f:
+                f.write(str(build_id))
     print('build id: %d' % (int(build_id)))
     if os.path.exists('modules/wifi/bin/libwifi_core.a'):
         g_is_sdk_packed = True

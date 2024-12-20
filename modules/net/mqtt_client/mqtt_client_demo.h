@@ -1,23 +1,43 @@
 /*
- */
- 
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
+
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *  SPDX-License-Identifier: Apache-2.0
+ * AWS IoT Device SDK for Embedded C 202211.00
+ * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/*
+ * Demo for showing the use of MQTT APIs to establish an MQTT session,
+ * subscribe to a topic, publish to a topic, receive incoming publishes,
+ * unsubscribe from a topic and disconnect the MQTT session.
  *
- *  This file is part of mbed TLS (https://tls.mbed.org)
+ * The example is single threaded and uses statically allocated memory;
+ * it uses QOS2 and therefore implements a retransmission mechanism
+ * for Publish messages. Retransmission of publish messages are attempted
+ * when a MQTT connection is established with a session that was already
+ * present. All the outgoing publish messages waiting to receive PUBREC
+ * are resend in this demo. In order to support retransmission all the outgoing
+ * publishes are stored until a PUBREC is received.
  */
 
 #ifndef _MQTT_CLIENT_DEMO_H_
@@ -63,6 +83,82 @@
 #define NETWORK_BUFFER_SIZE    ( 1024U )
 
 
+#define MQTT_DEMO_SESSION_NUM          (2U)
+
+
+/**
+ * @brief Invalid packet identifier for the MQTT packets. Zero is always an
+ * invalid packet identifier as per MQTT 3.1.1 spec.
+ */
+#define MQTT_PACKET_ID_INVALID                   ( ( uint16_t ) 0U )
+
+/**
+ * @brief Timeout for MQTT_ProcessLoop function in milliseconds.
+ */
+#define MQTT_PROCESS_LOOP_TIMEOUT_MS             ( 500U )
+
+/**
+ * @brief The maximum time interval in seconds which is allowed to elapse
+ *  between two Control Packets.
+ *
+ *  It is the responsibility of the Client to ensure that the interval between
+ *  Control Packets being sent does not exceed the this Keep Alive value. In the
+ *  absence of sending any other Control Packets, the Client MUST send a
+ *  PINGREQ Packet.
+ */
+#define MQTT_KEEP_ALIVE_INTERVAL_SECONDS    ( 60U )
+
+/**
+* @brief The maximum number of retries for connecting to server.
+*/
+#define CONNECTION_RETRY_MAX_ATTEMPTS            ( 3U )
+
+/**
+ * @brief The maximum back-off delay (in milliseconds) for retrying connection to server.
+ */
+#define CONNECTION_RETRY_MAX_BACKOFF_DELAY_MS    ( 20000U )
+
+/**
+ * @brief The base back-off delay (in milliseconds) to use for connection retry attempts.
+ */
+#define CONNECTION_RETRY_BACKOFF_BASE_MS         ( 10000U )
+
+/**
+ * @brief Timeout for receiving CONNACK packet in milli seconds.
+ */
+#define CONNACK_RECV_TIMEOUT_MS                  ( 5000U )
+
+#define CLIENT_IDENTIFIER                           ( "testclient" )                                           /**< @brief Client identifier. */
+#define CLIENT_IDENTIFIER_LENGTH                    ( ( uint16_t ) ( sizeof( CLIENT_IDENTIFIER ) - 1 ) ) /**< @brief Length of client identifier. */
+
+
+#define MQTT_EXAMPLE_TOPIC                  "example/topic"
+
+/**
+ * @brief Length of client MQTT topic.
+ */
+#define MQTT_EXAMPLE_TOPIC_LENGTH           ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_TOPIC ) - 1 ) )
+
+/**
+ * @brief The MQTT message published in this example.
+ */
+#define MQTT_EXAMPLE_MESSAGE                "Hello World!"
+
+/**
+ * @brief The length of the MQTT message published in this example.
+ */
+#define MQTT_EXAMPLE_MESSAGE_LENGTH         ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_MESSAGE ) - 1 ) )
+
+
+/* Check that transport timeout for transport send and receive is defined. */
+#define TRANSPORT_SEND_RECV_TIMEOUT_MS    ( 10 )
+
+/* Ping response timeout max time, otherwise will reconnect*/
+#define MQTT_PING_RESP_TIMEOUT_MAX_TIMES    (3)
+
+/* Ping response timeout max time, otherwise will reconnect*/
+#define MQTT_SUB_TOPIC_PER_SESSION_MAX    (10)
+
 typedef enum {
     MQTT_OVER_TCP,
 	MQTT_OVER_SSL,	
@@ -104,6 +200,7 @@ typedef struct MQTTClientSession
     NetworkCredentials_t tlsCredentials;
     MQTT_TRANSPORT_TYPE_E mqttTransportScheme;
     ServerInfo_t serverInfo; 
+    MQTTSubscribeInfo_t subscribeInfo[MQTT_SUB_TOPIC_PER_SESSION_MAX];
     MQTTConnectInfo_t connectInfo;
     MQTTPublishInfo_t lwtInfo;
     
@@ -191,6 +288,21 @@ typedef struct MQTTClientCMD
     }mqtt_cmd;
 } MQTTClientCMD_t;
 
+extern MQTTClientSession_t mqtt_client_sess[MQTT_DEMO_SESSION_NUM];
+
 qapi_Status_t mqttc_demo(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_subscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_unsubscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_publishRaw_Cache(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_publishRaw_Block(uint32_t len, char* block_buf);
+qapi_Status_t mqttc_disconnect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t mqttc_destroy(uint32_t sessionIndex);
+qapi_Status_t mqttc_connect_info_query(void);
+qapi_Status_t mqttc_sub_info_query(void);
+
+void cleanupNetworkCredentials(MQTTClientSession_t *pMqttClientSess);
 
 #endif

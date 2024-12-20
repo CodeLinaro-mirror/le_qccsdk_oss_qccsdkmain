@@ -1208,6 +1208,12 @@ static qapi_Status_t SetTxPower(uint32_t __attribute__((__unused__)) Parameter_C
 		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
+    if(Parameter_List[0].Integer_Value > UINT8_MAX)
+    {
+        info_printf("set tx power to %d fail\n", Parameter_List[0].Integer_Value);
+        return QAPI_ERROR;
+    }
+
     if (Parameter_Count == 2)
     {
         policy = Parameter_List[1].Integer_Value;
@@ -2348,7 +2354,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { getEdcaParam, "getEdcaParam",        "<qtid:0~7 or 255>",  "Get Edca parameters for qtid, 255:tid0"},
     { setEdccaThreshold, "setEdccaThreshold", "<EDCCA value, euqals real value plus 100>", "set EDCCA threshold to filter the non-wifi signal"},
     { getEdccaThreshold, "getEdccaThreshold", "", "get the EDCCA threshold"},
-    { SetTxPower,           "SetTxPower",     "<txPower> [<policy = 0:SAFETY>]",   "Set the transmit power in dbm. The default policy is SAFETY(SAFETY is the minimum value among reg domain, CTL and target power). Set value to 100 to restore default settings. Tx power range, xpa: 10-SAFETY; ipa:3-SAFETY"   },
+    { SetTxPower,           "SetTxPower",     "<txPower> [<policy = 0:SAFETY>]",   "Set the transmit power in dbm. The default policy is SAFETY(SAFETY is the minimum value among reg domain, CTL and target power). Set value to 100 to restore default settings. Tx power range, xpa: 10-SAFETY; ipa:3-SAFETY. Due to limited range in DAC gain with one designated Tx gain index, need to change PowerMode in BDF while setting power"   },
     { GetTxPower,           "GetTxPower",     "",                                  "Get the transmit power, reg_power, target power and CTL power"   },
     { setBmissThreshold, "setBmissThreshold", "<bmiss_threshold: 0~255>", "set beacon miss threshold"},
     { getBmissThreshold, "getBmissThreshold", "", "get beacon miss threshold"},

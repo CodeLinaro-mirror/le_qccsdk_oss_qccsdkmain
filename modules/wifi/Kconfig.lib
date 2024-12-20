@@ -15,12 +15,12 @@ config ACK_TIMEOUT_MODIFY_ENABLE
 config QOS_NULL_DATA_MAX_RETRY_COUNT
     hex "set qos null data max retry count"
     default 20 if ACK_TIMEOUT_MODIFY_ENABLE = n
-    default 2 if ACK_TIMEOUT_MODIFY_ENABLE = y
+    default 10 if ACK_TIMEOUT_MODIFY_ENABLE = y
 
 config QOS_NULL_DATA_RETRY_DELAY
     hex "set qos null data retry delay"
     default 100 if ACK_TIMEOUT_MODIFY_ENABLE = n
-    default 3000 if ACK_TIMEOUT_MODIFY_ENABLE = y
+    default 100 if ACK_TIMEOUT_MODIFY_ENABLE = y
 
 config HEAVY_CLIP_ENABLE
     bool "enable heavy_clip adjust"
@@ -79,5 +79,9 @@ config PEAKW_11A_1_5G
     default 0x62 if HEAVY_CLIP_LEVEL_5G = 0
     default 0x62 if HEAVY_CLIP_LEVEL_5G = 1
     default 0xFF if HEAVY_CLIP_LEVEL_5G = 2
+
+config SRRC_BAND_EDGE_SUPPORT
+    bool "enable band edge adjust for ch12 and ch13"
+    default y
 
 endmenu

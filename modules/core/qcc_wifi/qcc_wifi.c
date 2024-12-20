@@ -17,6 +17,7 @@ struct libwifi_kconfig_t{
     uint32_t hc_11a_0_5g;
     uint32_t hc_11a_1_5g;
     uint32_t hc_11n_5g;
+    uint8_t srrc_band_edge_enable;
 };
 
 struct libwifi_qos_null_kconfig_t{
@@ -59,6 +60,11 @@ void libwifi_kconfig_install(void)
     g_libwifi_qos_null_kconfig_t.retry_count = CONFIG_QOS_NULL_DATA_MAX_RETRY_COUNT;
     g_libwifi_qos_null_kconfig_t.socmp_nop_delay = CONFIG_QOS_NULL_DATA_RETRY_DELAY;
 
+#ifdef CONFIG_SRRC_BAND_EDGE_SUPPORT
+    g_libwifi_kconfig.srrc_band_edge_enable = TRUE;
+#else
+    g_libwifi_kconfig.srrc_band_edge_enable = FALSE;
+#endif
 }
 
 NT_BOOL wmi_pdev_utf_cmd(wmi_msg_struct_t* msg)

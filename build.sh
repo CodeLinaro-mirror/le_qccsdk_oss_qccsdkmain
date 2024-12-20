@@ -7,7 +7,7 @@
 # Fermion integration entry
 #========================================================================
 pushd ..
-if [ ! -f fermion.tar.gz ]; then
+if [ ! -f SRC-IOE-SDK.tar.gz ]; then
     tar --exclude=.git --exclude=.gitignore -czpf SRC-IOE-SDK.tar.gz qccsdk comp/backoffAlgorithm comp/exhost comp/freertos \
     comp/littlefs comp/lwip comp/matter comp/mbedtls comp/mqtt comp/posix comp/qurt comp/segger-rtt 
 fi

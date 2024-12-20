@@ -13,11 +13,11 @@ qcli_demo_src = [
 ]
 if (CONFIG_MGMT_FILTER_DEMO) {
     qcli_demo_inc += [
-        "src/mgmtfilter",
+        "//demo/common/mgmtfilter",
     ]
     
     qcli_demo_src += [
-        "src/mgmtfilter/mgmt_filter_demo.c",
+        "//demo/common/mgmtfilter/mgmt_filter_demo.c",
     ]
 }
 

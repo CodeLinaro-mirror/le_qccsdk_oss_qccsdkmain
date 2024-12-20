@@ -31,9 +31,7 @@
 
  ********************************************************************************************/
 
-void wifi_fw_pmic_init(void);
-
-void wifi_fw_pmic_init_pfm_openloop(void);
+void wifi_fw_pmic_init(cpr_mode_e cpr_mode);
 
 void wifi_fw_pmic_pre_sleep_config(sleep_mode mode);
 

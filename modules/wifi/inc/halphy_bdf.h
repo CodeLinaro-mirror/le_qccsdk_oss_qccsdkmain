@@ -95,4 +95,6 @@ bool halphy_bdf_get_temp_recal_support(uint8_t band);
 void halphy_bdf_get_temp_recal_th(uint8_t band, int8_t *TempThLo, int8_t *TempThHi);
 bool halphy_bdf_channel_supported(uint16_t channel_freq, uint16_t country_id);
 uint32_t halphy_bdf_get_rtt_base_delay(uint8_t band);
+void halphy_bdf_set_cbc_chan(uint8_t num_chan, uint32_t *ch_list);
+void halphy_bdf_set_cc(uint16_t country_code);
 #endif /* _HALPHY_BDF_H_ */

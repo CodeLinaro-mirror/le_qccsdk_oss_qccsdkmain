@@ -84,6 +84,7 @@ __attribute__ ((section(".perf_nc_txt"))) void nt_show_ip(void);
 /*-----------------------------RCLI----------------------------------------*/
 #else
 void *nt_dpm_allocate_network_buffer(uint32_t length);
+void *nt_dpm_allocate_network_buffer_pool(uint32_t length);
 void nt_dpm_free_network_buffer(void *buf);
 void nt_dpm_realloc_network_buffer(void *buf, uint32_t length);
 uint8_t nt_dpm_forward_eth_packet_to_stack(p_ndpA ad, void *rx_frame, void *eth_frame, uint32_t length, device_t *dev);

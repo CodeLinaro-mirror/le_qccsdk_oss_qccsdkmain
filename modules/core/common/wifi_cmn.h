@@ -289,7 +289,7 @@
 	#define NT_FN_STA_ADDBA_SUPPORT
 	#endif// NT_FN_STA_ADDBA_SUPPORT
 	#define AUTO_ADDBA_EN
-	#define DEFAULT_BA_TX_WIN_SIZE    8
+	#define DEFAULT_BA_TX_WIN_SIZE    16
 	#define DEFAULT_BA_RX_WIN_SIZE    8
 	#endif// NT_FN_AMPDU
 

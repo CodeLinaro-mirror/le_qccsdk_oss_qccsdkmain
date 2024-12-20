@@ -144,17 +144,19 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #if defined LWIPERF_PERF_BUILD
 #define MEM_SIZE                        120000
 #else
-#define MEM_SIZE                        120000
+#define MEM_SIZE                        60000
+#endif
+
+#if CONFIG_MATTER_ENABLE
+#define MEMP_STATS                      0
+#define LWIP_DISABLE_TCP_SANITY_CHECKS  1
 #endif
 
 #ifdef HTTPS_SERVER
 #define PBUF_POOL_SIZE                  16
-#elif CONFIG_MATTER_ENABLE
-#define PBUF_POOL_SIZE                  8
-#define MEMP_STATS                      0
-#define LWIP_DISABLE_TCP_SANITY_CHECKS  1
 #else
-#define PBUF_POOL_SIZE                  0
+#define PBUF_POOL_SIZE                  32
+#define PBUF_POOL_BUFSIZE               2500
 #endif
 #define MEMP_NUM_TCP_SEG                TCP_SND_QUEUELEN
 #define TCP_OVERSIZE                    TCP_MSS
@@ -199,6 +201,8 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 
 /* Enable socket send timeout */
 #define LWIP_SO_SNDTIMEO 				1
+
+#define LWIP_SO_RCVBUF                  1
 
 /* the number of struct netconns. */
 #define MEMP_NUM_NETCONN                8

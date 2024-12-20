@@ -10,4 +10,10 @@
  */
 void Initialize_QAT_Common_Demo(void);
 
+void Initialize_QAT_Mqtt_Demo(void);
+
+void Initialize_QAT_TCPIP_Demo(void);
+
+void Initialize_QAT_Wlan_Demo(void);
+
 #endif /* QAT_DEMO_H */

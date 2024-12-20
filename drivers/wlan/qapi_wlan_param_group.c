@@ -446,6 +446,14 @@ qapi_Status_t qapi_WLAN_Get_Param (uint8_t __attribute__((__unused__)) device_ID
             wlan_get_tx_power(power);
             break;
         }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_BMISS_CONFIG: {
+            uint8_t *bmiss_threshold = (uint8_t *)data;
+            if (*length < sizeof(uint8_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            wlan_get_bmiss_threshold(bmiss_threshold);
+            break;
+        }
 		default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
 			PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
 			ret = QAPI_WLAN_ERR_EINVAL;

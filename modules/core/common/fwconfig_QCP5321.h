@@ -39,6 +39,7 @@
 
 #define SUPPORT_REGULATORY
 #undef REGULATORY_TEST_FRAMEWORK
+//#define REGULATORY_TEST_FRAMEWORK
 
 /* Feature flag to support Ring Interface */
 #ifdef CONFIG_RING_IF
@@ -227,6 +228,8 @@ WAR_COEX_VIFERMION285
 /* flag to enable the feature which will trigger the calibration in FTM in case current
    temperature goes below or above a defined value */
 #define TEMP_BASED_RECAL_SUPPORT
+/* Support China regulatory domain band edge requirement, WAR for FERM-807 */
+//#define SRRC_BAND_EDGE_SUPPORT
 
 #define FEATURE_INDEF_DEEP_SLP
 #define UNIT_TEST_WAKELOCK

@@ -1,5 +1,8 @@
 /*
- */
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 
 /*
  * AWS IoT Device SDK for Embedded C 202211.00
@@ -71,6 +74,9 @@
 
 #include "mqtt_client_demo.h"
 
+#include "qat.h"
+#include "qat_api.h"
+
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions, Constants, and Type Declarations
  *-----------------------------------------------------------------------*/
@@ -88,85 +94,21 @@
 #define MQTT_CLIENT_DEBUG_PRINTF(...)
 #endif
 
-#define MQTT_DEMO_SESSION_NUM          (2U)
-
-/**
- * @brief Invalid packet identifier for the MQTT packets. Zero is always an
- * invalid packet identifier as per MQTT 3.1.1 spec.
- */
-#define MQTT_PACKET_ID_INVALID                   ( ( uint16_t ) 0U )
-
-/**
- * @brief Timeout for MQTT_ProcessLoop function in milliseconds.
- */
-#define MQTT_PROCESS_LOOP_TIMEOUT_MS             ( 500U )
-
-/**
- * @brief The maximum time interval in seconds which is allowed to elapse
- *  between two Control Packets.
- *
- *  It is the responsibility of the Client to ensure that the interval between
- *  Control Packets being sent does not exceed the this Keep Alive value. In the
- *  absence of sending any other Control Packets, the Client MUST send a
- *  PINGREQ Packet.
- */
-#define MQTT_KEEP_ALIVE_INTERVAL_SECONDS    ( 60U )
-
-/**
-* @brief The maximum number of retries for connecting to server.
-*/
-#define CONNECTION_RETRY_MAX_ATTEMPTS            ( 5U )
-
-/**
- * @brief The maximum back-off delay (in milliseconds) for retrying connection to server.
- */
-#define CONNECTION_RETRY_MAX_BACKOFF_DELAY_MS    ( 20000U )
-
-/**
- * @brief The base back-off delay (in milliseconds) to use for connection retry attempts.
- */
-#define CONNECTION_RETRY_BACKOFF_BASE_MS         ( 10000U )
-
-/**
- * @brief Timeout for receiving CONNACK packet in milli seconds.
- */
-#define CONNACK_RECV_TIMEOUT_MS                  ( 5000U )
-
-#define CLIENT_IDENTIFIER                           ( "testclient" )                                           /**< @brief Client identifier. */
-#define CLIENT_IDENTIFIER_LENGTH                    ( ( uint16_t ) ( sizeof( CLIENT_IDENTIFIER ) - 1 ) ) /**< @brief Length of client identifier. */
 
 
-#define MQTT_EXAMPLE_TOPIC                  "example/topic"
+#define WRTMEM_STR_BUFFER_LENGTH					  1500
 
-/**
- * @brief Length of client MQTT topic.
- */
-#define MQTT_EXAMPLE_TOPIC_LENGTH           ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_TOPIC ) - 1 ) )
-
-/**
- * @brief The MQTT message published in this example.
- */
-#define MQTT_EXAMPLE_MESSAGE                "Hello World!"
-
-/**
- * @brief The length of the MQTT message published in this example.
- */
-#define MQTT_EXAMPLE_MESSAGE_LENGTH         ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_MESSAGE ) - 1 ) )
-
-
-/* Check that transport timeout for transport send and receive is defined. */
-#define TRANSPORT_SEND_RECV_TIMEOUT_MS    ( 10 )
-
-/* Ping response timeout max time, otherwise will reconnect*/
-#define MQTT_PING_RESP_TIMEOUT_MAX_TIMES    (3)
 /*-------------------------------------------------------------------------
  * Variables
  *-----------------------------------------------------------------------*/
 
 MQTTClientSession_t mqtt_client_sess[MQTT_DEMO_SESSION_NUM];
 MQTTClientCMD_t mqtt_client_cmd [MQTT_DEMO_SESSION_NUM];
-static TaskHandle_t mqttc_task_handle = NULL;
 bool mqttThreadCreated = false;
+
+static uint32_t sessionIndex_raw;
+static uint32_t total_len_one_raw;
+static uint32_t total_send_len_one_raw =0;
 /*-------------------------------------------------------------------------
  * Private Function Declarations
  *-----------------------------------------------------------------------*/
@@ -553,31 +495,91 @@ static int handlePublishResend(PublishPackets_t *pOutgoingPublishPackets,  MQTTC
 /*-----------------------------------------------------------*/
 
 static void handleIncomingPublish(MQTTPublishInfo_t *pPublishInfo,
-                                  uint16_t packetIdentifier)
+                                  uint16_t packetIdentifier,uint32_t sessionIndex)
 {
     assert(pPublishInfo != NULL);
     (void) packetIdentifier;
     int i = 0;
-    /* Process incoming Publish. */
-    MQTT_CLIENT_PRINTF("Incoming Publish Topic Name : ");
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    uint32_t offset=0;
+    char* ptr = buffer;
+#endif
+
+    /* Process incoming Publish. */
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char *ptopic = malloc(pPublishInfo->topicNameLength + 1);
+    if(ptopic)
+    {
+        for (i = 0; i < pPublishInfo->topicNameLength; i++)
+        {
+            ptopic[i]= pPublishInfo->pTopicName[i];
+        }
+        ptopic[pPublishInfo->topicNameLength] = '\0';
+        offset=snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBRECV:%d,\"%s\",%d,",sessionIndex,ptopic,pPublishInfo->payloadLength);
+        // QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+        free(ptopic);
+    }
+
+#else
+    MQTT_CLIENT_PRINTF("Incoming Publish Topic Name : ");
+#endif
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    // snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "%s,", pPublishInfo->pTopicName);
+    // QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+#else
     for (i = 0; i < pPublishInfo->topicNameLength; i++)
     {
         MQTT_CLIENT_PRINTF("%c", pPublishInfo->pTopicName[i]);
     }
+#endif
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    // snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "Qos : %d.\n", pPublishInfo->qos);
+    // QAT_Response_Str(QAT_RC_QUIET, buffer);
+
+    // snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "Incoming Publish Message : ");
+    // QAT_Response_Str(QAT_RC_QUIET, buffer);
+
+#else
     MQTT_CLIENT_PRINTF(" Qos : %d.\n", pPublishInfo->qos);
 
     MQTT_CLIENT_PRINTF("Incoming Publish message Packet Id is %u.\n",
                        packetIdentifier);
     MQTT_CLIENT_PRINTF("Incoming Publish Message : ");
+#endif
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    // memset(buffer,0,WRTMEM_STR_BUFFER_LENGTH);
+    ptr +=offset;
+#endif
 
     for (size_t i = 0; i < pPublishInfo->payloadLength; i++)
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "%c", ((const char *) pPublishInfo->pPayload)[i]);
+        ptr[i] = (char) ((const char *) pPublishInfo->pPayload)[i];
+      
+#else
         MQTT_CLIENT_PRINTF("%c", ((const char *) pPublishInfo->pPayload)[i]);
+#endif
     }
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    ptr[pPublishInfo->payloadLength]="\0";
+#endif
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+#endif
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    QAT_Response_Str(QAT_RC_QUIET, NULL);
+#else
     MQTT_CLIENT_PRINTF("\n");
+#endif
 }
 
 /*-----------------------------------------------------------*/
@@ -613,6 +615,10 @@ static void eventCallback(MQTTContext_t *pMqttContext,
     assert(pPacketInfo != NULL);
     assert(pDeserializedInfo != NULL);
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+#endif
+
     /* Suppress unused parameter warning when asserts are disabled in build. */
     (void) pMqttContext;
 
@@ -621,8 +627,15 @@ static void eventCallback(MQTTContext_t *pMqttContext,
     assert(&pMqttClientSess->mqttContext == pMqttContext);
 
     packetIdentifier = pDeserializedInfo->packetIdentifier;
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    // snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "MQTT session:%d received message.\n",
+    //                     pMqttClientSess->sessionIndex);
+    // QAT_Response_Str(QAT_RC_QUIET, buffer);
+#else
     MQTT_CLIENT_PRINTF("MQTT session:%d received message.\n",
                        pMqttClientSess->sessionIndex);
+#endif
 
     /* Handle incoming publish. The lower 4 bits of the publish packet
      * type is used for the dup, QoS, and retain flags. Hence masking
@@ -631,7 +644,7 @@ static void eventCallback(MQTTContext_t *pMqttContext,
     {
         assert(pDeserializedInfo->pPublishInfo != NULL);
         /* Handle incoming publish. */
-        handleIncomingPublish(pDeserializedInfo->pPublishInfo, packetIdentifier);
+        handleIncomingPublish(pDeserializedInfo->pPublishInfo, packetIdentifier,pMqttClientSess->sessionIndex);
     }
     else
     {
@@ -736,11 +749,14 @@ static void eventCallback(MQTTContext_t *pMqttContext,
 }
 
 
-static int publishToTopic(MQTTContext_t *pMqttContext, MQTTClientCMD_t *pMqttCommand)
+static int publishToTopic(MQTTContext_t *pMqttContext, MQTTClientCMD_t *pMqttCommand,MQTTClientSession_t *pMqttClientSess)
 {
     int returnStatus = EXIT_SUCCESS;
     MQTTStatus_t mqttStatus = MQTTSuccess;
     uint16_t packetId;
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+#endif
     assert(pMqttContext != NULL);
 
     packetId = MQTT_GetPacketId(pMqttContext);
@@ -760,17 +776,41 @@ static int publishToTopic(MQTTContext_t *pMqttContext, MQTTClientCMD_t *pMqttCom
                            pMqttCommand->mqtt_cmd.publish.pTopicName);
     }
 
-    if (pMqttCommand->mqtt_cmd.publish.pTopicName)
-    {
-        free((char *)pMqttCommand->mqtt_cmd.publish.pTopicName);
-    }
-
     if (pMqttCommand->mqtt_cmd.publish.pPayload)
     {
         free((char *)pMqttCommand->mqtt_cmd.publish.pPayload);
     }
+    pMqttCommand->cmd_type= MQTT_CMD_NONE;
 
-    memset(pMqttCommand, 0, sizeof(MQTTClientCMD_t));
+    total_send_len_one_raw += pMqttCommand->mqtt_cmd.publish.payloadLength;
+    if(total_send_len_one_raw >= total_len_one_raw)
+    {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        if(mqttStatus == MQTTSuccess)
+        {
+            snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_PUBSUC:%d,%d,%d,\"%s\",%d",pMqttClientSess->sessionIndex,total_send_len_one_raw,pMqttClientSess->mqttTransportScheme,pMqttClientSess->serverInfo.pHostName, pMqttClientSess->serverInfo.port);
+            QAT_Response_Str(QAT_RC_QUIET, buffer);
+        }
+        else
+        {
+            snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_PUBFAIL:%d,%d,\"%s\",%d",pMqttClientSess->sessionIndex,pMqttClientSess->mqttTransportScheme,pMqttClientSess->serverInfo.pHostName, pMqttClientSess->serverInfo.port);
+            QAT_Response_Str(QAT_RC_QUIET, buffer);
+        }
+#endif
+        if (pMqttCommand->mqtt_cmd.publish.pTopicName)
+        {
+            free((char *)pMqttCommand->mqtt_cmd.publish.pTopicName);
+        }
+        pMqttCommand->mqtt_cmd.publish.pTopicName=NULL;
+        memset(pMqttCommand, 0, sizeof(MQTTClientCMD_t));
+
+
+        total_len_one_raw = 0;
+        total_send_len_one_raw = 0;
+        QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+
+    }
+
     return returnStatus;
 }
 
@@ -829,6 +869,9 @@ static int publishToTopicWithQos(MQTTClientSession_t *pMqttClientSess, MQTTClien
     int returnStatus = EXIT_SUCCESS;
     MQTTStatus_t mqttStatus = MQTTSuccess;
     uint8_t publishIndex = MAX_OUTGOING_PUBLISHES;
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+#endif
 
     assert(pMqttClientSess != NULL);
     assert(pMqttCommand != NULL);
@@ -884,18 +927,29 @@ static int publishToTopicWithQos(MQTTClientSession_t *pMqttClientSess, MQTTClien
                                         MQTT_PROCESS_LOOP_TIMEOUT_MS);
     }
 
-
+    total_send_len_one_raw += pMqttCommand->mqtt_cmd.publish.payloadLength;
     if (returnStatus == EXIT_SUCCESS)
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+
+        snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_PUBSUC:%d,%d,%d,\"%s\",%d",pMqttClientSess->sessionIndex,total_send_len_one_raw,pMqttClientSess->mqttTransportScheme,pMqttClientSess->serverInfo.pHostName, pMqttClientSess->serverInfo.port);
+        QAT_Response_Str(QAT_RC_QUIET, buffer);
+        
+#endif
         MQTT_CLIENT_PRINTF("Publish topic success.\n");
     }
     else
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_PUBFAIL:%d,%d,\"%s\",%d",pMqttClientSess->sessionIndex,pMqttClientSess->mqttTransportScheme,pMqttClientSess->serverInfo.pHostName, pMqttClientSess->serverInfo.port);
+        QAT_Response_Str(QAT_RC_QUIET, buffer);
+#endif
         MQTT_CLIENT_PRINTF("Publish to the topic %s fail.\n",
                            pOutgoingPublishPackets[ publishIndex ].pubInfo.pTopicName);
 
     }
 
+    total_send_len_one_raw = 0;
     memset(pMqttCommand, 0, sizeof(MQTTClientCMD_t));
     return returnStatus;
 }
@@ -988,6 +1042,30 @@ static int subscribeToTopic(MQTTClientSession_t *pMqttClientSess, MQTTClientCMD_
     assert(pMqttCommand != NULL);
     MQTTContext_t *pMqttContext = &pMqttClientSess->mqttContext;
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+#endif
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    for(uint16_t i =0;i<MQTT_SUB_TOPIC_PER_SESSION_MAX;i++)
+    {
+        if(strncmp(pMqttClientSess->subscribeInfo[i].pTopicFilter,pMqttCommand->mqtt_cmd.subscribe.pTopicFilter,pMqttCommand->mqtt_cmd.subscribe.topicFilterLength) == 0)
+        {
+            snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBALREADY:\"%s\"\n",
+                       pMqttCommand->mqtt_cmd.subscribe.pTopicFilter);
+            QAT_Response_Str(QAT_RC_QUIET, buffer);
+            if (pMqttCommand->mqtt_cmd.subscribe.pTopicFilter)
+            {
+                free((char *)pMqttCommand->mqtt_cmd.subscribe.pTopicFilter);
+            }
+
+            memset(pMqttCommand, 0, sizeof(MQTTClientCMD_t));
+
+            return returnStatus;
+        }
+    }
+
+#endif
     MQTT_CLIENT_PRINTF("Subscribing to the MQTT topic %s.\n",
                        pMqttCommand->mqtt_cmd.subscribe.pTopicFilter);
     /* Generate packet identifier for the SUBSCRIBE packet. */
@@ -1033,6 +1111,10 @@ static int subscribeToTopic(MQTTClientSession_t *pMqttClientSess, MQTTClientCMD_
          * in eventCallback to reflect the status of the SUBACK sent by the broker. */
         if (pMqttClientSess->subAckStatus == MQTTSubAckFailure)
         {
+#ifdef CONFIG_QAT_MQTT_DEMO
+            snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBFAIL:%d,\"%s\"",pMqttClientSess->sessionIndex,pMqttCommand->mqtt_cmd.subscribe.pTopicFilter);
+            QAT_Response_Str(QAT_RC_QUIET, buffer);
+#endif
             MQTT_CLIENT_PRINTF("Server rejected subscribe request to topic %s.\n",
                                pMqttCommand->mqtt_cmd.subscribe.pTopicFilter);
 
@@ -1046,10 +1128,36 @@ static int subscribeToTopic(MQTTClientSession_t *pMqttClientSess, MQTTClientCMD_
             MQTT_CLIENT_PRINTF("Subscribed to the topic %s. with maximum QoS %u success.\n",
                                pMqttCommand->mqtt_cmd.subscribe.pTopicFilter,
                                pMqttClientSess->subAckStatus);
+#ifdef CONFIG_QAT_MQTT_DEMO
+            snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBSUC:%d,\"%s\"",pMqttClientSess->sessionIndex,pMqttCommand->mqtt_cmd.subscribe.pTopicFilter);
+            QAT_Response_Str(QAT_RC_QUIET, buffer);
+#endif
+
+            int sub_index = -1;
+            for(uint16_t i=0;i<MQTT_SUB_TOPIC_PER_SESSION_MAX;i++)
+            {
+                if(pMqttClientSess->subscribeInfo[i].topicFilterLength == 0)
+                {  
+                    sub_index = i;
+                    break;
+                }
+            }
+            if(sub_index != -1 && sub_index < MQTT_SUB_TOPIC_PER_SESSION_MAX)
+            {
+                pMqttClientSess->subscribeInfo[sub_index].qos = (MQTTQoS_t)pMqttClientSess->subAckStatus;
+                pMqttClientSess->subscribeInfo[sub_index].pTopicFilter = malloc(pMqttCommand->mqtt_cmd.subscribe.topicFilterLength + 1);
+                memcpy((char *)(pMqttClientSess->subscribeInfo[sub_index].pTopicFilter), pMqttCommand->mqtt_cmd.subscribe.pTopicFilter, pMqttCommand->mqtt_cmd.subscribe.topicFilterLength + 1);
+                pMqttClientSess->subscribeInfo[sub_index].topicFilterLength = pMqttCommand->mqtt_cmd.subscribe.topicFilterLength;
+            }
+    
         }
     }
     else
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+            snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBFAIL:%d,\"%s\"",pMqttClientSess->sessionIndex,pMqttCommand->mqtt_cmd.subscribe.pTopicFilter);
+            QAT_Response_Str(QAT_RC_QUIET, buffer);
+#endif
         MQTT_CLIENT_PRINTF("Subscribed to the topic %s failed.\n",
                            pMqttCommand->mqtt_cmd.subscribe.pTopicFilter);
 
@@ -1069,6 +1177,10 @@ static int unsubscribeFromTopic(MQTTClientSession_t *pMqttClientSess, MQTTClient
 {
     int returnStatus = EXIT_SUCCESS;
     MQTTStatus_t mqttStatus;
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+#endif
 
     assert(pMqttClientSess != NULL);
     assert(pMqttCommand != NULL);
@@ -1114,14 +1226,36 @@ static int unsubscribeFromTopic(MQTTClientSession_t *pMqttClientSess, MQTTClient
 
     if (returnStatus == EXIT_SUCCESS)
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_UNSUBSUC:%d,\"%s\"",pMqttClientSess->sessionIndex, pMqttCommand->mqtt_cmd.unsubscribe.pTopicFilter);
+        QAT_Response_Str(QAT_RC_QUIET, buffer);
+#endif
         MQTT_CLIENT_PRINTF("Unsubscribed from the topic %s success.\n",
                            pMqttCommand->mqtt_cmd.unsubscribe.pTopicFilter);
+        
+        int sub_index = -1;
+        for(uint16_t i=0;i<MQTT_SUB_TOPIC_PER_SESSION_MAX;i++)
+        {
+            if(strncmp(pMqttClientSess->subscribeInfo[i].pTopicFilter,pMqttCommand->mqtt_cmd.unsubscribe.pTopicFilter,pMqttClientSess->subscribeInfo[i].topicFilterLength) == 0)
+            {  
+                sub_index = i;
+                break;
+            }
+        }
+        if(sub_index != -1 && sub_index < MQTT_SUB_TOPIC_PER_SESSION_MAX)
+        {
+            pMqttClientSess->subscribeInfo[sub_index].topicFilterLength = 0;
+            free((char *)pMqttClientSess->subscribeInfo[sub_index].pTopicFilter);
+        }
     }
     else
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_UNSUBFAIL:%d,\"%s\"",pMqttClientSess->sessionIndex, pMqttCommand->mqtt_cmd.unsubscribe.pTopicFilter);
+        QAT_Response_Str(QAT_RC_QUIET, buffer);
+#endif
         MQTT_CLIENT_PRINTF("Unsubscribed from the topic %s fail.\n",
                            pMqttCommand->mqtt_cmd.unsubscribe.pTopicFilter);
-
     }
 
     if (pMqttCommand->mqtt_cmd.unsubscribe.pTopicFilter)
@@ -1136,11 +1270,14 @@ static int unsubscribeFromTopic(MQTTClientSession_t *pMqttClientSess, MQTTClient
 
 /*-----------------------------------------------------------*/
 
-static int disconnectMqttSession(MQTTContext_t *pMqttContext)
+static int disconnectMqttSession(MQTTContext_t *pMqttContext,   MQTTClientSession_t *pMqttClientSess)
 {
     MQTTStatus_t mqttStatus = MQTTSuccess;
     int returnStatus = EXIT_SUCCESS;
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+#endif
     assert(pMqttContext != NULL);
 
     /* Send DISCONNECT. */
@@ -1151,6 +1288,13 @@ static int disconnectMqttSession(MQTTContext_t *pMqttContext)
         MQTT_CLIENT_PRINTF("Sending MQTT DISCONNECT failed with status=%s.\n",
                            MQTT_Status_strerror(mqttStatus));
         returnStatus = EXIT_FAILURE;
+    }else
+    {
+#ifdef CONFIG_QAT_MQTT_DEMO
+    snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_DISCONNECTED:%d",pMqttClientSess->sessionIndex);
+    QAT_Response_Str(QAT_RC_QUIET, buffer);
+    pMqttClientSess->mqttState= MQTT_DISCONNECT;
+#endif
     }
 
     return returnStatus;
@@ -1175,7 +1319,7 @@ void mqtt_client_process_cmd(uint32_t sessionIndex)
         {
             if (pMqttCommand->mqtt_cmd.publish.qos == MQTTQoS0)
             {
-                publishToTopic(pMqttContext, pMqttCommand);
+                publishToTopic(pMqttContext, pMqttCommand,pMqttClientSess);
             }
             else
             {
@@ -1204,7 +1348,7 @@ void mqtt_client_process_cmd(uint32_t sessionIndex)
     case MQTT_CMD_DISC:
         if (pMqttClientSess->mqttState == MQTT_CONNECTED)
         {
-            disconnectMqttSession(&pMqttClientSess->mqttContext);
+            disconnectMqttSession(&pMqttClientSess->mqttContext,pMqttClientSess);
         }
 
         qurt_thread_sleep(10);
@@ -1241,9 +1385,14 @@ void mqtt_client_process_cmd(uint32_t sessionIndex)
 void mqttc_task(void __attribute__((__unused__))*pvParameters)
 {
     uint32 sessionIndex;
+    bool delThread;
     MQTTStatus_t mqttStatus = MQTTSuccess;
 
     MQTTClientSession_t *pMqttClientSess;
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+#endif
 
     do
     {
@@ -1257,8 +1406,14 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
 
                 if (mqttStatus == MQTTKeepAliveTimeout)
                 {
+#ifdef CONFIG_QAT_MQTT_DEMO
+                    snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_KEEPLIVETIMEOUT:%d\n",
+                                       pMqttClientSess->sessionIndex);
+                    QAT_Response_Str(QAT_RC_QUIET, buffer);
+#else
                     MQTT_CLIENT_PRINTF("MQTT session:%d MQTT keep alive timeout\n",
                                        pMqttClientSess->sessionIndex);
+#endif
                     pMqttClientSess->mqttContext.waitingForPingResp = false;
 
                     uint32_t now = getTimeStampMs();
@@ -1269,7 +1424,7 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
                         MQTT_CLIENT_PRINTF("MQTT session:%d PING RESP timeout %d times, disconnect with the broker.\n",
                                            pMqttClientSess->sessionIndex,
                                            MQTT_PING_RESP_TIMEOUT_MAX_TIMES);
-                        disconnectMqttSession(&pMqttClientSess->mqttContext);
+                        disconnectMqttSession(&pMqttClientSess->mqttContext,pMqttClientSess);
                         pMqttClientSess->mqttState = MQTT_DISCONNECT;
                         qurt_thread_sleep(10);
 
@@ -1294,7 +1449,7 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
                     MQTT_CLIENT_PRINTF("MQTT session:%d MQTT_ProcessLoop returned with status = %s disconnect with broker\n",
                                        pMqttClientSess->sessionIndex,
                                        MQTT_Status_strerror(mqttStatus));
-                    disconnectMqttSession(&pMqttClientSess->mqttContext);
+                    disconnectMqttSession(&pMqttClientSess->mqttContext,pMqttClientSess);
                     qurt_thread_sleep(10);
                     pMqttClientSess->mqttState = MQTT_DISCONNECT;
                 }
@@ -1325,6 +1480,10 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
                 if (returnStatus == EXIT_SUCCESS)
                 {
                     pMqttClientSess->mqttState = MQTT_CONNECTED;
+#ifdef CONFIG_QAT_MQTT_DEMO
+                    snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_CONNECTED:%d,%d,\"%s\",%d,%d",pMqttClientSess->sessionIndex,pMqttClientSess->mqttTransportScheme,pMqttClientSess->serverInfo.pHostName, pMqttClientSess->serverInfo.port,1);
+                    QAT_Response_Str(QAT_RC_QUIET, buffer);
+#endif
                 }
             }
 
@@ -1334,10 +1493,23 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
             /*Allow small delay to allow other thread to run*/
             qurt_thread_sleep(150);
         }
+
+        delThread = true;
+        for (uint32 index = 0; index < MQTT_DEMO_SESSION_NUM; index++)
+        {
+            if (mqtt_client_sess[index].mqttState != MQTT_INIT)
+            {
+                delThread = false;
+                break; 
+            }
+        }
+
+        if (delThread == true) {
+            mqttThreadCreated = false;
+            nt_osal_thread_delete(NULL);
+        }
     }
     while (1);
-
-    nt_osal_thread_delete(NULL);
 }
 
 static void mqtt_client_help()
@@ -1413,7 +1585,16 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
     uint32_t sessionIndex = 0;
     qbool_t  isIntegerValid = false;
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    index = 0;
+#endif
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    if (Parameter_Count < 1)
+#else
     if (Parameter_Count < 2)
+#endif
     {
         mqtt_client_help();
         return QAPI_ERR_INVALID_PARAM;
@@ -1421,6 +1602,9 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
 
     /*    [0]   [1]
      mqttc init <session_id> [-s <transport scheme>][--ca file] [--cert file] [--key file] [--sni] [--alpn <protocol_name>]
+    */
+    /*                 [0]   [1]
+    +MQTTINIT=<session_id>,<transport scheme>,<ca_file>,<cert_file>,<key_file>,<sni>,<alpn protocol_name>
     */
 
     sessionIndex = Parameter_List[index].Integer_Value;
@@ -1453,9 +1637,16 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
 
     while (index < Parameter_Count)
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <transport scheme>
+        if (1 == index)
+#else
         if (0 == strcmp(Parameter_List[index].String_Value, "-s"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
 
             if (strcasecmp(Parameter_List[index].String_Value, "ssl") == 0)
             {
@@ -1473,12 +1664,20 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
 
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <ca_file>
+        else if (2 == index)
+#else
         else if (0 == strcasecmp(Parameter_List[index].String_Value, "--ca"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
 
             const char *filename = Parameter_List[index].String_Value;
             int rootCaLen = 0;
+#ifdef CONFIG_FILE_SYSTEM
             int file = open(filename, O_RDONLY, 0);
 
             if (file < 0)
@@ -1514,15 +1713,23 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
             rootCa[rootCaLen] = 0;
 
             pMqttClientSess->tlsCredentials.rootCaSize = rootCaLen + 1;
-
+#endif
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <cert_file>
+        else if (3 == index)
+#else
         else if (0 == strcasecmp(Parameter_List[index].String_Value, "--cert"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
 
             const char *filename = Parameter_List[index].String_Value;
             int clientCertLen = 0;
+#ifdef CONFIG_FILE_SYSTEM
             int file = open(filename, O_RDONLY, 0);
 
             if (file < 0)
@@ -1560,14 +1767,23 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
 
             pMqttClientSess->tlsCredentials.clientCertSize = clientCertLen + 1;
 
+#endif
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <key_file>
+        else if (4 == index)
+#else
         else if (0 == strcasecmp(Parameter_List[index].String_Value, "--key"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
 
             const char *filename = Parameter_List[index].String_Value;
             int clientKeyLen = 0;
+#ifdef CONFIG_FILE_SYSTEM
             int file = open(filename, O_RDONLY, 0);
 
             if (file < 0)
@@ -1604,17 +1820,29 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
             clientKey[clientKeyLen] = 0;
 
             pMqttClientSess->tlsCredentials.privateKeySize = clientKeyLen + 1;
-
+#endif
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <sni>
+        else if (5 == index)
+#else
         else if (0 == strcmp(Parameter_List[index].String_Value, "--sni"))
+#endif
         {
             index++;
-            pMqttClientSess->tlsCredentials.disableSni = pdFALSE;
+            pMqttClientSess->tlsCredentials.disableSni = Parameter_List[index].Integer_Value;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <alpn protocol_name>
+        else if (6 == index)
+#else
         else if (0 == strcmp(Parameter_List[index].String_Value, "--alpn"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             pMqttClientSess->tlsCredentials.pcAlpnProtocols[0] = malloc(strlen(Parameter_List[index].String_Value) + 1);
 
             if (pMqttClientSess->tlsCredentials.pcAlpnProtocols[0] == NULL)
@@ -1649,8 +1877,14 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
 
     pMqttClientSess->mqttState = MQTT_INIT;
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_INITED:%d", pMqttClientSess->sessionIndex);
+    QAT_Response_Str(QAT_RC_QUIET, buffer);
+#else
     MQTT_CLIENT_PRINTF("MQTT session:%d init successfully.\n",
                        pMqttClientSess->sessionIndex);
+#endif
+
 end:
     return QAPI_OK;
 fail:
@@ -1708,6 +1942,25 @@ void cleanupConnectInfo(MQTTClientSession_t *pMqttClientSess)
 
 }
 
+qapi_Status_t mqttc_connect_info_query(void)
+{
+    MQTTClientSession_t *pMqttClientSess;
+    uint16_t sessionIndex = 0;
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    for(sessionIndex=0;sessionIndex<MQTT_DEMO_SESSION_NUM;sessionIndex++)
+    {
+        pMqttClientSess = &mqtt_client_sess[sessionIndex];
+#ifdef CONFIG_QAT_MQTT_DEMO
+ 
+        snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+MQTTCONN:%d,%d,%d,\"%s\",%d",sessionIndex,pMqttClientSess->mqttState,pMqttClientSess->mqttTransportScheme,pMqttClientSess->serverInfo.pHostName ? pMqttClientSess->serverInfo.pHostName:"NULL",pMqttClientSess->serverInfo.port);
+        QAT_Response_Str(QAT_RC_QUIET, buffer);
+
+#else
+
+#endif
+    }
+}
+
 qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     uint32_t index = 1;
@@ -1720,8 +1973,17 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
         return QAPI_ERR_INVALID_PARAM;
     }
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    index = 0;
+#endif
+
     /*       [0]   [1]
     mqttc connect <session_id> -h <host> [-p <port>] [-u <username>] [-P <password>] [-k <keepalive>] [-i <clientid>][-c]
+    */
+   
+    /*             [0]      [1]
+    +MQTTCONN=<session_id>,<host>,<port>,<clientid>,<username>,<password>,<keepalive>,<clean session>
     */
 
     sessionIndex = Parameter_List[index].Integer_Value;
@@ -1755,9 +2017,16 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
     uint16_t keepAliveSeconds = 0;
     while (index < Parameter_Count)
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <host>
+        if (index == 1)
+#else 
         if (0 == strcmp(Parameter_List[index].String_Value, "-h"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             pMqttClientSess->serverInfo.hostNameLength = strlen(Parameter_List[index].String_Value);
 
             pMqttClientSess->serverInfo.pHostName = malloc(pMqttClientSess->serverInfo.hostNameLength + 1);
@@ -1773,15 +2042,29 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
             index++;
 
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <port>   
+        else if (index == 2)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-p"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             pMqttClientSess->serverInfo.port = Parameter_List[index].Integer_Value;
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <username>   
+        else if (index == 4)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-u"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
 
             pMqttClientSess->connectInfo.userNameLength = strlen(Parameter_List[index].String_Value);
 
@@ -1799,9 +2082,17 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
             index++;
         }
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <password> 
+        else if (index == 5)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-P"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
 
             pMqttClientSess->connectInfo.passwordLength = strlen(Parameter_List[index].String_Value);
 
@@ -1819,9 +2110,16 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <clientid>
+        else if (index == 3)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-i"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             /* The client identifier is used to uniquely identify this MQTT client to
              * the MQTT broker. In a production device the identifier can be something
              * unique, such as a device serial number. */
@@ -1841,9 +2139,16 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <keepalive>
+        else if (index == 6)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-k"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             if(Parameter_List[index].Integer_Value <= 0)
             {
                 MQTT_CLIENT_PRINTF("Value of keepalive must be a positive integer.\n");
@@ -1860,9 +2165,16 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
             pMqttClientSess->connectInfo.keepAliveSeconds = Parameter_List[index].Integer_Value;
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        // <clean session>
+        else if (index == 7)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-c"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             pMqttClientSess->connectInfo.cleanSession = true;
         }
         else
@@ -1908,18 +2220,6 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
     pMqttClientSess->lwtInfo.dup = false;
     pMqttClientSess->lwtInfo.retain = false;
 
-    if (mqttThreadCreated == false)
-    {
-        if (nt_qurt_thread_create(mqttc_task, "mqtt_client_task", 2048, pMqttClientSess, 6, mqttc_task_handle) != pdPASS)
-        {
-            MQTT_CLIENT_PRINTF("MQTT main thread create fail\n");
-        }
-        else
-        {
-            mqttThreadCreated = true;
-        }
-    }
-
     int returnStatus = EXIT_SUCCESS;
 
     returnStatus = initializeMqtt(pMqttClientSess);
@@ -1932,12 +2232,28 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
     if (returnStatus == EXIT_SUCCESS)
     {
         pMqttClientSess->mqttState = MQTT_CONNECTED;
-
+#ifdef CONFIG_QAT_MQTT_DEMO
+        snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_CONNECTED:%d,%d,\"%s\",%d,%d",pMqttClientSess->sessionIndex,pMqttClientSess->mqttTransportScheme,pMqttClientSess->serverInfo.pHostName, pMqttClientSess->serverInfo.port,1);
+        QAT_Response_Str(QAT_RC_QUIET, buffer);
+#else
         MQTT_CLIENT_PRINTF("MQTT connect successfully.\n");
+#endif
     }
     else
     {
         pMqttClientSess->mqttState = MQTT_DISCONNECT;
+    }
+
+    if (mqttThreadCreated == false)
+    {
+        if (nt_qurt_thread_create(mqttc_task, "mqtt_client_task", 4096, pMqttClientSess, 6, NULL) != pdPASS)
+        {
+            MQTT_CLIENT_PRINTF("MQTT main thread create fail\n");
+        }
+        else
+        {
+            mqttThreadCreated = true;
+        }
     }
 
 end:
@@ -1946,6 +2262,32 @@ fail:
     cleanupConnectInfo(pMqttClientSess);
 
     return QAPI_ERR_INVALID_PARAM;
+}
+
+qapi_Status_t mqttc_sub_info_query(void)
+{
+    MQTTClientSession_t *pMqttClientSess;
+    uint16_t sessionIndex = 0;
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    for(sessionIndex=0;sessionIndex<MQTT_DEMO_SESSION_NUM;sessionIndex++)
+    {
+        pMqttClientSess = &mqtt_client_sess[sessionIndex];
+#ifdef CONFIG_QAT_MQTT_DEMO
+        if(pMqttClientSess->mqttState == MQTT_CONNECTED)
+        {
+            for(uint16_t i = 0; i<MQTT_SUB_TOPIC_PER_SESSION_MAX;i++ )
+            {
+                if(pMqttClientSess->subscribeInfo[i].topicFilterLength !=0)
+                {
+                    snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+MQTTSUB:%d,%d,\"%s\",%d\n",sessionIndex,pMqttClientSess->mqttState,pMqttClientSess->subscribeInfo[i].pTopicFilter,pMqttClientSess->subscribeInfo[i].qos);
+                    QAT_Response_Str(QAT_RC_QUIET, buffer);
+                }
+            }
+        }
+#else
+
+#endif
+    }
 }
 
 qapi_Status_t mqttc_subscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
@@ -1960,10 +2302,17 @@ qapi_Status_t mqttc_subscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t
         return QAPI_ERR_INVALID_PARAM;
     }
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    index = 0;
+#endif
+
     /*            [0]   [1]
         mqttc subscribe <session_id> -t <topic filter> [-q <requested_qos>]
     */
-
+    /*
+        +MQTTSUB=<session_id>,<\"topic\">,<requested_qos>
+    */
     sessionIndex = Parameter_List[index].Integer_Value;
     isIntegerValid = Parameter_List[index].Integer_Is_Valid;
     
@@ -1992,9 +2341,16 @@ qapi_Status_t mqttc_subscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t
 
     while (index < Parameter_Count)
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <topic>
+        if (index == 1)
+#else 
         if (0 == strcmp(Parameter_List[index].String_Value, "-t"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             pMqttCommand->mqtt_cmd.subscribe.topicFilterLength = strlen(Parameter_List[index].String_Value);
             pMqttCommand->mqtt_cmd.subscribe.pTopicFilter = malloc(strlen(Parameter_List[index].String_Value) + 1);
 
@@ -2009,9 +2365,16 @@ qapi_Status_t mqttc_subscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t
 
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <requested_qos>
+        else if (index == 2)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-q"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
 
             if (Parameter_List[index].Integer_Value < MQTTQoS0
                     || Parameter_List[index].Integer_Value > MQTTQoS2)
@@ -2067,8 +2430,15 @@ qapi_Status_t mqttc_unsubscribe(uint32_t Parameter_Count, QAPI_Console_Parameter
         return QAPI_ERR_INVALID_PARAM;
     }
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    index = 0;
+#endif
     /*          [0]   [1]
      mqttc unsubscribe <session_id> -t <topic filter>
+    */
+    /*
+     +MQTTSUB=<session_id>,<\"topic\">
     */
 
     sessionIndex = Parameter_List[index].Integer_Value;
@@ -2099,9 +2469,16 @@ qapi_Status_t mqttc_unsubscribe(uint32_t Parameter_Count, QAPI_Console_Parameter
 
     while (index < Parameter_Count)
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <topic>
+        if (index == 1)
+#else 
         if (0 == strcmp(Parameter_List[index].String_Value, "-t"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             pMqttCommand->mqtt_cmd.unsubscribe.topicFilterLength = strlen(Parameter_List[index].String_Value);
             pMqttCommand->mqtt_cmd.unsubscribe.pTopicFilter = malloc(strlen(Parameter_List[index].String_Value) + 1);
 
@@ -2146,6 +2523,228 @@ fail:
 
 }
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+qapi_Status_t mqttc_publishRaw_Block(uint32_t len, char* block_buf)
+{
+    MQTTClientSession_t *pMqttClientSess = &mqtt_client_sess[sessionIndex_raw];
+
+    if (pMqttClientSess->mqttState != MQTT_CONNECTED)
+    {
+        MQTT_CLIENT_PRINTF("MQTT state:%d, is not in connected mode\n", pMqttClientSess->mqttState);
+        goto end;
+    }
+
+    MQTTClientCMD_t *pMqttCommand = &mqtt_client_cmd[sessionIndex_raw];
+
+    if (pMqttCommand->cmd_type != MQTT_CMD_NONE)
+    {
+        MQTT_CLIENT_PRINTF("MQTT session:%d command is busy\n", sessionIndex_raw);
+        goto end;
+    }
+
+    pMqttCommand->mqtt_cmd.publish.payloadLength = len;
+    pMqttCommand->mqtt_cmd.publish.pPayload = malloc(len);
+
+    if (pMqttCommand->mqtt_cmd.publish.pPayload == NULL)
+    {
+        MQTT_CLIENT_PRINTF("MQTT session:%d malloc message fail.\n", sessionIndex_raw);
+        goto fail;
+    }
+
+    memcpy((char *)pMqttCommand->mqtt_cmd.publish.pPayload, block_buf, len);
+
+    if (pMqttCommand->mqtt_cmd.publish.pTopicName == NULL)
+    {
+        MQTT_CLIENT_PRINTF("Error:topic is not configured\n");
+        goto fail;
+    }
+
+    pMqttCommand->cmd_type = MQTT_CMD_PUB;
+
+end:
+    return QAPI_OK;
+
+fail:
+
+    if (pMqttCommand->mqtt_cmd.publish.pTopicName)
+    {
+        free((char *)pMqttCommand->mqtt_cmd.publish.pTopicName);
+        pMqttCommand->mqtt_cmd.publish.pTopicName = NULL;
+    }
+
+    if (pMqttCommand->mqtt_cmd.publish.pPayload)
+    {
+        free((char *)pMqttCommand->mqtt_cmd.publish.pPayload);
+        pMqttCommand->mqtt_cmd.publish.pPayload = NULL;
+    }
+
+    return QAPI_ERR_INVALID_PARAM;
+}
+
+qapi_Status_t mqttc_publishRaw_Cache(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint32_t index = 1;
+    uint32_t sessionIndex = 0;
+    qbool_t  isIntegerValid = false;
+
+    if (Parameter_Count < 2)
+    {
+        mqtt_client_help();
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    index = 0;
+#endif
+
+    /*                [0]   [1]
+     +MQTTPUBRAW=<session_id>,<\"topic\">,<length>,<qos_level>,<retain>
+   */
+
+    sessionIndex = Parameter_List[index].Integer_Value;
+    isIntegerValid = Parameter_List[index].Integer_Is_Valid;
+
+    sessionIndex_raw = sessionIndex;
+
+    if (isIntegerValid == false)
+    {
+        MQTT_CLIENT_PRINTF("Invalid session id %s\n", Parameter_List[index].String_Value);
+        goto end;
+    }
+
+    if (sessionIndex > MQTT_DEMO_SESSION_NUM)
+    {
+        MQTT_CLIENT_PRINTF("Invalid session id %d\n", sessionIndex);
+        goto end;
+    }
+
+    index ++;
+    MQTTClientSession_t *pMqttClientSess = &mqtt_client_sess[sessionIndex];
+
+    if (pMqttClientSess->mqttState != MQTT_CONNECTED)
+    {
+        MQTT_CLIENT_PRINTF("MQTT state:%d, is not in connected mode\n", pMqttClientSess->mqttState);
+        goto end;
+    }
+
+    MQTTClientCMD_t *pMqttCommand = &mqtt_client_cmd[sessionIndex];
+
+    if (pMqttCommand->cmd_type != MQTT_CMD_NONE)
+    {
+        MQTT_CLIENT_PRINTF("MQTT session:%d command is busy\n", sessionIndex);
+        goto end;
+    }
+
+    assert(pMqttCommand->mqtt_cmd.publish.pTopicName == NULL);
+
+    /* Some fields not used by this demo so start with everything at 0. */
+    (void) memset((void *) & (pMqttCommand->mqtt_cmd.publish), 0x00, sizeof(MQTTPublishInfo_t));
+
+    while (index < Parameter_Count)
+    {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <\"topic\">
+        if (index == 1)
+#else 
+        if (0 == strcmp(Parameter_List[index].String_Value, "-t"))
+#endif
+        {
+#ifndef CONFIG_QAT_MQTT_DEMO
+            index++;
+#endif
+            pMqttCommand->mqtt_cmd.publish.topicNameLength = strlen(Parameter_List[index].String_Value);
+            pMqttCommand->mqtt_cmd.publish.pTopicName = malloc(strlen(Parameter_List[index].String_Value) + 1);
+
+            if (pMqttCommand->mqtt_cmd.publish.pTopicName == NULL)
+            {
+                MQTT_CLIENT_PRINTF("MQTT session:%d alloc topic name fail.\n", sessionIndex);
+                goto fail;
+            }
+
+            memcpy((char *)(pMqttCommand->mqtt_cmd.publish.pTopicName), Parameter_List[index].String_Value,
+                   strlen(Parameter_List[index].String_Value) + 1);
+            index++;
+        }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <qos_level>
+        else if (index == 3)
+#else 
+        else if (0 == strcmp(Parameter_List[index].String_Value, "-q"))
+#endif
+        {
+#ifndef CONFIG_QAT_MQTT_DEMO
+            index++;
+#endif
+
+            if (Parameter_List[index].Integer_Value < MQTTQoS0
+                    || Parameter_List[index].Integer_Value > MQTTQoS2)
+            {
+                MQTT_CLIENT_PRINTF("MQTT session:%d qos out of range.\n", sessionIndex);
+                goto fail;
+            }
+
+            pMqttCommand->mqtt_cmd.publish.qos = Parameter_List[index].Integer_Value;
+
+            index++;
+        }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <length>
+        else if (index == 2)
+#endif
+        {
+            total_len_one_raw =  Parameter_List[index].Integer_Value;
+            index++;
+        }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <retain>
+        else if (index == 4)
+#else 
+        else if (0 == strcmp(Parameter_List[index].String_Value, "-r"))
+#endif
+        {
+            index++;
+            pMqttCommand->mqtt_cmd.publish.retain = true;
+        }
+        else
+        {
+            MQTT_CLIENT_PRINTF("Invalid parameter %s\n", Parameter_List[index].String_Value);
+            index++;
+            goto fail;
+        }
+    }
+
+    if (pMqttCommand->mqtt_cmd.publish.pTopicName == NULL)
+    {
+        MQTT_CLIENT_PRINTF("Error:topic is not configured\n");
+        goto fail;
+    }
+
+    // pMqttCommand->cmd_type = MQTT_CMD_PUB;
+
+end:
+    return QAPI_OK;
+
+fail:
+
+    if (pMqttCommand->mqtt_cmd.publish.pTopicName)
+    {
+        free((char *)pMqttCommand->mqtt_cmd.publish.pTopicName);
+        pMqttCommand->mqtt_cmd.publish.pTopicName = NULL;
+    }
+
+    if (pMqttCommand->mqtt_cmd.publish.pPayload)
+    {
+        free((char *)pMqttCommand->mqtt_cmd.publish.pPayload);
+        pMqttCommand->mqtt_cmd.publish.pPayload = NULL;
+    }
+
+    return QAPI_ERR_INVALID_PARAM;
+
+
+}
+#endif
+
 qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     uint32_t index = 1;
@@ -2158,9 +2757,17 @@ qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
         return QAPI_ERR_INVALID_PARAM;
     }
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    index = 0;
+#endif
+
     /*      [0]   [1]
     mqttc publish <session_id> -t <topic> [-q <qos_level>] -m <message> [-r]
      */
+    /*                [0]   [1]
+     +MQTTPUB=<session_id>,<\"topic\">,<qos_level>,<\"message\">,<retain>
+   */
 
     sessionIndex = Parameter_List[index].Integer_Value;
     isIntegerValid = Parameter_List[index].Integer_Is_Valid;
@@ -2201,9 +2808,16 @@ qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
     while (index < Parameter_Count)
     {
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <\"topic\">
+        if (index == 1)
+#else 
         if (0 == strcmp(Parameter_List[index].String_Value, "-t"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             pMqttCommand->mqtt_cmd.publish.topicNameLength = strlen(Parameter_List[index].String_Value);
             pMqttCommand->mqtt_cmd.publish.pTopicName = malloc(strlen(Parameter_List[index].String_Value) + 1);
 
@@ -2217,9 +2831,16 @@ qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
                    strlen(Parameter_List[index].String_Value) + 1);
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <qos_level>
+        else if (index == 2)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-q"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
 
             if (Parameter_List[index].Integer_Value < MQTTQoS0
                     || Parameter_List[index].Integer_Value > MQTTQoS2)
@@ -2232,10 +2853,18 @@ qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <\"message\">
+        else if (index == 3)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-m"))
+#endif
         {
+#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
+#endif
             pMqttCommand->mqtt_cmd.publish.payloadLength = strlen(Parameter_List[index].String_Value);
+            total_len_one_raw = pMqttCommand->mqtt_cmd.publish.payloadLength;
             pMqttCommand->mqtt_cmd.publish.pPayload = malloc(pMqttCommand->mqtt_cmd.publish.payloadLength + 1);
 
             if (pMqttCommand->mqtt_cmd.publish.pPayload == NULL)
@@ -2247,7 +2876,12 @@ qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
             memcpy((char *)pMqttCommand->mqtt_cmd.publish.pPayload, Parameter_List[index].String_Value, pMqttCommand->mqtt_cmd.publish.payloadLength + 1);
             index++;
         }
+#ifdef CONFIG_QAT_MQTT_DEMO
+        //  <retain>
+        else if (index == 4)
+#else 
         else if (0 == strcmp(Parameter_List[index].String_Value, "-r"))
+#endif
         {
             index++;
             pMqttCommand->mqtt_cmd.publish.retain = true;
@@ -2296,14 +2930,26 @@ qapi_Status_t mqttc_disconnect(uint32_t Parameter_Count, QAPI_Console_Parameter_
     uint32_t sessionIndex = 0;
     qbool_t  isIntegerValid = false;
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    if (Parameter_Count < 1)
+#else
     if (Parameter_Count < 2)
+#endif
     {
         mqtt_client_help();
         return QAPI_ERR_INVALID_PARAM;
     }
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+    index = 0;
+#endif
+
     /*         [0]   [1]
      mqttc disconnect <session_id>
+    */
+    /*
+    +MQTTDISCONN=<session_id>
     */
 
     sessionIndex = Parameter_List[index].Integer_Value;
@@ -2323,7 +2969,12 @@ qapi_Status_t mqttc_disconnect(uint32_t Parameter_Count, QAPI_Console_Parameter_
 
     index ++;
     MQTTClientCMD_t *pMqttCommand = &mqtt_client_cmd[sessionIndex];
-
+    MQTTClientSession_t *pMqttClientSess = &mqtt_client_sess[sessionIndex];
+    if(pMqttClientSess->mqttState == MQTT_FORCE_DISCONNECT)
+    {
+        MQTT_CLIENT_PRINTF("MQTT state:%d, already disconnected\n", pMqttClientSess->mqttState);
+        goto fail;
+    }
     pMqttCommand->cmd_type = MQTT_CMD_DISC;
 
     return QAPI_OK;
@@ -2347,8 +2998,15 @@ qapi_Status_t mqttc_destroy(uint32_t sessionIndex)
         return QAPI_ERR_INVALID_PARAM;
     }
 
+#ifdef CONFIG_QAT_MQTT_DEMO
+    char buffer[WRTMEM_STR_BUFFER_LENGTH];
+#endif
+
     /*         [0]   [1]
      mqttc destroy <session_id>
+    */
+    /*
+    +MQTTDESTROY=<session_id>
     */
     MQTTClientSession_t *pMqttClientSess = &mqtt_client_sess[sessionIndex];
 
@@ -2359,13 +3017,17 @@ qapi_Status_t mqttc_destroy(uint32_t sessionIndex)
         return QAPI_ERR_INVALID_PARAM;
     }
 
-    pMqttClientSess->mqttState = MQTT_INIT;
     cleanupMqttSession(pMqttClientSess);
-    nt_osal_thread_delete(mqttc_task_handle);
-    mqttThreadCreated = false;
+    pMqttClientSess->mqttState = MQTT_INIT;
     /* Log message indicating destroy successfully. */
+#ifdef CONFIG_QAT_MQTT_DEMO
+    snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_DESTROYED:%d\n",
+                       sessionIndex);
+    QAT_Response_Str(QAT_RC_QUIET, buffer);
+#else
     MQTT_CLIENT_PRINTF("MQTT session:%d destroy successfully.\n",
                        pMqttClientSess->sessionIndex);
+#endif
 
     return QAPI_OK;
 }

@@ -25,9 +25,10 @@
 #define PMTUD_DEBUG_ENABLE    1//DEBUG_ENABLE
 #endif
 
-#define MTU_ERR_PARAM    -1 // invalid parameter
+#define MTU_ERR_STATUS   -1 // receive error
 #define MTU_ERR_TIMEOUT  -2 // timeout
 #define MTU_ERR_SOCK     -3 // socket creation error
+#define MTU_ERR_BUFFER   -4 // invalid buffer
 
 typedef struct icmp_echo_hdr icmp4_echo;
 

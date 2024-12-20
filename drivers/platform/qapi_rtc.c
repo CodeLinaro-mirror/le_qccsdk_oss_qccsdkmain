@@ -25,6 +25,7 @@ ntp_Time_t last_ntp_time = {0,0};
 uint32_t last_ntp_sec = 0;
 uint32_t last_ntp_frac = 0;
 
+time_zone_t g_time_zone = {0,0,0};
 
 
 extern uint64_t start_tsf_beacon;
@@ -144,6 +145,15 @@ qapi_Status_t qapi_Core_RTC_Julian_Get(qapi_Time_t *tm)
 	if(qapi_Core_RTC_NTP_Get(&ntp) != QAPI_OK)
 		return QAPI_ERROR;
 
+	if(g_time_zone.add_sub == 1)
+	{
+		ntp.second += (g_time_zone.hour * 3600 + g_time_zone.min * 60);
+	}
+	else
+	{
+		ntp.second -= (g_time_zone.hour * 3600 + g_time_zone.min * 60);
+	}
+	
 	return rtc_convert_NTP_to_Julian(tm, &ntp);
 }
 
@@ -160,6 +170,15 @@ qapi_Status_t qapi_Core_RTC_Julian_Set(qapi_Time_t *tm)
 	if(rtc_convert_Julian_to_NTP(tm, &ntp) != QAPI_OK)
 		return QAPI_ERROR;
 
+	if(g_time_zone.add_sub == 1)
+	{
+		ntp.second -= (g_time_zone.hour * 3600 + g_time_zone.min * 60);
+	}
+	else
+	{
+		ntp.second += (g_time_zone.hour * 3600 + g_time_zone.min * 60);
+	}
+	
 	return qapi_Core_RTC_NTP_Set(&ntp);
 }
 
@@ -213,6 +232,35 @@ qapi_Status_t qapi_Core_RTC_NTP_Set(ntp_Time_t *tm)
 	return QAPI_OK;
 }
 
+/**
+ *  Gets the time zone.
+ *
+ * @param[in] zone  Pointer to a buffer to contain the time zone.
+ *
+ * @return #QAPI_OK on success, or a different code on error.
+ */
+qapi_Status_t qapi_Core_Time_Zone_Get(time_zone_t *zone)
+{
+	if(zone == NULL)
+		return QAPI_ERROR;
+	
+	memscpy(zone, sizeof(time_zone_t), &g_time_zone, sizeof(time_zone_t));
+	return QAPI_OK;
+}
 
-
+/**
+ *  Sets the time zone.
+ *
+ * @param[in] tm  Pointer to a buffer to contain the time zone.
+ *
+ * @return #QAPI_OK on success, or a different code on error.
+ */
+qapi_Status_t qapi_Core_Time_Zone_Set(time_zone_t *zone)
+{
+	if(zone == NULL)
+		return QAPI_ERROR;
+	
+	memscpy(&g_time_zone, sizeof(time_zone_t), zone, sizeof(time_zone_t));
+	return QAPI_OK;
+}
 

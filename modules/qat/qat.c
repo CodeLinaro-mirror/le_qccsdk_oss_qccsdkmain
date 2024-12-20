@@ -13,6 +13,8 @@
 #include "qapi_version.h"
 #include "qat.h"
 #include "qat_api.h"
+#include "qat_uart.h"
+
 #include "qurt_internal.h"
 #include "nt_osal.h"
 #include "qurt_mutex.h"
@@ -37,11 +39,14 @@ extern void* QCLI_Context;
 /* QAT signals */
 #define QAT_EVENT_TXQ 0x1
 
+#define QAT_STR_BUFFER_LENGTH					  128
+
 QAT_Transfer_Mode_t QAT_Transfer_Mode = QAT_Transfer_Mode_AT_COMMAND_E;
 QAT_Transfer_Mode_Handle_t QAT_Transfer_Mode_Handle = NULL;
 uint32_t QAT_Echo_Enable=0;
 qurt_signal_t  qat_task_start;
-nt_osal_task_handle_t  qat_uart_tx_task_hdl = NULL;
+nt_osal_task_handle_t  qat_tx_task_hdl = NULL;
+nt_osal_task_handle_t  qat_rx_task_hdl = NULL;
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -59,6 +64,7 @@ HTC_Context_t HTC_Context;
 const char Rel_Date[] = __DATE__;
 const char Rel_Time[] = __TIME__;
 
+Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
 /*-------------------------------------------------------------------------
  * Function Declarations
  *-----------------------------------------------------------------------*/
@@ -71,7 +77,14 @@ extern size_t memsmove(void *Dest, size_t DestSize, const void *Src, size_t SrcS
 extern qbool_t PAL_Take_Lock(void);
 extern void PAL_Release_Lock(void);
 extern int32_t QCLI_Memcmpi(const void *Source1, const void *Source2, uint32_t Size);
+
+extern void UartRxTasks();
+extern void SPIRxTasks();
+
 void QAT_Response_Event(char *Command_Name, char *Buffer, int rc_code);
+qapi_Status_t QAT_Output(uint32_t Length, const char *Buffer);
+
+qbool_t (*Process_Input_Data_Handle)(uint32_t Length, char *Buffer);
 
 char *QAT_Result_Str[]=
 {
@@ -85,7 +98,89 @@ char *QAT_Result_Str[]=
 	"BUSY",
 	"NO ANSWER",
 	"",
+   "OK",
+   "OK",
 };
+
+static void Process_RAW_Data(void)
+{
+   qbool_t Result;
+   Find_Result_t Find_Result;
+   Result = Find_Command_By_String(Cur_Data_Mode_Cmd.cur_data_mode_commnd, &Find_Result);
+   if(!Result)
+   {
+      printf("Command search failed: %s\n", Cur_Data_Mode_Cmd.cur_data_mode_commnd);
+      QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+      QAT_Response_Str(QAT_RC_ERROR, NULL);
+   }
+
+   if(QAT_STATUS_SUCCESS_E  != 
+            (*(Find_Result.Command->Command_Function))(QAT_OP_EXEC_IN_DATA_MODEL, HTC_Context.Input_Length, (QAT_Parameter_t*) HTC_Context.Input_String))
+   {
+      Result = false;
+   }
+}
+
+qbool_t QAT_Data_Transfer_Mode_Handle(uint32_t Length, uint8_t *Buffer)
+{
+     qbool_t Result = true;
+
+   if(QAT_Transfer_Mode == QAT_Transfer_Mode_ONLINE_DATA_E)
+   {
+      if((Length) && (Buffer))
+      {
+         /* pause the event sendind */
+         if(HTC_Context.Input_Length == 0)
+         {
+            ;
+         }
+         
+         /* Process all received data. */
+         while(Length)
+         {
+            /* Check for a valid character, which here is any non control
+                  code lower ASCII (0x20 ' ' to 0x7E '~'). */
+            if((*Buffer >= ' ') && (*Buffer <= '~'))
+            {
+               /* Make sure that the command buffer can fit the character. */
+               if(HTC_Context.Input_Length < QAT_MAXIMUM_COMMAND_STRING_LENGTH)
+               {
+                  if(QAT_Echo_Enable)
+                  {
+                     QAT_Output(1, Buffer);
+                  }
+                  
+                  HTC_Context.Input_String[HTC_Context.Input_Length] = Buffer[0];
+                  HTC_Context.Input_Length++;
+            
+               }
+            }
+ 
+            /* Move to the next character in the buffer. */
+            Buffer ++;
+            Length --;
+         }
+
+         if(Length == 0)
+         {
+            if(strncmp(HTC_Context.Input_String,"+++",strlen("+++")) == 0)
+            {
+               QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+               QAT_Response_Str(QAT_RC_OK, NULL);
+            }
+            else if(HTC_Context.Input_Length > 0)
+            {
+               /*Data block is complete, process it now. */
+               Process_RAW_Data();
+            }
+            /* Set the command length back to zero in preparation of the next
+            command and display the prompt. */
+            memset(HTC_Context.Input_String, '\0', HTC_Context.Input_Length);
+            HTC_Context.Input_Length = 0;
+         }
+      }
+   }
+}
 
 qbool_t QAT_Transfer_Mode_set(QAT_Transfer_Mode_t Mode, QAT_Transfer_Mode_Handle_t Handle)
 {
@@ -111,9 +206,11 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
    uint32_t	  i;
    qbool_t 	  Inside_Quotes = false;
    uint8_t Temp_Char;
+   uint8_t is_exec = 0;
    uint32_t      Index = *Command_Index;
    uint8_t *Command_Name;
    qbool_t  Sub_Command = false;
+   char buffer[QAT_STR_BUFFER_LENGTH];
    
    Result = true;
    Command_Name = NULL;
@@ -143,6 +240,7 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
 		 if(HTC_Context.Input_String[Index] == '=')
          {
             *Command_Name = '\0';
+			is_exec = 0;
             HTC_Context.Command_Flag |= QAT_STR_EQ;
             Index ++;
             if(Index < HTC_Context.Input_Length)
@@ -170,12 +268,15 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
             Index ++;
             HTC_Context.Command_Flag |= QAT_STR_QU;
             *(char*)(Command_Name) = '\0';
+			is_exec = 0;
             break;
          }
          else
          {
             Temp_Char = HTC_Context.Input_String[Index];
-            
+
+			is_exec = 1;
+
             if ((Temp_Char >= '0' && Temp_Char <= '9') ||
             ((Temp_Char) >= 'a' && (Temp_Char) <= 'z') ||
             (Temp_Char >= 'A' && Temp_Char <= 'Z') ||
@@ -200,6 +301,8 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
    {
       /* Initialize the find results to the current group state so that it can
       be used to recursively search the groups. */
+      if(is_exec == 1)
+	  	*(char*)(Command_Name) = '\0';
       
       Result = Find_Command_By_String(HTC_Context.Command_Name, &Find_Result);
       if(!Result)
@@ -207,6 +310,8 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
          printf("Command search failed: %s\n", HTC_Context.Command_Name);
          QAT_Response_Str(QAT_RC_ERROR, NULL);
       }
+	  if(is_exec == 1)
+	  	*(char*)(Command_Name) = ';';
    }
    
    /* search parameter if needed */
@@ -257,7 +362,7 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
                         /* Simply consume the escape character. */
                         memsmove(&(HTC_Context.Input_String[Index]), HTC_Context.Input_Length - Index, &(HTC_Context.Input_String[Index + 1]), HTC_Context.Input_Length - Index - 1);
                      
-                        HTC_Context.Input_String[HTC_Context.Input_Length - 2] = '\0';
+                        HTC_Context.Input_String[HTC_Context.Input_Length - 1] = '\0';
                      
                         HTC_Context.Input_Length --;
                      }
@@ -696,9 +801,8 @@ static qbool_t Find_Command_By_String(uint8_t *Command_Name, Find_Result_t *Find
       Command_Group = &Current_Entry->Command_Group;
       for(Index = 0; Index < Command_Group->Command_Count; Index++)
       {
-		 if(!QCLI_Memcmpi(Command_Group->Command_List[Index].Command_String, 
-                           Command_Name, 
-                           strlen(Command_Group->Command_List[Index].Command_String)))
+		  if((strlen(Command_Group->Command_List[Index].Command_String) == strlen(Command_Name)) && 
+	            (!QCLI_Memcmpi(Command_Group->Command_List[Index].Command_String, Command_Name, strlen(Command_Name))))
          {
             Find_Result->Command = &Command_Group->Command_List[Index];
             return true;
@@ -860,22 +964,33 @@ QAT_Command_Status_t QAT_Response_Str(int Ret_Code, char *Buffer)
       Tx_Queue->Buffer = (uint8_t*)((char*)Tx_Queue + sizeof(QAT_Tx_Queue_t));
       Ptr = (char*)Tx_Queue->Buffer;
       
-      Len = snprintf(Ptr, Buffer_Len, "%s", "\r\n");
-	  Buffer_Len -= Len,
-      Ptr += Len;
-      Tx_Queue->Len = Len;
+      if(Ret_Code != QAT_RC_QUIET_NO_CR)
+      {
+         Len = snprintf(Ptr, Buffer_Len, "%s", "\r\n");
+         Buffer_Len -= Len,
+         Ptr += Len;
+         Tx_Queue->Len = Len;
+      }
       
       if(Buffer && Input_Buffer_Length)
       {
          memcpy(Ptr, Buffer, Input_Buffer_Length); 
          Ptr += Input_Buffer_Length;      
-   
-         memcpy(Ptr, "\r\n", 2);
-         Ptr += 2;
-         Tx_Queue->Len += (Input_Buffer_Length + 2);
+
+         if(Ret_Code != QAT_RC_QUIET_NO_CR)
+         {
+            memcpy(Ptr, "\r\n", 2);
+            Ptr += 2;
+            Tx_Queue->Len += (Input_Buffer_Length + 2);
+         }
+         else
+         {
+            Tx_Queue->Len += (Input_Buffer_Length );
+         }
+
       }	 
          
-      if(Ret_Code != QAT_RC_QUIET)
+      if(Ret_Code != QAT_RC_QUIET && Ret_Code != QAT_RC_QUIET_NO_CR)
       {
          if(QAT_Result_Str[Ret_Code] && strlen(QAT_Result_Str[Ret_Code]))
          {
@@ -913,7 +1028,27 @@ QAT_Command_Status_t QAT_Response_Str(int Ret_Code, char *Buffer)
    return QAT_STATUS_SUCCESS_E;
 }
 
-static void QAT_Uart_TxTasks(void *arg)
+qapi_Status_t QAT_Output(uint32_t Length, const char *Buffer)
+{
+   uint8_t ret = QAPI_OK;
+   
+   if((Length != 0) && (Buffer != NULL))
+   {
+#if (CONFIG_QAT_TRANSMISSION_MODULE == 0)  
+	 QAT_UART_Output(Length, Buffer);
+#else if(CONFIG_QAT_TRANSMISSION_MODULE == 1)  
+     QAT_SPI_Output(Length, Buffer);
+#endif
+   }
+   else
+   {
+		ret = QAPI_ERR_INVALID_PARAM;
+   }
+
+    return ret;
+}
+
+static void QAT_TxTasks(void *arg)
 {
    QAT_Tx_Queue_t *Next=NULL;
    uint32_t signal;
@@ -942,7 +1077,7 @@ static void QAT_Uart_TxTasks(void *arg)
 }
 
 
-qbool_t QAT_Initialize(void)
+qbool_t QAT_TxTask_Initialize(void)
 {
 	uint32_t ret_val;
 	
@@ -950,7 +1085,7 @@ qbool_t QAT_Initialize(void)
    memset(&HTC_Context, 0, sizeof(HTC_Context));
    qurt_mutex_create(&HTC_Context.mutex);
 
-   ret_val =  (uint32_t)nt_qurt_thread_create(QAT_Uart_TxTasks, "qat_uart_tx_task", 1024, NULL, 6, &qat_uart_tx_task_hdl);
+   ret_val =  (uint32_t)nt_qurt_thread_create(QAT_TxTasks, "qat_tx_task", 1024, NULL, 6, &qat_tx_task_hdl);
    if(ret_val != pdPASS)
    {
   	 printf("QAT: task creation failed out of memory\r\n");
@@ -962,10 +1097,59 @@ qbool_t QAT_Initialize(void)
 	if (ret_val != 0)
 	{
 	    printf("failed to create qat_task_start signal", 0);
-		nt_osal_thread_delete(qat_uart_tx_task_hdl);
+		nt_osal_thread_delete(qat_tx_task_hdl);
 		ASSERT(0);
 	}  
    return true;
+}
+void QAT_RxTasks()
+{
+#if (CONFIG_QAT_TRANSMISSION_MODULE == 0)  
+	UartRxTasks();
+#else if (CONFIG_QAT_TRANSMISSION_MODULE == 1)  
+	SPIRxTasks();
+#endif
+
+}
+qbool_t QAT_RxTask_Start()
+{
+    qbool_t Ret_Val = true;
+	uint32_t ret_val;
+
+    ret_val =  (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 1024, NULL, 8, &qat_rx_task_hdl);
+    if(ret_val != pdPASS)
+    {
+   	 printf("QAT: task creation failed out of memory\r\n");
+   	 ASSERT(0);
+    } 
+
+    return Ret_Val;
+}
+
+qbool_t QAT_RxTask_Initialize(void)
+{
+	uint32_t ret_val;
+	
+#if (CONFIG_QAT_TRANSMISSION_MODULE == 0) 
+   Uart_Initialize(UART_HTC_INSTANCE);
+#else if (CONFIG_QAT_TRANSMISSION_MODULE == 1)  
+   SPI_Initialize();
+#endif
+
+   QAT_RxTask_Start();
+
+   return true;
+}
+
+
+void Initialize_QAT_Main(void)
+{
+    Process_Input_Data_Handle = QAT_Process_Input_Data;
+
+	QAT_TxTask_Initialize();
+
+	QAT_RxTask_Initialize();
+
 }
 
 void qat_module_init (void)

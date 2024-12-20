@@ -476,6 +476,20 @@ typedef struct tsf_periodic_sync_ctx_s
 }tsf_periodic_sync_ctx_t;
 #endif
 
+typedef struct anti_param_s{
+    uint8_t rts_enable;
+    uint8_t rts_rate;
+    uint8_t threshold;
+    uint8_t slot_time;
+    uint8_t qid;
+    uint8_t aifsn;
+    uint16_t cw_min;
+    uint16_t cw_max;
+    uint16_t txop_limit;
+    uint16_t ack_timeout;
+    uint16_t delay;
+} anti_param_t;
+
 #if defined(FEATURE_STA_ECSA) || defined(FEATURE_AP_ECSA)
 typedef struct ecsa_ctx_s
 {
@@ -649,6 +663,7 @@ typedef struct devh_s {
 #if defined(FEATURE_STA_ECSA) || defined(FEATURE_AP_ECSA)
  	ecsa_ctx_t *ecsa_ctx;
 #endif
+    struct anti_param_s anti_param;
 
 } devh_t;
 

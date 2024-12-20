@@ -78,6 +78,7 @@ void Initialize_Matter_Demo(void)
 
 void Matter_Enable();
 void Matter_Onboarding(char* ssid, char* password);
+
 void Matter_FactoryReset();
 static qapi_Status_t Command_Matter_Enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {	
@@ -93,14 +94,21 @@ static qapi_Status_t Command_Matter_Enable(uint32_t Parameter_Count, QAPI_Consol
 
 static qapi_Status_t Command_Matter_Onboarding(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-	if( Parameter_Count < 2 || !Parameter_List){
+	if( Parameter_Count < 1 || !Parameter_List){
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 	
 	char* ssid = Parameter_List[0].String_Value;
-	char* password = Parameter_List[1].String_Value;
 
-	Matter_Onboarding(ssid, password);
+	if( Parameter_Count >= 2)
+	{
+		char* password = Parameter_List[1].String_Value;
+		Matter_Onboarding(ssid, password);
+	}
+	else
+	{
+		Matter_Onboarding(ssid, "\0");
+	}
 	return QAPI_OK;
 }
 

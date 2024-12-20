@@ -101,3 +101,17 @@ config BOARD_QCC730_SPI_SLAVE_OPTION
 	range 0 1
 	depends on BOARD_QCC730_SPI_SLAVE_ENABLE
 	default 0
+
+config BOARD_QCC730_GPIO_DEFAULT_PU_STATE
+    hex "GPIO internal default pull up state"
+    default 0xABB0A if BOARD_QCC730_UART_GPIO_OPTION = 0
+    default 0xAEB0A if BOARD_QCC730_UART_GPIO_OPTION = 1
+    default 0xAAF0A if BOARD_QCC730_UART_GPIO_OPTION = 2
+    default 0xAAB0A if BOARD_QCC730_UART_GPIO_OPTION = 3
+
+config BOARD_QCC730_GPIO_DEFAULT_PD_STATE
+    hex "GPIO internal default pull down state"
+    default 0x1544D0 if BOARD_QCC730_UART_GPIO_OPTION = 0
+    default 0x1514F0 if BOARD_QCC730_UART_GPIO_OPTION = 1
+    default 0x1550F0 if BOARD_QCC730_UART_GPIO_OPTION = 2
+    default 0x1554F0 if BOARD_QCC730_UART_GPIO_OPTION = 3

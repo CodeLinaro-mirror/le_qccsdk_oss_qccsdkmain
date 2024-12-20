@@ -5,4 +5,23 @@ config QAT
 config QAT_COMMON_DEMO
     bool "enable QAT COMMON DEMO"
     default n
+config QAT_TRANSMISSION_MODULE
+    int "change transmission module for QAT. 0:UART, 1:SPI"
+    default 0
+config QAT_TCPIP_DEMO
+    bool "enable QAT TCPIP DEMO"
+    default n
+config QAT_WLAN_DEMO
+    bool "enable QAT WLAN DEMO"
+    default n
+config QAT_MQTT_DEMO
+    bool "enable QAT MQTT DEMO"
+    default n
+config QAT_CB_SIZE_MTU_MULTIPLIER
+    int "Set the circular buffer size to be a multiple of the MTU."
+    default 10
+
+config QAT_CB_QUEUE_MAX_LENGTH
+    int "set max length of the circular buffer queue"
+    default 10
 endmenu

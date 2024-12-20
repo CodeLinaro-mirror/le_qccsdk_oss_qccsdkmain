@@ -371,6 +371,19 @@ nt_dpm_network_init()
 }
 
 void *
+nt_dpm_allocate_network_buffer_pool(uint32_t length)
+{
+    struct pbuf *p;
+
+    p = pbuf_alloc(PBUF_RAW, length, PBUF_POOL);
+
+    if (p != NULL)
+        return p->payload;
+    else
+        return NULL;
+}
+
+void *
 nt_dpm_allocate_network_buffer(uint32_t length)
 {
     struct pbuf *p;
