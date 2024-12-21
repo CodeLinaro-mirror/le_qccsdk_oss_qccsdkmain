@@ -568,7 +568,7 @@ static void handleIncomingPublish(MQTTPublishInfo_t *pPublishInfo,
     }
 
 #ifdef CONFIG_QAT_MQTT_DEMO
-    ptr[pPublishInfo->payloadLength]="\0";
+    ptr[pPublishInfo->payloadLength]='\0';
 #endif
 
 #ifdef CONFIG_QAT_MQTT_DEMO
