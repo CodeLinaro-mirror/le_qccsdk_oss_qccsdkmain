@@ -102,9 +102,9 @@ typedef struct wifi_shell_cxt_s {
 #define WIFI_COMMAND_LIST_SIZE                    (sizeof(QAT_Wifi_Command_List) / sizeof(QAT_Command_t))
 
 #define WLAN_RESPONSE_BUFFER_LENGTH					  128
-#define WLAN_STR_BUFFER_LENGTH					     2000					     
-#define SCAN_MODE_BLOCKING      1
-#define SCAN_MODE_UNBLOCKING    2
+#define WLAN_STR_BUFFER_LENGTH					     1500					     
+#define SCAN_MODE_BLOCKING                        1
+#define SCAN_MODE_UNBLOCKING                      2
 #define CMD_STR_BUFFER_LENGTH					        1024
 
 static wifi_shell_cxt_t g_wifi_shell_cxt;
@@ -130,16 +130,17 @@ static void scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
    uint8_t temp_ssid[33] = {0};
    qapi_WLAN_BSS_Scan_Info_t *list = scan_coml_evt->scan_bss_info;
    int16_t num_scan = scan_coml_evt->num_bss_cur;
-   int offset = 0;
+   
 
    char buffer[WLAN_STR_BUFFER_LENGTH] = {0};
-
-   QAT_Response_Str(QAT_RC_QUIET, buffer);
    for (i = 0; i < num_scan; i++) {
+
+      int offset = 0;
+
       memscpy(temp_ssid,list[i].ssid_Length,list[i].ssid,list[i].ssid_Length);
       temp_ssid[list[i].ssid_Length] = '\0';
       if (list[i].ssid_Length == 0) {
-         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "+CWLAP:ssid = SSID Not available");
+         QAT_Response_Str(QAT_RC_QUIET, "+CWLAP:ssid = SSID Not available");
       } else
       {
          offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "+CWLAP:%s,%.2x-%.2x-%.2x-%.2x-%.2x-%.2x,%d,%d,", temp_ssid, 
@@ -149,60 +150,55 @@ static void scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "802.1X");
                }
-               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK){
+               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "PSK");
                }
-               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE){
+               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "SAE");
                }
             }
 
             if(list[i].rsn_Cipher){
                /* AP security can support multiple options hence we check each one separately. Note rsn == wpa2 */
-               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP){
+               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WEP");
                }
-               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP){
+               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP");
                }
-               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP){
+               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "AES");
                }
             }
 
             if(list[i].wpa_Auth) {
-               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_1X){
+               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "802.1X");
                }
-               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK){
+               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "PSK");
                }
             }
 
             if(list[i].wpa_Cipher) {
-               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP){
+               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WEP");
                }
-               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP){
+               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP");
                }
-               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP){
+               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "AES");
                }
             }
          } else {
             offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "NONE");
          }
+         QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
       }
+      
 
-      if(i!= num_scan - 1) {
-         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "\r\n");
-      } else {
-         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "\r\n");
-      }
    }
-
-   QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
 
    return;
 }
@@ -632,11 +628,14 @@ static QAT_Command_Status_t Extend_Command_Scan(uint32_t Op_Type, uint32_t Param
          bss_cnt = scan_complete_evt.num_bss_cur;
          qapi_WLAN_Scan_Comp_Evt_t *scan_complete_evt_total = malloc(sizeof(qapi_WLAN_Scan_Comp_Evt_t) + bss_cnt*sizeof(qapi_WLAN_BSS_Scan_Info_t));
          qapi_WLAN_Get_Scan_Results(deviceId, scan_complete_evt_total, &bss_cnt);
+         qurt_mutex_lock(&p_cxt->wifi_shell_cxt_mutex);
          if (scan_complete_evt_total) {
+            
             snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_scanresultstart:%d,%d",bss_cnt, p_cxt->scan_mode);
             QAT_Response_Str(QAT_RC_QUIET, buffer);
             scan_results(scan_complete_evt_total);
             snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_scanresultend");
+            qurt_mutex_unlock(&p_cxt->wifi_shell_cxt_mutex);
             QAT_Response_Str(QAT_RC_QUIET, buffer);
             free(scan_complete_evt_total);
          } else {
