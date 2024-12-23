@@ -233,6 +233,11 @@
 	#define NT_FN_WPA3
 	#endif//NT_FN_WPA3
 
+        /* flag for enabling PMK caching */
+        #ifndef FM_PMK_CACHING
+        #define FM_PMK_CACHING
+        #endif//FM_PMK_CACHING
+
 	/* flag for enabling H/W Crypto */
 	#ifndef NT_FN_HW_CRYPTO
 	//#define NT_FN_HW_CRYPTO

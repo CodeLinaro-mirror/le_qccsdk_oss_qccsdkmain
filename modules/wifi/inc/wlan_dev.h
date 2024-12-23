@@ -507,6 +507,32 @@ typedef struct ecsa_ctx_s
 }ecsa_ctx_t;
 #endif /*FEATURE_STA_ECSA*/
 
+#ifdef FM_PMK_CACHING
+#define NT_PMKINFO_MAX          1
+#define NT_PMKSA_MAX            5
+
+typedef struct pmkinfo_s
+{
+    uint8_t                    pmk[WMI_PMK_LEN];
+    uint8_t                    pmkid[SAE_PMKID_LEN];
+}pmkinfo_t;
+
+typedef struct pmksa_s
+{
+    uint8_t                     ni_macaddr[IEEE80211_ADDR_LEN];   /* peer mac address */
+    uint8_t                     num;
+    uint8_t                     replace_idx;
+    pmkinfo_t                   pmkinfo[NT_PMKINFO_MAX];
+}pmksa_t;
+
+typedef struct pmkcaching_s
+{
+    uint8_t                     num;
+    uint8_t                     replace_idx;  
+    pmksa_t                     pmksa[NT_PMKSA_MAX];
+}pmkcaching_t;
+#endif /*FM_PMK_CACHING*/
+
 typedef struct wpa3_tdi_ctx_s
 {
 	unsigned char		ssid[WMI_MAX_SSID_LEN + 1];
@@ -700,6 +726,11 @@ typedef struct devh_s {
  	ecsa_ctx_t *ecsa_ctx;
 #endif
     struct anti_param_s anti_param;
+
+#ifdef FM_PMK_CACHING
+    pmkcaching_t                pmkcaching;
+#endif
+
     wpa3_tdi_ctx_t wpa3_tdi_ctx;
 
 } devh_t;
@@ -780,6 +811,16 @@ void nt_wlan_init_dev_macaddr_for_conc(dev_common_t *pDevCmn);
 void nt_wlan_set_channel_idx(uint8_t chIdx);
 uint8_t nt_wlan_chck_ch_idx(uint8_t curr_chindex, NT_BOOL flag);
 void* nt_wlan_get_global_dev_addr(void *);
+
+#ifdef FM_PMK_CACHING
+void nt_wlan_save_pmk_info(devh_t *dev, conn_t *conn);
+void nt_wlan_clear_pmk_info(devh_t *dev);
+pmksa_t* nt_wlan_find_pmksa_by_addr(devh_t *dev, uint8_t *pAddr);
+uint8_t* nt_wlan_find_pmk_by_pmkid(devh_t *dev, uint8_t *pAddr, uint8_t *pmkid);
+void nt_wlan_clear_pmksa_by_addr(devh_t *dev, uint8_t *pAddr);
+void nt_wlan_set_sae_pmk(devh_t *dev, uint8_t *pAddr, uint8_t *pmkid);
+#endif /*FM_PMK_CACHING*/
+
 
 #ifdef __cplusplus
 }
