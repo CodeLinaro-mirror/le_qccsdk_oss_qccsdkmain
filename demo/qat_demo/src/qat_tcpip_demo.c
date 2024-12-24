@@ -82,6 +82,7 @@ static QAT_Command_t QAT_TCPIP_Command_List[] =
 #define QAT_INPUT_BUFFER_LENGTH                     1500
 #define TIMEOUT_TV_SEC					            1
 #define TIMEOUT_TV_USEC					            0
+#define INVALID_LINKID					            -1
 #define QAT_IP_PRINTF(...) printf(__VA_ARGS__)
 
 /** ping identifier - must fit on a u16_t */
@@ -105,7 +106,8 @@ static uint32_t ping_delay;
 static size_t ping_size;
 static uint32_t data_mode_max_len = 0;
 static uint32_t data_mode_total_send_len = 0;
-// static CircularBuffer *client_cb = NULL;
+
+static int data_mode_link_id = INVALID_LINKID;
 static QueueHandle_t client_queue = NULL;
 qurt_mutex_t client_mutex;
 client_ctx_t g_client_conns_t[QAT_CLIENT_MAX_CONNECTIONS];
@@ -652,7 +654,7 @@ int CircularBuffer_GetFreeSpace(CircularBuffer *cb) {
 }
 
 static void CleanupClientConnInfo(int link_id) {
-    g_client_conns_t[link_id].id = link_id;
+    g_client_conns_t[link_id].id = INVALID_LINKID;
     g_client_conns_t[link_id].sockfd = INVALID_FD;
     g_client_conns_t[link_id].protocol_type = PROTOCOL_INVALID;
     g_client_conns_t[link_id].active = INACTIVE;
@@ -1155,6 +1157,7 @@ static QAT_Command_Status_t Extend_Command_Send(uint32_t Op_Type, uint32_t Param
                 return rc;
             }
 
+            data_mode_link_id = link_id;
             data_mode_max_len = Parameter_List[1].Integer_Value;
             if(data_mode_max_len < 0){
                 QAT_Response_Str(QAT_RC_ERROR,"+CIPSEND:The len parameter must be greater than or equal to 0.\r\n");
@@ -1176,12 +1179,11 @@ static QAT_Command_Status_t Extend_Command_Send(uint32_t Op_Type, uint32_t Param
                                     Parameter_Count : (data_mode_max_len - data_mode_total_send_len);
 
             total_sent = 0;
-            sockfd = g_client_conns_t[link_id].sockfd;
-
+            sockfd = g_client_conns_t[data_mode_link_id].sockfd;
             while(total_sent < data_mode_one_send_len){
                 sent_bytes = send(sockfd, output_buf + total_sent, data_mode_one_send_len - total_sent, 0);
                 if(sent_bytes < 0){
-                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND FAILED, %d\r\n", link_id);
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND FAILED:%d\r\n", data_mode_link_id);
                     QAT_Response_Str(QAT_RC_ERROR, buffer);
                     return rc;
                 }
@@ -1191,10 +1193,11 @@ static QAT_Command_Status_t Extend_Command_Send(uint32_t Op_Type, uint32_t Param
             data_mode_total_send_len += data_mode_one_send_len;
             if(data_mode_total_send_len >= data_mode_max_len)
             {
-                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND DONE:%d\r\n", link_id);
+                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND DONE:%d\r\n", data_mode_link_id);
                 rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
                 data_mode_total_send_len = 0;
                 data_mode_max_len = 0;
+                data_mode_link_id = INVALID_LINKID;
                 QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
             }
             break;
