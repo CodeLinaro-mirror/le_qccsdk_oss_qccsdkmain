@@ -841,7 +841,7 @@ static void client_recv_thread(void *arg)
             break;
         }
         else if (ret == 0) {
-            QAT_IP_PRINTF("select timeout \r\n");
+            // QAT_IP_PRINTF("select timeout \r\n");
             continue;
         }
         else
