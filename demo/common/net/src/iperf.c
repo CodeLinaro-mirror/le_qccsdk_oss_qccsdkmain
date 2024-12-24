@@ -90,7 +90,8 @@ qurt_mutex_t serverLock;                                /* Lock to protect the g
 int sessionRefCount = 0;                                /* Total number of active TCP/SSL RX sessions */
 int tcpRefCount = 0;                                    /* Number of active TCP RX sessions */
 bench_tcp_server_t g_tcpServers[BENCH_TCP_MAX_SERVERS]; /* Array of TCP Server objects */
-int serverRefCount = 0;                                 /* Total number of active TCP/SSL Servers */
+int serverRefCount = 0;
+bool tcp_rx_rslt_created = false;                       /* indicate iperf_rx_show_result thread is created for tcp server */
 
 /***************************************************************************************
  *
@@ -1189,6 +1190,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
                     IPERF_PRINTF("TCP result task creation failed\r\n");
                     goto RET_OK;
                 }
+                tcp_rx_rslt_created = true;
             }
         }
     }
@@ -2058,12 +2060,6 @@ void iperf_rx_show_result(void *arg)
     {
         qurt_thread_sleep(iperf_display_interval);
 
-        if(iperf_rx_quit)
-        {
-            IPERF_PRINTF("Warning: iperf_rx_quit, iperf_rx_show_result quit! \n");
-             break;
-        }
-
         app_get_time(&iperf_curr_time);
 
         if (p_tCxt->protocol == UDP)
@@ -2761,10 +2757,16 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
     do
     {
-        if (iperf_rx_quit || tcp_server->exit || (get_device_connect_state() == false))
+        if ((iperf_rx_quit && !tcp_rx_rslt_created) || tcp_server->exit || (get_device_connect_state() == false))
         {
             goto tcp_rx_QUIT2;
         }
+
+        if(iperf_rx_quit && tcp_rx_rslt_created)
+        {
+            goto tcp_rx_QUIT;
+        }
+
         FD_SET(tcp_server->sockfd, &rset);
         tv.tv_sec = 10;
         if(select(tcp_server->sockfd+1, &rset, NULL, NULL, &tv) > 0)
