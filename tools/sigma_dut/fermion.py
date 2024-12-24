@@ -208,6 +208,7 @@ class Fermion_Command:
         return dutOutput
 
     def reAssocAp(self,reassoc_dict):
+        self.disconnectAp()
         if "pmfTag" in reassoc_dict.keys():
             self.pmfMode(reassoc_dict['pmfTag'])
         if "psk" in reassoc_dict.keys():
