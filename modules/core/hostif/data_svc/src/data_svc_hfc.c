@@ -175,6 +175,7 @@ int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint32_t tim
 		}
 		memcpy(p_buff, msg.data, len);
 		ret = QAPI_OK;
+		free(msg.buf);
 	}
 	
     return ret;
