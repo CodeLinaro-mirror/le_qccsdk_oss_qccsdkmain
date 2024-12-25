@@ -506,6 +506,15 @@ typedef struct ecsa_ctx_s
 	nt_osal_timer_handle_t ecsa_timer;
 }ecsa_ctx_t;
 #endif /*FEATURE_STA_ECSA*/
+
+typedef struct wpa3_tdi_ctx_s
+{
+	unsigned char		ssid[WMI_MAX_SSID_LEN + 1];
+	uint8_t				ssid_len;
+	uint8_t				mode;
+	uint32_t			last_update_time;
+}wpa3_tdi_ctx_t;
+
 typedef struct dev_common_s {
 	uint8_t						conc_mode;				//AP_STA concurrency or no concurrency
 	uint8_t						active_dev_cnt;			//Active device count
@@ -691,6 +700,7 @@ typedef struct devh_s {
  	ecsa_ctx_t *ecsa_ctx;
 #endif
     struct anti_param_s anti_param;
+    wpa3_tdi_ctx_t wpa3_tdi_ctx;
 
 } devh_t;
 
