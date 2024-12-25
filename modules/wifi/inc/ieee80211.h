@@ -349,6 +349,8 @@ typedef uint8_t *ieee80211_mgt_beacon_t;
 #define WFD_OUI_TYPE        0x09        /* WiFi-Direct IE */
 #define WFDSP_OUI_TYPE      0x0a        /* WiFi-Display IE */
 
+#define TRANSITION_DISABLE_WPA3_PERSONAL	0x01
+
 #define WMM_OUI         0xf25000
 #define WMM_OUI_TYPE        0x02
 #define WMM_INFO_OUI_SUBTYPE    0x00
