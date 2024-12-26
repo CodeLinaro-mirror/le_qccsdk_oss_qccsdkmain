@@ -802,7 +802,6 @@ static void client_recv_thread(void *arg)
         if(g_client_conns_t[*p_id].thread_quit){
             closesocket(client_fd);
             CircularBuffer_Destroy(g_client_conns_t[*p_id].cb);
-            CleanupClientConnInfo(*p_id);
             cleanGlobalQueue(client_queue, *p_id);
             qurt_mutex_lock(&client_mutex);
             ipd_message_print_flag = true;
@@ -810,6 +809,7 @@ static void client_recv_thread(void *arg)
             memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
             snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:CLOSED:%d\r\n", *p_id);
             QAT_Response_Str(QAT_RC_OK, buffer);
+            CleanupClientConnInfo(*p_id);
             break;
         }
 
@@ -910,13 +910,13 @@ static void client_recv_thread(void *arg)
 client_recv_fail:
     closesocket(client_fd);
     CircularBuffer_Destroy(g_client_conns_t[*p_id].cb);
-    CleanupClientConnInfo(*p_id);
     cleanGlobalQueue(client_queue, *p_id);
     qurt_mutex_lock(&client_mutex);
     ipd_message_print_flag = true;
     qurt_mutex_unlock(&client_mutex);
     snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:CLOSED:%d\r\n", *p_id);
-    QAT_Response_Str(QAT_RC_ERROR, buffer);
+    QAT_Response_Str(QAT_RC_QUIET, buffer);
+    CleanupClientConnInfo(*p_id);
     free(buffer);
     nt_osal_thread_delete(NULL);
     return;
@@ -1243,7 +1243,7 @@ static QAT_Command_Status_t Extend_Command_SendData(uint32_t Op_Type, uint32_t P
         case QAT_OP_EXEC_W_PARAM:
         {
             if( (Parameter_Count != 3) || (!Parameter_List) || (!Parameter_List[0].Integer_Is_Valid) 
-                    || (!Parameter_List[1].Integer_Is_Valid) || (Parameter_List[2].Integer_Is_Valid))
+                    || (!Parameter_List[1].Integer_Is_Valid))
             {
                 QAT_Response_Str(QAT_RC_ERROR, NULL);
                 return rc;
@@ -1918,7 +1918,7 @@ static QAT_Command_Status_t Extend_Command_Server(uint32_t Op_Type, uint32_t Par
 
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPSERVER:");
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%c,", 'S');
-                offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,%d,", "TCP", i);
+                offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%d,%s,", i, "TCP");
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,%d,", ipaddr_ntoa(&peer_ip_addr), ntohs(peer_port));
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,%d\r\n", ipaddr_ntoa(&local_ip_addr), ntohs(local_port));
                 }
@@ -2202,7 +2202,7 @@ static QAT_Command_Status_t Extend_Command_UdpServer(uint32_t Op_Type, uint32_t 
 
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPUDPSERVER:");
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%c,",'S');
-                offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,%d,", "UDP", i);
+                offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%d,%s,", i, "UDP");
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,%d,", ipaddr_ntoa(&peer_ip_addr), ntohs(peer_port));
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,%d\r\n", ipaddr_ntoa(&local_ip_addr), ntohs(local_port));
                 }
