@@ -70,7 +70,7 @@ class CLI_Helper:
     def writeSerial(self, command):
         logger.info("[DUT_CLI] %s --------> %s", self.port, command)
         retryTimes  = 0
-        try_max_cnt = 5
+        try_max_cnt = 50
         #Clear Buffer
         self.clear_buffer()
 
