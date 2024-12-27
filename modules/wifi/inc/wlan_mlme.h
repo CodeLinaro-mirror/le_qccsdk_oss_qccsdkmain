@@ -51,6 +51,10 @@ typedef struct umlme_struct {
     uint8_t                             challenge_ie[IEEE80211_CHALLENGE_LEN+2]; /* AP mode shared auth */
     uint16_t                            rsn_ie_len;
     uint8_t                             rsn_ie[MAX_WPA_IE_LEN];
+#ifdef FM_PMK_CACHING
+    uint16_t                            temp_rsn_ie_len;
+    uint8_t                             temp_rsn_ie[MAX_WPA_IE_LEN];
+#endif /*FM_PMK_CACHING*/
   /*  uint16_t                            wpa_ie_len;
     uint8_t                             wpa_ie[MAX_WPA_IE_LEN];*/
     uint8_t                             ieee80211_auth_alg;
@@ -251,5 +255,9 @@ NT_BOOL mlme_initialize_eosp_data_wait_timer(devh_t *dev, uint16_t ms);
  */
 void mlme_send_probe_req_for_sap_ps(devh_t *dev, uint8_t *dstAddr, uint8_t *bssid, ssid_t *ssidInfo);
 #endif
+
+#ifdef FM_PMK_CACHING
+void mlme_reset_pmkcach_parameters(devh_t *dev);
+#endif //FM_PMK_CACHING
 
 #endif /* _WLAN_MLME_H_ */

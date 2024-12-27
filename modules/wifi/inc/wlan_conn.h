@@ -138,7 +138,6 @@ typedef struct conn_s {
 #ifdef SUPPORT_COEX
    uint32_t                     backup_data_rate;
 #endif
-
 } conn_t;
 
 #define ni_challenge_ie shared_ie.challenge_ie
@@ -155,6 +154,7 @@ typedef struct conn_s {
 #define MLME_CONN_INIT_DONE             0x0040  /* MLME connection object is initialized */
 #define MLME_CONN_BSS                   0x0080  /* BSS connection object */
 #define MLME_CONN_NO_DISASSOC           0x0100  /* No diassoc at disconnect */
+#define MLME_CONN_PMK_CACHING           0x0200  /* bit indicates PMK caching */
 #define MLME_CONN_AUTH_SAE				0x0400  /* bit indicates sae ot open auth */
 
 #endif /* _WLAN_CONN_H_ */
