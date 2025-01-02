@@ -2173,9 +2173,7 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
         else if (0 == strcmp(Parameter_List[index].String_Value, "-c"))
 #endif
         {
-#ifndef CONFIG_QAT_MQTT_DEMO
             index++;
-#endif
             pMqttClientSess->connectInfo.cleanSession = true;
         }
         else
