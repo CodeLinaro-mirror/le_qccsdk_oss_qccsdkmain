@@ -1242,10 +1242,11 @@ static int unsubscribeFromTopic(MQTTClientSession_t *pMqttClientSess, MQTTClient
                 break;
             }
         }
-        if(sub_index != -1 && sub_index < MQTT_SUB_TOPIC_PER_SESSION_MAX)
+        if(sub_index != -1 && sub_index < MQTT_SUB_TOPIC_PER_SESSION_MAX && pMqttClientSess->subscribeInfo[sub_index].pTopicFilter)
         {
             pMqttClientSess->subscribeInfo[sub_index].topicFilterLength = 0;
             free((char *)pMqttClientSess->subscribeInfo[sub_index].pTopicFilter);
+            pMqttClientSess->subscribeInfo[sub_index].pTopicFilter = NULL;
         }
     }
     else
