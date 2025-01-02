@@ -2882,8 +2882,13 @@ qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
         else if (0 == strcmp(Parameter_List[index].String_Value, "-r"))
 #endif
         {
-            index++;
+           
+#ifdef CONFIG_QAT_MQTT_DEMO
+            pMqttCommand->mqtt_cmd.publish.retain = Parameter_List[index].Integer_Value !=0 ? true:false;
+#else
             pMqttCommand->mqtt_cmd.publish.retain = true;
+#endif
+            index++;
         }
         else
         {
