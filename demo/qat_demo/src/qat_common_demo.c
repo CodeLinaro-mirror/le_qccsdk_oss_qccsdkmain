@@ -459,7 +459,7 @@ static QAT_Command_Status_t Extend_Command_TIME(uint32_t Op_Type, uint32_t Param
       {
       	rc = QAT_Response_Str(QAT_RC_OK, "AT+TIME: get usage of command\r\n"\
 										 "AT+TIME?: get RTC time\r\n" \
-										 "AT+TIME=<year[1980-2100]>,<month[1-12]>,<day[1-31]>,<hour[0-23]>,<minute[0-59]>,<second[0-59]>,<day_Of_Weak[0-6]>: set RTC time");
+										 "AT+TIME=<year[1980-2100]>,<month[1-12]>,<day[1-31]>,<hour[0-23]>,<minute[0-59]>,<second[0-59]>,<day_Of_Week[0-6]>: set RTC time");
 		break;
 	  }
 	  case QAT_OP_QUERY: 	     /* AT+TIME */
@@ -488,7 +488,7 @@ static QAT_Command_Status_t Extend_Command_TIME(uint32_t Op_Type, uint32_t Param
         qapi_Status_t status;
 
 		if ( Parameter_Count != 7 ) {
-			return QAT_Response_Str(QAT_RC_ERROR, "AT+TIME=<year[1980-2100]>,<month[1-12]>,<day[1-31]>,<hour[0-23]>,<minute[0-59]>,<second[0-59]>,<day_Of_Weak[0-6]>: set RTC time");
+			return QAT_Response_Str(QAT_RC_ERROR, "AT+TIME=<year[1980-2100]>,<month[1-12]>,<day[1-31]>,<hour[0-23]>,<minute[0-59]>,<second[0-59]>,<day_Of_Week[0-6]>: set RTC time");
 		}
 
 		// check year
