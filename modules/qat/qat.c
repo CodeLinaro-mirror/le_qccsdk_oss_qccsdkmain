@@ -266,6 +266,17 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
          else if(HTC_Context.Input_String[Index] == '?')
          {
             Index ++;
+			
+			if((HTC_Context.Input_String[Index] != ';') 
+				&& (HTC_Context.Input_String[Index] != '\r')
+				&& (HTC_Context.Input_String[Index] != NULL))
+			{
+			   Result = false;
+               QAT_Response_Str(QAT_RC_ERROR, NULL);
+
+               break;
+			}
+				
             HTC_Context.Command_Flag |= QAT_STR_QU;
             *(char*)(Command_Name) = '\0';
 			is_exec = 0;
