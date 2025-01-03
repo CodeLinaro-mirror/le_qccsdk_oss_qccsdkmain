@@ -2635,7 +2635,12 @@ qapi_Status_t mqttc_publishRaw_Cache(uint32_t Parameter_Count, QAPI_Console_Para
         goto end;
     }
 
-    assert(pMqttCommand->mqtt_cmd.publish.pTopicName == NULL);
+    // assert(pMqttCommand->mqtt_cmd.publish.pTopicName == NULL);
+    if(pMqttCommand->mqtt_cmd.publish.pTopicName != NULL)
+    {
+        free(pMqttCommand->mqtt_cmd.publish.pTopicName);
+        pMqttCommand->mqtt_cmd.publish.pTopicName = NULL;
+    }
 
     /* Some fields not used by this demo so start with everything at 0. */
     (void) memset((void *) & (pMqttCommand->mqtt_cmd.publish), 0x00, sizeof(MQTTPublishInfo_t));
