@@ -212,14 +212,12 @@ void nt_gpio_preset(void)
         NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, regval | 0x0002C000); //0-18,25,26 : no pu, 14/15/17: pd
         #endif
 
-		#ifdef CONFIG_BOARD_QCC730_UART_ENABLE
 		/* UART op3: GPIO1 GPIO3*/
 		/* UART op1: GPIO13 GPIO14*/
 		/* UART op0: GPIO11 GPIO12*/
 		/* UART op2: GPIO9 GPIO10*/
         NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG,  CONFIG_BOARD_QCC730_GPIO_DEFAULT_PU_STATE); 
         NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG,  CONFIG_BOARD_QCC730_GPIO_DEFAULT_PD_STATE); 
-		#endif
         
     }
         
