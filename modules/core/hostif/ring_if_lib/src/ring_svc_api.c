@@ -739,6 +739,7 @@ bool ringif_f2a_clear_used_bufs(uint8_t ring_id, _pfn_clear_elem pfn_clear_elem)
            }
         } else {
            RINGIF_PRINT_LOG_ERR("ringif_f2a_clear_used_bufs: Invalid element ring_id:%d, idx:%d, read_idx:%d", ring_id, idx, read_idx);
+		   break;
         }
 
         num_cleared++;
