@@ -283,6 +283,13 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
             qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
             break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_ENCRYPTION_TYPE */
         }
+#ifdef CONFIG_WPS
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_WPS_CREDENTIALS: {
+            ret = (qapi_Status_t)wlan_wps_set_credentials(device_ID, (qapi_WLAN_WPS_Credentials_t *) data);
+            break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_WPS_CREDENTIALS */
+        }
+#endif
+
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;

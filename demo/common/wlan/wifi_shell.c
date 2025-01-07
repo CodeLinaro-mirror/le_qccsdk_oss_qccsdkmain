@@ -48,6 +48,8 @@
 #define SCAN_MODE_BLOCKING      1
 #define SCAN_MODE_UNBLOCKING    2
 
+#define MAX_WPS_PIN_SIZE        32
+
 #ifndef NT_MAX_DEVICES
 #define NT_MAX_DEVICES			2
 #endif
@@ -70,7 +72,15 @@ typedef struct wifi_shell_cxt_s {
     uint16_t        channel_frequency;
 	uint8_t			active_device;
         uint8_t                 wlan_enabled;
+    uint8_t         wps_stage;
 } wifi_shell_cxt_t;
+
+typedef struct {
+    uint8_t wps_in_progress;
+    uint8_t connect_flag;
+    uint8_t wps_pbc_interrupt;
+    qapi_WLAN_Netparams_t netparams;
+} wps_context_t;
 
 static wifi_shell_cxt_t g_wifi_shell_cxt;
 static wifi_shell_cxt_t *pg_wifi_shell_cxt;
@@ -185,6 +195,21 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
             printf("\nshell> ");
         }
     }
+}
+
+uint32_t chan_to_frequency(uint32_t channel)
+{
+    if (channel < 1 || channel > 165)
+    {
+        return 0;
+    }
+    if (channel < 27) {
+        channel = __QAPI_WLAN_CHAN_FREQ_1 + (channel-1)*5;
+    } else {
+        channel = (5000 + (channel*5));
+    }
+    return channel;
+
 }
 
 #ifdef CONFIG_QCSPI_HFC_ETH_ENABLE
@@ -418,6 +443,22 @@ int32_t get_wifi_power_mode()
 	info_printf("Power mode  = %s\n",data);
 	return 0;
 }
+
+uint32_t set_power_mode(qbool_t pwr_mode, uint8_t pwr_module)
+{
+    uint32_t deviceId = get_active_device();
+    qapi_WLAN_Power_Mode_Params_t pwrMode;
+
+    pwrMode.power_Mode = pwr_mode;
+    pwrMode.power_Module = pwr_module;
+    return qapi_WLAN_Set_Param(deviceId,
+            __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+            __QAPI_WLAN_PARAM_GROUP_WIRELESS_POWER_MODE_PARAMS,
+            (void *) &pwrMode,
+            sizeof(pwrMode),
+            FALSE);
+}
+
 int32_t get_device_mac_address()
 {
 	uint8_t mac[__QAPI_WLAN_MAC_LEN] = {0};
@@ -2308,6 +2349,136 @@ static qapi_Status_t getBmissThreshold(uint32_t __attribute__((__unused__)) Para
     return QAPI_OK;
 }
 
+#ifdef CONFIG_WPS
+wps_context_t wps_context;
+char wpsPin[MAX_WPS_PIN_SIZE];
+
+int32_t wps_push_setup(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t val = 0, wps_mode = 0;
+    qapi_WLAN_WPS_Credentials_t wpsScan, *wpsScan_p = NULL;
+    int j = 0;
+    qapi_WLAN_DEV_Mode_e wifi_mode;
+    uint32_t data_len = sizeof(qapi_WLAN_DEV_Mode_e);
+    uint32_t error = 0, deviceId = 0;
+    char data[32+1] = {'\0'};
+
+    deviceId = get_active_device();
+    error = qapi_WLAN_Get_Param (deviceId,
+                         __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                         __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+                         &wifi_mode,
+                         &data_len);
+    if (error != QAPI_OK)
+    {
+        info_printf("WPS failed\r\n");
+        return QAPI_ERROR;
+    }
+    if (wifi_mode == DEV_MODE_AP_E)
+    {
+        error = qapi_WLAN_Get_Param (deviceId,
+                             __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                             __QAPI_WLAN_PARAM_GROUP_WIRELESS_SSID,
+                             (void *) data,
+                             &data_len);
+        if (data_len == 0)
+        {
+            return QAPI_ERROR;
+        }
+        if (error != 0)
+        {
+            return QAPI_ERROR;
+        }
+    }
+
+    /* Initialize context */
+    wps_context.wps_in_progress = 0;
+    /* Connect flag */
+    wps_context.connect_flag = Parameter_List[0].Integer_Value;
+    /* Mode */
+    wps_mode = QAPI_WLAN_WPS_PBC_MODE_E;
+    /* Pin not used for WPS push mode */
+    memset(wpsPin, 0, MAX_WPS_PIN_SIZE);
+
+    if (Parameter_Count > 1)
+    {
+        /* SSID */
+        if (strlen(Parameter_List[1].String_Value) > __QAPI_WLAN_MAX_SSID_LEN)
+        {
+                info_printf("Invalid SSID length\r\n");
+                return QAPI_ERROR;
+        }
+        memset(wpsScan.ssid, 0, __QAPI_WLAN_MAX_SSID_LEN);
+        wpsScan.ssid_Length = strlen(Parameter_List[1].String_Value);
+        strlcpy((char*)(wpsScan.ssid), Parameter_List[1].String_Value, wpsScan.ssid_Length);
+
+        /* MAC address */
+        if(strlen((char *) Parameter_List[2].String_Value) != 12)
+        {
+            info_printf("Invalid MAC address\r\n");
+            return QAPI_ERROR;
+        }
+        memset(wpsScan.mac_Addr, 0, __QAPI_WLAN_MAC_LEN);
+        for(j=0; j < strlen((char *) Parameter_List[2].String_Value); j++)
+        {
+            val = ascii_to_hex(Parameter_List[2].String_Value[j]);
+            if(val == 0xff)
+            {
+                info_printf("Invalid character\r\n");
+                return QAPI_ERROR;
+            }
+            else
+            {
+                if((j&1) == 0)
+                {
+                    val <<= 4;
+                }
+                wpsScan.mac_Addr[j>>1] |= val;
+            }
+        }
+
+        /* Wireless channel */
+        wpsScan.ap_Channel = chan_to_frequency(Parameter_List[3].Integer_Value);
+        wpsScan_p = &wpsScan;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                __QAPI_WLAN_PARAM_GROUP_SECURITY_WPS_CREDENTIALS,
+                wpsScan_p,
+                sizeof(qapi_WLAN_WPS_Credentials_t),
+                FALSE))
+    {
+        info_printf("WPS failed\r\n");
+        return QAPI_ERROR;
+    }
+
+    if(qapi_WLAN_Start_Wps(deviceId, wps_context.connect_flag, wps_mode, wpsPin) != 0)
+    {
+        info_printf("WPS failed\r\n");
+        return QAPI_ERROR;
+    }
+
+    wps_context.wps_in_progress = true;
+    return QAPI_OK;
+}
+
+static qapi_Status_t wpsPushSetup(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    if( Parameter_Count < 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    if((Parameter_List[0].Integer_Value != 0) && (Parameter_List[0].Integer_Value != 1)) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    if (0 == wps_push_setup(Parameter_Count, Parameter_List))
+    {
+        return QAPI_OK;
+    }
+    return QAPI_ERROR;
+}
+#endif
+
 const QAPI_Console_Command_t wifi_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -2361,6 +2532,9 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { GetTxPower,           "GetTxPower",     "",                                  "Get the transmit power, reg_power, target power and CTL power"   },
     { setBmissThreshold, "setBmissThreshold", "<bmiss_threshold: 0~255>", "set beacon miss threshold"},
     { getBmissThreshold, "getBmissThreshold", "", "get beacon miss threshold"},
+#ifdef CONFIG_WPS
+    { wpsPushSetup, 	 "WpsPush", 		  "<connectFlag> [<ssid> <mac> <channel>]",    "Setup and start a WPS connection using the Push method"   },
+#endif
 
 };
 

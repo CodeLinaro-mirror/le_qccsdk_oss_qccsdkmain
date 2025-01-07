@@ -57,6 +57,9 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t                wlan_get_stat_block_mode:1;
     uint32_t                wlan_set_param_block_mode:1;
     uint32_t                wlan_get_regulatory_block_mode:1;
+#ifdef CONFIG_WPS
+    uint32_t                wlan_start_wps_block_mode:1;
+#endif
     uint32_t                wlan_roaming_started:1;
     uint32_t                wlan_set_rate_block_mode:1;
     uint32_t                wlan_get_rate_block_mode:1;
@@ -69,6 +72,9 @@ typedef struct wlan_qapi_cxt_s {
     WMI_CONNECT_CMD         connect_cmd;
     WMI_START_SCAN_CMD      scan_cmd;
     WMI_SET_PASSPHRASE_CMD  passphrase_cmd;
+#ifdef CONFIG_WPS
+    WMI_WPS_START_CMD	  wps_process_cmd;
+#endif
     WLAN_WMI_DISCONN_t      discon_cmd;
 	WMI_SET_PDEV_PARAM_CMD  dev_param_cmd;
     qapi_WLAN_Join_Comp_Evt_t connect_result;
@@ -78,6 +84,10 @@ typedef struct wlan_qapi_cxt_s {
     qbool_t                 disconnect_in_progress;
     qbool_t                 scan_in_progress;
     qbool_t                 wait_scan_comp_evt;
+#ifdef CONFIG_WPS
+    qbool_t                 wps_in_progress;
+    qbool_t                 wps_stage;
+#endif
     qbool_t                 connected;
     uint8_t                *pScanOut;       /* callers buffer to hold results. */
     uint16_t                pScanOutSize;
@@ -96,6 +106,9 @@ typedef struct wlan_qapi_cxt_s {
     WMI_SET_APPIE_CMD       appie_cmd;
     WMI_SET_TX_POWER_CMD    tx_power;
     qapi_WLAN_Get_Power_Evt_t get_tx_power_result;
+#ifdef CONFIG_WPS
+    WMI_WPS_START_CMD       wps_param;
+#endif
 } wlan_qapi_cxt_t;
 
 extern wlan_qapi_cxt_t *gp_wlan_qapi_cxt;

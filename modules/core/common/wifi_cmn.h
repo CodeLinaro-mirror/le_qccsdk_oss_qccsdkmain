@@ -211,6 +211,10 @@
 	#endif
 
 	/* flag for enabling WPS */
+	#ifndef CONFIG_WPS
+	#define CONFIG_WPS
+	#endif
+
 #ifdef CONFIG_WPS
 	#ifndef NT_FN_WPS
 	#define NT_FN_WPS

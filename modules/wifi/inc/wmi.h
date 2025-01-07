@@ -1298,7 +1298,7 @@ typedef PREPACK struct {
     WMI_WPS_DEV_TYPE      pri_dev_type;
     uint8_t     	      device_mode ;
     uint8_t  			  devId ;
-
+    uint8_t  			  auth_floor;
 } POSTPACK WMI_WPS_START_CMD;
 
 /* WMI_WPS_SET_CONFIG_STATE_CMD */

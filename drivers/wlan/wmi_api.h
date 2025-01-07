@@ -23,6 +23,9 @@
 #define WLAN_WMI_CMD_SIG_MASK_SEND_RAW				0x2000
 #define WLAN_WMI_CMD_SIG_MASK_SET_MGMT_FILTER		0x4000
 #define WLAN_WMI_CMD_SIG_MASK_GET_TX_POWER		    0x8000
+#ifdef CONFIG_WPS
+#define WLAN_WMI_CMD_SIG_MASK_STARTED_WPS_PROCESS	0x10000
+#endif
 
 extern qapi_Status_t wmi_cmd_send (WMI_COMMAND_ID cmd_id, void *p_data, uint32_t data_len);
 extern qapi_Status_t wmi_dev_cmd_send (WMI_COMMAND_ID cmd_id, uint8_t dev_id, void *p_data, uint32_t data_len);

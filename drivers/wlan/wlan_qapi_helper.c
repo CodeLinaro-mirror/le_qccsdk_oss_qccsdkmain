@@ -9,6 +9,9 @@
 #include "wlan_ra.h"
 #include "wmi_api.h"
 #include "safeAPI.h"
+#ifdef CONFIG_WPS
+#include "qapi_wlan_base.h"
+#endif
 
 #ifdef CONFIG_6GHZ
 /*11 for 2G and 30 for 5G and 24 for 6G */
@@ -1093,3 +1096,15 @@ qapi_Status_t wlan_get_bmiss_threshold(uint8_t *bmiss_threshold)
 
 	return QAPI_OK;
 }
+
+#ifdef CONFIG_WPS
+qapi_WLAN_WPS_Credentials_t gWpsCredentials;
+qapi_Status_t wlan_wps_set_credentials(uint8_t device_id, qapi_WLAN_WPS_Credentials_t *pwps_prof)
+{
+    /* save wps credentials */
+    memset(&gWpsCredentials, 0, sizeof(qapi_WLAN_WPS_Credentials_t));
+    if(pwps_prof != NULL)
+        memscpy(&gWpsCredentials, sizeof(gWpsCredentials), pwps_prof, sizeof(qapi_WLAN_WPS_Credentials_t));
+    return QAPI_OK;
+}
+#endif
