@@ -138,24 +138,20 @@ qbool_t QAT_Data_Transfer_Mode_Handle(uint32_t Length, uint8_t *Buffer)
          /* Process all received data. */
          while(Length)
          {
-            /* Check for a valid character, which here is any non control
-                  code lower ASCII (0x20 ' ' to 0x7E '~'). */
-            if((*Buffer >= ' ') && (*Buffer <= '~'))
+           
+            /* Make sure that the command buffer can fit the character. */
+            if(HTC_Context.Input_Length < QAT_MAXIMUM_COMMAND_STRING_LENGTH)
             {
-               /* Make sure that the command buffer can fit the character. */
-               if(HTC_Context.Input_Length < QAT_MAXIMUM_COMMAND_STRING_LENGTH)
-               {
-                  if(QAT_Echo_Enable)
-                  {
-                     QAT_Output(1, Buffer);
-                  }
-                  
-                  HTC_Context.Input_String[HTC_Context.Input_Length] = Buffer[0];
-                  HTC_Context.Input_Length++;
-            
-               }
+              if(QAT_Echo_Enable)
+              {
+                 QAT_Output(1, Buffer);
+              }
+              
+              HTC_Context.Input_String[HTC_Context.Input_Length] = Buffer[0];
+              HTC_Context.Input_Length++;
+        
             }
- 
+    
             /* Move to the next character in the buffer. */
             Buffer ++;
             Length --;
@@ -1116,7 +1112,7 @@ qbool_t QAT_RxTask_Start()
     qbool_t Ret_Val = true;
 	uint32_t ret_val;
 
-    ret_val =  (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 1024, NULL, 8, &qat_rx_task_hdl);
+    ret_val =  (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 1024, NULL, 6, &qat_rx_task_hdl);
     if(ret_val != pdPASS)
     {
    	 printf("QAT: task creation failed out of memory\r\n");
