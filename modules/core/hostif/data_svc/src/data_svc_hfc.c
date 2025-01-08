@@ -265,11 +265,19 @@ uint32_t data_svc_set_gpio_assert_info(uint32_t info)
 
 int hfc_rx_raw_ether(struct pbuf *p, struct netif *netif)
 {
-	uint8_t *buf = (uint8_t *)nt_osal_allocate_memory(p->len);
+	uint8_t *buf = NULL;
 
-	if (p->next != NULL || p->len>1600)
-	    printf("[%s][%d]: buff size %d %d next 0x%x\n", __func__, __LINE__, PBUF_POOL_BUFSIZE, p->len, p->next);
+	if (p->next != NULL || p->len>1600) {
+        //TODO for packets chain and payload is too big
+		printf("[%s][%d]: buff size %d %d next 0x%x\n", __func__, __LINE__, PBUF_POOL_BUFSIZE, p->len, p->next);
+        return 0;
+	}
 
+	buf = (uint8_t *)nt_osal_allocate_memory(p->len);
+
+	if (buf == NULL)
+		return 0;
+	
 	memcpy(buf, p->payload, p->len);
 
 	if (data_svc_hfc_send_data_pkt(buf, buf, p->len, 0) != QAPI_OK)
