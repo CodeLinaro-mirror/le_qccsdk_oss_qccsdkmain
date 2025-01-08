@@ -260,6 +260,7 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
             else
             {
                Result = false;
+               QAT_Response_Str(QAT_RC_ERROR, NULL);
                break;
             }
          }
@@ -422,6 +423,7 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
                         {
                         	  QAT_Printf("Invalid escape sequence \\x\n");
                         	  Result = false;
+                             QAT_Response_Str(QAT_RC_ERROR, NULL);
                         }
                      
                      }
@@ -429,12 +431,14 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
                      {
                         QAT_Printf("Invalid escape sequence \"\\%c\"\n", HTC_Context.Input_String[Index + 1]);
                         Result = false;
+                        QAT_Response_Str(QAT_RC_ERROR, NULL);
                      }
                   }
                   else
                   {
                      QAT_Printf("Invalid escape sequence\n");
                      Result = false;
+                     QAT_Response_Str(QAT_RC_ERROR, NULL);
                   }
                }
             
