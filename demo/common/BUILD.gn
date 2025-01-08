@@ -65,11 +65,12 @@ qcc_demo_src = [
 not_needed("*", [ ])
 
 config("_config") {
+    include_dirs = []
     if (CONFIG_PROF) {
-        include_dirs = prof_demo_inc
+        include_dirs += prof_demo_inc
     }
     if (CONFIG_FW_UPGRADE) {
-        include_dirs = ota_demo_inc
+        include_dirs += ota_demo_inc
     }
 }
 
