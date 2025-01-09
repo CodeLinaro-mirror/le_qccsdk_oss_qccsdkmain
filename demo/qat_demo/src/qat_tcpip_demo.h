@@ -12,7 +12,7 @@
 #include "autoconf.h"
 
 #ifndef QAT_MAX_MTU_PACKET_SIZE
-#define QAT_MAX_MTU_PACKET_SIZE         1462
+#define QAT_MAX_MTU_PACKET_SIZE         1370
 #endif	
 
 #ifndef QAT_CIRCULAR_BUFFER_SIZE
