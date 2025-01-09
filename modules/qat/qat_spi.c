@@ -26,7 +26,7 @@
  *-----------------------------------------------------------------------*/
 #define SPI_TX_MAX_LEN 			 128
 #define SPI_RECV_MAX_LEN		 SPI_TX_MAX_LEN
-#define INPUT_BUFFER_SIZE        1024
+#define INPUT_BUFFER_SIZE        1400
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -74,14 +74,18 @@ void SPIRxTasks(void *arg)
     {
 	    if (qapi_hfc_recvfrom_host_data_pkt(SPI_Rcv_Buff, &buf_len, timeout, &data_len, NULL) == QAPI_OK)
 		{		    
+			/*
 			printf("\r\nSPIRx cmd %d:", data_len);
+			
 			for (i=0; i<data_len; i++)
 			{
 			    printf("%c", SPI_Rcv_Buff[i]);
 			}
 			printf("\r\n");
+			*/
 			if(Process_Input_Data_Handle)
 		        Process_Input_Data_Handle(data_len, SPI_Rcv_Buff);
+		    
 			
 		}		
     }
@@ -122,7 +126,7 @@ int QAT_SPI_Output(uint32_t Length, const char *Buffer)
     		ret = qapi_hfc_sendto_host_data_pkt(payload, payload, Length, 0);
             if (0 == ret)
         	{
-    			printf("\r\nSPITx resp %d: %s\r\n", Length, (char*)payload);
+    			//printf("\r\nSPITx resp %d: %s\r\n", Length, (char*)payload);
     			break;
     		} 
     
