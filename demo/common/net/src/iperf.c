@@ -101,6 +101,10 @@ bool tcp_rx_rslt_created = false;                       /* indicate iperf_rx_sho
 #define TCP_QUEUE_PBUF_THRESHOLD_DEFAULT    21
 #define TCP_QUEUE_PBUF_THRESHOLD_LOW    12
 #define TCP_QUEUE_PBUF_THRESHOLD_STEP    3
+
+#define Mbps (1000 * 1000)
+#define Kbps 1000
+
 extern uint8_t tcp_queue_pbuf_threshold;
 void iperf_incrs_tcp_queue_pbuf_thrsh(void)
 {
@@ -750,6 +754,9 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
     int operation_mode = -1;
     int reverse_mode = 0;
     unsigned int udpRate = IPERF_DEFAULT_UDP_RATE;
+    unsigned int tcpRate = IPERF_DEFAULT_TCP_RATE;
+    unsigned int bandwidth_unit = 0;
+    char *rateString = NULL;
     unsigned short mcastEnabled = 0;
     int ip_tos = 0;
     unsigned int sndbuf_size = 0;
@@ -903,14 +910,38 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         else if (0 == strcmp(Parameter_List[index].String_Value, "-b"))
         {
             index++;
-            udpRate = Parameter_List[index].Integer_Value;
+            rateString = Parameter_List[index].String_Value;
             index++;
 
-            if (udpRate == 0 || udpRate > 100)
+            if (rateString[strlen(rateString) - 1] == 'M')
             {
-                IPERF_PRINTF("error: invalid bandwidth value, unit is Mbps, should less 100\n");
-                return QAPI_ERR_INVALID_PARAM;
+                rateString[strlen(rateString) - 1] = '\0';
+                udpRate = atoi(rateString);
+                tcpRate = udpRate;
+                bandwidth_unit = 0; // Mbps
+                if (udpRate == 0 || udpRate > 100)
+                {
+                    IPERF_PRINTF("error: invalid bandwidth value, unit is Mbps, should less 100\n");
+                    return QAPI_ERR_INVALID_PARAM;
+                }
             }
+            else if (rateString[strlen(rateString) - 1] == 'K')
+            {
+                rateString[strlen(rateString) - 1] = '\0';
+                udpRate = atoi(rateString);
+                tcpRate = udpRate;
+                bandwidth_unit = 1;  //Kbps
+                if (udpRate == 0 || udpRate > 100000)
+                {
+                    IPERF_PRINTF("error: invalid bandwidth value, unit is Kbps, should less 100000\n");
+                    return QAPI_ERR_INVALID_PARAM;
+                }
+            }
+            else 
+            {
+                IPERF_PRINTF("error: invalid bandwidth format, valid input example: \"500K\" or \"5M\"\n");
+            }
+            
         }
 #if TO_CHECK
         else if (0 == strcmp(Parameter_List[index].String_Value, "-V"))
@@ -960,6 +991,8 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
     memset(tCxt, 0, sizeof(THROUGHPUT_CXT));
     tCxt->pktStats.iperf_display_interval = interval;
     tCxt->pktStats.iperf_udp_rate = udpRate;
+    tCxt->pktStats.iperf_tcp_rate = tcpRate;
+    tCxt->bandwidth_unit = bandwidth_unit;
 
     tCxt->tcp_snd_buf = sndbuf_size*TCP_MSS;
 
@@ -1602,7 +1635,6 @@ void iperf_udp_ack_finish(THROUGHPUT_CXT *p_tCxt, struct sockaddr *faddr, uint32
     }
 }
 
-#define Mbps 1000000
 static void iperf_client_send(void *arg)
 {
     THROUGHPUT_CXT *p_tCxt = (THROUGHPUT_CXT *)arg;
@@ -1625,6 +1657,13 @@ static void iperf_client_send(void *arg)
     uint32_t iperf_udp_packets_counter = 0;
     uint32_t iperf_udp_start_time = 0;
     uint32_t iperf_curr_time;
+    uint32_t iperf_tcp_packets_per_second = 0;
+    uint32_t iperf_tcp_packets_per_divided_second = 0;
+    uint32_t iperf_tcp_packets_per_res_second = 0;
+    uint32_t iperf_tcp_packets_counter = 0;
+    uint32_t iperf_tcp_start_time = 0;
+    uint32_t qurt_sleep_one_second_to_be_divided = 10;
+    uint32_t qurt_sleep_counter = 0;
 
     /* Sending.*/
     IPERF_PRINTF("Sending\n");
@@ -1643,8 +1682,49 @@ static void iperf_client_send(void *arg)
     /* Convert bps to B/s, and then to packets/sec */
     if (p_tCxt->protocol == UDP)
     {
-        iperf_udp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_udp_rate * Mbps / 8) / p_tCxt->params.tx_params.packet_size);
+        if (p_tCxt->bandwidth_unit == 0)  /* Mbps */
+        {
+            iperf_udp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_udp_rate * Mbps / 8) / p_tCxt->params.tx_params.packet_size);
+        }
+        else /* Kbps */
+        {
+            iperf_udp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_udp_rate * Kbps / 8) / p_tCxt->params.tx_params.packet_size);
+        }
         app_get_time(&iperf_udp_start_time);
+    }
+    else if (p_tCxt->protocol == TCP && p_tCxt->pktStats.iperf_tcp_rate != 0)
+    {
+        /* calculate the packets according to the rate */
+        if (p_tCxt->bandwidth_unit == 0)
+        {
+            iperf_tcp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_tcp_rate * Mbps / 8) / p_tCxt->params.tx_params.packet_size);
+        }
+        else
+        {
+            iperf_tcp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_tcp_rate * Kbps / 8) / p_tCxt->params.tx_params.packet_size);
+        }
+
+        /* divide the time to different slices according to the packets send per second */
+        if (iperf_tcp_packets_per_second > 20)
+        {
+            qurt_sleep_one_second_to_be_divided = 10;
+            iperf_tcp_packets_per_divided_second = iperf_tcp_packets_per_second / qurt_sleep_one_second_to_be_divided;
+            iperf_tcp_packets_per_res_second = iperf_tcp_packets_per_second - iperf_tcp_packets_per_divided_second * qurt_sleep_one_second_to_be_divided;
+        }
+        else if (iperf_tcp_packets_per_second > 5 && iperf_tcp_packets_per_second <= 20)
+        {
+            qurt_sleep_one_second_to_be_divided = 5;
+            iperf_tcp_packets_per_divided_second = iperf_tcp_packets_per_second / qurt_sleep_one_second_to_be_divided;
+            iperf_tcp_packets_per_res_second = iperf_tcp_packets_per_second - iperf_tcp_packets_per_divided_second * qurt_sleep_one_second_to_be_divided;
+        }
+        else
+        {
+            qurt_sleep_one_second_to_be_divided = 5;
+            iperf_tcp_packets_per_divided_second = 1;
+            iperf_tcp_packets_per_res_second = 0;
+        }
+        
+        app_get_time(&iperf_tcp_start_time);
     }
     iperf_display_interval = p_tCxt->pktStats.iperf_display_interval; // second
     iperf_display_last = p_tCxt->pktStats.first_time;
@@ -1795,6 +1875,39 @@ static void iperf_client_send(void *arg)
                     /* Restart the timer and clear the counter */
                     app_get_time(&iperf_udp_start_time);
                     iperf_udp_packets_counter = 0;
+                }
+            }
+            else if (p_tCxt->protocol == TCP && p_tCxt->pktStats.iperf_tcp_rate != 0)
+            {
+                iperf_tcp_packets_counter++;
+
+                if (( qurt_sleep_counter < qurt_sleep_one_second_to_be_divided - 1) && (iperf_tcp_packets_counter == iperf_tcp_packets_per_divided_second) ||
+                    (qurt_sleep_counter == qurt_sleep_one_second_to_be_divided - 1) && (iperf_tcp_packets_counter == iperf_tcp_packets_per_divided_second + iperf_tcp_packets_per_res_second))
+                {
+                    uint32_t iperf_diff_time = 0;
+
+                    /* Get the current time and calculate the sleep needed till the end of the second */
+                    // app_get_time(&iperf_curr_time);
+                    iperf_curr_time = now;
+                    iperf_diff_time = iperf_curr_time - iperf_tcp_start_time;
+
+                    /* Check that the diff is less than a second. If it's more than 1/QURT_SLEEP_ONE_SECOND_TO_BE_DIVIDED second,
+                     * it means that we were asked to limit the bandwidth to a value we cannot
+                     * reach, so we are behind. In this case, no sleep is required, just push as much as
+                     * we can...
+                     */
+                    if (qurt_sleep_counter == qurt_sleep_one_second_to_be_divided - 1)
+                        qurt_sleep_counter = 0;
+
+                    if (iperf_diff_time < (1000 / qurt_sleep_one_second_to_be_divided))
+                    {
+                        qurt_thread_sleep((1000 / qurt_sleep_one_second_to_be_divided) - iperf_diff_time);
+                        qurt_sleep_counter++;
+                    }
+
+                    /* Restart the timer and clear the counter */
+                    app_get_time(&iperf_tcp_start_time);
+                    iperf_tcp_packets_counter = 0;
                 }
             }
             /*Test mode can be "number of packets" or "fixed time duration"*/
@@ -1951,8 +2064,12 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
     }
 
     IPERF_PRINTF("------------------------------------------------------------\n");
-    IPERF_PRINTF("Client connecting to %s, UDP port %d, bandwidth:%dMbps\n", ip_str, p_tCxt->params.tx_params.port,
-                 p_tCxt->pktStats.iperf_udp_rate);
+    if (p_tCxt->bandwidth_unit == 0)
+        IPERF_PRINTF("Client connecting to %s, UDP port %d, bandwidth:%dMbps\n", ip_str, p_tCxt->params.tx_params.port,
+                    p_tCxt->pktStats.iperf_udp_rate);
+    else
+        IPERF_PRINTF("Client connecting to %s, UDP port %d, bandwidth:%dKbps\n", ip_str, p_tCxt->params.tx_params.port,
+            p_tCxt->pktStats.iperf_udp_rate);
     IPERF_PRINTF("------------------------------------------------------------\n");
 
     /* Create UDP socket */
