@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #include "safeAPI.h"
-#include "posix/errno.h"
+#include "FreeRTOS_POSIX/errno.h"
 
 #if !defined (_TRUNCATE)
 #define _TRUNCATE ((size_t)-1)
