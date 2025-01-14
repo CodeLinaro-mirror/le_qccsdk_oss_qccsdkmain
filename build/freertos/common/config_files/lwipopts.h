@@ -203,6 +203,7 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #define LWIP_SO_SNDTIMEO 				1
 
 #define LWIP_SO_RCVBUF                  1
+#define LWIP_SO_SNDBUF                  1
 
 /* the number of struct netconns. */
 #define MEMP_NUM_NETCONN                8
