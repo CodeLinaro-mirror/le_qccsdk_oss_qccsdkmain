@@ -187,6 +187,14 @@ enum ota_image_format {
 
 #define SBL_SHARE_VER 1
 
+#define PART_SIZE   10 /**< part map size */
+
+// define struct with id and addr
+typedef struct {
+    uint32_t id;
+    uint32_t addr;
+} IDAddr;
+
 typedef struct {
 	uint32_t magic_num;
 	uint8_t ver;
@@ -194,9 +202,11 @@ typedef struct {
 	uint8_t rsv1;
 	uint8_t rsv2;
 	uint32_t bdf_addr;
+	IDAddr fdt_part[PART_SIZE];
 } boot_sbl_share;
 
 uint32_t bdf_addr;
+IDAddr fdt_part[PART_SIZE];
 
 void __attribute__ ((section(".after_vectors"),noreturn,weak))
 _start (void* arg)
@@ -287,6 +297,8 @@ _start (void* arg)
 		}
 
 	bdf_addr = sbl_share.bdf_addr;
+	
+	memcpy(fdt_part, sbl_share.fdt_part, sizeof(sbl_share.fdt_part));
 
 	// Copying of pbl_log from temp_buffer to pbl_log_buffer
 	memscpy(&pbl_log_buff[0], temp_log_arr[0], &temp_log_arr[0], temp_log_arr[0] );
