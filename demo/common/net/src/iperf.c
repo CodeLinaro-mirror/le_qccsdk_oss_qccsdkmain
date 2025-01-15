@@ -752,6 +752,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
     unsigned int udpRate = IPERF_DEFAULT_UDP_RATE;
     unsigned short mcastEnabled = 0;
     int ip_tos = 0;
+    unsigned int sndbuf_size = 0;
 
     unsigned int ipAddress = 0;
     unsigned int numOfPkts = 0;
@@ -934,6 +935,16 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             IPERF_PRINTF("Usage: iperf [-s|-c host] [options]\n");
             IPERF_PRINTF("       iperf [-h]\n");
         }
+        else if (0 == strcmp(Parameter_List[index].String_Value, "-w"))
+        {
+            index++;
+            sndbuf_size = Parameter_List[index].Integer_Value;
+            if(sndbuf_size <= 0 || sndbuf_size > 24)
+            {
+                IPERF_PRINTF("error: invalid sndbuf size value\n");
+                return QAPI_ERR_INVALID_PARAM;
+            }
+        }
         else
         {
             /*silent ignore*/
@@ -949,6 +960,8 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
     memset(tCxt, 0, sizeof(THROUGHPUT_CXT));
     tCxt->pktStats.iperf_display_interval = interval;
     tCxt->pktStats.iperf_udp_rate = udpRate;
+
+    tCxt->tcp_snd_buf = sndbuf_size*TCP_MSS;
 
     if (operation_mode == IPERF_CLIENT)
     {
@@ -2511,6 +2524,11 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
     {
         IPERF_PRINTF("ERROR: Unable to create socket\n");
         goto ERROR_1;
+    }
+
+    if(p_tCxt->tcp_snd_buf > 0)
+    {
+        setsockopt(p_tCxt->sock_peer, SOL_SOCKET,SO_SNDBUF, &p_tCxt->tcp_snd_buf, sizeof(int));
     }
 
     if (p_tCxt->params.tx_params.ip_tos > 0)

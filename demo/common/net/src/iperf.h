@@ -189,6 +189,7 @@ typedef struct throughput_cxt
     uint8_t echo:1;
     void *session;
     TaskHandle_t rx_task_handler;
+    uint16_t tcp_snd_buf;
 } THROUGHPUT_CXT;
 
 typedef struct {
