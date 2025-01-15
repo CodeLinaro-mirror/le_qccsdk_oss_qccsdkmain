@@ -76,7 +76,7 @@ extern void qurt_thread_sleep(uint32_t duration);
 //uint8_t iperf_tx_quit;
 //uint8_t iperf_rx_quit;
 
-#define MAX_STREAM 4
+#define MAX_STREAM 10
 uint8_t iperf_stream_id[MAX_STREAM] = {0};
 uint16_t bench_udp_rx_port_in_use[MAX_STREAM] = {0}; /* Used to prevent two udp rx streams from using the same port */
 
