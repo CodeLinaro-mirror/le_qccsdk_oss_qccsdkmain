@@ -66,6 +66,7 @@ typedef struct wifi_shell_cxt_s {
     qbool_t         connected;
     char            ssid[__QAPI_WLAN_MAX_SSID_LEN+1];
     int32_t         ssid_length;
+    uint8           bssid[6];
     uint16_t        channel_frequency;
 	uint8_t			active_device;
         uint8_t                 wlan_enabled;
@@ -233,6 +234,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
 			memscpy(p_cxt->ssid, cxnInfo->ssid_Length, cxnInfo->ssid, cxnInfo->ssid_Length);
 			p_cxt->ssid[cxnInfo->ssid_Length] = 0;
 			p_cxt->ssid_length = cxnInfo->ssid_Length;
+			memscpy(p_cxt->bssid, 6, cxnInfo->bssid, 6);
 		}
         p_cxt->channel_frequency = cxnInfo->channel_frequency;
         if(cxnInfo->evt_hdr.status == QAPI_OK){
@@ -482,6 +484,7 @@ static qapi_Status_t Info(uint32_t __attribute__((__unused__)) Parameter_Count, 
     {
         info_printf("ssid        = %s\n", p_cxt->ssid);
         info_printf("channel     = %d \n", p_cxt->channel_frequency);
+        info_printf("bssid       = %02x:%02x:%02x:%02x:%02x:%02x\n",p_cxt->bssid[0],p_cxt->bssid[1],p_cxt->bssid[2],p_cxt->bssid[3],p_cxt->bssid[4],p_cxt->bssid[5]);
     }
 
     get_phy_mode();

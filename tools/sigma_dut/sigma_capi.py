@@ -264,10 +264,10 @@ class sigma_CAPI:
         return dutResult
 
     def sta_get_mac_address(self):
-        bssid = self.objDut.getBssid()
-        if bssid is not None:
-            dutResult = "mac,%s" %bssid
-            logger.debug( "DUT bssid is:%s!!!" %bssid)
+        MacAddr = self.objDut.getMacAddr()
+        if MacAddr is not None:
+            dutResult = "mac,%s" %MacAddr
+            logger.debug( "DUT MacAddr is:%s!!!" %MacAddr)
         else:
             dutResult = None
         return dutResult

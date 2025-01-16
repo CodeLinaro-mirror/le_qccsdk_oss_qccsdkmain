@@ -92,9 +92,15 @@ class Fermion_Command:
 
     def getBssid(self):
         dutOutput = self.ser.writeSerial("wlan info")
-        pattern   = "Mac Addr(\s+)=(\s+)(([0-9A-F]{1,2}[:]){5}[0-9A-F]{1,2})"
+        pattern   = "bssid(\s+)=(\s+)(([0-9A-F]{1,2}[:]){5}[0-9A-F]{1,2})"
         bssid    = self.getMatchingInfo(pattern,dutOutput,3)
         return bssid
+
+    def getMacAddr(self):
+        dutOutput = self.ser.writeSerial("wlan info")
+        pattern   = "Mac Addr(\s+)=(\s+)(([0-9A-F]{1,2}[:]){5}[0-9A-F]{1,2})"
+        MacAddr    = self.getMatchingInfo(pattern,dutOutput,3)
+        return MacAddr
 
     def getDutConnectStatus(self):
         dutOutput = self.ser.writeSerial("wlan info")
