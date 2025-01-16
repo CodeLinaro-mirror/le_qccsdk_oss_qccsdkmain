@@ -3,6 +3,14 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
+/*
+ * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * NOT A CONTRIBUTION
+ */
+ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,25 +22,14 @@
 #include <time.h>
 #include <sys/queue.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/timers.h"
-#include "freertos/event_groups.h"
+#include "FreeRTOS.h"
+#include "timers.h"
+#include "event_groups.h"
 #include "lwip/err.h"
 #include "lwip/sockets.h"
-#include "cJSON.h"
 
-#include "esp_wifi.h"
-#include "esp_err.h"
-#include "esp_log.h"
-#include "esp_system.h"
-#include "esp_vfs.h"
-#include "esp_ota_ops.h"
-#include "esp_image_format.h"
-#include "esp_flash_partitions.h"
-#include "esp_partition.h"
-#include "esp_mac.h"
 
-#include "esp_at.h"
+#define CONFIG_AT_WEB_SERVER_SUPPORT 
 
 #ifdef CONFIG_AT_WEB_SERVER_SUPPORT
 #include "esp_http_server.h"
@@ -88,11 +85,18 @@ static char *s_at_web_redirect_url = NULL;
 #define ESP_AT_WEB_HEADER_AUTH_NAME                    ("Object")
 #define ESP_AT_UPGRADE_PARTITION_NAME                  ("ota")
 
+/**
+ * Maximum length of path prefix (not including zero terminator)
+ */
+#define ESP_VFS_PATH_MAX 15
+
+#if 0
 extern void at_wifi_reconnect_stop(void);
 extern void at_wifi_reconnect_init(bool force);
 extern esp_err_t at_wifi_connect(void);
 extern esp_err_t at_wifi_disconnect(void);
 extern esp_err_t at_wifi_scan_start(const wifi_scan_config_t *config, bool block);
+#endif
 
 typedef struct router_obj {
     uint8_t ssid[32];
@@ -133,6 +137,33 @@ typedef struct {
     char rx_buffer[32];
 } udp_broadcast_info_t;
 
+/**
+ * @brief the result of AT parse
+ *
+ */
+typedef enum {
+    ESP_AT_PARA_PARSE_RESULT_FAIL = -1,           /*!< parse fail,Maybe the type of parameter is mismatched,or out of range */
+    ESP_AT_PARA_PARSE_RESULT_OK = 0,              /*!< Successful */
+    ESP_AT_PARA_PARSE_RESULT_OMITTED,             /*!< the parameter is OMITTED. */
+} esp_at_para_parse_result_type;
+
+/**
+ * @brief the result code of AT command processing
+ *
+ */
+typedef enum {
+    ESP_AT_RESULT_CODE_OK           = 0x00,       /*!< "OK" */
+    ESP_AT_RESULT_CODE_ERROR        = 0x01,       /*!< "ERROR" */
+    ESP_AT_RESULT_CODE_FAIL         = 0x02,       /*!< "ERROR" */
+    ESP_AT_RESULT_CODE_SEND_OK      = 0x03,       /*!< "SEND OK" */
+    ESP_AT_RESULT_CODE_SEND_FAIL    = 0x04,       /*!< "SEND FAIL" */
+    ESP_AT_RESULT_CODE_IGNORE       = 0x05,       /*!< response nothing, just change internal status */
+    ESP_AT_RESULT_CODE_PROCESS_DONE = 0x06,       /*!< response nothing, just change internal status */
+    ESP_AT_RESULT_CODE_OK_AND_INPUT_PROMPT = 0x07,    // "OK" and ">"
+    ESP_AT_RESULT_CODE_MAX
+} esp_at_result_code_string_index;
+
+
 static web_server_context_t *s_web_context = NULL;
 static httpd_handle_t s_server = NULL;
 static int32_t s_at_web_wifi_reconnect_timeout = ESP_AT_WEB_WIFI_MAX_RECONNECT_TIMEOUT;
@@ -157,6 +188,9 @@ static wl_handle_t s_wl_handle = WL_INVALID_HANDLE; // Handle of the wear levell
 static BYTE pdrv = 0xFF;
 #endif
 
+esp_err_t at_read_wifi_info(void);
+
+#if 0
 static uint8_t at_web_get_mac_match_len(uint8_t *mac1, uint8_t *mac2, uint8_t mac_length)
 {
     uint8_t match_len = 0;
@@ -627,6 +661,7 @@ err:
     ESP_LOGW(TAG, "scan filter error");
     return ESP_FAIL;
 }
+#endif
 
 static int at_web_url_decode(char *src, int src_len, char *des, int des_len)
 {
@@ -731,14 +766,128 @@ static esp_err_t web_common_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 #else
+const char *response =
+	  "HTTP/1.1 200 OK\r\n"
+	  "Content-Type: text/html\r\n"
+	  "Content-Length: 13\r\n"
+	  "\r\n"
+	  "Hello, World!";
+
+#if 0
+const char *index_start = 
+	"<!DOCTYPE html>"
+	"<html lang='en'>"
+	"<head>"
+	    "<meta charset='UTF-8'>"
+	    "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+	    "<title>WiFi Configuration</title>"
+	    "<script>"
+	        "function sendWiFiConfig() {"
+	            "alert('submit start...');"
+	            "const ssid = document.getElementById('ssid').value;"
+	            "const password = document.getElementById('password').value;"
+
+	            "const wifiConfig = {"
+	                "ssid: ssid,"
+	                "password: password"
+	            "};"
+
+                "alert('fetch start...');"
+
+	            "fetch('/configure-wifi', {"
+	                "method: 'POST',"
+	                "headers: {"
+	                    "'Content-Type': 'application/json'"
+	                "},"
+	                "body: JSON.stringify(wifiConfig)"
+	            "})"
+	            ".then(response => response.json())"
+	            ".then(data => {"
+	                "alert('WiFi configuration sent successfully!');"
+	           "})"
+	            ".catch(error => {"
+	                "console.error('Error:', error);"
+	                "alert('Failed to send WiFi configuration.');"
+	            "});"
+	        "}"
+	    "</script>"
+	"</head>"
+	"<body>"
+	    "<h1>Configure WiFi</h1>"
+	    "<form onsubmit='event.preventDefault();sendWiFiConfig();'>"
+	        "<label for='ssid'>WiFi SSID:</label>"
+	        "<input type='text' id='ssid' required>"
+	        "<br><br>"
+	        "<label for='password'>Password:</label>"
+	        "<input type='password' id='password' required>"
+	        "<br><br>"
+	        "<input type='submit' value='Submit'>"
+	    "</form>"
+	"</body>"
+	"</html>";
+#else
+
+char wifi_ssid[32] = "httpd_ap";
+char wifi_pwd[32] = "12345678";
+
+char html_buf[1024] = {0};
+
+#if 0
+const char *index_start = 
+	//"<!DOCTYPE html>"
+	"<html lang='en'>"
+	"<head>"
+	    "<meta charset='UTF-8'>"
+	    "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+	    "<title>Wi-Fi Configuration</title>"
+	"</head>"
+	"<body>"
+	    "<h1>Wi-Fi Setup</h1>"
+	    "<form action='/setstainfo' method='POST'>"
+	        "<label for='ssid'>SSID:</label><br>"
+	        "<input type='text' id='ssid' name='ssid' required>"
+	        "<br><br>"
+	        "<label for='password'>Password:</label>"
+	        "<input type='password' id='password' name='password' required>"
+	        "<br><br>"
+	        "<button type='submit'>Submit</button>"
+	        //"<input name='Submit' type='submit' value='Submit'>"
+	    "</form>"
+	"</body>"
+	"</html>";
+#else
+const char *html_start = 
+	"<html lang='en'>"
+	"<head>"
+	    "<meta charset='UTF-8'>"
+	    "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+	    "<title>Wi-Fi Configuration</title>"
+	"</head>"
+	"<body>"
+	    "<h1>Wi-Fi Setup</h1>"
+	    "<form action='/setstainfo' method='POST'>"
+	        "<label for='ssid'>SSID:</label><br>"
+	        "<input type='text' id='ssid' name='ssid' value='%s' required>"
+	        "<br><br>"
+	        "<label for='password'>Password:</label>"
+	        "<input type='test' id='password' name='password' value='%s' required>"
+	        "<br><br>"
+	        "<button type='submit'>Submit</button>"
+	        //"<input name='Submit' type='submit' value='Submit'>"
+	    "</form>"
+	"</body>"
+	"</html>";
+
+#endif
+#endif
 static esp_err_t index_html_get_handler(httpd_req_t *req)
 {
-    extern const char html_start[] asm("_binary_index_html_start");
-    extern const char html_end[]   asm("_binary_index_html_end");
-    const size_t html_size = (html_end - html_start);
     httpd_resp_set_type(req, "text/html");
     /* Add file upload form and script which on execution sends a POST request to /upload */
-    httpd_resp_send_chunk(req, (const char*) html_start, html_size);
+	memset(html_buf, 0, sizeof(html_buf));
+	at_read_wifi_info();
+	snprintf(html_buf, sizeof(html_buf), html_start, wifi_ssid, wifi_pwd);
+    httpd_resp_send_chunk(req, (const char*) html_buf, strlen(html_buf));
     /* Respond with an empty chunk to signal HTTP response completion */
     return httpd_resp_send_chunk(req, NULL, 0);
 }
@@ -842,6 +991,7 @@ static bool at_web_get_sta_got_ip_flag(void)
     return s_sta_got_ip_flag;
 }
 
+#if 0
 static void listen_sta_connect_status_timer_cb(TimerHandle_t timer)
 {
     wifi_sta_connection_info_t connection_info = {0};
@@ -1124,50 +1274,93 @@ err:
     at_web_update_sta_connection_info(&connection_info);
     return ESP_FAIL;
 }
+#endif 
 
 static esp_err_t at_get_wifi_info_from_json_str(char *buffer, wifi_sta_connect_config_t *config)
 {
-    char ssid[33] = {0}, password[65] = {0};
-    int32_t ssid_len = 0, password_len = 0;
-    cJSON *root = NULL, *item = NULL, *value_item = NULL;
+    char *ssid = NULL;
+	char *pwd = NULL;
+	char *end = NULL;	
+    printf("wifi info %s\r\n", buffer);
+	ssid = strstr(buffer, "ssid=");
+	pwd = strstr(buffer, "password=");
+    end = strstr(buffer, "&");
+	//*end = '\0';
+    if (ssid) {
+        snprintf(wifi_ssid, end-ssid-5+1, "%s", ssid+5);
+	}
+	
+	if (pwd) {
+        snprintf(wifi_pwd, strlen(buffer)-(pwd-buffer)-9+1, "%s", pwd+9);
+	}
+	
+    printf("ssid %s password %s\r\n", wifi_ssid,wifi_pwd);
+    return ESP_OK;
+}
 
-    root = cJSON_Parse(buffer);
-    if (!root) {
-        ESP_LOGE(TAG, "Invalid format: [%s]", cJSON_GetErrorPtr());
-        return ESP_FAIL;
+static esp_err_t at_save_wifi_info(char *buffer, wifi_sta_connect_config_t *config)
+{
+    printf("at_save_wifi_info!\r\n");
+
+	if(is_fs_mounted() == 0)
+    {
+        printf("FS is not mounted, please mount FS first.\r\n");
+        return ESP_ERR_NOT_SUPPORTED;
     }
 
-    int json_item_num = cJSON_GetArraySize(root);
-    ESP_LOGD(TAG, "Total JSON Items:%d", json_item_num);
-
-    item = cJSON_GetObjectItem(root, "ssid");
-    if (item) {
-        ssid_len = strlen(item->valuestring);
-        ESP_LOGD(TAG, "ssid:%s", item->valuestring);
-        if (ssid_len > 32) {
-            ESP_LOGE(TAG, "ssid is too long");
-            return ESP_FAIL;
-        } else {
-            strlcpy(ssid, item->valuestring, ssid_len);
-        }
+    //write_func("/lfs/wifi", 0, (const void*)buffer, strlen(buffer));
+    int file = open("/lfs/wifi", O_RDWR | O_CREAT, 0);
+    if (file == -1)
+    {
+        printf("Error opening/creating file:%s.\n", "lfs/wifi");
+        return -1;
     }
 
-    item = cJSON_GetObjectItem(root, "password");
-    if (item) {
-        password_len = strlen(item->valuestring);
-        ESP_LOGD(TAG, "password:%s", item->valuestring);
-        if (password_len > 64) {
-            ESP_LOGE(TAG, "password is too long");
-            return ESP_FAIL;
-        } else {
-            strlcpy(password, item->valuestring, password_len);
-        }
+    lseek(file, 0, SEEK_SET);
+    write(file, buffer, strlen(buffer));    
+    close(file);
+
+}
+
+esp_err_t at_read_wifi_info(void)
+{
+    int file;
+	
+    file = open("/lfs/wifi", O_RDONLY, 0);
+    if (file == -1)
+    {
+        printf("Error opening file:%s.\n","/lfs/wifi");
+        return -1;
     }
-    cJSON_Delete(root);
+    printf("open %s for read\r\n", "/lfs/wifi");
+    char *buf = (char*)malloc(128);
+    if(buf==NULL)
+    {
+        printf("ERROR: no enough memory\r\n");
+        return 0;
+    }
+    lseek(file, 0, SEEK_SET);
 
-    memcpy(config->ssid, ssid, ssid_len);
-    memcpy(config->password, password, password_len);
+    int len_read = 0;
+    len_read = read(file, buf, 128);
+    if(len_read > 0)
+    {
+        buf[len_read] = '\0';
+        printf("read %d %s\r\n", len_read, buf);
+		at_get_wifi_info_from_json_str(buf, NULL);
+    }
+    else if(len_read == 0)
+    {
+        printf("Fail to read from: %s, %d\r\n", "/lfs/wifi", len_read);
+    }
+    else
+    {
+        printf("Fail to read from: %s, %d\r\n", "/lfs/wifi", len_read);
+    }
 
+    free(buf);
+    close(file);
+	
     return ESP_OK;
 }
 
@@ -1179,14 +1372,16 @@ static esp_err_t config_wifi_post_handler(httpd_req_t *req)
     int32_t udp_port = -1;
     char temp_str[32] = {0};
     bool ssid_is_null = false;
-    wifi_mode_t current_wifi_mode;
+    //wifi_mode_t current_wifi_mode;
     wifi_sta_connection_info_t *connection_info = at_web_get_sta_connection_info();
     memset(buf, '\0', ESP_AT_WEB_SCRATCH_BUFSIZE * sizeof(char));
+#if 0	
     esp_wifi_get_mode(&current_wifi_mode);
     if (current_wifi_mode != WIFI_MODE_APSTA) {
         printf("Error, wifi mode is not correct\r\n");
         goto error_handle;
     }
+#endif	
     // only wifi config not start or have success apply one connection,allow to apply new connect
     if ((connection_info->config_status == ESP_AT_WIFI_STA_NOT_START) ||
             (connection_info->config_status == ESP_AT_WIFI_STA_CONNECT_FAIL) ||
@@ -1201,6 +1396,8 @@ static esp_err_t config_wifi_post_handler(httpd_req_t *req)
             ESP_LOGE(TAG, "failed to parse wifi info, json str: %s", buf);
             goto error_handle;
         }
+		at_save_wifi_info(buf, &wifi_config);
+#if 0
         ESP_LOGD(TAG, "ssid(%d):%s password:(%d):%s\r\n",
                  strlen((char *)wifi_config.ssid), wifi_config.ssid, strlen((char *)wifi_config.password), wifi_config.password);
 
@@ -1226,8 +1423,9 @@ static esp_err_t config_wifi_post_handler(httpd_req_t *req)
         }
 
         at_web_update_sta_connect_config(&wifi_config);
-
-        at_web_response_ok(req);
+#endif
+        web_common_get_handler(req);
+#if 0		
         vTaskDelay(300 / portTICK_PERIOD_MS); // to avoid wifi ap channel changed so quickly that the response can not be sent.
         // begin connect
         if (ssid_is_null != true) {
@@ -1245,6 +1443,7 @@ static esp_err_t config_wifi_post_handler(httpd_req_t *req)
                 return ESP_FAIL;
             }
         }
+#endif		
         return ESP_OK;
     }
 error_handle:
@@ -1265,38 +1464,38 @@ static esp_err_t config_wifi_get_handler(httpd_req_t *req)
 
     // according wifi connect status, update state
     if (connection_info->config_status == ESP_AT_WIFI_STA_CONNECT_OK) {
-        json_len += snprintf(temp_json_str + json_len, "{\"state\":1,"); // it means wifi connect success
+        json_len += snprintf(temp_json_str + json_len, strlen("{\"state\":1,"), "{\"state\":1,"); // it means wifi connect success
     } else if (connection_info->config_status == ESP_AT_WIFI_STA_CONNECT_FAIL) {
-        json_len += snprintf(temp_json_str + json_len, "{\"state\":2,"); // it means wifi connect fail
+        json_len += snprintf(temp_json_str + json_len, strlen("{\"state\":2,"), "{\"state\":2,"); // it means wifi connect fail
     } else {
-        json_len += snprintf(temp_json_str + json_len, "{\"state\":0,"); // it means http context OK
+        json_len += snprintf(temp_json_str + json_len, strlen("{\"state\":0,"), "{\"state\":0,"); // it means http context OK
     }
 
     // add ssid to json str
     // note: escape special non-control characters in json format, see https://www.json.org/json-en.html for more details
-    json_len += snprintf(temp_json_str + json_len, "\"sta_ssid\":\"");
+    json_len += snprintf(temp_json_str + json_len, strlen("\"sta_ssid\":\""), "\"sta_ssid\":\"");
     int32_t ssid_len = strlen((char *)(connect_config->ssid));
     for (int i = 0; i < ssid_len; i++) {
         uint8_t c = connect_config->ssid[i];
         if (c == '\\' || c == '\"' || c == '/') {
-            json_len += snprintf(temp_json_str + json_len, "\\");
+            json_len += snprintf(temp_json_str + json_len,2, "\\");
         }
-        json_len += snprintf(temp_json_str + json_len, "%c", c);
+        json_len += snprintf(temp_json_str + json_len, 1, "%c", c);
     }
-    json_len += snprintf(temp_json_str + json_len, "\",");
+    json_len += snprintf(temp_json_str + json_len, strlen("\","), "\",");
 
     // add password to json str
     // note: escape special non-control characters in json format, see https://www.json.org/json-en.html for more details
-    json_len += snprintf(temp_json_str + json_len, "\"sta_password\":\"");
+    json_len += snprintf(temp_json_str + json_len, strlen("\"sta_password\":\""), "\"sta_password\":\"");
     int32_t password_len = strlen((char *)(connect_config->password));
     for (int i = 0; i < password_len; i++) {
         uint8_t c = connect_config->password[i];
         if (c == '\\' || c == '\"' || c == '/') {
-            json_len += snprintf(temp_json_str + json_len, "\\");
+            json_len += snprintf(temp_json_str + json_len,2, "\\");
         }
-        json_len += snprintf(temp_json_str + json_len, "%c", c);
+        json_len += snprintf(temp_json_str + json_len,1, "%c", c);
     }
-    json_len += snprintf(temp_json_str + json_len, "\",");
+    json_len += snprintf(temp_json_str + json_len, strlen("\","), "\",");
 
     switch (connection_info->config_status) {
     case ESP_AT_WIFI_STA_NOT_START:
@@ -1317,7 +1516,7 @@ static esp_err_t config_wifi_get_handler(httpd_req_t *req)
     default:
         break;
     }
-    json_len += snprintf(temp_json_str + json_len, "\"message\":\"%s\"}", temp_str);
+    json_len += snprintf(temp_json_str + json_len, strlen("\"message\":\"%s\"}"), "\"message\":\"%s\"}", temp_str);
 
     ESP_LOGD(TAG, "now wifi get json str is %s\n", temp_json_str);
     httpd_resp_send(req, temp_json_str, (temp_json_str == NULL) ? 0 : strlen(temp_json_str));
@@ -1329,7 +1528,7 @@ static esp_err_t at_web_version_get_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "application/json");
     char *temp_json_str = ((web_server_context_t*)(req->user_ctx))->scratch;
-    snprintf(temp_json_str, "{\"version\":\"%s\"}", ESP_AT_WEB_VERSION);
+    snprintf(temp_json_str, strlen("\"message\":\"%s\"}"), "{\"version\":\"%s\"}", ESP_AT_WEB_VERSION);
     ESP_LOGD(TAG, "ready to send version: %s\n", temp_json_str);
 
     httpd_resp_send(req, temp_json_str, (temp_json_str == NULL) ? 0 : strlen(temp_json_str));
@@ -1337,6 +1536,7 @@ static esp_err_t at_web_version_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+#if 0
 static esp_err_t accept_wifi_result_post_handler(httpd_req_t *req)
 {
     char *buf = ((web_server_context_t*)(req->user_ctx))->scratch;
@@ -1419,21 +1619,21 @@ static esp_err_t ap_record_get_handler(httpd_req_t *req)
     memset(temp_json_str, 0, ESP_AT_WEB_AP_RECORD_JSON_STR_LEN * sizeof(char));
 
     httpd_resp_set_type(req, "application/json");
-    json_len += snprintf(temp_json_str + json_len, "{\"state\":0,\"message\":\"scan done\",\"aplist\":["); // to get a json array format str
+    json_len += snprintf(temp_json_str + json_len, strlen("{\"state\":0,\"message\":\"scan done\",\"aplist\":["), "{\"state\":0,\"message\":\"scan done\",\"aplist\":["); // to get a json array format str
 
     for (loop = 0; loop < ap_number; loop++) {
         int32_t ssid_len = strlen((const char*)ap_info[loop].ssid);
         if (ssid_len != 0) { // ingore hidden ssid
-            json_len += snprintf(temp_json_str + json_len, "{\"ssid\":\"");
+            json_len += snprintf(temp_json_str + json_len, strlen("{\"ssid\":\""), "{\"ssid\":\"");
             for (int i = 0; i < ssid_len; i++) {
                 uint8_t c = ap_info[loop].ssid[i];
                 // escape special non-control characters in json format, see https://www.json.org/json-en.html for more details
                 if (c == '\\' || c == '\"' || c == '/') {
-                    json_len += snprintf(temp_json_str + json_len, "\\");
+                    json_len += snprintf(temp_json_str + json_len, 2, "\\");
                 }
-                json_len += snprintf(temp_json_str + json_len, "%c", c);
+                json_len += snprintf(temp_json_str + json_len, 1, "%c", c);
             }
-            json_len += snprintf(temp_json_str + json_len, "\",\"auth_mode\":%d},", ap_info[loop].authmode);
+            json_len += snprintf(temp_json_str + json_len, strlen("\",\"auth_mode\":%d},"), "\",\"auth_mode\":%d},", ap_info[loop].authmode);
 
             valid_ap_count++;
         }
@@ -1441,8 +1641,8 @@ static esp_err_t ap_record_get_handler(httpd_req_t *req)
     free(ap_info);
     ap_info = NULL;
 
-    json_len += snprintf(temp_json_str + json_len - 1, "]}");
-    ESP_LOGD(TAG, "now, valid ap num is %d, ap records json str is %s\n", valid_ap_count, temp_json_str);
+    json_len += snprintf(temp_json_str + json_len - 1, 2, "]}");
+    //ESP_LOGD(TAG, "now, valid ap num is %d, ap records json str is %s\n", valid_ap_count, temp_json_str);
     httpd_resp_send(req, temp_json_str, (temp_json_str == NULL) ? 0 : strlen(temp_json_str));
     free(temp_json_str);
     temp_json_str = NULL;
@@ -1635,54 +1835,6 @@ static esp_err_t at_customize_partition_upgrade(httpd_req_t *req, const char* pa
 extern const esp_partition_t *esp_at_custom_partition_find_next(const esp_partition_t *start_from);
 static esp_err_t ota_info_get_handler(httpd_req_t *req)
 {
-    uint32_t version_uint32 =  esp_at_get_version();
-    int32_t json_len = 0;
-    uint8_t version[4] = {0};
-    char *temp_json_str = ((web_server_context_t*)(req->user_ctx))->scratch;
-    esp_partition_t *cur_partition = NULL;
-
-    memcpy(version, &version_uint32, sizeof(version_uint32));
-
-    httpd_resp_set_type(req, "application/json");
-
-    // OTA information start
-    json_len += snprintf(temp_json_str + json_len, "{");
-
-    // OTA information
-    json_len += snprintf(temp_json_str + json_len, "\"state\":0,"); // it means http context OK
-    json_len += snprintf(temp_json_str + json_len, "\"fw_version\":\"%s\",", CONFIG_ESP_AT_FW_VERSION); // it means http context OK
-    json_len += snprintf(temp_json_str + json_len, "\"at_core_version\":\"%d.%d.%d.%d\",", version[3], version[2], version[1], version[0]);
-
-    // partition information array start
-    json_len += snprintf(temp_json_str + json_len, "\"partitions\":");
-    json_len += snprintf(temp_json_str + json_len, "[");
-
-    // OTA partition information
-    if (at_web_get_ota_update_partition()) {
-        json_len += snprintf(temp_json_str + json_len, "\"ota\",");
-    }
-
-    // AT customize partition information
-    for (;;) {
-        const esp_partition_t *partition = esp_at_custom_partition_find_next((const esp_partition_t *)cur_partition);
-        if (partition) {
-            json_len += snprintf(temp_json_str + json_len, "\"%s\",", partition->label);
-            cur_partition = (esp_partition_t *)partition;
-        } else {
-            json_len -= 1;
-            break;
-        }
-    }
-
-    // partition information array end
-    json_len += snprintf(temp_json_str + json_len, "]");
-
-    // OTA information end
-    json_len += snprintf(temp_json_str + json_len, "}");
-
-    ESP_LOGD(TAG, "now ota get json str is %s\n", temp_json_str);
-    httpd_resp_send(req, temp_json_str, strlen(temp_json_str));
-
     return ESP_OK;
 }
 
@@ -1720,6 +1872,7 @@ static esp_err_t ota_data_post_handler(httpd_req_t *req)
 
     return err;
 }
+#endif
 
 #ifdef CONFIG_AT_WEB_CAPTIVE_PORTAL_ENABLE
 /* http 404/414 error handler that redirect all requests to the root page */
@@ -1766,11 +1919,14 @@ static esp_err_t start_web_server(const char *base_path, uint16_t server_port)
         {"/getversion", HTTP_GET, at_web_version_get_handler, s_web_context},
         {"/getstainfo", HTTP_GET, config_wifi_get_handler, s_web_context},
         {"/setstainfo", HTTP_POST, config_wifi_post_handler, s_web_context},
+#if 0        
         {"/getresult", HTTP_POST, accept_wifi_result_post_handler, s_web_context},
         {"/getaprecord", HTTP_GET, ap_record_get_handler, s_web_context},
         {"/getotainfo", HTTP_GET, ota_info_get_handler, s_web_context},
         {"/setotadata", HTTP_POST, ota_data_post_handler, s_web_context},
-        {"/", HTTP_GET, web_common_get_handler, s_web_context},
+#endif        
+        {"/", HTTP_GET, web_common_get_handler, s_web_context},        
+	    {"/index.html", HTTP_GET, web_common_get_handler, s_web_context},
     };
 
     for (int i = 0; i < sizeof(httpd_uri_array) / sizeof(httpd_uri_t); i++) {
@@ -1908,7 +2064,7 @@ static esp_err_t at_web_fatfs_spiflash_deinit(void)
 }
 #endif
 
-static esp_err_t at_web_start(uint16_t server_port)
+int at_web_start(uint16_t server_port)
 {
     esp_err_t err;
 
@@ -2013,9 +2169,12 @@ static uint8_t at_setupCmdWebConf(uint8_t para_num)
     }
 }
 
+#if 0
+
 static const esp_at_cmd_struct at_web_cmd[] = {
     {"+WEBSERVER", NULL, NULL,  at_setupCmdWebConf, NULL},
 };
+
 
 static void at_web_got_ip_cb(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
@@ -2029,5 +2188,5 @@ bool esp_at_web_server_cmd_regist(void)
 }
 
 ESP_AT_CMD_SET_FIRST_INIT_FN(esp_at_web_server_cmd_regist, 25);
-
+#endif
 #endif

@@ -4,15 +4,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/*
+ * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * NOT A CONTRIBUTION
+ */
+
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/param.h>
 #include <errno.h>
+#if 0
 #include <esp_log.h>
 #include <esp_err.h>
 #include <assert.h>
-#include <netinet/tcp.h>
-
+#endif
+#include <tcp.h>
 #include <esp_http_server.h>
 #include "esp_httpd_priv.h"
 #include "ctrl_sock.h"
@@ -42,10 +50,10 @@ ESP_EVENT_DEFINE_BASE(ESP_HTTP_SERVER_EVENT);
 
 void esp_http_server_dispatch_event(int32_t event_id, const void* event_data, size_t event_data_size)
 {
-    esp_err_t err = esp_event_post(ESP_HTTP_SERVER_EVENT, event_id, event_data, event_data_size, ESP_HTTP_SERVER_EVENT_POST_TIMEOUT);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to post esp_http_server event: %s", esp_err_to_name(err));
-    }
+//    esp_err_t err = esp_event_post(ESP_HTTP_SERVER_EVENT, event_id, event_data, event_data_size, ESP_HTTP_SERVER_EVENT_POST_TIMEOUT);
+   // if (err != ESP_OK) {
+        //ESP_LOGE(TAG, "Failed to post esp_http_server event: %s", esp_err_to_name(err));
+    //}
 }
 
 static esp_err_t httpd_accept_conn(struct httpd_data *hd, int listen_fd)
@@ -65,7 +73,7 @@ static esp_err_t httpd_accept_conn(struct httpd_data *hd, int listen_fd)
     }
 
     struct sockaddr_storage addr_from;
-    socklen_t addr_from_len = sizeof(addr_from);
+    socklen_t addr_from_len = sizeof(struct sockaddr);
     int new_fd = accept(listen_fd, (struct sockaddr *)&addr_from, &addr_from_len);
     if (new_fd < 0) {
         ESP_LOGE(TAG, LOG_FMT("error in accept (%d)"), errno);
@@ -73,6 +81,7 @@ static esp_err_t httpd_accept_conn(struct httpd_data *hd, int listen_fd)
     }
     ESP_LOGD(TAG, LOG_FMT("newfd = %d"), new_fd);
 
+#if 0
     struct timeval tv;
     /* Set recv timeout of this fd as per config */
     tv.tv_sec = hd->config.recv_wait_timeout;
@@ -89,6 +98,14 @@ static esp_err_t httpd_accept_conn(struct httpd_data *hd, int listen_fd)
         ESP_LOGE(TAG, LOG_FMT("error in setsockopt SO_SNDTIMEO (%d)"), errno);
         goto exit;
     }
+#endif
+
+	int keep_alive_enable = 1;
+	if (setsockopt(new_fd, SOL_SOCKET, SO_KEEPALIVE, &keep_alive_enable, sizeof(keep_alive_enable)) < 0) {
+		ESP_LOGE(TAG, LOG_FMT("error in setsockopt SO_KEEPALIVE (%d)"), errno);
+		goto exit;
+	}
+
 
     if (hd->config.keep_alive_enable) {
         int keep_alive_enable = 1;
@@ -378,6 +395,7 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
         .sin_port     = htons(hd->config.server_port)
     };
 #endif
+#if 0
     /* Enable SO_REUSEADDR to allow binding to the same
      * address and port when restarting the server */
     int enable = 1;
@@ -386,7 +404,7 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
          * it does not affect the normal working of the HTTP Server */
         ESP_LOGW(TAG, LOG_FMT("error in setsockopt SO_REUSEADDR (%d)"), errno);
     }
-
+#endif
     int ret = bind(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     if (ret < 0) {
         ESP_LOGE(TAG, LOG_FMT("error in bind (%d)"), errno);
@@ -397,10 +415,11 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
     ret = listen(fd, hd->config.backlog_conn);
     if (ret < 0) {
         ESP_LOGE(TAG, LOG_FMT("error in listen (%d)"), errno);
+		printf("Sock listen error!\r\n");
         close(fd);
         return ESP_FAIL;
     }
-
+#if 0
     int ctrl_fd = cs_create_ctrl_sock(hd->config.ctrl_port);
     if (ctrl_fd < 0) {
         ESP_LOGE(TAG, LOG_FMT("error in creating ctrl socket (%d)"), errno);
@@ -415,10 +434,12 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
         close(ctrl_fd);
         return ESP_FAIL;
     }
-
+#endif
     hd->listen_fd = fd;
+#if 0
     hd->ctrl_fd = ctrl_fd;
     hd->msg_fd  = msg_fd;
+#endif	
     return ESP_OK;
 }
 

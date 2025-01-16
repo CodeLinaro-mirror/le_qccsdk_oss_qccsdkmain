@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/*
+ * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * NOT A CONTRIBUTION
+ */
 
 #ifndef _HTTPD_PRIV_H_
 #define _HTTPD_PRIV_H_
@@ -11,10 +17,11 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <sys/param.h>
+#if 0
 #include <netinet/in.h>
 #include <esp_log.h>
 #include <esp_err.h>
-
+#endif
 #include <esp_http_server.h>
 #include "osal.h"
 
@@ -556,7 +563,7 @@ esp_err_t httpd_sess_trigger_close_(httpd_handle_t handle, struct sock_db *sessi
 #if CONFIG_HTTPD_SERVER_EVENT_POST_TIMEOUT == -1
 #define ESP_HTTP_SERVER_EVENT_POST_TIMEOUT portMAX_DELAY
 #else
-#define ESP_HTTP_SERVER_EVENT_POST_TIMEOUT pdMS_TO_TICKS(CONFIG_HTTPD_SERVER_EVENT_POST_TIMEOUT)
+//#define ESP_HTTP_SERVER_EVENT_POST_TIMEOUT pdMS_TO_TICKS(CONFIG_HTTPD_SERVER_EVENT_POST_TIMEOUT)
 #endif
 
 /**
