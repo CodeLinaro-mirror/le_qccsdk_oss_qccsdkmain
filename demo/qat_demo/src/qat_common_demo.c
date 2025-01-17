@@ -1000,6 +1000,11 @@ static QAT_Command_Status_t Extend_Command_SNTPC(uint32_t Op_Type, uint32_t Para
 				return rc;
 	    	}
 	    }
+		else
+		{
+			rc = QAT_Response_Str(QAT_RC_ERROR, "+SNTPC:command not found, AT+SNTPC for help");
+			return rc;
+		}
 	    break;
 	  }
       
