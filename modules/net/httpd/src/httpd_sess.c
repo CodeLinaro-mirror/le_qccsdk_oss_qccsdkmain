@@ -3,9 +3,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
+/*
+ * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * NOT A CONTRIBUTION
+ */
+ 
 #include <stdlib.h>
-#include <esp_log.h>
-#include <esp_err.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>

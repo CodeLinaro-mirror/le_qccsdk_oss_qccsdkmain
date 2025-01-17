@@ -4,14 +4,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/*
+ * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * NOT A CONTRIBUTION
+ */
+
 #include <string.h>
 #include <unistd.h>
 
 #include <sys/socket.h>
+#if 0
 #include <netinet/in.h>
+#endif
 #include <arpa/inet.h>
+#if 0
 #include "sdkconfig.h"
 #include "esp_log.h"
+#endif
+
 #include "ctrl_sock.h"
 
 #if CONFIG_IDF_TARGET_LINUX
@@ -30,7 +42,7 @@
 int cs_create_ctrl_sock(int port)
 {
 #if !LOOPBACK_ENABLED
-    ESP_LOGE("esp_http_server", "Please enable LWIP_NETIF_LOOPBACK for %s API", __func__);
+    //ESP_LOGE("esp_http_server", "Please enable LWIP_NETIF_LOOPBACK for %s API", __func__);
     return -1;
 #endif
 

@@ -3,15 +3,24 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+ 
+ /*
+  * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+  * SPDX-License-Identifier: BSD-3-Clause-Clear
+  *
+  * NOT A CONTRIBUTION
+  */
 
 #ifndef _OSAL_H_
 #define _OSAL_H_
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
+#include <FreeRTOS.h>
+#include <task.h>
 #include <unistd.h>
 #include <stdint.h>
+#if 0
 #include <esp_timer.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,7 +36,9 @@ static inline int httpd_os_thread_create(othread_t *thread,
                                  void (*thread_routine)(void *arg), void *arg,
                                  BaseType_t core_id, uint32_t caps)
 {
-    int ret = xTaskCreatePinnedToCoreWithCaps(thread_routine, name, stacksize, arg, prio, thread, core_id, caps);
+    int ret = 0;
+	
+	ret = xTaskCreate(thread_routine, name, stacksize, arg, prio, thread);
     if (ret == pdPASS) {
         return OS_SUCCESS;
     }
@@ -37,7 +48,7 @@ static inline int httpd_os_thread_create(othread_t *thread,
 /* Only self delete is supported */
 static inline void httpd_os_thread_delete(void)
 {
-    vTaskDeleteWithCaps(xTaskGetCurrentTaskHandle());
+    vTaskDelete(xTaskGetCurrentTaskHandle());
 }
 
 static inline void httpd_os_thread_sleep(int msecs)

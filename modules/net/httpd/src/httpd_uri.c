@@ -4,10 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/*
+ * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * NOT A CONTRIBUTION
+ */
 
 #include <errno.h>
+#if 0
 #include <esp_log.h>
 #include <esp_err.h>
+#endif
 #include <http_parser.h>
 
 #include <esp_http_server.h>
@@ -146,13 +154,13 @@ esp_err_t httpd_register_uri_handler(httpd_handle_t handle,
 
     for (int i = 0; i < hd->config.max_uri_handlers; i++) {
         if (hd->hd_calls[i] == NULL) {
-            ESP_COMPILER_DIAGNOSTIC_PUSH_IGNORE("-Wanalyzer-malloc-leak") // False-positive detection. TODO GCC-366
+            //ESP_COMPILER_DIAGNOSTIC_PUSH_IGNORE("-Wanalyzer-malloc-leak") // False-positive detection. TODO GCC-366
             hd->hd_calls[i] = malloc(sizeof(httpd_uri_t));
             if (hd->hd_calls[i] == NULL) {
                 /* Failed to allocate memory */
                 return ESP_ERR_HTTPD_ALLOC_MEM;
             }
-            ESP_COMPILER_DIAGNOSTIC_POP("-Wanalyzer-malloc-leak")
+            //ESP_COMPILER_DIAGNOSTIC_POP("-Wanalyzer-malloc-leak")
 
             /* Copy URI string */
             hd->hd_calls[i]->uri = strdup(uri_handler->uri);

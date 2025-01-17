@@ -4,14 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/*
+ * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * NOT A CONTRIBUTION
+ */
 
 #include <errno.h>
+#if 0
 #include <esp_log.h>
 #include <esp_err.h>
-
+#endif
 #include <esp_http_server.h>
 #include "esp_httpd_priv.h"
-#include <netinet/tcp.h>
+#include <tcp.h>
 
 static const char *TAG = "httpd_txrx";
 
