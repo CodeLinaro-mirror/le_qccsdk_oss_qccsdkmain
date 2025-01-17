@@ -911,7 +911,7 @@ static QAT_Command_Status_t Extend_Command_SNTPC(uint32_t Op_Type, uint32_t Para
 		cmd = Parameter_List[0].String_Value;
 
 		/* Sntpc  start */
-	    if (strncmp(cmd, "start", 5) == 0)
+	    if (strncasecmp(cmd, "start", 5) == 0)
 	    {
 	        sntp_init();
 			rc = QAT_Response_Str(QAT_RC_OK, NULL);
@@ -919,7 +919,7 @@ static QAT_Command_Status_t Extend_Command_SNTPC(uint32_t Op_Type, uint32_t Para
 	        return rc;
 	    }
 	    /* Sntpc  stop */
-	    else if (strncmp(cmd, "stop", 4) == 0)
+	    else if (strncasecmp(cmd, "stop", 4) == 0)
 	    {
 	        sntp_stop();
 			rc = QAT_Response_Str(QAT_RC_OK, NULL);
@@ -927,7 +927,7 @@ static QAT_Command_Status_t Extend_Command_SNTPC(uint32_t Op_Type, uint32_t Para
 	        return rc;
 	    }
 		/* Sntpc  set operating class */
-	    else if (strncmp(cmd, "setOpMode", 9) == 0)
+	    else if (strncasecmp(cmd, "setOpMode", 9) == 0)
 	    {
 	    	uint8_t opMode = 0;
 			
@@ -961,7 +961,7 @@ static QAT_Command_Status_t Extend_Command_SNTPC(uint32_t Op_Type, uint32_t Para
 			return rc;
 	    }
 		/* Sntpc  setServer <IP addr | name> [id] */
-	    else if (strncmp(cmd, "setServer", 8) == 0)
+	    else if (strncasecmp(cmd, "setServer", 8) == 0)
 	    {
 			if(Parameter_Count <= 1)
 			{
