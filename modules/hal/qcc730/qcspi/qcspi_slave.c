@@ -135,6 +135,7 @@ nt_spi_slv_interrupt(
 		void)
 {
     uint32_t qcspi_status;
+	uint32_t qcspi_status_1;
     //Reading IRQ Status register
     qcspi_status = HWIO_INX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
     QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_STATUS);
@@ -143,6 +144,19 @@ nt_spi_slv_interrupt(
     HWIO_OUTX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
     QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_CLR, qcspi_status);
 
+	qcspi_status_1 = HWIO_INX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
+    QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_STATUS);
+	
+	while( QCSPI_SLAVE_HOST_INT0_MASK & qcspi_status_1)
+	{
+		//clearing interrupts
+	    HWIO_OUTX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
+	    QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_CLR, qcspi_status);
+		
+		qcspi_status_1 = HWIO_INX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
+	    QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_STATUS);
+	}
+	
     //If the source of interrupt is HOST_INT0, control interface is called
     if(qcspi_status & QCSPI_SLAVE_HOST_INT0_MASK)
     {
@@ -168,7 +182,6 @@ nt_spi_slv_interrupt(
     {
         assert(false);
     }
-
 }
 
 /**
