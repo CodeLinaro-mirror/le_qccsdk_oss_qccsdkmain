@@ -755,9 +755,9 @@ static qapi_Status_t Connect(uint32_t __attribute__((__unused__)) Parameter_Coun
         __QAPI_WLAN_PARAM_GROUP_WIRELESS_SSID,
         (void *)ssid, ssidLength, FALSE);
 
-    if (bssid) {
+    if(deviceId == NT_DEV_STA_ID) {
         uint8_t bssidToConnect[__QAPI_WLAN_MAC_LEN] = {0};
-        if (ether_aton(bssid, bssidToConnect) < 0) {
+        if (bssid && (ether_aton(bssid, bssidToConnect) < 0)) {
             info_printf("Invalid BSSID to connect\n");
             return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
         }
