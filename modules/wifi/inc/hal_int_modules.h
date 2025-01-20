@@ -217,6 +217,8 @@ typedef enum hal_bmu_cmd_e {
 } hal_bmu_cmd_t;
 
 #define BMU_CMD_RESERVE_ALL_BD_PDU(_moduleIdx)	(BMU_COMMAND_BASE_ADDRESS | ((_moduleIdx & 0x3f) << 8) | RESERVE_ALL_BD_PDU_CMDTYPE)
+#define BMU_CMD_POP_WQ(wq)                  (BMU_COMMAND_BASE_ADDRESS|((wq<<8)|POP_WQ_CMDTYPE))
+#define BMU_CMD_PUSH_WQ(wq)                 (BMU_COMMAND_BASE_ADDRESS|((wq<<8)|PUSH_WQ_CMDTYPE))
 
 /*
  * BMU WQ assignment
