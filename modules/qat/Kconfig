@@ -17,6 +17,9 @@ config QAT_WLAN_DEMO
 config QAT_MQTT_DEMO
     bool "enable QAT MQTT DEMO"
     default n
+config QAT_HTTP_SERVER_DEMO
+    bool "enable QAT HTTP_SERVER DEMO"
+    default n
 config QAT_CB_SIZE_MTU_MULTIPLIER
     int "Set the circular buffer size to be a multiple of the MTU."
     default 10

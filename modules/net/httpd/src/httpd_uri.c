@@ -163,7 +163,7 @@ esp_err_t httpd_register_uri_handler(httpd_handle_t handle,
             //ESP_COMPILER_DIAGNOSTIC_POP("-Wanalyzer-malloc-leak")
 
             /* Copy URI string */
-            hd->hd_calls[i]->uri = strdup(uri_handler->uri);
+            hd->hd_calls[i]->uri = uri_handler->uri;
             if (hd->hd_calls[i]->uri == NULL) {
                 /* Failed to allocate memory */
                 free(hd->hd_calls[i]);
@@ -277,7 +277,7 @@ void httpd_unregister_all_uri_handlers(struct httpd_data *hd)
         }
         ESP_LOGD(TAG, LOG_FMT("[%d] removing %s"), i, hd->hd_calls[i]->uri);
 
-        free((char*)hd->hd_calls[i]->uri);
+        //free((char*)hd->hd_calls[i]->uri);
         free(hd->hd_calls[i]);
         hd->hd_calls[i] = NULL;
     }

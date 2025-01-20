@@ -115,6 +115,8 @@ declare_args() {
     CONFIG_HTTP_CLIENT = false
     CONFIG_HTTP_CLIENT_DEMO = false
 
+    CONFIG_HTTP_SERVER = false
+    CONFIG_QAT_HTTP_SERVER_DEMO = false
     CONFIG_CPR_ENABLE = true
     CONFIG_RNG_TEST = false
     CONFIG_SNTP_CLIENT = false

@@ -4,6 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/*
+ * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * NOT A CONTRIBUTION
+ */
+
 /**
  * \file ctrl_sock.h
  * \brief Control Socket for select() wakeup
@@ -20,6 +27,7 @@
 extern "C" {
 #endif
 
+#define close closesocket
 /**
  * @brief Create a control socket
  *
