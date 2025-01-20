@@ -42,6 +42,13 @@ extern void boot_log_show_elf_load(boot_log *log_ptr);
 //#define SET_APP_ARGS(bin_mode)		((void*)(((uint8_t)(bin_mode))|((APP_ARGS_MAGIC)<<8)))
 
 #define SBL_SHARE_VER 1
+#define PART_SIZE     10 /**< part map size */
+
+// define struct with id and addr
+typedef struct {
+    uint32_t id;
+    uint32_t addr;
+} IDAddr;
 
 typedef struct {
 	uint32_t magic_num;
@@ -50,6 +57,7 @@ typedef struct {
 	uint8_t rsv1;
 	uint8_t rsv2;
 	uint32_t bdf_addr;
+	IDAddr fdt_part[PART_SIZE];
 } boot_sbl_share;
 
 #define PBL_VERSION_ADDR			0x200168
@@ -130,9 +138,13 @@ void get_pbl_share(void *arg, uint32_t cs_pbl) {
 	return;
 }
 
-void set_sbl_share(uint8_t img_type, uint32_t bdf_addr)
+void set_sbl_share(uint8_t img_type, uint32_t bdf_addr, fdt_s *fdt)
 {
 	boot_sbl_share *share = &sbl_share;
+	for (int i = 0; i < fdt->header.num_fde; i++) {
+		share->fdt_part[i].id = fdt->fde[i].id;
+		share->fdt_part[i].addr = fdt->fde[i].addr;
+	}
 
 	share->magic_num = APP_ARGS_MAGIC;
 	share->ver = SBL_SHARE_VER;
@@ -247,7 +259,7 @@ loader_start( void* arg){
 
 		__asm volatile ("MSR msp, %0" : : "r" (*msp) : "sp");
 
-		set_sbl_share(OTA_IMG_FORMAT_BIN, get_bdf_addr(fdt));
+		set_sbl_share(OTA_IMG_FORMAT_BIN, get_bdf_addr(fdt), fdt);
 
 		app_entry((void *)&sbl_share);
 	}

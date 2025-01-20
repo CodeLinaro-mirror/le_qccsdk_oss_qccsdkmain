@@ -85,6 +85,7 @@ enum ota_image_id {
 	OTA_IMG_ID_PBL_PATCH,
 	OTA_IMG_ID_APP,
 	OTA_IMG_ID_BDF,
+	OTA_IMG_ID_UD,
 };
 
 enum ota_patch_state {
