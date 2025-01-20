@@ -130,9 +130,12 @@ qapi_Status_t platform_demo_free(uint32_t Parameter_Count, QAPI_Console_Paramete
         return QAPI_ERROR;
     }
 
-    printf("           total       used       free       min_free\n");
-    printf("Heap:   %8d   %8d   %8d       %8d\n", hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes);
-
+    printf("                  total       used       free         min_free\n");
+    printf("Heap:           %8d   %8d   %8d       %8d\n", hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes);
+#if !CONFIG_MATTER_ENABLE
+    printf("lwip heap:     %8d   %8d   %8d       %8d\n", hs.lwip_total_Bytes, hs.lwip_total_Bytes-hs.lwip_free_Bytes, hs.lwip_free_Bytes, hs.lwip_min_ever_free_bytes);
+    printf("lwip pool:     %8d   %8d   %8d       %8d\n", hs.lwip_total_pool, hs.lwip_total_pool-hs.lwip_free_pool, hs.lwip_free_pool, hs.lwip_min_ever_free_pool);
+#endif    
     return QAPI_OK;
 }
 

@@ -25,6 +25,14 @@ typedef struct heap_status_t
     uint32_t free_Bytes;
     uint32_t min_ever_free_bytes;
 
+    uint32_t lwip_total_Bytes;
+    uint32_t lwip_free_Bytes;
+    uint32_t lwip_min_ever_free_bytes;
+
+    uint32_t lwip_total_pool;
+    uint32_t lwip_free_pool;
+    uint32_t lwip_min_ever_free_pool;
+
 }heap_status;
 
 /**
