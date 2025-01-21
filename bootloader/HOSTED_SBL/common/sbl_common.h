@@ -27,6 +27,8 @@ extern uint32_t __app_image_start_addr;
 #define APP_IMAGE_START_ADDRESS (uint32_t)&__app_image_start_addr
 extern uint32_t __app_image_bdf_addr;
 //#define APP_IMAGE_BDF_ADDRESS (uint32_t)&__app_image_bdf_addr
+extern uint32_t __raw_file_start_addr;
+#define RAW_FILE_START_ADDRESS (uint32_t)&__raw_file_start_addr
 #endif
 
 void sbl_printf(const char *fmt, ...);

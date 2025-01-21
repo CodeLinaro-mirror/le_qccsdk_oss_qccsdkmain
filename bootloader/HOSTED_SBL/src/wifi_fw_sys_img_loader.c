@@ -858,7 +858,7 @@ sbl_func_status_t sys_loader(void)
 						int rram_write_status=0;
 						
 						if(((sys_loader_cntxt.softid_in_progress == WLAN_IMG_ID) &&
-							(dst<APP_IMAGE_START_ADDRESS || dst>APP_IMAGE_START_ADDRESS+0x110000))
+							(dst<APP_IMAGE_START_ADDRESS || dst>RAW_FILE_START_ADDRESS))
 							|| ((sys_loader_cntxt.softid_in_progress == BDF_ID) &&
 							(dst<0x37a000 || dst>0x380000)))
 						{
