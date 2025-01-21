@@ -9,6 +9,7 @@ net_demo_src = [
     "net/src/iperf.c",
     "net/src/ssl_demo.c",
     "net/src/ping.c",
+    "net/src/prefix.c",
     "//modules/net/rvr_lite/src/rvr_lite.c",
 ]
 

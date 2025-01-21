@@ -18,6 +18,7 @@
 #include "lwip/ip6_addr.h"
 #include "timer.h"
 #include "safeAPI.h"
+#include "data_path.h"
 
 #ifdef CONFIG_NET_IPERF
 
@@ -37,6 +38,7 @@ extern QAPI_Console_Group_Handle_t net_shell_cmd_group_handle;              /* H
 
 #define IPV6_TCLASS 16 /* int; set IPV6 traffic class */
 #define IS_IPV6_MULTICAST(ipv6_Address) (((uint8_t *)ipv6_Address)[0] == 0xff)
+
 /* loopback behavior (disabled or enabled) for multicast packets */
 #define IPV6_MC_LPBK_DIS 0 /**< Disable loopback behavior for multicast packets. */
 #define IPV6_MC_LPBK_EN 1  /**< Enable loopback behavior for multicast packets. */
@@ -769,7 +771,8 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
     THROUGHPUT_CXT *tCxt = NULL;
     // THROUGHPUT_CXT *rCxt = NULL;
     uint32_t v6 = 0;
-    // char *receiver_ip;
+    char *receiver_ip;
+    uint8_t v6addr[16] = {0};
 
     // memset(&tCxt, 0, sizeof(THROUGHPUT_CXT));
     // memset(&rCxt, 0, sizeof(THROUGHPUT_CXT));
@@ -813,49 +816,27 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         {
             index++;
             operation_mode = IPERF_CLIENT;
-
-            if (inet_pton(AF_INET, Parameter_List[index].String_Value, &ipAddress) != 0)
-            {
-#if 0
-
-                    /* check if it's IPV6 */
-                    receiver_ip = Parameter_List[index].String_Value;
-                    if (inet_pton(AF_INET6, receiver_ip, tCxt.params.tx_params.v6addr) != 0)
-                    {
-                        IPERF_PRINTF("Incorrect IP address %s\n", receiver_ip);
-                        return QAPI_ERR_INVALID_PARAM;
-                    }
-                    else
-                    {
-                        /* is valid IPV6*/
-                        if (QAPI_IS_IPV6_LINK_LOCAL(tCxt.params.tx_params.v6addr) ||
-                            IS_IPV6_MULTICAST(tCxt.params.tx_params.v6addr))
-                        {
-                            /* if this is a link local address, then the interface must be specified after % */
-
-                            char * interface_name = (char*) bench_common_GetInterfaceNameFromStr(receiver_ip);
-                            if (!interface_name)
-                            {
-                                IPERF_PRINTF("this is a link local address, then the interface must be specified after %\n", receiver_ip);
-                                return QAPI_ERR_INVALID_PARAM;
-                            }
-
-                            if (qapi_Net_IPv6_Get_Scope_ID(interface_name, &tCxt.params.tx_params.scope_id) != 0)
-                            {
-                                IPERF_PRINTF("Failed to get scope id for the interface %s\n", interface_name);
-                                return QAPI_ERR_INVALID_PARAM;
-                            }
-                        }
-                    }
-#endif
-            }
-            else
+            receiver_ip = Parameter_List[index].String_Value;
+            if (inet_pton(AF_INET, receiver_ip, &ipAddress) == 1)
             {
                 /* is valid IPV4 */
                 if ((ipAddress & 0xf0000000) == 0xE0000000) // 224.xxx.xxx.xxx - 239.xxx.xxx.xxx
                 {
                     mcastEnabled = 1;
                 }
+            }
+            else if (inet_pton(AF_INET6, receiver_ip, &v6addr) == 1)
+            {
+                /* is valid IPV6*/
+                if (IS_IPV6_MULTICAST(v6addr))
+                {
+                    mcastEnabled = 1;
+                }
+            }
+            else
+            {
+                IPERF_PRINTF("Incorrect IP address %s\n", receiver_ip);
+                return QAPI_ERR_INVALID_PARAM;
             }
             index++;
         }
@@ -943,13 +924,11 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             }
             
         }
-#if TO_CHECK
         else if (0 == strcmp(Parameter_List[index].String_Value, "-V"))
         {
             index++;
             v6 = 1;
         }
-#endif
         else if (0 == strcmp(Parameter_List[index].String_Value, "-S"))
         {
             index++;
@@ -1001,6 +980,8 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         iperf_tx_quit = 0;
         tCxt->params.tx_params.v6 = v6;
         tCxt->params.tx_params.ip_address = ipAddress;
+        memscpy(tCxt->params.tx_params.v6addr, sizeof(tCxt->params.tx_params.v6addr), v6addr, sizeof(v6addr));
+        tCxt->params.tx_params.scope_id = nt_get_netifidx_by_devmode(STA_DEVICE);
         tCxt->params.tx_params.ip_tos = ip_tos;
         if (pktSize > 0)
         {
@@ -1033,11 +1014,11 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             {
                 if (protocol == TCP)
                 {
-                    pktSize = min(pktSize, IPERF_MAX_PACKET_SIZE_TCPV6);
+                    pktSize = IPERF_MAX_PACKET_SIZE_TCPV6;
                 }
                 else
                 {
-                    pktSize = min(pktSize, IPERF_MAX_PACKET_SIZE_UDPV6);
+                    pktSize = IPERF_MAX_PACKET_SIZE_UDPV6;
                 }
             }
             else
@@ -2032,6 +2013,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         foreign_addr6.sin6_port = htons(p_tCxt->params.tx_params.port);
         foreign_addr6.sin6_family = family;
         foreign_addr6.sin6_scope_id = p_tCxt->params.tx_params.scope_id;
+        foreign_addr6.sin6_flowinfo = 0;
 
         to = (struct sockaddr *)&foreign_addr6;
         tolen = sizeof(foreign_addr6);
@@ -2609,7 +2591,8 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         foreign_addr6.sin6_port = htons(p_tCxt->params.tx_params.port);
         foreign_addr6.sin6_family = family;
         foreign_addr6.sin6_scope_id = p_tCxt->params.tx_params.scope_id;
-
+        foreign_addr6.sin6_flowinfo = 0;
+        
         to = (struct sockaddr *)&foreign_addr6;
         tolen = sizeof(foreign_addr6);
         tos_opt = IPV6_TCLASS;
