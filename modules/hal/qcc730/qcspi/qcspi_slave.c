@@ -34,6 +34,7 @@
 #define QCSPI_SLAVE_HOST_INT1_MASK    0x2000000
 #define QCSPI_SLAVE_HOST_INT2_MASK    0x4000000
 #define QCSPI_SLAVE_DW_SPI_GPIO_PIN    0x20
+#define QCSPI_SLAVE_CLEAR_INT_MAX_RETRY 3
 //Following is the priority of QcSPI slave peripheral in AHB arbitration to highest, to reduce access latencies
 #define QCSPI_AHB_PRI_CONFIG 0xF
 /*-------------------------------------------------------------------------
@@ -130,12 +131,15 @@ qcspi_slv_init (void)
 *@return NULL
 *@Param NULL
 */
+
 void __attribute__ ((section(".after_ram_vectors")))
 nt_spi_slv_interrupt(
 		void)
 {
     uint32_t qcspi_status;
 	uint32_t qcspi_status_1;
+	uint8_t  max_retry = 0;
+	
     //Reading IRQ Status register
     qcspi_status = HWIO_INX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
     QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_STATUS);
@@ -149,12 +153,17 @@ nt_spi_slv_interrupt(
 	
 	while( QCSPI_SLAVE_HOST_INT0_MASK & qcspi_status_1)
 	{
-		//clearing interrupts
-	    HWIO_OUTX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
-	    QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_CLR, qcspi_status);
+        if(max_retry > QCSPI_SLAVE_CLEAR_INT_MAX_RETRY)
+         break;
 		
-		qcspi_status_1 = HWIO_INX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
-	    QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_STATUS);
+		//clearing interrupts
+        HWIO_OUTX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
+        QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_CLR, qcspi_status);
+		
+        qcspi_status_1 = HWIO_INX(SEQ_WCSS_QCSPI_SLAVE_OFFSET,
+        QCSPI_SLAVE_QCSPI_SLAVE_R_SPI_SLAVE_IRQ_STATUS);
+
+        max_retry++;
 	}
 	
     //If the source of interrupt is HOST_INT0, control interface is called
