@@ -61,6 +61,7 @@ static QAT_Command_Status_t Extend_Command_BMISSTHR(uint32_t Op_Type, uint32_t P
 #ifdef CONFIG_HTTP_SERVER
 static QAT_Command_Status_t Extend_Command_CWCFG(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 #endif
+static QAT_Command_Status_t Extend_Command_WPS(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 
 /* The following is the complete command list for the QAT common command demo. */
 /** List of global commands that are supported when in a group. */
@@ -85,6 +86,8 @@ static QAT_Command_t QAT_Wifi_Command_List[] =
 #ifdef CONFIG_HTTP_SERVER   
    {"+CWCFG",    Extend_Command_CWCFG,	  QAT_OP_EXEC},
 #endif   
+   {"+BMISSTHR", Extend_Command_BMISSTHR,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+   {"+WPS",      Extend_Command_WPS,          QAT_OP_EXEC_W_PARAM},
 };
 
 typedef struct wifi_shell_cxt_s {
@@ -99,8 +102,22 @@ typedef struct wifi_shell_cxt_s {
    uint16_t        channel_frequency;
 	uint8_t			 active_device;
    uint8_t         wlan_enabled;
+   uint8_t         wps_stage;
 } wifi_shell_cxt_t;
 
+
+typedef struct {
+    uint8_t wps_in_progress;
+    uint8_t connect_flag;
+    uint8_t wps_pbc_interrupt;
+    qapi_WLAN_Netparams_t netparams;
+} wps_context_t;
+
+typedef enum {
+    WPS_NONE,
+    WPS_SCAN,
+    WPS_CONNECTED
+} WPS_STAGE_TYPE;
 /*-------------------------------------------------------------------------
  * Parameters define
  *-----------------------------------------------------------------------*/
@@ -245,6 +262,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
                p_cxt->connected = true;
             offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_conned:%d,%02x-%02x-%02x-%02x-%02x-%02x,",
                p_cxt->active_device, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+               p_cxt->wps_stage = WPS_CONNECTED;
          } else {
             offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_disconn:%d,%d,%02x-%02x-%02x-%02x-%02x-%02x,", cxnInfo->reason_code, cxnInfo->bss_Connection_Status,mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
          }
@@ -260,6 +278,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
          
          if(p_cxt->ssid_length) {
             snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_disconcmd:%d,%s", p_cxt->active_device, p_cxt->ssid);
+            p_cxt->wps_stage = WPS_NONE;
          }
          break;
       }
@@ -2095,6 +2114,80 @@ static QAT_Command_Status_t Extend_Command_CWCFG(uint32_t Op_Type, uint32_t Para
    return rc;
 }
 #endif
+
+/**
+   @brief WPS
+
+   This command will enable and start WPS PBC connect, or disable WPS PBC.
+
+   @param[in] Op_Type          The input command type.
+   @param[in] Parameter_Count  Number of parameters that were entered into the
+                               command line.
+   @param[in] Parameter_List   List of parameters entered into the command line.
+*/
+
+static QAT_Command_Status_t Extend_Command_WPS(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+   QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+   uint8_t auth_floor = 0;
+   uint8_t wps_enable = 0;
+	uint8_t deviceId = qat_get_active_device();
+	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+   wps_context_t wps_context;
+   char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
+   qapi_Status_t ret = QAPI_OK;
+   uint8_t wps_mode = 0;
+   char wps_pin[32];
+
+   if (0 == p_cxt->wlan_enabled)
+   {
+      QAT_Response_Str(QAT_RC_ERROR, "+WPS:Enable WLAN before get the WLAN infomation");
+      return rc;
+   }
+
+   switch (Op_Type)
+   {
+      case QAT_OP_EXEC_W_PARAM:    /* AT+WPS=0/1 */
+      {
+         if( Parameter_Count < 1 || !Parameter_List ) {
+            QAT_Response_Str(QAT_RC_ERROR, NULL);
+            return rc;
+         }
+
+         wps_enable = Parameter_List[0].Integer_Value;
+         if (wps_enable != 0 && wps_enable != 1) {
+            QAT_Response_Str(QAT_RC_ERROR, NULL);
+            return rc;
+         }
+         if (Parameter_Count == 2) {
+            auth_floor = Parameter_List[1].Integer_Value;
+         }
+
+         wps_mode = QAPI_WLAN_WPS_PBC_MODE_E;
+         wps_context.connect_flag = 1;
+         memset(wps_pin, 0, 32);
+
+         if (wps_enable == 1) {
+            if(qapi_WLAN_Start_Wps(deviceId, wps_context.connect_flag, wps_mode, wps_pin, auth_floor) != 0)
+            {
+               snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+WPS:WPS failed\r\n");
+               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+               return rc;
+            }
+            p_cxt->wps_stage = WPS_SCAN;
+            wps_context.wps_in_progress = true;
+         } else {
+            qapi_WLAN_Stop_Wps(deviceId, p_cxt->wps_stage);
+            p_cxt->wps_stage = WPS_NONE;
+            wps_context.wps_in_progress = false;
+         }
+      }
+      default:
+      ;
+   }
+   rc = QAT_Response_Str(QAT_RC_OK, NULL);
+   return rc;
+}
 
 void Initialize_QAT_Wlan_Demo (void)
 {

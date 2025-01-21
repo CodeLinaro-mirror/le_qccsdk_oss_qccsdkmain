@@ -134,6 +134,7 @@ int wlan_qapi_init (void)
     p_cxt->wlan_disable_block_mode = true;
     p_cxt->wlan_if_add_block_mode = true;
     p_cxt->wlan_scan_start_block_mode = true;
+    p_cxt->wlan_scan_stop_block_mode = true;
     p_cxt->wlan_connect_block_mode = false;
     p_cxt->wlan_disconnect_block_mode = true;
     p_cxt->wlan_get_stat_block_mode = true;

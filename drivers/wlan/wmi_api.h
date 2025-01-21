@@ -25,6 +25,7 @@
 #define WLAN_WMI_CMD_SIG_MASK_GET_TX_POWER		    0x8000
 #ifdef CONFIG_WPS
 #define WLAN_WMI_CMD_SIG_MASK_STARTED_WPS_PROCESS	0x10000
+#define WLAN_WMI_CMD_SIG_MASK_STOPPED_SCAN          0x20000
 #endif
 
 extern qapi_Status_t wmi_cmd_send (WMI_COMMAND_ID cmd_id, void *p_data, uint32_t data_len);
@@ -48,6 +49,6 @@ extern qapi_Status_t wmi_get_rate (void);
 extern qapi_Status_t wmi_send_raw (void);
 extern qapi_Status_t wmi_set_mgmt_filter (void);
 extern qapi_Status_t wmi_get_tx_power (void);
-
+extern qapi_Status_t wmi_stop_scan (void);
 #endif //__WMI_API_H__
 

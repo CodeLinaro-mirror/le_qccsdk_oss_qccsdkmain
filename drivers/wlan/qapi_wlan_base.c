@@ -342,5 +342,34 @@ qapi_Status_t qapi_WLAN_Start_Wps(uint8_t device_ID,
     WLAN_QAPI_UNLOCK();
     return ret;
 }
+
+qapi_Status_t qapi_WLAN_Stop_Wps (uint8_t device_ID, uint8_t wps_stage)
+{
+    qapi_Status_t ret = QAPI_OK;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    p_cxt->wps_stage = wps_stage;
+
+    if (p_cxt->wps_stage == WPS_CONNECTED && p_cxt->wps_in_progress)
+    {
+        WLAN_QAPI_LOCK();
+        ret = wmi_disconnect();
+        qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+        memset(&p_cxt->connect_cmd, 0, sizeof(WMI_CONNECT_CMD));
+        memset(&p_cxt->passphrase_cmd, 0, sizeof(WMI_SET_PASSPHRASE_CMD));
+        wlan_clear_privacy();
+        wlan_preset_specific_param();
+        qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+        WLAN_QAPI_UNLOCK();
+    }
+    else if (p_cxt->wps_stage == WPS_SCAN && p_cxt->wps_in_progress)
+    {
+        WLAN_QAPI_LOCK();
+        ret = wmi_stop_scan();
+        WLAN_QAPI_UNLOCK();
+    }
+    p_cxt->wps_in_progress = 0;
+    return ret;
+}
+
 #endif
 
