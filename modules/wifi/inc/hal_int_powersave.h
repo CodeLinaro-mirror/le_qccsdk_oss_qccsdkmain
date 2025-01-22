@@ -328,6 +328,7 @@ void nt_hal_rri_backup(sleep_mode mode);
 
 void mtu_fiq_handler(void);
 uint32_t nt_hal_pwrsave_bcn_fetch(uint8_t *buf, uint32_t buflen);
+uint32_t nt_hal_pwrsave_packets_fetch(uint8_t *buf, uint32_t buflen);
 void hal_wlan_sleep_timer_disable(uint32_t sleep_mode);
 void nt_twt_wakeup_rri_restore(uint32_t mode);
 

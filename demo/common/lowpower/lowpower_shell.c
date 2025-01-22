@@ -15,13 +15,21 @@
 #include "wlan_drv.h"
 #include "wmi_api.h"
 #include "lowpower_internal.h"
+#include "ethernet.h"
+#include "ip4.h"
+#include "udp.h"
 
 
 #define TEST_SLP_TYPE_MCU       1
 #define TEST_SLP_TYPE_LIGHT     2
 #define DEEP_SLP_WKUP_AON_TMR       1
 #define DEEP_SLP_WKUP_EXT           2
+#define udp_whitelist_len           4
+#define PP_HTONS(x) ((u16_t)((((x) & (u16_t)0x00ffU) << 8) | (((x) & (u16_t)0xff00U) >> 8)))
 
+#define WIFI_MAC_HEADER_LEN 24
+
+#define LLC_SNAP_HEADER_LEN 8
 
 void nt_dpm_stop_network_stack();
 
@@ -29,6 +37,8 @@ int32_t test_sleep_list_no = -1;
 uint32_t test_sleep_wkup_delay;
 uint32_t test_sleep_start_time;
 uint32_t test_sleep_min_time;
+uint32_t udp_whitelist_arr[udp_whitelist_len];
+
 
 static uint32_t bmps_start;
 static nt_osal_timer_handle_t bmps_timer;
@@ -239,6 +249,200 @@ static qapi_Status_t bmps_force_dtim(uint32_t Parameter_Count, QAPI_Console_Para
     return QAPI_OK;
 }
 
+// uint16_t udp_list[10]={0};
+
+uint64_t fourth_bc =0;
+extern uint64_t bc_delta_time, bc_after_bcn, bcmc_len;
+extern uint8_t bcmc[1000];
+
+uint64_t hres_timer_curr_time_us(void);
+
+static bool parse_eth_frame_in_whitelist(const uint8_t *frame, uint16_t frame_len)
+{
+    if (frame_len < sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + sizeof(struct udp_hdr)) {
+        // printf("Frame too short\n");
+        return TRUE;
+    }
+
+
+    struct eth_hdr *eth = (struct eth_hdr *)frame;
+    if (ntohs(eth->type) != ETHTYPE_IP) {
+        // printf("Not an IPv4 packet\n");
+        return TRUE;
+    }
+ 
+    struct ip_hdr *ip = (struct ip_hdr *)(frame + sizeof(struct eth_hdr));
+    if (ip->_proto != IP_PROTO_UDP) {  
+        // printf("Not a UDP packet\n");
+        return TRUE;
+    }
+
+    struct udp_hdr *udp = (struct udp_hdr *)(frame + sizeof(struct eth_hdr) + (IPH_HL_BYTES(ip)));
+    uint16_t src_port = ntohs(udp->src);
+    uint16_t dst_port = ntohs(udp->dest);
+
+    // whitelist for UDP
+
+    printf("type:0x%x\n",PP_HTONS(eth->type));
+    printf("UDP Source Port: %d\n", src_port);
+    printf("UDP Destination Port: %d\n", dst_port);
+    
+
+    return TRUE;
+}
+
+
+bool wakeup_cb_bcmc_filter_dtim(uint16_t type, bool bm_cast,void* wifi_frame,uint16_t len)
+{
+    // uint32_t ip_frame_len;
+    uint8_t *ip_frame;
+    if(bm_cast)
+    {
+        if (len < (WIFI_MAC_HEADER_LEN + LLC_SNAP_HEADER_LEN)) {
+            return FALSE;
+        }
+
+        const uint8_t *llc_snap_header = wifi_frame + WIFI_MAC_HEADER_LEN;
+
+        if (llc_snap_header[6] != 0x08 || llc_snap_header[7] != 0x00) {
+            return TRUE;
+        }
+
+        // ip_frame_len = len - (WIFI_MAC_HEADER_LEN + LLC_SNAP_HEADER_LEN);
+        ip_frame = wifi_frame + WIFI_MAC_HEADER_LEN + LLC_SNAP_HEADER_LEN;
+
+        struct ip_hdr *ip = (struct ip_hdr *)(ip_frame);
+        if (ip->_proto != IP_PROTO_UDP) {  
+            return TRUE;
+        }
+
+        struct udp_hdr *udp = (struct udp_hdr *)(ip_frame + (IPH_HL_BYTES(ip)));
+        uint16_t src_port = ntohs(udp->src);
+        uint16_t dst_port = ntohs(udp->dest);
+
+        // whitelist for UDP dst port
+        if(dst_port != 7777)
+        {
+            return FALSE;
+        }
+
+    }    
+    return TRUE;
+}
+
+bool wakeup_cb(uint16_t type, bool bm_cast,void* pbuf,uint16_t len)
+{
+    const struct eth_hdr *ethhdr;
+    const struct ip_hdr *iphdr;
+    const struct udp_hdr *udphdr;
+
+    printf("type:0x%x\n",type);
+    printf("bc_delta_time:%d, bc_after_bcn:%d, bcmc_len:%d \n",(uint32_t) bc_delta_time, (uint32_t) bc_after_bcn, (uint32_t)bcmc_len );
+    bc_after_bcn =0;
+    bcmc_len =0;
+    bc_delta_time =0;
+
+    // for(uint16_t i =0;i<1000;i++)
+    // {
+    //     if(bcmc[i])
+    //         printf("%x ",bcmc[i]);
+    // }
+    memset(bcmc,0,1000);
+
+    /*the pbuf as link-layer broadcast */
+    if(bm_cast && (type == ETHTYPE_IP))
+    {   
+        fourth_bc = hres_timer_curr_time_us();
+        return parse_eth_frame_in_whitelist((uint8_t *)pbuf,len);
+    }
+
+    // every unicast is in wake up whitelist
+    return TRUE;
+}
+
+static qapi_Status_t bcmc_filter_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    qapi_bmps_rx_filter_enable(Parameter_List[0].Integer_Value ? 1 : 0);
+    return QAPI_OK;
+}
+
+static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    unsigned int index = 0;
+    bool op = 0;
+    bool add_success =false;
+    unsigned int port =0 ;
+    if (Parameter_Count < 1)
+    {
+        printf("\nbcmc_filter_list -a [1|0] -u [dst udp port] -q\n");
+        printf("  -a  = 1:add udp port to the whitelist, 0:delete udp port from the whitelist \n");
+        printf("  -u  = the dst udp port like 7777\n");
+        printf("  -q  = query the whitelist\n");
+
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    while (index < Parameter_Count)
+    {
+        if (0 == strcmp(Parameter_List[index].String_Value, "-a"))
+        {
+            index++;
+            if(Parameter_List[index].Integer_Value !=0 && Parameter_List[index].Integer_Value !=1)
+                return QAPI_ERR_INVALID_PARAM;
+
+            op = Parameter_List[index].Integer_Value;
+            index++;
+        }
+        else if (0 == strcmp(Parameter_List[index].String_Value, "-u"))
+        {
+            index++;
+            port = Parameter_List[index].Integer_Value;
+            index++;
+        } 
+        else if (0 == strcmp(Parameter_List[index].String_Value, "-q"))
+        {
+            index++;
+            for(uint16_t i=0;i<udp_whitelist_len;i++)
+            {
+                printf("%d ",udp_whitelist_arr[i]);
+            }
+            printf("\r\n");
+        } 
+    }
+
+    if(op)      
+    {
+        for(uint16_t i=0;i<udp_whitelist_len;i++)
+        {
+            if(udp_whitelist_arr[i] == 0)
+            {
+                udp_whitelist_arr[i] = port;
+                add_success = true;
+                break;
+            }
+        }
+        if(!add_success)
+        {
+            printf("Add failed, the udp_whitelist_arr not empty");
+        }
+    }
+    else
+    {
+        for(uint16_t i=0;i<udp_whitelist_len;i++)
+        {
+            if(udp_whitelist_arr[i] == port)
+                udp_whitelist_arr[i] = 0;
+        }
+    }
+
+    return QAPI_OK;
+}
+
+
 #ifdef CONFIG_CPR_ENABLE
 static qapi_Status_t cpr_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
@@ -280,6 +484,8 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
 #ifdef CONFIG_CPR_ENABLE
     {cpr_enable, "cpr_enable", "<1/0>", "Enable CPR for Power save (This qcli is only for debugging. CPR enabled for default)\n"},
 #endif //CONFIG_CPR_ENABLE
+    {bcmc_filter_enable, "bcmc_filter_enable", "<1|0>", "enable or disable the bcmc filter\n"},
+    {bcmc_filter_list , "bcmc_filter_list", "\n\nUsage: bcmc_filter_list -a [1|0] -u [dst udp port] -q\n\n", "bcmc_filter_list"},
 };
 
 const QAPI_Console_Command_Group_t lowpower_shell_cmd_group = {"lowpower", sizeof(lowpower_shell_cmds) / sizeof(QAPI_Console_Command_t), lowpower_shell_cmds};

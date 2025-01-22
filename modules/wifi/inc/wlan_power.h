@@ -361,6 +361,7 @@ typedef struct {
     uint8_t no_of_acceptable_bcn_miss; /* no.of continuous beacon miss acceptable in mini mlme*/
     uint64_t last_sleep_time;
     uint8_t bmps_enabled; /* BMPS Enabled or disabled */
+    uint8_t bmps_rx_filter_enabled;
     //IMPS_STRUCT imps_struct;
     uint64_t next_dtim_tbtt_time_us;   /*next dtim tbtt time value in microseconds*/
 #if defined(NT_FN_PRODUCTION_STATS) || defined(NT_FN_DEBUG_STATS)

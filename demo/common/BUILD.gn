@@ -101,6 +101,8 @@ source_set("common") {
         sources += qtmr_demo_src
     }
     if (CONFIG_LOWPOWER_SHELL) {
+        include_dirs += ["//../comp/lwip/src/include/lwip"]
+        include_dirs += ["//../comp/lwip/src/include/lwip/prot"]
         sources += lowpower_demo_src
     }
     if (CONFIG_PROF) {

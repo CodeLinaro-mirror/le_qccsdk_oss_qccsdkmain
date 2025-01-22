@@ -103,6 +103,7 @@ void wmi_ignore_bcmc_in_bmps(devh_t *dev, uint8_t data);
 void wmi_slp_clk_cal_cfg(devh_t *dev, uint8_t data);
 void wmi_imps_cfg(devh_t *dev, WMI_IMPS_CFG *cfg);
 void wmi_bmps_enable(devh_t *dev, uint8_t data);
+void wmi_bmps_rx_filter_enable(devh_t *dev, uint8_t data);
 void wmi_slp_cal_clk_act(devh_t *dev, uint8_t data);
 
 NT_BOOL wmi_wlan_receive_management_frame_message(devh_t *dev);
