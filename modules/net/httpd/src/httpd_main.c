@@ -50,10 +50,12 @@ ESP_EVENT_DEFINE_BASE(ESP_HTTP_SERVER_EVENT);
 
 void esp_http_server_dispatch_event(int32_t event_id, const void* event_data, size_t event_data_size)
 {
-//    esp_err_t err = esp_event_post(ESP_HTTP_SERVER_EVENT, event_id, event_data, event_data_size, ESP_HTTP_SERVER_EVENT_POST_TIMEOUT);
-   // if (err != ESP_OK) {
-        //ESP_LOGE(TAG, "Failed to post esp_http_server event: %s", esp_err_to_name(err));
-    //}
+#if 0
+	esp_err_t err = esp_event_post(ESP_HTTP_SERVER_EVENT, event_id, event_data, event_data_size, ESP_HTTP_SERVER_EVENT_POST_TIMEOUT);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to post esp_http_server event: %s", esp_err_to_name(err));
+    }
+#endif	
 }
 
 static esp_err_t httpd_accept_conn(struct httpd_data *hd, int listen_fd)
@@ -299,6 +301,7 @@ static esp_err_t httpd_server(struct httpd_data *hd)
          * older connections will be closed) */
         FD_SET(hd->listen_fd, &read_set);
     }
+	
     FD_SET(hd->ctrl_fd, &read_set);
 
     int tmp_max_fd;
@@ -360,8 +363,10 @@ static void httpd_thread(void *arg)
     }
 
     ESP_LOGD(TAG, LOG_FMT("web server exiting"));
+	
     close(hd->msg_fd);
     cs_free_ctrl_sock(hd->ctrl_fd);
+
     httpd_sess_close_all(hd);
     close(hd->listen_fd);
     hd->hd_td.status = THREAD_STOPPED;
@@ -419,7 +424,7 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
         close(fd);
         return ESP_FAIL;
     }
-#if 0
+
     int ctrl_fd = cs_create_ctrl_sock(hd->config.ctrl_port);
     if (ctrl_fd < 0) {
         ESP_LOGE(TAG, LOG_FMT("error in creating ctrl socket (%d)"), errno);
@@ -434,12 +439,12 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
         close(ctrl_fd);
         return ESP_FAIL;
     }
-#endif
+
     hd->listen_fd = fd;
-#if 0
+
     hd->ctrl_fd = ctrl_fd;
     hd->msg_fd  = msg_fd;
-#endif	
+
     return ESP_OK;
 }
 

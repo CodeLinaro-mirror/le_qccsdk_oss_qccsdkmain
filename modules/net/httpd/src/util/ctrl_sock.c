@@ -26,6 +26,8 @@
 
 #include "ctrl_sock.h"
 
+#define CONFIG_LWIP_IPV4 1
+#define CONFIG_LWIP_NETIF_LOOPBACK 1
 #if CONFIG_IDF_TARGET_LINUX
 #define IPV4_ENABLED      1
 #define IPV6_ENABLED      1
