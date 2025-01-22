@@ -33,6 +33,7 @@ INCLUDE frn_ioe_bl_cmn.ld
 
 __app_image_start_addr = ORIGIN(RRAMMEM);
 __app_image_xip_start_addr = ORIGIN(FLASH_XIP);
+__raw_file_start_addr = ORIGIN(UDPARTMEM);
 /*
  * The entry point for SBL, which is used to load first function of SBL
  */
