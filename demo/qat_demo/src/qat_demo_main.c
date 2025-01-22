@@ -39,6 +39,10 @@ void app_init(void)
     Initialize_QAT_Wlan_Demo();
 #endif 
 
+#ifdef CONFIG_QAT_HTTPC_DEMO
+    Initialize_QAT_HttpC_Demo();
+#endif 
+
     UART_SEND_DIRECT("app_init over\r\n");
 }
 

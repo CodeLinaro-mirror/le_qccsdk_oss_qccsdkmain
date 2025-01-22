@@ -101,6 +101,9 @@ typedef struct qapi_Ssl_Cert {
 typedef struct {
     uint32_t    length;
     /**< Length of the data. */
+    
+    uint32_t    contentlength;
+    /**< Length of the content. */
 
     uint32_t    resp_Code;
     /**< Response code. */

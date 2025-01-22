@@ -359,6 +359,7 @@ int http_client_resolve(httpclient_sess *sess)
     htdbgprintf("%s(): need dns to resolve.\n", __func__);
 
     dns_gethostbyname((char *)sess->hcs_host, &ipaddr, httpc_dns_found, NULL);
+
     while((g_httpc_dns_found == 0) && (count++ < 5))
     {
         qurt_thread_sleep(1000);
@@ -2075,7 +2076,8 @@ int http_client_rx_cb(httpclient_sess *sess, int32_t state, void* chunk_data, in
     cb_resp.length    = chunk_size;
     cb_resp.resp_code = cb->resp_code;
     cb_resp.data = NULL;
-
+    cb_resp.contentlength = sess->hcs_contentlength;
+    
     if (chunk_data && chunk_size)
     {
         cb_resp.data = chunk_data;
@@ -2461,9 +2463,29 @@ int http_client_processpkt(httpclient_sess *sess, int length)
                 if (sess->hcs_command == HTTP_CLIENT_HEAD_CMD)
                 {
                     cb->state = HTTPC_RX_FINISHED;
+
+                    /* Get length of message body if there is "Content-Length" header */
+                    sess->hcs_contentlength = 0;
+                    ret_status = http_client_get_header_value("Content-Length:", (char *)sess->hcs_rxbuffer,
+                                                        sess->hcs_headersize, &hcs_contentlen);
+                    if (ret_status >= HTTP_CLIENT_RSP_WITH_INVALID_FORMAT_HEADER)
+                    {
+                        if(ret_status == HTTP_CLIENT_RSP_WITH_VALID_FORMAT_HEADER && hcs_contentlen >= 0)
+                        {
+                            sess->hcs_contentlength = (uint32_t)hcs_contentlen;
+                        }
+                        else
+                        {
+                            reset_sess = 1;
+                            cb->state = HTTPC_RX_ERROR_RX_PROCESS;
+                            goto end;
+                        }
+                    }
+                    
                     http_client_rx_cb(sess, cb->state, sess->hcs_rxbuffer, sess->hcs_headersize);
                     reset_sess = TRUE;
                     sendFailEvent = FALSE;
+
                     goto end;
                 }
 
