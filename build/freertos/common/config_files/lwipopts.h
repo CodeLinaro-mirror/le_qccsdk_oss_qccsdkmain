@@ -147,7 +147,10 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #define MEM_SIZE                        60000
 #endif
 
-#if CONFIG_MATTER_ENABLE
+#if !CONFIG_MATTER_ENABLE
+#define MEM_STATS                       1
+#define MEMP_STATS                      1
+#else
 #define MEMP_STATS                      0
 #define LWIP_DISABLE_TCP_SANITY_CHECKS  1
 #endif
