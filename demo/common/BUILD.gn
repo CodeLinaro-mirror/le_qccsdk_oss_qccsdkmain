@@ -110,6 +110,7 @@ source_set("common") {
         sources += flash_demo_src
     }
     if (CONFIG_PLATFORM_SHELL) {
+        include_dirs += ["//modules/hal/qcc730/qcspi"]
         sources += [ "platform/platform_shell.c" ]
     }
     if (CONFIG_WLAN) {
