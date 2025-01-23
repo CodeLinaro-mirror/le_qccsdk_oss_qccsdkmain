@@ -141,6 +141,7 @@ typedef struct http_rsp_cont{
 
 typedef struct {
     uint32_t    length;
+    uint32_t    contentlength;
     uint32_t    resp_code;
     const void* data;
 } http_client_cb_resp_t;
