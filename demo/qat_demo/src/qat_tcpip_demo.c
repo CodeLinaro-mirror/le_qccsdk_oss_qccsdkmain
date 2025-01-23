@@ -2142,7 +2142,7 @@ static QAT_Command_Status_t Extend_Command_Server(uint32_t Op_Type, uint32_t Par
     char local_ip[INET6_ADDRSTRLEN] = {0};
     int protocol_type = PROTOCOL_TCP;
     uint8_t ca_enable = 0;
-    uint16_t keep_alive = 0;
+    int keep_alive = 0;
     bool is_v6 = false;
     int opt = 1;
     switch (Op_Type)
@@ -2150,10 +2150,10 @@ static QAT_Command_Status_t Extend_Command_Server(uint32_t Op_Type, uint32_t Par
         case QAT_OP_EXEC:
         {
             QAT_Response_Str(QAT_RC_QUIET, "+CIPSERVER=<mode>,<param2>,[<\"type\">], [<CA enable>], [<keepalive>]");
-            // QAT_Response_Str(QAT_RC_QUIET, "mode:\r\n0: Shut down the server\r\n1: Build server");
-            // QAT_Response_Str(QAT_RC_QUIET, "if mode = 0, param2 can be either 0 or 1:\r\n    param2=0:Maintain existing server connections.\r\n    param2=1:Completely shut down the server.");
-            // QAT_Response_Str(QAT_RC_QUIET, "if mode = 1: param2 is listen port");
-            // QAT_Response_Str(QAT_RC_OK, NULL);
+            QAT_Response_Str(QAT_RC_QUIET, "mode:\r\n0: Shut down the server\r\n1: Build server");
+            QAT_Response_Str(QAT_RC_QUIET, "if mode = 0, param2 can be either 0 or 1:\r\n    param2=0:Maintain existing server connections.\r\n    param2=1:Completely shut down the server.");
+            QAT_Response_Str(QAT_RC_QUIET, "if mode = 1: param2 is listen port");
+            QAT_Response_Str(QAT_RC_OK, NULL);
             break;
         }
         case QAT_OP_QUERY:
@@ -2317,8 +2317,7 @@ static QAT_Command_Status_t Extend_Command_Server(uint32_t Op_Type, uint32_t Par
                 if (is_v6 && setsockopt(tcp_listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt)) < 0) {
                     goto tcp_server_fail;
                 }
-
-                if (keep_alive && setsockopt(tcp_listen_fd, SOL_SOCKET, SO_KEEPALIVE, &keep_alive, sizeof(keep_alive)) < 0) {
+                if (setsockopt(tcp_listen_fd, SOL_SOCKET, SO_KEEPALIVE, &keep_alive, sizeof(keep_alive)) < 0) {
                     goto tcp_server_fail;
                 }
 
@@ -2821,13 +2820,11 @@ static QAT_Command_Status_t Extend_Command_DHCPv4s(uint32_t Op_Type, uint32_t Pa
         }
         case QAT_OP_EXEC_W_PARAM:
         {
-            // if((Parameter_Count < 2) || (Parameter_Count > 5) || !Parameter_List || (Parameter_List[0].Integer_Is_Valid)
-            // || (Parameter_List[1].Integer_Is_Valid) || (Parameter_List[2].Integer_Is_Valid) 
-            // || (Parameter_List[3].Integer_Is_Valid) || (!Parameter_List[4].Integer_Is_Valid)) 
-            // {
-            //     QAT_Response_Str(QAT_RC_ERROR, "+CIPDHCPV4S:Invalid input parameter!\r\n");
-            //     return rc;
-            // }
+            if((Parameter_Count < 2) || (Parameter_Count > 5) || !Parameter_List) 
+            {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPDHCPV4S:Invalid input parameter!\r\n");
+                return rc;
+            }
 
             netif = get_netif_by_device(AP_DEVICE);
             if(!netif){

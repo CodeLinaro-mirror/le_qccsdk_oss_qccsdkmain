@@ -673,24 +673,21 @@ static qapi_Status_t ifconfig(uint32_t __attribute__((__unused__)) Parameter_Cou
                    net_set_ip(netif, &gw_addr, IPv4_GATEWAY_IDX);
                }
             }
-            else {
-                return QAPI_NET_ERR_INVALID_IPADDR;
-            }
 #endif /* LWIP_IPV4 */
 #if LWIP_IPV6
-        	if (IP_IS_V6_VAL(ip_addr)) {
+        	else if (IP_IS_V6_VAL(ip_addr)) {
                 int idx;
-        		idx = atoi(Parameter_List[1].String_Value);
+        		idx = atoi(Parameter_List[2].String_Value);
         		if ((idx < 1) && (idx > 2)) {
         			info_printf("Invalid index selected for ipv6 address index set to default \r\n");
         			idx = 1;
         		}
         		net_set_ip(netif, &ip_addr, idx); //setting ipv6 address
         	}
+#endif /* LWIP_IPV6 */
             else {
                 return QAPI_NET_ERR_INVALID_IPADDR;
             }
-#endif /* LWIP_IPV6 */
             break;
         default:
             return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
