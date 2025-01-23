@@ -14,6 +14,7 @@
 #include "nt_osal.h"
 #include <stdio.h>
 #include "timer.h"
+#include "nt_hw.h"
 
 /*-------------------------------------------------------------------------
  * Variables
@@ -228,6 +229,23 @@ qapi_Status_t qapi_Core_RTC_NTP_Set(ntp_Time_t *tm)
 	rtc_time_padding = 0;
 	last_ntp_time.second = tm->second;
 	last_ntp_time.frac = tm->frac;
+	
+	return QAPI_OK;
+}
+
+/**
+ *  Gets boot reason
+ *
+ * @param[in] tm  Pointer to a uint32_t to contain boot reason.
+ *
+ * @return #QAPI_OK on success, or a different code on error.
+ */
+qapi_Status_t qapi_Core_Obtain_Boot_Reason(uint32_t *data)
+{
+	if(data != NULL)
+		*data = *(uint8_t *)QWLAN_PMU_SYSTEM_STATUS_REG;
+	else
+		return QAPI_ERROR;
 	
 	return QAPI_OK;
 }

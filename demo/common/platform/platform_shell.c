@@ -25,6 +25,7 @@
 #include "qcspi_slave_api.h"
 #endif
 #include "qapi_rram.h"
+#include "nt_hw.h"
 
 
 
@@ -755,6 +756,34 @@ platform_demo_time_zone_error:
     print_usage_set_time_zone();
     return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
 }
+static qapi_Status_t platform_demo_check_boot_reason(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{	
+	uint32_t data = 0;
+
+	if(QAPI_OK == qapi_Core_Obtain_Boot_Reason(&data))
+	{
+		if(0 == data & PMU_BASE_pmu_PMU_SYSTEM_STATUS_COLD_WARM_BOOT_Msk)
+		{
+			printf("Status: boot from cold boot\r\n");
+		}
+		else if(QWLAN_PMU_SYSTEM_STATUS_WARM_BOOT_FROM_SLEEP_MASK == (uint32_t)(data & QWLAN_PMU_SYSTEM_STATUS_WARM_BOOT_FROM_SLEEP_MASK))
+		{	
+			printf("Status: boot from dtim sleep\r\n");
+		}
+		else if(QWLAN_PMU_SYSTEM_STATUS_WARM_BOOT_FROM_DEEPSLEEP_MASK == (uint32_t)(data & QWLAN_PMU_SYSTEM_STATUS_WARM_BOOT_FROM_DEEPSLEEP_MASK))
+		{
+			printf("Status: boot from deep sleep\r\n");
+		}
+		else
+		{
+			printf("Status: unknown status %d\r\n", data);
+		}
+		return QAPI_OK;
+	}
+	else
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+	
+}
 
 const QAPI_Console_Command_t platform_shell_cmds[] =
 {
@@ -781,6 +810,7 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
 #ifdef SUPPORT_QCSPI_SLAVE
     {platform_qcspi_enable, "qcspi", "<0|1>\n", "enable/disable qcspi. 1: enable, 0:disable\n"},
 #endif    
+    {platform_demo_check_boot_reason, "boot_reason", "\n", "check boot reason\n"},
 };
 
 const QAPI_Console_Command_Group_t platform_shell_cmd_group = {"platform", sizeof(platform_shell_cmds) / sizeof(QAPI_Console_Command_t), platform_shell_cmds};
