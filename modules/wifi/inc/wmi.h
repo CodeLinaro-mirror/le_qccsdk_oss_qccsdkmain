@@ -235,6 +235,7 @@ typedef enum {
 	WMI_BMPS_ENABLE_CMDID,
 	WMI_BMPS_IGNORE_BCMC_CMDID,
 	WMI_BMPS_TIMING_CFG_CMDID, //0xa0=160
+    WMI_BMPS_RX_FILTER_ENABLE_CMDID,
 	WMI_IMPS_CFG_CMDID,
 	WMI_GET_STATISTICS_CMDID,
     WMI_SLEEP_CLK_CAL_DONE_CMDID, /* Updates the xocnt based on current temperature from the sleep clock cal results */

@@ -74,3 +74,15 @@ qapi_Status_t qapi_imps_cfg(uint8_t enable, uint32_t sleep_time, uint32_t recnx_
 */
 qapi_Status_t qapi_bmps_cfg(uint8_t enable, uint32_t idle_timeout);
 
+/**
+   @brief Config and enable/disable BMPS RX Filter.
+
+   The API config and enable/disable BMPS.
+
+   @param[in] enable          1: Enable; 0: disable;
+   @param[in] idle_timeout  Idle timeout value in ms. When BMPS is enabled, system would start a timer with idle_timeout as timeout value, after timer expires, it'll check tx/rx cnt during this period, if meet condition then trigger system entering into BMPS, otherwise re-start the idle timer again;
+
+   @return
+   - QAPI_OK                             --  BMPS  RX Filter enable/disable successfully.
+*/
+qapi_Status_t  qapi_bmps_rx_filter_enable(uint8_t enable);

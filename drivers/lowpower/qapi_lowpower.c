@@ -125,3 +125,21 @@ qapi_Status_t qapi_bmps_cfg(uint8_t enable, uint32_t idle_timeout)
     return QAPI_OK;
 }
 
+
+qapi_Status_t qapi_bmps_rx_filter_enable(uint8_t enable)
+{
+    if (enable != 0 && enable != 1) {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    WMI_BMPS_ENABLE *pbmps = (WMI_BMPS_ENABLE *)&g_lowpower_wmi.bmps_cfg.bmps_enable;
+    memset(pbmps, 0, sizeof(*pbmps));
+    pbmps->enable = enable;
+    wmi_cmd_send(WMI_BMPS_RX_FILTER_ENABLE_CMDID, pbmps, sizeof(*pbmps));
+    return QAPI_OK;
+}
+
+qapi_Status_t qapi_bmps_rx_filter_cb_register(void)
+{
+   return QAPI_OK;
+}
+
