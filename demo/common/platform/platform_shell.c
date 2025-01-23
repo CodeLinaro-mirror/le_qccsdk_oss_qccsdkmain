@@ -21,6 +21,9 @@
 #include "qapi_rtc.h"
 #include "wifi_fw_pmu_ts_cfg.h"
 #include "ferm_hkadc_drv.h"
+#ifdef SUPPORT_QCSPI_SLAVE
+#include "qcspi_slave_api.h"
+#endif
 #include "qapi_rram.h"
 
 
@@ -567,6 +570,23 @@ static qapi_Status_t platform_demo_info(uint32_t Parameter_Count, QAPI_Console_P
     return QAPI_OK;
 }
 
+#ifdef SUPPORT_QCSPI_SLAVE
+static qapi_Status_t platform_qcspi_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+	if (Parameter_Count != 1) {
+		printf("Invalid number of arguments\r\n");
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+
+    if(0 == Parameter_List[0].Integer_Value)
+		qcspi_slv_deinit ();
+	else
+		qcspi_slv_init ();        
+
+    return QAPI_OK;
+}
+#endif
+
 static qapi_Status_t platform_demo_getcx(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     (void)(Parameter_Count);
@@ -758,6 +778,9 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
     {platform_demo_calcxoneshot, "calcxoneshot", "<tempC> <vbatmV>", "calculate cx(ULP-SMPS2) oneshot_code accordting to tempC(-40C, 125C) and vbatmV(1600mV, 3600mV)\n"},
     {platform_demo_setcxoneshot, "setcxoneshot", "<oneshot> [tempC] [vbatmV]\n", "if oneshot not zero, just set; else, calculate oneshot according to tempC and vbatmV then set. This will disable cxoneshot update in sleep\n"},
     {platform_demo_time_zone, "time_zone", "<zone>\n", "set time zone\n"},
+#ifdef SUPPORT_QCSPI_SLAVE
+    {platform_qcspi_enable, "qcspi", "<0|1>\n", "enable/disable qcspi. 1: enable, 0:disable\n"},
+#endif    
 };
 
 const QAPI_Console_Command_Group_t platform_shell_cmd_group = {"platform", sizeof(platform_shell_cmds) / sizeof(QAPI_Console_Command_t), platform_shell_cmds};

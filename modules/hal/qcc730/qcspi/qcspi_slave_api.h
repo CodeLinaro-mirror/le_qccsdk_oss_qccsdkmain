@@ -17,6 +17,7 @@
 
 // Funiction to initialize QcSPI
 void qcspi_slv_init (void);
+void qcspi_slv_deinit (void);
 void qcspi_slv_disable_host_int(void);
 void qcspi_slv_enable_host_int(void);
 #endif //SUPPORT_QCSPI_SLAVE
