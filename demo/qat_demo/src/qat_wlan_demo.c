@@ -304,7 +304,14 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
           QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+EVT:wlan_disabled\r\n");
          return;
       }
+      case QAPI_WLAN_WPS_FAIL_CB_E: {
+         int reason = *(int *)payload;
+         p_cxt->wps_stage = WPS_NONE;
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_wps_failed:%d,", reason);
+         break;
+      }
    }
+
 
    if (!enable_event_reporting) {
       QAT_Response_Str(QAT_RC_QUIET, "Event reporting has been disabled");

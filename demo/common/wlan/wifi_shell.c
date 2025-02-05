@@ -2410,7 +2410,7 @@ int32_t wps_push_setup(uint32_t __attribute__((__unused__)) Parameter_Count, QAP
         }
         memset(wpsScan.ssid, 0, __QAPI_WLAN_MAX_SSID_LEN);
         wpsScan.ssid_Length = strlen(Parameter_List[1].String_Value);
-        strlcpy((char*)(wpsScan.ssid), Parameter_List[1].String_Value, wpsScan.ssid_Length);
+        strlcpy((char*)(wpsScan.ssid), Parameter_List[1].String_Value, wpsScan.ssid_Length + 1);
 
         /* MAC address */
         if(strlen((char *) Parameter_List[2].String_Value) != 12)
@@ -2438,7 +2438,7 @@ int32_t wps_push_setup(uint32_t __attribute__((__unused__)) Parameter_Count, QAP
         }
 
         /* Wireless channel */
-        wpsScan.ap_Channel = chan_to_frequency(Parameter_List[3].Integer_Value);
+        wpsScan.ap_Channel = Parameter_List[3].Integer_Value;
         wpsScan_p = &wpsScan;
     }
 
@@ -2453,7 +2453,7 @@ int32_t wps_push_setup(uint32_t __attribute__((__unused__)) Parameter_Count, QAP
         return QAPI_ERROR;
     }
 
-    if(qapi_WLAN_Start_Wps(deviceId, wps_context.connect_flag, wps_mode, wpsPin) != 0)
+    if(qapi_WLAN_Start_Wps(deviceId, wps_context.connect_flag, wps_mode, wpsPin, 0/* AUTH_OPEN */) != 0)
     {
         info_printf("WPS failed\r\n");
         return QAPI_ERROR;

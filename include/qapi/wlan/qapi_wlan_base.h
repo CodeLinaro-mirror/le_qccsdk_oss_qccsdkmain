@@ -210,6 +210,12 @@ typedef struct {
     uint8_t reserved2;
 } qapi_WLAN_Chan_Switch_Evt_t;
 
+typedef struct {
+    qapi_WLAN_Evt_Hdr_t evt_hdr;  /* contains the common event header */
+    uint8_t reason; 
+    uint8_t reserved[3];
+} qapi_WLAN_WPS_Fail_Evt_t;
+
 /**
 @ingroup qapi_wlan
 WLAN driver invokes an application-registered callback function to indicate various
@@ -321,6 +327,7 @@ typedef enum
    QAPI_WLAN_DISABLE_CB_E                   = 25, /**< ID to indicate WLAN is disabled. */
    QAPI_WLAN_IF_ADD_COMP_CB_E               = 26, /**< ID to indicate WLAN interface is added. */
    QAPI_WLAN_SCAN_START_CB_E                = 27, /**< ID to indicate WLAN scan is started. */
+   QAPI_WLAN_WPS_FAIL_CB_E                  = 28, /**< ID to indicate WLAN WPS failed. */
 } qapi_WLAN_Callback_ID_e;
 
 /**

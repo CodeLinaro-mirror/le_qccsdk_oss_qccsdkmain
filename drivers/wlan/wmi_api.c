@@ -624,6 +624,26 @@ static void wmi_stop_scan_event(void *msg)
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
 
+static void wmi_wps_fail_event(void *msg)
+{
+    qapi_WLAN_WPS_Fail_Evt_t qapi_wps_fail_evt;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    int reason = *(int *)msg;
+
+    if (!msg) {
+        warn_printf("msg NULL\n");
+        return;
+    }
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    p_cxt->connected = false;
+
+    if (p_cxt->qapi_event_handler) {
+        p_cxt->qapi_event_handler(p_cxt->network_id, QAPI_WLAN_WPS_FAIL_CB_E, p_cxt->event_application_Context, &reason, sizeof(reason));
+    }
+
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+}
+
 static void wmi_chan_switch_event(void *msg)
 {
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
@@ -731,6 +751,10 @@ static void wmi_event_dispatch(event_t event_id, void *data)
 			wmi_set_mgmt_filter_event(data);
 		case WMI_SCAN_STOP_EVTID:
 			wmi_stop_scan_event(data);
+			break;
+		case WMI_WPS_FAIL_EVTID:
+			wmi_wps_fail_event(data);
+			break;
         default:
             break;
     }
