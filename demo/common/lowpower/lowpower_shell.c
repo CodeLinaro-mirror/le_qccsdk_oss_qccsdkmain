@@ -24,7 +24,7 @@
 #define TEST_SLP_TYPE_LIGHT     2
 #define DEEP_SLP_WKUP_AON_TMR       1
 #define DEEP_SLP_WKUP_EXT           2
-#define udp_whitelist_len           4
+#define UDP_WHITELIST_LEN           4
 #define PP_HTONS(x) ((u16_t)((((x) & (u16_t)0x00ffU) << 8) | (((x) & (u16_t)0xff00U) >> 8)))
 
 #define WIFI_MAC_HEADER_LEN 24
@@ -37,7 +37,7 @@ int32_t test_sleep_list_no = -1;
 uint32_t test_sleep_wkup_delay;
 uint32_t test_sleep_start_time;
 uint32_t test_sleep_min_time;
-uint32_t udp_whitelist_arr[udp_whitelist_len];
+uint32_t udp_whitelist_arr[UDP_WHITELIST_LEN]={7777,0,0,0};
 
 
 static uint32_t bmps_start;
@@ -321,11 +321,15 @@ bool wakeup_cb_bcmc_filter_dtim(uint16_t type, bool bm_cast,void* wifi_frame,uin
         uint16_t dst_port = ntohs(udp->dest);
 
         // whitelist for UDP dst port
-        if(dst_port != 7777)
+        for(uint16_t i =0;i<UDP_WHITELIST_LEN;i++)
         {
-            return FALSE;
+            if(udp_whitelist_arr[i] && dst_port == udp_whitelist_arr[i])
+            {
+                return TRUE;
+            }
         }
-
+        
+        return FALSE;
     }    
     return TRUE;
 }
@@ -367,6 +371,11 @@ static qapi_Status_t bcmc_filter_enable(uint32_t Parameter_Count, QAPI_Console_P
     }
 
     qapi_bmps_rx_filter_enable(Parameter_List[0].Integer_Value ? 1 : 0);
+
+    if(Parameter_List[0].Integer_Value )
+    {
+        qapi_bmps_bcmc_rx_filter_cb_register(wakeup_cb_bcmc_filter_dtim, wakeup_cb);
+    }
     return QAPI_OK;
 }
 
@@ -406,7 +415,7 @@ static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Par
         else if (0 == strcmp(Parameter_List[index].String_Value, "-q"))
         {
             index++;
-            for(uint16_t i=0;i<udp_whitelist_len;i++)
+            for(uint16_t i=0;i<UDP_WHITELIST_LEN;i++)
             {
                 printf("%d ",udp_whitelist_arr[i]);
             }
@@ -416,7 +425,7 @@ static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Par
 
     if(op)      
     {
-        for(uint16_t i=0;i<udp_whitelist_len;i++)
+        for(uint16_t i=0;i<UDP_WHITELIST_LEN;i++)
         {
             if(udp_whitelist_arr[i] == 0)
             {
@@ -432,7 +441,7 @@ static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Par
     }
     else
     {
-        for(uint16_t i=0;i<udp_whitelist_len;i++)
+        for(uint16_t i=0;i<UDP_WHITELIST_LEN;i++)
         {
             if(udp_whitelist_arr[i] == port)
                 udp_whitelist_arr[i] = 0;
