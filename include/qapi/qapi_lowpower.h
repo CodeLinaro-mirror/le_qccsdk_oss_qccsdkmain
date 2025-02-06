@@ -20,6 +20,9 @@
 #include "wmi_api.h"
 
 
+/* @brief bmps rx filter callback typedef */
+typedef bool (*qapi_bmps_rx_filter_cb)(uint16_t type, bool bm_cast,void* pbuf,uint16_t len);
+
 /**
    @brief Enable/Disable system power management.
 
@@ -77,12 +80,27 @@ qapi_Status_t qapi_bmps_cfg(uint8_t enable, uint32_t idle_timeout);
 /**
    @brief Config and enable/disable BMPS RX Filter.
 
-   The API config and enable/disable BMPS.
+   The API config and enable/disable BMPS RX Filter.
 
    @param[in] enable          1: Enable; 0: disable;
-   @param[in] idle_timeout  Idle timeout value in ms. When BMPS is enabled, system would start a timer with idle_timeout as timeout value, after timer expires, it'll check tx/rx cnt during this period, if meet condition then trigger system entering into BMPS, otherwise re-start the idle timer again;
 
    @return
    - QAPI_OK                             --  BMPS  RX Filter enable/disable successfully.
 */
 qapi_Status_t  qapi_bmps_rx_filter_enable(uint8_t enable);
+
+
+
+/**
+   @brief Register the rx filter callback function for bmps for broadcast/multicast packets.
+
+   The API config and enable/disable BMPS.
+
+   @param[in] bmps_cb  callback function used in bmps mode, used as filter to ignore some broadcast/multicast packets that will not wake up chip;
+   @param[in] net_cb  callback function used in net stack, could be NULL;
+
+   @return
+   - QAPI_OK                             --  BMPS  RX Filter enable/disable successfully.
+*/
+qapi_Status_t qapi_bmps_bcmc_rx_filter_cb_register(qapi_bmps_rx_filter_cb bmps_cb, qapi_bmps_rx_filter_cb net_cb);
+

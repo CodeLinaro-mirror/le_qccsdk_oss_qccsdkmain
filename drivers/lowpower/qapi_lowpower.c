@@ -14,7 +14,8 @@
 
 lpr_wmi_t g_lowpower_wmi;
 extern void nt_watchdog_timer_freeze(void);
-
+extern bool (*wakeup_cb_dtim)(uint16_t type, bool bm_cast,void* pbuf,uint16_t len);
+extern bool (*wakeup_cb_net)(uint16_t type, bool bm_cast,void* pbuf,uint16_t len);
 
 /**
    @brief Enable/Disable system power management.
@@ -138,8 +139,21 @@ qapi_Status_t qapi_bmps_rx_filter_enable(uint8_t enable)
     return QAPI_OK;
 }
 
-qapi_Status_t qapi_bmps_rx_filter_cb_register(void)
+qapi_Status_t qapi_bmps_bcmc_rx_filter_cb_register(qapi_bmps_rx_filter_cb bmps_cb, qapi_bmps_rx_filter_cb net_cb)
 {
+    if(!bmps_cb)
+    {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    if(bmps_cb)
+    {
+        wakeup_cb_dtim = bmps_cb;
+    }
+
+    wakeup_cb_net = net_cb;
+    
+
    return QAPI_OK;
 }
 
