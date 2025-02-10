@@ -29,7 +29,7 @@ extern "C" {
 #define OS_SUCCESS ESP_OK
 #define OS_FAIL    ESP_FAIL
 
-typedef TaskHandle_t othread_t;
+#define othread_t TaskHandle_t 
 
 static inline int httpd_os_thread_create(othread_t *thread,
                                  const char *name, uint16_t stacksize, int prio,
