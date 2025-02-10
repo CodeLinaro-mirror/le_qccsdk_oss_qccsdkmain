@@ -23,7 +23,7 @@
 #include <esp_err.h>
 #endif
 #include <esp_http_server.h>
-#include "osal.h"
+#include <port/osal.h>
 
 #ifdef __cplusplus
 extern "C" {
