@@ -27,12 +27,14 @@
 #include "event_groups.h"
 #include "lwip/err.h"
 #include "lwip/sockets.h"
-
-
+#include "at_web_server.h"
 #include "qapi_version.h"
 #include "qat.h"
 
 #ifdef CONFIG_HTTP_SERVER
+
+#define AT_HTTPD_PRINT_ENABLE 0
+
 #define AT_WEB_SERVER_CHECK(a, str, goto_tag, ...)                                              \
     do                                                                                 \
     {                                                                                  \
@@ -45,17 +47,21 @@
 
 #define AT_WEB_VERSION                             "1.0"
 #define AT_WEB_SCRATCH_BUFSIZE                     320
-#define AT_WEB_PAGE_BUFSIZE                        1024
-#define AT_WEB_MAX_SSID_SIZE                       32
-#define AT_WEB_MAX_PWD_SIZE                        64
+#define AT_WEB_PAGE_MAX_BUFSIZE                    2048
 #define AT_WEB_MAX_WIFI_CFG_SIZE                   128    
-
 
 #define AT_WEB_MOUNT_POINT                         "/lfs"
 #define AT_LFS_WIFI_FILE                           "/lfs/wifi"
+#define AT_LFS_HTTPD_PAGE                          "/lfs/index.html"
+
 #define AT_OK          0  
 #define AT_FAIL        -1 
 
+#if AT_HTTPD_PRINT_ENABLE
+#define AT_HTTPD_PRINT printf
+#else
+#define AT_HTTPD_PRINT
+#endif
 /**
  * Maximum length of path prefix (not including zero terminator)
  */
@@ -69,7 +75,7 @@ typedef struct {
 typedef struct web_server_context {
     char base_path[AT_LFS_PATH_MAX + 1];
     char scratch[AT_WEB_SCRATCH_BUFSIZE];	
-	char html_buf[AT_WEB_PAGE_BUFSIZE];
+	char html_buf[AT_WEB_PAGE_MAX_BUFSIZE];
 	wifi_config_t wifi_cfg;
 } web_server_context_t;
 
@@ -79,10 +85,11 @@ static const char *TAG = "at web";
 wifi_config_t *p_wifi_cfg = NULL;
 char *p_html_buf = NULL;
 
-int at_read_wifi_info(void);
+int at_read_wifi_info(char *ssid, char *password);
 static esp_err_t web_common_get_handler(httpd_req_t *req);
 static esp_err_t at_web_version_get_handler(httpd_req_t *req);
 static esp_err_t config_wifi_post_handler(httpd_req_t *req);
+static int at_read_wifi_page(char *buffer, uint32_t buf_len, char *file);
 
 const char *html_page = 
 	"<html lang='en'>"
@@ -95,10 +102,10 @@ const char *html_page =
 	    "<h1>Wi-Fi Setup</h1>"
 	    "<form action='/setwifi' method='POST'>"
 	        "<label for='ssid'>SSID:</label><br>"
-	        "<input type='text' id='ssid' name='ssid' value='%s' required>"
+	        "<input type='text' id='ssid' name='ssid' required>"
 	        "<br><br>"
 	        "<label for='password'>Password:</label><br>"
-	        "<input type='test' id='password' name='password' value='%s' required>"
+	        "<input type='text' id='password' name='password' required>"
 	        "<br><br>"
 	        "<button type='submit'>Submit</button>"
 	    "</form>"
@@ -109,13 +116,10 @@ int at_get_wifi_cfg(char *ssid, char *password)
 {
     if ((NULL == ssid) 
 		|| (NULL == password)
-		|| (AT_OK != at_read_wifi_info()))
+		|| (AT_OK != at_read_wifi_info(ssid, password)))
     {
         return AT_FAIL;
     }
-
-    snprintf(ssid, sizeof(p_wifi_cfg->ssid), "%s", p_wifi_cfg->ssid);
-    snprintf(password, sizeof(p_wifi_cfg->password), "%s", p_wifi_cfg->password);
 	
     return AT_OK;
 }
@@ -175,9 +179,25 @@ static esp_err_t index_html_get_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html");
     /* Add file upload form and script which on execution sends a POST request to /upload */
-	memset(p_html_buf, 0, AT_WEB_PAGE_BUFSIZE);
-	at_read_wifi_info();
-	snprintf(p_html_buf, AT_WEB_PAGE_BUFSIZE, html_page, p_wifi_cfg->ssid, p_wifi_cfg->password);
+	memset(p_html_buf, 0, AT_WEB_PAGE_MAX_BUFSIZE);
+#ifdef CONFIG_FILE_SYSTEM
+    at_read_wifi_page(p_html_buf, AT_WEB_PAGE_MAX_BUFSIZE, AT_LFS_HTTPD_PAGE);
+#else
+	at_read_wifi_info(p_wifi_cfg->ssid, p_wifi_cfg->password);
+	snprintf(p_html_buf, AT_WEB_PAGE_MAX_BUFSIZE, "%s", html_page);
+#endif
+    httpd_resp_send_chunk(req, (const char*) p_html_buf, strlen(p_html_buf));
+    /* Respond with an empty chunk to signal HTTP response completion */
+    return httpd_resp_send_chunk(req, NULL, 0);
+}
+
+static esp_err_t wifi_cfg_get_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "application/json");
+    /* Add file upload form and script which on execution sends a POST request to /upload */
+	memset(p_html_buf, 0, AT_WEB_PAGE_MAX_BUFSIZE);
+	at_read_wifi_info(p_wifi_cfg->ssid, p_wifi_cfg->password);
+	snprintf(p_html_buf, AT_WEB_PAGE_MAX_BUFSIZE, "{ssid:%s, password:%s}", "test_ap", "12345678");
     httpd_resp_send_chunk(req, (const char*) p_html_buf, strlen(p_html_buf));
     /* Respond with an empty chunk to signal HTTP response completion */
     return httpd_resp_send_chunk(req, NULL, 0);
@@ -188,6 +208,12 @@ static esp_err_t web_common_get_handler(httpd_req_t *req)
 {
     return index_html_get_handler(req);
     return AT_OK;
+}
+
+/* Send HTTP response with the contents of the requested file */
+static int web_wifi_get_handler(httpd_req_t *req)
+{
+    return wifi_cfg_get_handler(req);
 }
 
 /* A help function to get post request data */
@@ -220,7 +246,7 @@ static esp_err_t recv_post_data(httpd_req_t *req, char *buf)
 
 static void at_web_response_ok(httpd_req_t *req)
 {
-    const char *temp_str = "{\"state\": 0}";
+    const char *temp_str = "{\"state\": OK}";
     httpd_resp_set_type(req, HTTPD_TYPE_JSON);
     httpd_resp_set_status(req, HTTPD_200);
 
@@ -247,7 +273,7 @@ static int at_get_wifi_info_from_str(char *buffer, wifi_config_t *config)
 	    return AT_FAIL;
 	}
 
-    printf("wifi info %s\r\n", buffer);
+    AT_HTTPD_PRINT("wifi info %s\r\n", buffer);
 
 #if 1
     at_web_find_arg(buffer, "ssid", config->ssid, AT_WEB_MAX_SSID_SIZE);	
@@ -265,16 +291,55 @@ static int at_get_wifi_info_from_str(char *buffer, wifi_config_t *config)
         snprintf(config->password, strlen(buffer)-(pwd-buffer)-9+1, "%s", pwd+9);
 	}
 #endif	
-    printf("ssid %s password %s\r\n", config->ssid, config->password);
+    AT_HTTPD_PRINT("ssid %s password %s\r\n", config->ssid, config->password);
+    return AT_OK;
+}
+
+static int at_read_wifi_page(char *buffer, uint32_t buf_len, char *name)
+{
+    int file;
+
+	if ((NULL == buffer) || (0 == buf_len) || (NULL == name))
+	{
+	    return AT_FAIL;
+	}
+	
+    file = open(name, O_RDONLY, 0);
+    if (file == -1)
+    {
+        printf("Error opening file:%s.\n",name);
+        return AT_FAIL;
+    }
+    AT_HTTPD_PRINT("open %s for read\r\n", name);
+
+    lseek(file, 0, SEEK_SET);
+
+    int len_read = 0;
+    len_read = read(file, buffer, buf_len);
+    if(len_read > 0)
+    {
+        //AT_HTTPD_PRINT("read %d %s\r\n", len_read, buffer);
+    }
+    else if(len_read == 0)
+    {
+        printf("Fail to read from: %s, %d\r\n", name, len_read);
+    }
+    else
+    {
+        printf("Fail to read from: %s, %d\r\n", name, len_read);
+    }
+    close(file);
+	
     return AT_OK;
 }
 
 
-int at_read_wifi_info(void)
+int at_read_wifi_info(char *ssid, char *password)
 {
     int file;
+	wifi_config_t wificfg = {0};
 
-	if (NULL == p_wifi_cfg)
+	if ((NULL == ssid) || (NULL == password))
 	{
 	    return AT_FAIL;
 	}
@@ -285,7 +350,7 @@ int at_read_wifi_info(void)
         printf("Error opening file:%s.\n",AT_LFS_WIFI_FILE);
         return AT_FAIL;
     }
-    printf("open %s for read\r\n", AT_LFS_WIFI_FILE);
+    AT_HTTPD_PRINT("open %s for read\r\n", AT_LFS_WIFI_FILE);
     char *buf = (char*)malloc(AT_WEB_MAX_WIFI_CFG_SIZE);
     if(buf==NULL)
     {
@@ -299,8 +364,12 @@ int at_read_wifi_info(void)
     if(len_read > 0)
     {
         buf[len_read] = '\0';
-        printf("read %d %s\r\n", len_read, buf);
-		at_get_wifi_info_from_str(buf, p_wifi_cfg);
+        AT_HTTPD_PRINT("read %d %s\r\n", len_read, buf);
+		if (AT_OK == at_get_wifi_info_from_str(buf, &wificfg))
+		{
+		    snprintf(ssid, AT_WEB_MAX_SSID_SIZE, "%s", wificfg.ssid);
+            snprintf(password, AT_WEB_MAX_PWD_SIZE, "%s", wificfg.password);
+		}
     }
     else if(len_read == 0)
     {
@@ -358,7 +427,7 @@ static int AT_WebServer_Response(char *ssid, char *pwd)
         return QAT_RC_ERROR;
     }
 
-	snprintf(buffer, AT_WEB_MAX_WIFI_CFG_SIZE, "+EVT:CWCFG:%s,%s", ssid, pwd);
+	snprintf(buffer, AT_WEB_MAX_WIFI_CFG_SIZE, "+EVT:SYSCFG:WIFI:%s,%s", ssid, pwd);
 	rc = QAT_Response_Str(QAT_RC_OK, buffer);
 	return rc;
 }
@@ -385,7 +454,8 @@ static esp_err_t config_wifi_post_handler(httpd_req_t *req)
         }
 		at_write_wifi_info(buf, strlen(buf));
 		AT_WebServer_Response(p_wifi_cfg->ssid, p_wifi_cfg->password);
-        web_common_get_handler(req);
+		at_web_response_ok(req);
+        //web_common_get_handler(req);
         return AT_OK;
     }
 error_handle:
@@ -427,6 +497,7 @@ static esp_err_t start_web_server(const char *base_path, uint16_t server_port)
 		{"/index.html", HTTP_GET, web_common_get_handler, s_web_context},
 		{"/getversion", HTTP_GET, at_web_version_get_handler, s_web_context},
 		{"/setwifi", HTTP_POST, config_wifi_post_handler, s_web_context},
+		{"/getssid", HTTP_GET, web_wifi_get_handler, s_web_context},
 	};
 
     for (int i = 0; i < sizeof(httpd_uri_array) / sizeof(httpd_uri_t); i++) {

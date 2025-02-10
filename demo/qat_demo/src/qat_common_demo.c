@@ -22,6 +22,7 @@
 #include "wifi_fw_pmu_ts_cfg.h"
 #include "dns.h"
 #include "ip_addr.h"
+#include "at_web_server.h"
 
 #ifdef CONFIG_SNTP_CLIENT_DEMO
 #include "lwip/apps/sntp.h"
@@ -40,7 +41,9 @@ static QAT_Command_Status_t Extend_Command_TIME(uint32_t Op_Type, uint32_t Param
 static QAT_Command_Status_t Extend_Command_Deep_Sleep(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_SNTPC(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
-
+#ifdef CONFIG_HTTP_SERVER
+static QAT_Command_Status_t Extend_Command_SYSCFG(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+#endif
 static QAT_Command_Status_t Extend_Command_Cmd(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 QAT_Command_Status_t qat_power_state_event_handler(uint8_t evt);
 
@@ -59,7 +62,10 @@ static QAT_Command_t QAT_Common_Command_List[] =
     {"+TIME",     Extend_Command_TIME,      QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM | QAT_OP_QUERY},
     {"+DSLEEP",    Extend_Command_Deep_Sleep,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
     {"+DNSC",     Extend_Command_DNSC,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC | QAT_OP_QUERY},
-    {"+SNTPC",    Extend_Command_SNTPC,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+    {"+SNTPC",    Extend_Command_SNTPC,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},    
+#ifdef CONFIG_HTTP_SERVER   
+	{"+SYSCFG",	 Extend_Command_SYSCFG,	  QAT_OP_EXEC},
+#endif   
 };
 /*-------------------------------------------------------------------------
  * External parameters
@@ -1019,6 +1025,50 @@ static QAT_Command_Status_t Extend_Command_SNTPC(uint32_t Op_Type, uint32_t Para
 
    return rc;
 }
+
+#ifdef CONFIG_HTTP_SERVER
+/**
+   @brief Processes the Extend command from the QAT.
+
+   This command will get the configuation of SYSTEM.
+
+   @param[in] Op_Type          The input command type.
+   @param[in] Parameter_Count  Number of parameters that were entered into the
+                               command line.
+   @param[in] Parameter_List   List of parameters entered into the command line.
+*/
+static QAT_Command_Status_t Extend_Command_SYSCFG(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+   qapi_Status_t ret;
+   
+   char buffer[CMD_STR_BUFFER_LENGTH]={0};
+   QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+   char ssid[AT_WEB_MAX_SSID_SIZE+1] = {0};
+   char pwd[AT_WEB_MAX_PWD_SIZE+1] = {0};
+
+   switch (Op_Type)
+   {
+      case QAT_OP_EXEC:   /* AT+ CWENABLE */
+      {	  	
+		 memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);	  
+         if(QAT_RC_OK == at_get_wifi_cfg(ssid, pwd))
+         {
+            snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+SYSCFG:WIFI:%s,%s", ssid, pwd);
+			rc = QAT_Response_Str(QAT_RC_OK, buffer); 
+         }
+		 else
+		 {
+			 snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+SYSCFG: get system config failed\n");
+			 return QAT_Response_Str(QAT_RC_ERROR, buffer);
+		 }
+         break;
+      }
+      default:
+      ;
+   }
+   return rc;
+}
+#endif
 
 
 /**

@@ -24,7 +24,6 @@
 #include "qapi_wlan_base.h"
 #include "wifi_cmn.h"
 #include "safeAPI.h"
-#include "at_web_server.h"
 
 #ifndef NT_DEV_AP_ID
 #define NT_DEV_AP_ID			      0
@@ -58,9 +57,6 @@ static QAT_Command_Status_t Extend_Command_ANTIINF(uint32_t Op_Type, uint32_t Pa
 static QAT_Command_Status_t Extend_Command_EDCA(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_EDCCATHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_BMISSTHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
-#ifdef CONFIG_HTTP_SERVER
-static QAT_Command_Status_t Extend_Command_CWCFG(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
-#endif
 static QAT_Command_Status_t Extend_Command_WPS(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 
 /* The following is the complete command list for the QAT common command demo. */
@@ -83,9 +79,6 @@ static QAT_Command_t QAT_Wifi_Command_List[] =
    {"+ANTIINF",  Extend_Command_ANTIINF,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+EDCA",     Extend_Command_EDCA,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+EDCCATHR", Extend_Command_EDCCATHR,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
-#ifdef CONFIG_HTTP_SERVER   
-   {"+CWCFG",    Extend_Command_CWCFG,	  QAT_OP_EXEC},
-#endif   
    {"+BMISSTHR", Extend_Command_BMISSTHR,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+WPS",      Extend_Command_WPS,          QAT_OP_EXEC_W_PARAM},
 };
@@ -2077,50 +2070,6 @@ static QAT_Command_Status_t Extend_Command_BMISSTHR(uint32_t Op_Type, uint32_t P
 
    return rc;
 }
-
-#ifdef CONFIG_HTTP_SERVER
-/**
-   @brief Processes the Extend command from the QAT.
-
-   This command will get the configuation of WIFI.
-
-   @param[in] Op_Type          The input command type.
-   @param[in] Parameter_Count  Number of parameters that were entered into the
-                               command line.
-   @param[in] Parameter_List   List of parameters entered into the command line.
-*/
-static QAT_Command_Status_t Extend_Command_CWCFG(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
-{
-   qapi_Status_t ret;
-   
-   char buffer[CMD_STR_BUFFER_LENGTH]={0};
-   QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
-   char ssid[32] = {0};
-   char pwd[32] = {0};
-
-   switch (Op_Type)
-   {
-      case QAT_OP_EXEC:   /* AT+ CWENABLE */
-      {	  	
-		 memset((void*)buffer, 0, CMD_STR_BUFFER_LENGTH);	  
-         if(QAT_RC_OK == at_get_wifi_cfg(ssid, pwd))
-         {
-            snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+CWCFG:%s,%s", ssid, pwd);
-			rc = QAT_Response_Str(QAT_RC_OK, buffer); 
-         }
-		 else
-		 {
-			 snprintf(buffer, CMD_STR_BUFFER_LENGTH, "+CWCFG: get WIFI config failed\n");
-			 return QAT_Response_Str(QAT_RC_ERROR, buffer);
-		 }
-         break;
-      }
-      default:
-      ;
-   }
-   return rc;
-}
-#endif
 
 /**
    @brief WPS
