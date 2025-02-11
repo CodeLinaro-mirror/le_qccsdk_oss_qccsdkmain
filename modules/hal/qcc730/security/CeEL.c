@@ -136,7 +136,7 @@ CeELErrorType CeElEnableClock(void)
 CeELErrorType CeElDisableClock(void)
 {
   CeELErrorType ret_val = CEEL_ERROR_FAILURE;
-  ret_val = (CeELErrorType)CeElClkDisable();
+  //ret_val = (CeELErrorType)CeElClkDisable();
   return ret_val;
   
 }
