@@ -115,6 +115,7 @@ static size_t ping_size;
 static uint32_t data_mode_max_len = 0;
 static uint32_t data_mode_total_send_len = 0;
 static int data_mode_link_id = INVALID_LINKID;
+static bool exitLengthValid = true;
 
 static QueueHandle_t client_queue = NULL;
 qurt_mutex_t client_mutex;
@@ -1414,6 +1415,10 @@ static QAT_Command_Status_t Extend_Command_Send(uint32_t Op_Type, uint32_t Param
             if(data_mode_max_len < 0){
                 QAT_Response_Str(QAT_RC_ERROR,"+CIPSEND:The len parameter must be greater than or equal to 0.\r\n");
                 return rc;
+            } else if(data_mode_max_len == 0){
+                exitLengthValid = false;
+            } else {
+                exitLengthValid = true;
             }
             extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
             memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+CIPSEND",strlen("+CIPSEND"));
@@ -1427,9 +1432,12 @@ static QAT_Command_Status_t Extend_Command_Send(uint32_t Op_Type, uint32_t Param
         case QAT_OP_EXEC_IN_DATA_MODEL:
         {
             output_buf = (char*)Parameter_List;
-            data_mode_one_send_len = (Parameter_Count <= (data_mode_max_len - data_mode_total_send_len))? 
-                                    Parameter_Count : (data_mode_max_len - data_mode_total_send_len);
-
+            if(exitLengthValid){
+                data_mode_one_send_len = (Parameter_Count <= (data_mode_max_len - data_mode_total_send_len))? 
+                                        Parameter_Count : (data_mode_max_len - data_mode_total_send_len);
+            } else {
+                data_mode_one_send_len = Parameter_Count;
+            }
             total_sent = 0;
             sockfd = g_client_conns_t[data_mode_link_id].sockfd;
             while(total_sent < data_mode_one_send_len){
@@ -1441,16 +1449,18 @@ static QAT_Command_Status_t Extend_Command_Send(uint32_t Op_Type, uint32_t Param
                 }
                 total_sent += sent_bytes;
             }
-
-            data_mode_total_send_len += data_mode_one_send_len;
-            if(data_mode_total_send_len >= data_mode_max_len)
-            {
-                snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND DONE:%d\r\n", data_mode_link_id);
-                rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
-                data_mode_total_send_len = 0;
-                data_mode_max_len = 0;
-                data_mode_link_id = INVALID_LINKID;
-                QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+            
+            if(exitLengthValid){
+                data_mode_total_send_len += data_mode_one_send_len;
+                if(data_mode_total_send_len >= data_mode_max_len)
+                {
+                    snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+IPS:SEND DONE:%d\r\n", data_mode_link_id);
+                    rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                    data_mode_total_send_len = 0;
+                    data_mode_max_len = 0;
+                    data_mode_link_id = INVALID_LINKID;
+                    QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+                }
             }
             break;
         }
