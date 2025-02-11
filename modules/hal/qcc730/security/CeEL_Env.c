@@ -60,7 +60,8 @@ void CeEL_mutex_init (void)
  **********************************************************/
 void CeEL_mutex_lock (void)
 {
-  qurt_mutex_lock(&CeEL_mutex);
+    if(ceel_mutex_init == 0) 
+        qurt_mutex_lock(&CeEL_mutex);
 }
 
 /**********************************************************
@@ -69,5 +70,16 @@ void CeEL_mutex_lock (void)
  **********************************************************/
 void CeEL_mutex_unlock (void)
 {
-  qurt_mutex_unlock(&CeEL_mutex);
+    if(ceel_mutex_init == 0) 
+        qurt_mutex_unlock(&CeEL_mutex);
+}
+
+void CeEL_mutex_deinit(void)
+{
+    if(1==ceel_mutex_init)
+    {
+        //printf("will call qurt_mutex_delete\r\n");
+        qurt_mutex_delete(&CeEL_mutex);
+        ceel_mutex_init = 0;
+    }
 }

@@ -417,13 +417,16 @@ void clearReg(void)
    HW_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_SEG_CFG_REG    ,0);
    HW_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG    ,0);
 }
-# if 1
+
 CeELErrorType CeElCryptoDxeXfer( uint8 *buff_in, 
                               uint32 buff_in_len,
                               uint8 *buff_out,
                               uint32 buff_out_len)
 {
     uint32_t regVal;
+    uint32_t dma_to;
+    uint32_t dma_from;
+    uint32_t rem_data = 0;
 
   /* Sanity check inputs */
   if (!buff_out  || !buff_out_len)
@@ -435,6 +438,8 @@ CeELErrorType CeElCryptoDxeXfer( uint8 *buff_in,
   {
     return CEEL_ERROR_INVALID_PARAM;
   }
+    dma_to = buff_in_len & ~(0x03);
+    dma_from = buff_out_len & ~(0x03);
 
     regVal = ((QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_IN_REG >> 2) << QWLAN_DXE_0_CH8_DADRL_BASE_OFFSET)|0x20;
     HW_REG_WR(QWLAN_DXE_0_CH8_DADRL_REG, regVal);
@@ -443,7 +448,7 @@ CeELErrorType CeElCryptoDxeXfer( uint8 *buff_in,
     HW_REG_WR(QWLAN_DXE_0_CH8_SADRL_REG, (uint32_t)buff_in);
     HW_REG_WR(QWLAN_DXE_0_CH8_SADRH_REG, 0);
 
-    regVal = (1 << QWLAN_DXE_0_CH8_SZ_CHK_SZ_OFFSET) | ((buff_in_len) & QWLAN_DXE_0_CH8_SZ_TOT_SZ_MASK);
+    regVal = (4 << QWLAN_DXE_0_CH8_SZ_CHK_SZ_OFFSET) | ((dma_to) & QWLAN_DXE_0_CH8_SZ_TOT_SZ_MASK);
     HW_REG_WR(QWLAN_DXE_0_CH8_SZ_REG, regVal);
 
     HW_REG_WR(QWLAN_DXE_0_CH9_DADRL_REG, (uint32_t)buff_out);
@@ -453,7 +458,7 @@ CeELErrorType CeElCryptoDxeXfer( uint8 *buff_in,
     HW_REG_WR(QWLAN_DXE_0_CH9_SADRL_REG, regVal);
     HW_REG_WR(QWLAN_DXE_0_CH9_SADRH_REG, 0);
 
-    regVal = (1 << QWLAN_DXE_0_CH9_SZ_CHK_SZ_OFFSET) | ((buff_out_len) & QWLAN_DXE_0_CH9_SZ_TOT_SZ_MASK);
+    regVal = (4 << QWLAN_DXE_0_CH9_SZ_CHK_SZ_OFFSET) | ((dma_from) & QWLAN_DXE_0_CH9_SZ_TOT_SZ_MASK);
     HW_REG_WR(QWLAN_DXE_0_CH9_SZ_REG, regVal);
 
     regVal = QWLAN_DXE_0_CH8_CTRL_DIQ_MASK |
@@ -468,22 +473,30 @@ CeELErrorType CeElCryptoDxeXfer( uint8 *buff_in,
              (QWLAN_DXE_0_CH9_CTRL_ENDIANNESS_ELTLEND << QWLAN_DXE_0_CH9_CTRL_ENDIANNESS_OFFSET);
     HW_REG_WR(QWLAN_DXE_0_CH9_CTRL_REG, regVal);
 
-#if 0
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG, 0x2);
-    volatile uint32_t cfgVal;
-    cfgVal = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG);
-    if(cfgVal == 0)
     {
-        printf("read CRYPTO_CORE_CFG_REG cfgVal is 0\n");
-    }
-    if( cfgVal != 0x2)
-    {
-        printf("crypto core cfg value:0x%02x\n",cfgVal);
-        //return CEEL_ERROR_FAILURE;
-    }
-    else
-#endif
-    {
+        if (buff_in_len - dma_to)
+        {
+            while (!((regVal = HW_REG_RD (QWLAN_DXE_0_CH8_STATUS_REG)) & QWLAN_DXE_0_CH0_STATUS_DONE_MASK));
+            while (!((regVal = HW_REG_RD (QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_REG)) & QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_DIN_RDY_MASK));
+
+            uint8_t count = buff_in_len - dma_to;
+            if(count == 2)
+            {
+                uint16_t tmp = (buff_in[buff_in_len-1] << 8) | buff_in[buff_in_len-2];
+                *(uint16_t *)QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_IN_REG = tmp;
+                count -= 2;
+            }
+            else
+            {
+                while(count)
+                {
+                    *(uint8_t *)QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_IN_REG = buff_in[buff_in_len-count];
+                    count--;
+                }
+            }
+            
+        }
+
         while (!((regVal = HW_REG_RD (QWLAN_DXE_0_CH9_STATUS_REG)) & QWLAN_DXE_0_CH0_STATUS_DONE_MASK))
         {
             //uint32_t qcc_reset_delay = 0xFFFF;
@@ -494,32 +507,33 @@ CeELErrorType CeElCryptoDxeXfer( uint8 *buff_in,
                 return CEEL_ERROR_FAILURE;
 
             }
-            else if((regVal & QWLAN_DXE_0_CH0_STATUS_MSKD_MASK) && (regVal & QWLAN_DXE_0_CH0_STATUS_EN_MASK))
-            {
-                uint32_t qcc_reset_delay = 0xFFFF;
-                while (--qcc_reset_delay);
-            }
-            //usleep(10);
+
         }
+
+            if (buff_out_len > dma_from)
+            {
+                rem_data = HW_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_OUT_REG);
+                switch(buff_out_len - dma_from)               
+                {                  
+                    case 3: buff_out[--buff_out_len] = (rem_data >> 16) & 0xff;                  
+                    case 2: buff_out[--buff_out_len] = (rem_data >> 8) & 0xff;                  
+                    case 1: buff_out[--buff_out_len] = rem_data &0xff;                  
+                    default: break;               
+                }
+            }
     }
-    //clearReg();
     return CEEL_ERROR_SUCCESS;
 }
-#endif
 
-#if 0
-CeELErrorType CeElCryptoShaDxeXfer( uint8 *buff_in, 
+
+
+CeELErrorType CeElCryptoDxeShaXfer( uint8 *buff_in, 
                               uint32 buff_in_len,
                               uint8 *buff_out,
                               uint32 buff_out_len)
+
 {
     uint32_t regVal;
-
-  /* Sanity check inputs */
-  if (!buff_out  || !buff_out_len)
-  {
-    return CEEL_ERROR_INVALID_PARAM;
-  }
 
   if (!buff_in  || !buff_in_len)
   {
@@ -527,97 +541,51 @@ CeELErrorType CeElCryptoShaDxeXfer( uint8 *buff_in,
   }
 
     regVal = ((QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_IN_REG >> 2) << QWLAN_DXE_0_CH8_DADRL_BASE_OFFSET)|0x20;
-    HW_REG_WR(QWLAN_DXE_0_CH10_DADRL_REG, regVal);
-    HW_REG_WR(QWLAN_DXE_0_CH10_DADRH_REG, 0);
+    HW_REG_WR(QWLAN_DXE_0_CH8_DADRL_REG, regVal);
+    HW_REG_WR(QWLAN_DXE_0_CH8_DADRH_REG, 0);
     
-    HW_REG_WR(QWLAN_DXE_0_CH10_SADRL_REG, (uint32_t)buff_in);
-    HW_REG_WR(QWLAN_DXE_0_CH10_SADRH_REG, 0);
+    HW_REG_WR(QWLAN_DXE_0_CH8_SADRL_REG, (uint32_t)buff_in);
+    HW_REG_WR(QWLAN_DXE_0_CH8_SADRH_REG, 0);
 
-    regVal = (1 << QWLAN_DXE_0_CH8_SZ_CHK_SZ_OFFSET) | ((buff_in_len) & QWLAN_DXE_0_CH8_SZ_TOT_SZ_MASK);
-    HW_REG_WR(QWLAN_DXE_0_CH10_SZ_REG, regVal);
+    regVal = (4 << QWLAN_DXE_0_CH8_SZ_CHK_SZ_OFFSET) | ((buff_in_len) & QWLAN_DXE_0_CH8_SZ_TOT_SZ_MASK);
+    HW_REG_WR(QWLAN_DXE_0_CH8_SZ_REG, regVal);
 
-    HW_REG_WR(QWLAN_DXE_0_CH11_DADRL_REG, (uint32_t)buff_out);
-    HW_REG_WR(QWLAN_DXE_0_CH11_DADRH_REG, 0);
 
-    regVal = ((QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_OUT_REG >> 2) << QWLAN_DXE_0_CH9_SADRL_BASE_OFFSET)|0x20;
-    HW_REG_WR(QWLAN_DXE_0_CH11_SADRL_REG, regVal);
-    HW_REG_WR(QWLAN_DXE_0_CH11_SADRH_REG, 0);
-
-    regVal = (1 << QWLAN_DXE_0_CH9_SZ_CHK_SZ_OFFSET) | ((buff_out_len) & QWLAN_DXE_0_CH9_SZ_TOT_SZ_MASK);
-    HW_REG_WR(QWLAN_DXE_0_CH11_SZ_REG, regVal);
 
     regVal = QWLAN_DXE_0_CH8_CTRL_DIQ_MASK |
              QWLAN_DXE_0_CH8_CTRL_EN_MASK |
              (8 << QWLAN_DXE_0_CH8_CTRL_CTR_SEL_OFFSET) |
              (QWLAN_DXE_0_CH8_CTRL_ENDIANNESS_ELTLEND << QWLAN_DXE_0_CH8_CTRL_ENDIANNESS_OFFSET);
-    HW_REG_WR(QWLAN_DXE_0_CH10_CTRL_REG, regVal);
-
-    regVal = QWLAN_DXE_0_CH9_CTRL_SIQ_MASK |
-             QWLAN_DXE_0_CH9_CTRL_EN_MASK |
-             (9 << QWLAN_DXE_0_CH9_CTRL_CTR_SEL_OFFSET) |
-             (QWLAN_DXE_0_CH9_CTRL_ENDIANNESS_ELTLEND << QWLAN_DXE_0_CH9_CTRL_ENDIANNESS_OFFSET);
-    HW_REG_WR(QWLAN_DXE_0_CH11_CTRL_REG, regVal);
+    HW_REG_WR(QWLAN_DXE_0_CH8_CTRL_REG, regVal);
 
 
-#if 0
-    while (!((regVal = HW_REG_RD (QWLAN_DXE_0_CH9_STATUS_REG)) & QWLAN_DXE_0_CH0_STATUS_DONE_MASK))
     {
-        if (regVal & QWLAN_DXE_0_CH0_STATUS_ERR_MASK) 
+        while (!((regVal = HW_REG_RD (QWLAN_DXE_0_CH8_STATUS_REG)) & QWLAN_DXE_0_CH0_STATUS_DONE_MASK))
         {
-            printf("CeElCryptoDxeXfer err: 0x%x\n", regVal);
-            return CEEL_ERROR_FAILURE;
+            if (regVal & QWLAN_DXE_0_CH0_STATUS_ERR_MASK) 
+            {
+                return CEEL_ERROR_FAILURE;
 
+            }
         }
-        
-    }
-#endif
-    //clearReg();
-    return CEEL_ERROR_SUCCESS;
-}
-#endif
-#if 0
-CeELErrorType CeElCryptoDxeXfer( uint32_t *buff_in, 
-                              uint32_t buff_in_len,
-                              uint8_t *buff_out,
-                              uint32_t buff_out_len)
-{
-    uint32_t i,j;
-    buff_in_len >>= 2;
-    
-		for(i = 0; i < buff_in_len; i+=4) {
-			//write 4 data in buffer in
-			for(j = 0; j < 4; j++) {
-				HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_IN_REG+(j*4),buff_in[i+j]);
-			}
-			//read 4 data to out buffer
-			for(j = 0; j < 4; j++) {
+        while ( !(HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_REG) & QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_OPERATION_DONE_MASK));
+        HW_REG_WR(QWLAN_DXE_0_CH9_DADRL_REG, (uint32_t)buff_out);
+        HW_REG_WR(QWLAN_DXE_0_CH9_DADRH_REG, 0);
 
-				buff_out[j + i] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_OUT_REG+(j*4));
+        HW_REG_WR(QWLAN_DXE_0_CH9_SADRL_REG, CECL_CE_AUTH_IV0);
+        HW_REG_WR(QWLAN_DXE_0_CH9_SADRH_REG, 0);
 
-			}
-		}
-}
-#endif
+        regVal = (4 << QWLAN_DXE_0_CH9_SZ_CHK_SZ_OFFSET) | ((buff_out_len) & QWLAN_DXE_0_CH9_SZ_TOT_SZ_MASK);
+        HW_REG_WR(QWLAN_DXE_0_CH9_SZ_REG, regVal);
 
-CeELErrorType CeElCryptoShaDxeXfer( uint32 *buff_in, 
-                              uint32 buff_in_len,
-                              uint8 *buff_out,
-                              uint32 buff_out_len)
-{
-    //printf("CeElCryptoShaDxeXfer pio\n");
-    uint32_t i,j;
-    buff_in_len >>= 2;
-    if(buff_in_len ==0)
-        buff_in_len = 1;
-    for(i=0;i<buff_in_len;i++)
-    {
-        {
-            while( !(HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_REG) & QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_DIN_RDY_MASK));
+        regVal = QWLAN_DXE_0_CH9_CTRL_EN_MASK |
+                 (9 << QWLAN_DXE_0_CH9_CTRL_CTR_SEL_OFFSET) |
+                 (QWLAN_DXE_0_CH9_CTRL_ENDIANNESS_ELTLEND << QWLAN_DXE_0_CH9_CTRL_ENDIANNESS_OFFSET);
+        HW_REG_WR(QWLAN_DXE_0_CH9_CTRL_REG, regVal);
 
-            HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_IN_REG,buff_in[i]);
-        }
+        while (!((regVal = HW_REG_RD (QWLAN_DXE_0_CH9_STATUS_REG)) & QWLAN_DXE_0_CH0_STATUS_DONE_MASK));
+
     }
     return CEEL_ERROR_SUCCESS;
 }
-
 
