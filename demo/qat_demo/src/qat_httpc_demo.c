@@ -999,6 +999,19 @@ qapi_Status_t at_httpc_conn(char *url)
     Parameter_List[Parameter_Count].String_Value = host;
     Parameter_Count++;
     printf("conn host:%s\r\n",host);
+
+    
+    Parameter_List[Parameter_Count].Integer_Is_Valid =true;
+    if(isSecureSession(url))
+    {
+        Parameter_List[Parameter_Count].Integer_Value = HTTPS_DEFAULT_PORT;
+    }
+    else
+    {
+        Parameter_List[Parameter_Count].Integer_Value = HTTP_DEFAULT_PORT;
+    }
+    
+    Parameter_Count++;
     
     rlt = httpc_command_handler(Parameter_Count,Parameter_List);
 
