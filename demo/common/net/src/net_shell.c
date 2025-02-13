@@ -696,7 +696,7 @@ static qapi_Status_t ifconfig(uint32_t __attribute__((__unused__)) Parameter_Cou
     return QAPI_OK;
 }
 
-#define CFG_PING_MAX_TX 1470
+#define CFG_PING_MAX_TX 10000 //increase the max_size from 1470 to 10000 to pass WFA 11N-5.2.35/36
 #define CFG_PING6_MAX_TX 1450
 static qapi_Status_t pingv4(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
