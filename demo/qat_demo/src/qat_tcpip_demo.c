@@ -43,6 +43,7 @@ static QAT_Command_Status_t Extend_Command_RecvType(uint32_t Op_Type, uint32_t P
 static QAT_Command_Status_t Extend_Command_RecvData(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_Server(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_UdpServer(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_Mode(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 
 /* The following is the complete command list for the QAT common command demo. */
 /** List of global commands that are supported when in a group. */
@@ -61,6 +62,8 @@ static QAT_Command_t QAT_TCPIP_Command_List[] =
     {"+CIPRECVDATA",    Extend_Command_RecvData,        QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM},
     {"+CIPSERVER",      Extend_Command_Server,          QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
     {"+CIPUDPSERVER",   Extend_Command_UdpServer,       QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
+    {"+CIPMODE",        Extend_Command_Mode,            QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
+
 };
 
 /*-------------------------------------------------------------------------
@@ -116,6 +119,7 @@ static uint32_t data_mode_max_len = 0;
 static uint32_t data_mode_total_send_len = 0;
 static int data_mode_link_id = INVALID_LINKID;
 static bool exitLengthValid = true;
+uint8_t isPassThroughMode = 0;
 
 static QueueHandle_t client_queue = NULL;
 qurt_mutex_t client_mutex;
@@ -969,6 +973,7 @@ static void client_recv_thread(void *arg)
     struct timeval timeout;
     int result;
     QueueElem elem;
+    int offset;
 
     client_fd = g_client_conns_t[*p_id].sockfd;
     protocol_type = g_client_conns_t[*p_id].protocol_type;
@@ -1052,9 +1057,16 @@ static void client_recv_thread(void *arg)
                         goto client_recv_fail;
                     }
                     else{
-                        input_buf[recv_bytes] = '\0';
-                        snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPD:%c,%s,%d,%d,%s\r\n", 'C', protocol_name, *p_id, recv_bytes, input_buf);
-                        QAT_Response_Str(QAT_RC_QUIET, buffer);
+                        if(isPassThroughMode){
+                            offset = 0;
+                            offset += snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPDHEX:%c,%s,%d,%d,", 'C', protocol_name, *p_id, recv_bytes);
+                            memcpy(buffer + offset, input_buf, recv_bytes);
+                            QAT_Response_Buffer(QAT_RC_QUIET, buffer, offset + recv_bytes);
+                        } else {
+                            input_buf[recv_bytes] = '\0';
+                            snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPD:%c,%s,%d,%d,%s", 'C', protocol_name, *p_id, recv_bytes, input_buf);
+                            QAT_Response_Str(QAT_RC_QUIET, buffer);
+                        }
                     }
                 }else{
                     if((g_client_conns_t[*p_id].protocol_type == PROTOCOL_TCP) || 
@@ -1983,6 +1995,7 @@ static void tcp_server_thread(void *arg)
     int result;
     int recv_type, recv_bytes;
     int bytes_available;
+    int offset;
     QueueElem elem;
 
     do{
@@ -2081,9 +2094,16 @@ static void tcp_server_thread(void *arg)
                             CleanupListenClientConnInfo(index);
                             continue;
                         }else{
-                            input_buf[recv_bytes] = '\0';
-                            snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPD:%c,%s,%d,%d,%s\r\n", 'S', "TCP", index, recv_bytes, input_buf);
-                            QAT_Response_Str(QAT_RC_QUIET, buffer);
+                            if(isPassThroughMode){
+                                offset = 0;
+                                offset += snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPDHEX:%c,%s,%d,%d,", 'S', "TCP", index, recv_bytes);
+                                memcpy(buffer + offset, input_buf, recv_bytes);
+                                QAT_Response_Buffer(QAT_RC_QUIET, buffer, offset + recv_bytes);
+                            } else {
+                                input_buf[recv_bytes] = '\0';
+                                snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPD:%c,%s,%d,%d,%s", 'S', "TCP", index, recv_bytes, input_buf);
+                                QAT_Response_Str(QAT_RC_QUIET, buffer);
+                            }
                         }
                     }else{
                         if (uxQueueSpacesAvailable(server_queue) == 0) {
@@ -2450,6 +2470,7 @@ static void udp_server_thread(void *arg)
     fd_set readfds;
     int recv_type;
     int result;
+    int offset;
     QueueElem elem;
 
     do{
@@ -2523,10 +2544,17 @@ static void udp_server_thread(void *arg)
 
                     recv_type = g_listen_udp_clients[client_idx].recv_type;
                     if(recv_type == RECVTYPE_ACTIVE){
-                        input_buf[recv_len] = '\0';
-                        memset((void*)buffer, 0, QAT_INPUT_BUFFER_LENGTH);
-                        snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPD:%c,%s,%d,%d,%s\r\n", 'S', "UDP", client_idx, recv_len, input_buf);
-                        QAT_Response_Str(QAT_RC_QUIET, buffer);
+                        if(isPassThroughMode){
+                            offset = 0;
+                            offset += snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPDHEX:%c,%s,%d,%d,", 'S', "UDP", client_idx, recv_len);
+                            memcpy(buffer + offset, input_buf, recv_len);
+                            QAT_Response_Buffer(QAT_RC_QUIET, buffer, offset + recv_len);
+                        } else {
+                            input_buf[recv_len] = '\0';
+                            memset((void*)buffer, 0, QAT_INPUT_BUFFER_LENGTH);
+                            snprintf(buffer, QAT_INPUT_BUFFER_LENGTH, "+IPD:%c,%s,%d,%d,%s", 'S', "UDP", client_idx, recv_len, input_buf);
+                            QAT_Response_Str(QAT_RC_QUIET, buffer);
+                        }
                     }else{
                         if (uxQueueSpacesAvailable(udp_server_queue) == 0) {
                             continue;
@@ -2922,6 +2950,53 @@ static QAT_Command_Status_t Extend_Command_DHCPv4s(uint32_t Op_Type, uint32_t Pa
             }
         }
     }
+}
+
+static QAT_Command_Status_t Extend_Command_Mode(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+    char buf[QAT_CMD_IP_BUFFER_LENGTH] = {0};
+    uint8_t value;
+    switch (Op_Type)
+    {
+        case QAT_OP_EXEC:
+        {
+            QAT_Response_Str(QAT_RC_OK, "AT+CIPMODE=<mode>");
+            break;
+        }
+        case QAT_OP_QUERY:
+        {
+            snprintf(buf, QAT_CMD_IP_BUFFER_LENGTH, "+CIPMODE:%d", isPassThroughMode);
+            QAT_Response_Str(QAT_RC_OK, buf);
+            break;
+        }
+        case QAT_OP_EXEC_W_PARAM:
+        {
+            if( Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) 
+            {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPMODE:Invalid input parameter!\r\n");
+                return rc;
+            }
+            value = Parameter_List[0].Integer_Value;
+            if(value > 1){
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPMODE:mode parameter can only be 0 or 1!\r\n");
+                return rc;
+            }
+
+            if(value){
+                isPassThroughMode = 1;
+            }else{
+                isPassThroughMode = 0;
+            }
+            rc = QAT_Response_Str(QAT_RC_OK, NULL);
+            break;
+        }
+        default : 
+        {
+            ;
+        }
+    }
+    return rc;
 }
 
 void Initialize_QAT_TCPIP_Demo (void)

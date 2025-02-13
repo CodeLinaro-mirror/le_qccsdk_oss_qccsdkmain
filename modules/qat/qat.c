@@ -1059,6 +1059,86 @@ qapi_Status_t QAT_Output(uint32_t Length, const char *Buffer)
     return ret;
 }
 
+/**
+   @brief Passes characters input from the command line to the QCLI module for
+          processing.
+ 
+   @param[in] Length  Number of bytes in the provided buffer.
+   @param[in] Buffer  Buffer containing the inputted data.
+ 
+   @return
+    - true if QCLI was initialized successfully.
+    - false if initialization failed.
+*/
+QAT_Command_Status_t QAT_Response_Buffer(int Ret_Code, char *Buffer, uint32_t Length)
+{
+   QAT_Tx_Queue_t *Tx_Queue, *Tx_Queue_Head;
+   uint32_t Len_Need;
+   char *Ptr;
+   int len;
+ 
+   if(!Buffer || !Length ||(Ret_Code > QAT_RC_MAX))
+   {
+	  return QAT_STATUS_ERROR_E;
+   }
+   
+   if(Ret_Code != QAT_RC_QUIET){
+      Len_Need = sizeof(QAT_Tx_Queue_t)+strlen((char*)QAT_Result_Str[Ret_Code])+Length+sizeof("\r\n");
+   }else{
+      Len_Need = sizeof(QAT_Tx_Queue_t)+strlen((char*)QAT_Result_Str[Ret_Code])+Length;
+   }
+   
+   /* extra bytes: \r\n <CMD name> */
+   Tx_Queue = malloc(Len_Need + 1);
+   if(Tx_Queue)
+   {
+      memset(Tx_Queue, 0, (Len_Need + 1));
+      Tx_Queue->Buffer = (uint8_t*)((char*)Tx_Queue + sizeof(QAT_Tx_Queue_t));
+      Ptr = (char*)Tx_Queue->Buffer;
+      // len = snprintf(Ptr, Len_Need, "%s", "\r\n");
+      // Ptr += len;
+      // Tx_Queue->Len = len;
+      if(Buffer && Length)
+      {
+         memcpy(Ptr, Buffer, Length); 
+         Ptr += Length;      
+         // memcpy(Ptr, "\r\n", 2);
+         // Ptr += 2;
+         // Tx_Queue->Len += (Length + 2);
+         Tx_Queue->Len += Length;
+      }	 
+      if(Ret_Code != QAT_RC_QUIET)
+      {
+         if(QAT_Result_Str[Ret_Code] && strlen(QAT_Result_Str[Ret_Code]))
+         {
+            memcpy(Ptr, (char*)QAT_Result_Str[Ret_Code], strlen(QAT_Result_Str[Ret_Code]));
+            Ptr += strlen(QAT_Result_Str[Ret_Code]);
+            memcpy(Ptr, "\r\n", 2);
+            Ptr += 2;
+            Tx_Queue->Len += (strlen(QAT_Result_Str[Ret_Code]) + 2);
+         }
+      }
+      /* queue buffer, then signal */
+      qurt_mutex_lock(&HTC_Context.mutex);
+      if(!HTC_Context.Tx_Queue)
+      {
+         HTC_Context.Tx_Queue = Tx_Queue;
+      }
+      else
+      {
+         Tx_Queue_Head = HTC_Context.Tx_Queue;
+         while(Tx_Queue_Head && Tx_Queue_Head->Next)
+         {
+            Tx_Queue_Head = Tx_Queue_Head->Next;
+         }
+         Tx_Queue_Head->Next = Tx_Queue;
+      }
+      qurt_mutex_unlock(&HTC_Context.mutex);
+      qurt_signal_set(&qat_task_start, QAT_EVENT_TXQ);
+   }
+   return QAT_STATUS_SUCCESS_E;
+}
+
 static void QAT_TxTasks(void *arg)
 {
    QAT_Tx_Queue_t *Next=NULL;
