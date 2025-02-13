@@ -1072,14 +1072,18 @@ static void QAT_TxTasks(void *arg)
 		while(Next){
 			  //printf("xmt %d\n", Next->Len);
               QAT_Output(Next->Len, (char*)Next->Buffer);
-            
+
+			  /*
               if(Next->CB)
               {
                  Next->CB(Next->CB_Context, NULL);
               }
-              free((uint8_t *)Next);
+              */
 
 			  HTC_Context.Tx_Queue = Next->Next;
+		
+              free((uint8_t *)Next);
+			  
 			  Next = HTC_Context.Tx_Queue;
 		}
 		
@@ -1096,7 +1100,7 @@ qbool_t QAT_TxTask_Initialize(void)
    memset(&HTC_Context, 0, sizeof(HTC_Context));
    qurt_mutex_create(&HTC_Context.mutex);
 
-   ret_val =  (uint32_t)nt_qurt_thread_create(QAT_TxTasks, "qat_tx_task", 1024, NULL, 6, &qat_tx_task_hdl);
+   ret_val =  (uint32_t)nt_qurt_thread_create(QAT_TxTasks, "qat_tx_task", 4096, NULL, 6, &qat_tx_task_hdl);
    if(ret_val != pdPASS)
    {
   	 printf("QAT: task creation failed out of memory\r\n");
