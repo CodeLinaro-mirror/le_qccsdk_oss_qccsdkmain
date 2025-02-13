@@ -120,7 +120,7 @@ qurt_signal_t  qat_mqtt_client_signal;
 nt_osal_timer_handle_t qat_mqtt_keepalive_timer;
 bool qat_mqtt_keepalive_created = false;
 bool qat_mqtt_signal_created = false;
-
+extern uint8_t isRecvHex;
 #endif
 
 static uint32_t sessionIndex_raw;
@@ -535,8 +535,16 @@ static void handleIncomingPublish(MQTTPublishInfo_t *pPublishInfo,
         {
             ptopic[i]= pPublishInfo->pTopicName[i];
         }
-        ptopic[pPublishInfo->topicNameLength] = '\0';
-        offset=snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBRECV:%d,\"%s\",%d,",sessionIndex,ptopic,pPublishInfo->payloadLength);
+		if(isRecvHex)
+		{
+			ptopic[pPublishInfo->topicNameLength] = '\0';
+        	offset=snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBRECVHEX:%d,\"%s\",%d,",sessionIndex,ptopic,pPublishInfo->payloadLength);
+		}
+		else
+		{
+			ptopic[pPublishInfo->topicNameLength] = '\0';
+        	offset=snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "+EVT:MQTT_SUBRECV:%d,\"%s\",%d,",sessionIndex,ptopic,pPublishInfo->payloadLength);
+		}
         // QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
         free(ptopic);
     }
@@ -579,7 +587,14 @@ static void handleIncomingPublish(MQTTPublishInfo_t *pPublishInfo,
     {
 #ifdef CONFIG_QAT_MQTT_DEMO
         // snprintf(buffer, WRTMEM_STR_BUFFER_LENGTH, "%c", ((const char *) pPublishInfo->pPayload)[i]);
-        ptr[i] = (char) ((const char *) pPublishInfo->pPayload)[i];
+        if(isRecvHex)
+		{
+			ptr[i] = ((const char *) (pPublishInfo->pPayload))[i];
+        }
+		else
+		{
+			ptr[i] = (char) ((const char *) pPublishInfo->pPayload)[i];
+		}
       
 #else
         MQTT_CLIENT_PRINTF("%c", ((const char *) pPublishInfo->pPayload)[i]);
@@ -587,11 +602,22 @@ static void handleIncomingPublish(MQTTPublishInfo_t *pPublishInfo,
     }
 
 #ifdef CONFIG_QAT_MQTT_DEMO
-    ptr[pPublishInfo->payloadLength]='\0';
+	if(!isRecvHex)
+	{
+    	ptr[pPublishInfo->payloadLength]='\0';
+	}
 #endif
 
 #ifdef CONFIG_QAT_MQTT_DEMO
-    QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+	if(isRecvHex)
+	{
+		QAT_Response_Buffer(QAT_RC_QUIET, buffer, offset + pPublishInfo->payloadLength);
+    }
+	else
+	{
+		QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+	}
+    
 #endif
 
 #ifdef CONFIG_QAT_MQTT_DEMO
