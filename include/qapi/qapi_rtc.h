@@ -117,5 +117,16 @@ qapi_Status_t qapi_Core_Time_Zone_Get(time_zone_t *zone);
  * @return #QAPI_OK on success, or a different code on error.
  */
 qapi_Status_t qapi_Core_Time_Zone_Set(time_zone_t *zone);
+
+/**
+ *  Gets boot reason
+ *
+ * @param[in] tm  Pointer to a uint32_t to contain boot reason.
+ *
+ * @return #QAPI_OK on success, or a different code on error.
+ */
+qapi_Status_t qapi_Core_Obtain_Boot_Reason(uint32_t *data);
+
+
 #endif /* __QAPI_RTC_H__ */
 
