@@ -73,6 +73,11 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define NT_DXE_TX_NO_DESC_VI		NT_DXE_TX_NO_DESC	/** Number of descriptors for DXE that can be queued for transfer at one time for Video AC  */
 #define NT_DXE_TX_NO_DESC_VO		NT_DXE_TX_NO_DESC	/** Number of descriptors for DXE that can be queued for transfer at one time for Voice AC  */
 
+#define NT_DXE_CH_PRIO_BK				3	/** DXE channel priority for Background AC */
+#define NT_DXE_CH_PRIO_BE				4	/** DXE channel priority Best effort AC */
+#define NT_DXE_CH_PRIO_VI				5	/** DXE channel priority Video AC */
+#define NT_DXE_CH_PRIO_VO				6	/** DXE channel priority Voice AC*/
+
 // Frame Type definitions
 
 #define NT_MGMT_FRAME    0x0
