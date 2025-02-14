@@ -475,7 +475,7 @@ int32_t get_device_mac_address()
 	info_printf("Mac Addr    = %02x:%02x:%02x:%02x:%02x:%02x\n",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 	return 0;
 }
-int32_t get_op_mode()
+int32_t get_op_mode(qapi_WLAN_DEV_Mode_e *mode)
 {
 	qapi_WLAN_DEV_Mode_e conc_mode, opmode;
 	uint32_t length = sizeof(qapi_WLAN_DEV_Mode_e);
@@ -502,6 +502,8 @@ int32_t get_op_mode()
 		return -1;
 	}
 
+    *mode = opmode;
+
 	if(opmode == DEV_MODE_STATION_E) {
 		info_printf("mode        = station\n");
 	}
@@ -514,6 +516,7 @@ int32_t get_op_mode()
 static qapi_Status_t Info(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
     wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+    qapi_WLAN_DEV_Mode_e opmode;
 
     if (0 == p_cxt->wlan_enabled)
     {
@@ -525,13 +528,14 @@ static qapi_Status_t Info(uint32_t __attribute__((__unused__)) Parameter_Count, 
     {
         info_printf("ssid        = %s\n", p_cxt->ssid);
         info_printf("channel     = %d \n", p_cxt->channel_frequency);
-        info_printf("bssid       = %02x:%02x:%02x:%02x:%02x:%02x\n",p_cxt->bssid[0],p_cxt->bssid[1],p_cxt->bssid[2],p_cxt->bssid[3],p_cxt->bssid[4],p_cxt->bssid[5]);
     }
 
     get_phy_mode();
     get_wifi_power_mode();
     get_device_mac_address();
-	get_op_mode();
+	get_op_mode(&opmode);
+    if (opmode == DEV_MODE_STATION_E && p_cxt->connected == true)
+        info_printf("bssid       = %02x:%02x:%02x:%02x:%02x:%02x\n",p_cxt->bssid[0],p_cxt->bssid[1],p_cxt->bssid[2],p_cxt->bssid[3],p_cxt->bssid[4],p_cxt->bssid[5]);
     return QAPI_OK;
 }
 
