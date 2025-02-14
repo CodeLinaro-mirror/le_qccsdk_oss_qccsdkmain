@@ -40,6 +40,7 @@ extern void* QCLI_Context;
 #define QAT_EVENT_TXQ 0x1
 
 #define QAT_STR_BUFFER_LENGTH					  128
+#define QAT_OUTPUT_MAX_LENGTH					  1400
 
 QAT_Transfer_Mode_t QAT_Transfer_Mode = QAT_Transfer_Mode_AT_COMMAND_E;
 QAT_Transfer_Mode_Handle_t QAT_Transfer_Mode_Handle = NULL;
@@ -1143,28 +1144,33 @@ static void QAT_TxTasks(void *arg)
 {
    QAT_Tx_Queue_t *Next=NULL;
    uint32_t signal;
-
+   uint16_t chunkSize = 0;
+   uint16_t offset = 0;
+   
    while(1)
    {
 		signal = qurt_signal_wait(&qat_task_start, QAT_EVENT_TXQ, QURT_SIGNAL_ATTR_CLEAR_MASK);
    		qurt_mutex_lock(&HTC_Context.mutex);
 		Next = HTC_Context.Tx_Queue;
+		
 		while(Next){
-			  //printf("xmt %d\n", Next->Len);
-              QAT_Output(Next->Len, (char*)Next->Buffer);
 
-			  /*
-              if(Next->CB)
-              {
-                 Next->CB(Next->CB_Context, NULL);
-              }
-              */
+			  while(Next->Len > offset)
+			  {
+				chunkSize = (Next->Len - offset > QAT_OUTPUT_MAX_LENGTH)? QAT_OUTPUT_MAX_LENGTH:(Next->Len - offset); 
+				QAT_Output(chunkSize, (char*)(Next->Buffer+offset));
+				offset += chunkSize;
+			  }
+              //QAT_Output(Next->Len, (char*)Next->Buffer);
 
 			  HTC_Context.Tx_Queue = Next->Next;
 		
               free((uint8_t *)Next);
 			  
 			  Next = HTC_Context.Tx_Queue;
+			  
+			  offset = 0;
+			  chunkSize = 0;
 		}
 		
 		qurt_mutex_unlock(&HTC_Context.mutex);
