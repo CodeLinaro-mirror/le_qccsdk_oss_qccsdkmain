@@ -49,6 +49,8 @@ extern qapi_Status_t wmi_get_rate (void);
 extern qapi_Status_t wmi_send_raw (void);
 extern qapi_Status_t wmi_set_mgmt_filter (void);
 extern qapi_Status_t wmi_get_tx_power (void);
+#ifdef CONFIG_WPS
 extern qapi_Status_t wmi_stop_scan (void);
+#endif
 #endif //__WMI_API_H__
 

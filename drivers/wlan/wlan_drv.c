@@ -134,7 +134,10 @@ int wlan_qapi_init (void)
     p_cxt->wlan_disable_block_mode = true;
     p_cxt->wlan_if_add_block_mode = true;
     p_cxt->wlan_scan_start_block_mode = true;
+#ifdef CONFIG_WPS
     p_cxt->wlan_scan_stop_block_mode = true;
+    p_cxt->wlan_start_wps_block_mode = false;
+#endif
     p_cxt->wlan_connect_block_mode = false;
     p_cxt->wlan_disconnect_block_mode = true;
     p_cxt->wlan_get_stat_block_mode = true;
@@ -144,7 +147,6 @@ int wlan_qapi_init (void)
 	p_cxt->wlan_send_raw_block_mode = true;
     p_cxt->wlan_set_mgmt_filter_block_mode = true;
     p_cxt->wlan_get_tx_power_block_mode = true;
-    p_cxt->wlan_start_wps_block_mode = false;
 
     wmi_register_event_handler(wmi_event_relay, (void*)p_cxt);
     p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf_length = QAPI_EVENT_LARGE_PAYLOAD_LENGTH_MAX;

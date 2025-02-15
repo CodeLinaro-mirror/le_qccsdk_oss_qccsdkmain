@@ -70,9 +70,11 @@ typedef struct wifi_shell_cxt_s {
     int32_t         ssid_length;
     uint8           bssid[6];
     uint16_t        channel_frequency;
-	uint8_t			active_device;
-        uint8_t                 wlan_enabled;
+    uint8_t         active_device;
+    uint8_t         wlan_enabled;
+#ifdef CONFIG_WPS
     uint8_t         wps_stage;
+#endif
 } wifi_shell_cxt_t;
 
 typedef struct {

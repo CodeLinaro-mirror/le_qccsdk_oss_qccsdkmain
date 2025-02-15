@@ -57,8 +57,9 @@ static QAT_Command_Status_t Extend_Command_ANTIINF(uint32_t Op_Type, uint32_t Pa
 static QAT_Command_Status_t Extend_Command_EDCA(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_EDCCATHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_BMISSTHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+#ifdef CONFIG_WPS
 static QAT_Command_Status_t Extend_Command_WPS(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
-
+#endif
 /* The following is the complete command list for the QAT common command demo. */
 /** List of global commands that are supported when in a group. */
 static QAT_Command_t QAT_Wifi_Command_List[] =
@@ -80,7 +81,9 @@ static QAT_Command_t QAT_Wifi_Command_List[] =
    {"+EDCA",     Extend_Command_EDCA,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+EDCCATHR", Extend_Command_EDCCATHR,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+BMISSTHR", Extend_Command_BMISSTHR,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+#ifdef CONFIG_WPS
    {"+WPS",      Extend_Command_WPS,          QAT_OP_EXEC_W_PARAM},
+#endif
 };
 
 typedef struct wifi_shell_cxt_s {
@@ -95,10 +98,12 @@ typedef struct wifi_shell_cxt_s {
    uint16_t        channel_frequency;
 	uint8_t			 active_device;
    uint8_t         wlan_enabled;
+#ifdef CONFIG_WPS
    uint8_t         wps_stage;
+#endif
 } wifi_shell_cxt_t;
 
-
+#ifdef CONFIG_WPS
 typedef struct {
     uint8_t wps_in_progress;
     uint8_t connect_flag;
@@ -111,6 +116,7 @@ typedef enum {
     WPS_SCAN,
     WPS_CONNECTED
 } WPS_STAGE_TYPE;
+#endif
 /*-------------------------------------------------------------------------
  * Parameters define
  *-----------------------------------------------------------------------*/
@@ -255,7 +261,9 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
                p_cxt->connected = true;
             offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_conned:%d,%02x-%02x-%02x-%02x-%02x-%02x,",
                p_cxt->active_device, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+#ifdef CONFIG_WPS
                p_cxt->wps_stage = WPS_CONNECTED;
+#endif
          } else {
             offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_disconn:%d,%d,%02x-%02x-%02x-%02x-%02x-%02x,", cxnInfo->reason_code, cxnInfo->bss_Connection_Status,mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
          }
@@ -271,7 +279,9 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
          
          if(p_cxt->ssid_length) {
             snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_disconcmd:%d,%s", p_cxt->active_device, p_cxt->ssid);
+#ifdef CONFIG_WPS
             p_cxt->wps_stage = WPS_NONE;
+#endif
          }
          break;
       }
@@ -297,12 +307,14 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
           QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+EVT:wlan_disabled\r\n");
          return;
       }
+#ifdef CONFIG_WPS
       case QAPI_WLAN_WPS_FAIL_CB_E: {
          int reason = *(int *)payload;
          p_cxt->wps_stage = WPS_NONE;
          offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_wps_failed:%d,", reason);
          break;
       }
+#endif
    }
 
 
@@ -2071,6 +2083,7 @@ static QAT_Command_Status_t Extend_Command_BMISSTHR(uint32_t Op_Type, uint32_t P
    return rc;
 }
 
+#ifdef CONFIG_WPS
 /**
    @brief WPS
 
@@ -2144,6 +2157,7 @@ static QAT_Command_Status_t Extend_Command_WPS(uint32_t Op_Type, uint32_t Parame
    rc = QAT_Response_Str(QAT_RC_OK, NULL);
    return rc;
 }
+#endif
 
 void Initialize_QAT_Wlan_Demo (void)
 {

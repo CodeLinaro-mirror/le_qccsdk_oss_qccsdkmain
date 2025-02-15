@@ -52,13 +52,13 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t                wlan_disable_block_mode:1;
     uint32_t                wlan_if_add_block_mode:1;
     uint32_t                wlan_scan_start_block_mode:1;
-    uint32_t                wlan_scan_stop_block_mode:1;
     uint32_t                wlan_connect_block_mode:1;
     uint32_t                wlan_disconnect_block_mode:1;
     uint32_t                wlan_get_stat_block_mode:1;
     uint32_t                wlan_set_param_block_mode:1;
     uint32_t                wlan_get_regulatory_block_mode:1;
 #ifdef CONFIG_WPS
+    uint32_t                wlan_scan_stop_block_mode:1;
     uint32_t                wlan_start_wps_block_mode:1;
 #endif
     uint32_t                wlan_roaming_started:1;
@@ -84,12 +84,12 @@ typedef struct wlan_qapi_cxt_s {
     qbool_t                 connect_in_progress;
     qbool_t                 disconnect_in_progress;
     qbool_t                 scan_in_progress;
-    qbool_t                 stop_scan_in_progress;
-    qbool_t                 wait_scan_comp_evt;
 #ifdef CONFIG_WPS
+    qbool_t                 stop_scan_in_progress;
     qbool_t                 wps_in_progress;
     qbool_t                 wps_stage;
 #endif
+    qbool_t                 wait_scan_comp_evt;
     qbool_t                 connected;
     uint8_t                *pScanOut;       /* callers buffer to hold results. */
     uint16_t                pScanOutSize;

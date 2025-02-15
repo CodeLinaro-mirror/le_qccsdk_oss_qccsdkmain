@@ -1,0 +1,3 @@
+config WPS_LIB
+	bool "enable wps lib"
+	default n
