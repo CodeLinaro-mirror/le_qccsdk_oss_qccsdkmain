@@ -45,6 +45,7 @@ static QAT_Command_Status_t Extend_Command_SNTPC(uint32_t Op_Type, uint32_t Para
 static QAT_Command_Status_t Extend_Command_SYSCFG(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 #endif
 static QAT_Command_Status_t Extend_Command_Cmd(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_DFU(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 QAT_Command_Status_t qat_power_state_event_handler(uint8_t evt);
 
 static uint32_t mem_test = 123;
@@ -66,6 +67,10 @@ static QAT_Command_t QAT_Common_Command_List[] =
 #ifdef CONFIG_HTTP_SERVER   
 	{"+SYSCFG",	 Extend_Command_SYSCFG,	  QAT_OP_EXEC},
 #endif   
+        {"+DFUBOOT", Extend_Command_DFU, QAT_OP_EXEC},
+        {"+DFURESET", Extend_Command_DFU, QAT_OP_EXEC},
+        {"+DFUAPP", Extend_Command_DFU, QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM },
+        {"+DFUBDF", Extend_Command_DFU, QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM },
 };
 /*-------------------------------------------------------------------------
  * External parameters
@@ -157,6 +162,22 @@ static QAT_Command_Status_t Extend_Command_Version(uint32_t Op_Type, uint32_t Pa
    }
    
    return rc;
+}
+
+/**
+   @brief Processes the Extend command from the QAT.
+
+   This command will change the current group to its parent. No parameters are
+   expected for this command.
+
+   @param[in] Op_Type          The input command type.
+   @param[in] Parameter_Count  Number of parameters that were entered into the
+                               command line.
+   @param[in] Parameter_List   List of parameters entered into the command line.
+*/
+static QAT_Command_Status_t Extend_Command_DFU(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+    return QAT_STATUS_SUCCESS_E;
 }
 
 /**
