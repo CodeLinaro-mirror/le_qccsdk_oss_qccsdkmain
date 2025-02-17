@@ -50,6 +50,9 @@ void keymgmt_get_pmkid_list_cmd(devh_t *dev, WMI_PMKID_LIST_REPLY *buffer);
 CRYPTO_TYPE keymgmt_get_cipher_type(devh_t *dev, struct rxbfChain *rxChain);
 #endif //ATH_KF
 
+void keymgmt_km_adaptate(devh_t *dev, uint8_t *pAddr);
+void keymgmt_km_clear(devh_t *dev);
+
 
 #ifdef __cplusplus
 }

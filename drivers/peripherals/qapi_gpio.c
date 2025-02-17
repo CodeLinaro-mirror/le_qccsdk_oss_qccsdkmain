@@ -68,7 +68,7 @@ uint16_t Mux_Func_2_Pin_Mask[MUX_FUNC_MAX] =
 
 uint8_t spi_slave_Pin[] = { QAPI_GPIO_ID0_E, QAPI_GPIO_ID1_E, QAPI_GPIO_ID2_E, QAPI_GPIO_ID3_E};	/* scl, cs, mosi, miso*/;
 Uart_Pin_t uart_Pin[] = { {QAPI_GPIO_ID11_E, QAPI_GPIO_ID12_E}, 
-                          {QAPI_GPIO_ID14_E, QAPI_GPIO_ID12_E}, 
+                          {QAPI_GPIO_ID14_E, QAPI_GPIO_ID13_E}, 
                           {QAPI_GPIO_ID9_E,  QAPI_GPIO_ID10_E}, 
                           {QAPI_GPIO_ID3_E,  QAPI_GPIO_ID1_E}};
 uint8_t i2c_pin[] =       {QAPI_GPIO_ID9_E,  QAPI_GPIO_ID10_E};		/* sda, scl*/

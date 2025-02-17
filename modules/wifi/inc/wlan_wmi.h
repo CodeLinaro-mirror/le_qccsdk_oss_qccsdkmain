@@ -103,6 +103,7 @@ void wmi_ignore_bcmc_in_bmps(devh_t *dev, uint8_t data);
 void wmi_slp_clk_cal_cfg(devh_t *dev, uint8_t data);
 void wmi_imps_cfg(devh_t *dev, WMI_IMPS_CFG *cfg);
 void wmi_bmps_enable(devh_t *dev, uint8_t data);
+void wmi_bmps_rx_filter_enable(devh_t *dev, uint8_t data);
 void wmi_slp_cal_clk_act(devh_t *dev, uint8_t data);
 
 NT_BOOL wmi_wlan_receive_management_frame_message(devh_t *dev);
@@ -128,6 +129,7 @@ NT_BOOL dispatch_wlan_wmi_evts(void **pContext, void *msg);
 void wlan_wmi_local_evt_notification(WMI_EVENTT_ID id, void* data, uint32_t data_len);
 void wlan_wmi_cnx_event(void *conn, int32_t reason, NT_BOOL cnx_sucess);
 void wlan_wmi_disc_event(void *conn, int32_t reason);
+void wlan_wmi_wps_fail_event(int32_t reason);
 #endif
 
 void wlan_wmi_addba( void *msg);

@@ -57,6 +57,7 @@ static QAT_Command_Status_t Extend_Command_ANTIINF(uint32_t Op_Type, uint32_t Pa
 static QAT_Command_Status_t Extend_Command_EDCA(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_EDCCATHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_BMISSTHR(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_WPS(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 
 /* The following is the complete command list for the QAT common command demo. */
 /** List of global commands that are supported when in a group. */
@@ -79,6 +80,7 @@ static QAT_Command_t QAT_Wifi_Command_List[] =
    {"+EDCA",     Extend_Command_EDCA,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+EDCCATHR", Extend_Command_EDCCATHR,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+BMISSTHR", Extend_Command_BMISSTHR,     QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
+   {"+WPS",      Extend_Command_WPS,          QAT_OP_EXEC_W_PARAM},
 };
 
 typedef struct wifi_shell_cxt_s {
@@ -93,8 +95,22 @@ typedef struct wifi_shell_cxt_s {
    uint16_t        channel_frequency;
 	uint8_t			 active_device;
    uint8_t         wlan_enabled;
+   uint8_t         wps_stage;
 } wifi_shell_cxt_t;
 
+
+typedef struct {
+    uint8_t wps_in_progress;
+    uint8_t connect_flag;
+    uint8_t wps_pbc_interrupt;
+    qapi_WLAN_Netparams_t netparams;
+} wps_context_t;
+
+typedef enum {
+    WPS_NONE,
+    WPS_SCAN,
+    WPS_CONNECTED
+} WPS_STAGE_TYPE;
 /*-------------------------------------------------------------------------
  * Parameters define
  *-----------------------------------------------------------------------*/
@@ -102,9 +118,9 @@ typedef struct wifi_shell_cxt_s {
 #define WIFI_COMMAND_LIST_SIZE                    (sizeof(QAT_Wifi_Command_List) / sizeof(QAT_Command_t))
 
 #define WLAN_RESPONSE_BUFFER_LENGTH					  128
-#define WLAN_STR_BUFFER_LENGTH					     2000					     
-#define SCAN_MODE_BLOCKING      1
-#define SCAN_MODE_UNBLOCKING    2
+#define WLAN_STR_BUFFER_LENGTH					     1500					     
+#define SCAN_MODE_BLOCKING                        1
+#define SCAN_MODE_UNBLOCKING                      2
 #define CMD_STR_BUFFER_LENGTH					        1024
 
 static wifi_shell_cxt_t g_wifi_shell_cxt;
@@ -130,16 +146,17 @@ static void scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
    uint8_t temp_ssid[33] = {0};
    qapi_WLAN_BSS_Scan_Info_t *list = scan_coml_evt->scan_bss_info;
    int16_t num_scan = scan_coml_evt->num_bss_cur;
-   int offset = 0;
+   
 
    char buffer[WLAN_STR_BUFFER_LENGTH] = {0};
-
-   QAT_Response_Str(QAT_RC_QUIET, buffer);
    for (i = 0; i < num_scan; i++) {
+
+      int offset = 0;
+
       memscpy(temp_ssid,list[i].ssid_Length,list[i].ssid,list[i].ssid_Length);
       temp_ssid[list[i].ssid_Length] = '\0';
       if (list[i].ssid_Length == 0) {
-         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "+CWLAP:ssid = SSID Not available");
+         QAT_Response_Str(QAT_RC_QUIET, "+CWLAP:ssid = SSID Not available");
       } else
       {
          offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "+CWLAP:%s,%.2x-%.2x-%.2x-%.2x-%.2x-%.2x,%d,%d,", temp_ssid, 
@@ -149,60 +166,55 @@ static void scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "802.1X");
                }
-               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK){
+               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "PSK");
                }
-               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE){
+               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "SAE");
                }
             }
 
             if(list[i].rsn_Cipher){
                /* AP security can support multiple options hence we check each one separately. Note rsn == wpa2 */
-               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP){
+               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WEP");
                }
-               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP){
+               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP");
                }
-               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP){
+               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "AES");
                }
             }
 
             if(list[i].wpa_Auth) {
-               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_1X){
+               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "802.1X");
                }
-               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK){
+               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "PSK");
                }
             }
 
             if(list[i].wpa_Cipher) {
-               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP){
+               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WEP");
                }
-               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP){
+               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP");
                }
-               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP){
+               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP) {
                   offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "AES");
                }
             }
          } else {
             offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "NONE");
          }
+         QAT_Response_Str(QAT_RC_QUIET, buffer);
       }
+      
 
-      if(i!= num_scan - 1) {
-         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "\r\n");
-      } else {
-         offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "\r\n");
-      }
    }
-
-   QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
 
    return;
 }
@@ -243,12 +255,12 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
                p_cxt->connected = true;
             offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_conned:%d,%02x-%02x-%02x-%02x-%02x-%02x,",
                p_cxt->active_device, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-         } else { 
-            strlcpy(p_cxt->ssid, "NA", sizeof(p_cxt->ssid));
+               p_cxt->wps_stage = WPS_CONNECTED;
+         } else {
             offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_disconn:%d,%d,%02x-%02x-%02x-%02x-%02x-%02x,", cxnInfo->reason_code, cxnInfo->bss_Connection_Status,mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
          }
-         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "%d,%s,%d,%d",
-                  cxnInfo->channel_frequency, p_cxt->ssid, cxnInfo->assoc_id, cxnInfo->host_initiated);
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "%d","NA","%d,%d",
+                  cxnInfo->channel_frequency, cxnInfo->assoc_id, cxnInfo->host_initiated);
          break;
       }
       case QAPI_WLAN_DISCONNECT_CB_E: {
@@ -259,6 +271,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
          
          if(p_cxt->ssid_length) {
             snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_disconcmd:%d,%s", p_cxt->active_device, p_cxt->ssid);
+            p_cxt->wps_stage = WPS_NONE;
          }
          break;
       }
@@ -284,7 +297,14 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
           QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+EVT:wlan_disabled\r\n");
          return;
       }
+      case QAPI_WLAN_WPS_FAIL_CB_E: {
+         int reason = *(int *)payload;
+         p_cxt->wps_stage = WPS_NONE;
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_wps_failed:%d,", reason);
+         break;
+      }
    }
+
 
    if (!enable_event_reporting) {
       QAT_Response_Str(QAT_RC_QUIET, "Event reporting has been disabled");
@@ -632,11 +652,14 @@ static QAT_Command_Status_t Extend_Command_Scan(uint32_t Op_Type, uint32_t Param
          bss_cnt = scan_complete_evt.num_bss_cur;
          qapi_WLAN_Scan_Comp_Evt_t *scan_complete_evt_total = malloc(sizeof(qapi_WLAN_Scan_Comp_Evt_t) + bss_cnt*sizeof(qapi_WLAN_BSS_Scan_Info_t));
          qapi_WLAN_Get_Scan_Results(deviceId, scan_complete_evt_total, &bss_cnt);
+         qurt_mutex_lock(&p_cxt->wifi_shell_cxt_mutex);
          if (scan_complete_evt_total) {
+            
             snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_scanresultstart:%d,%d",bss_cnt, p_cxt->scan_mode);
             QAT_Response_Str(QAT_RC_QUIET, buffer);
             scan_results(scan_complete_evt_total);
             snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+EVT:wlan_scanresultend");
+            qurt_mutex_unlock(&p_cxt->wifi_shell_cxt_mutex);
             QAT_Response_Str(QAT_RC_QUIET, buffer);
             free(scan_complete_evt_total);
          } else {
@@ -875,10 +898,9 @@ static int32_t qat_set_11nht_cap(char *ht_config)
 
 }
 
-int32_t qat_get_phy_mode()
+int32_t qat_get_phy_mode(char *buffer, int offset)
 {
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
-   char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
 	qapi_WLAN_Phy_Mode_e phy_mode;
 	char data[32+1] = {'\0'};
 	uint32_t length = sizeof(qapi_WLAN_Phy_Mode_e);
@@ -902,29 +924,24 @@ int32_t qat_get_phy_mode()
 	else if(phy_mode == QAPI_WLAN_11ABGN_HT20_MODE_E)
 		strlcpy(data, "abgn", sizeof(data)); 
 	else {
-      snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "FAIL, %d",(int)phy_mode);
-      QAT_Response_Str(QAT_RC_ERROR, buffer);
+      offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "FAIL, %d",(int)phy_mode);
 		return rc;
 	} 
 
-   snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "%s",data);
-   rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
-	return rc;
+   offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "%s",data);
+	return offset;
 }
 
-void qat_regulatory_info(qapi_WLAN_Reg_Evt_t *reg_info)
+int32_t qat_regulatory_info(qapi_WLAN_Reg_Evt_t *reg_info, char *buffer, int offset)
 {
 	int idx = 0, num;
    uint16_t max_bw = 20;
    char data[32+1] = {'\0'};
 	qapi_WLAN_Reg_t *reg;
-   int offset = 0;
-   char buffer[WLAN_STR_BUFFER_LENGTH] = {0};
 
 	if(reg_info) 
 	{
-      snprintf(buffer, WLAN_STR_BUFFER_LENGTH, "%s,", reg_info->alpha);
-      QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+      offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "%s,", reg_info->alpha);
 		reg = reg_info->reg_rules;
 		num = (reg_info->num_2g_reg_rules) + (reg_info->num_5g_reg_rules);
 		for(idx = 0;idx < num - 1;idx++) {
@@ -939,12 +956,12 @@ void qat_regulatory_info(qapi_WLAN_Reg_Evt_t *reg_info)
 		}
       offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "(%d-%d@%d,%s,%d)",reg[num - 1].start_freq,reg[num - 1].end_freq,max_bw,
 				data,reg[num - 1].reg_power);
-      QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
 	}
 
+   return offset;
 }
 
-int32_t qat_get_country_code()
+int32_t qat_get_country_code(char *buffer, int offset)
 {
    qapi_Status_t ret = QAPI_OK;
    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
@@ -953,26 +970,23 @@ int32_t qat_get_country_code()
 	
    ret = qapi_WLAN_Get_Regulatory_Info(&reg_info);
    if(ret == QAPI_OK) {
-      qat_regulatory_info(&reg_info);
+      offset = qat_regulatory_info(&reg_info, buffer, offset);
    }
 
-   rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, NULL);
-   return rc;
+   return offset;
 }
 
-int32_t qat_get_wifi_power_mode()
+int32_t qat_get_wifi_power_mode(char *buffer, int offset)
 {
 	uint8_t power_mode = 0;
 	uint32_t length = sizeof(power_mode);
 	uint32_t deviceId = qat_get_active_device();
 	char data[64+1] = {'\0'};	
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
-   char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
 
    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS, 
          __QAPI_WLAN_PARAM_GROUP_WIRELESS_POWER_MODE_PARAMS, &power_mode, &length)) {
-      snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "get wifi power mode fail for device %d",deviceId);
-      QAT_Response_Str(QAT_RC_ERROR, buffer);
+      offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "get wifi power mode fail for device %d",deviceId);
 		return rc;
 	}	
 	
@@ -993,38 +1007,32 @@ int32_t qat_get_wifi_power_mode()
 			strlcat(data, "WNM enabled", sizeof(data));
 		}		
 	}		
-   snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "%s",data);
-   rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
-
-	return rc;
+   offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "%s",data);
+	return offset;
 }
 
-int32_t qat_get_device_mac_address()
+int32_t qat_get_device_mac_address(char *buffer, int offset)
 {
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
-   char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
 	uint8_t mac[__QAPI_WLAN_MAC_LEN] = {0};
 	uint32_t length = __QAPI_WLAN_MAC_LEN;
 	uint8_t deviceId = qat_get_active_device();	
 
    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS,
          __QAPI_WLAN_PARAM_GROUP_WIRELESS_MAC_ADDRESS, &mac[0], &length)) {
-      snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "get mac address fail for device %d",deviceId);
-		QAT_Response_Str(QAT_RC_ERROR, buffer);
+      offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "get mac address fail for device %d",deviceId);
 		return rc;
 	}
 
-	snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "%02x-%02x-%02x-%02x-%02x-%02x",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
-   rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+	offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "%02x-%02x-%02x-%02x-%02x-%02x",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 
-	return rc;
+	return offset;
 }
 
-int32_t qat_get_rssi()
+int32_t qat_get_rssi(char *buffer, int offset)
 {
 	qapi_Status_t ret = QAPI_ERROR;
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
-   char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
 	uint8_t rssi = 0;
 	uint32_t length = sizeof(rssi);
 	uint32_t deviceId =qat_get_active_device();
@@ -1035,20 +1043,18 @@ int32_t qat_get_rssi()
 							&rssi,
 							&length);
 	if(QAPI_OK == ret) {
-      snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "%d",rssi);
-      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+      offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "%d",rssi);
    }
    else{
-      QAT_Response_Str(QAT_RC_QUIET_NO_CR, "NA");
+      offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "NA");
    }
 
-	return rc;
+	return offset;
 }
 
-int32_t qat_get_op_mode()
+int32_t qat_get_op_mode(char *buffer, int offset)
 {
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
-   char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
 	qapi_WLAN_DEV_Mode_e conc_mode, opmode;
 	uint32_t length = sizeof(qapi_WLAN_DEV_Mode_e);
 	uint8_t deviceId = qat_get_active_device();
@@ -1063,7 +1069,7 @@ int32_t qat_get_op_mode()
 	}
 	
 	if(conc_mode == DEV_MODE_AP_STA_E) {
-      QAT_Response_Str(QAT_RC_QUIET_NO_CR, "concurrency mode");
+      offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "concurrency mode");
       return rc;
 	}
 								
@@ -1072,22 +1078,21 @@ int32_t qat_get_op_mode()
 								__QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
 								&opmode,
 								&length)) {
-      snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "get operation mode fail");
-		QAT_Response_Str(QAT_RC_ERROR, buffer);
+      offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "get operation mode fail");
 		return rc;
 	}
 	
 	if(opmode == DEV_MODE_STATION_E) {
-      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, "station");
+      offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "station");
 	}
 	else if(opmode == DEV_MODE_AP_E) {
-      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, "softap");
+      offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "softap");
 	}
    else if(opmode == DEV_MODE_NO_CONC_E) {
-      rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, "non_softap+station");
+      offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "non_softap+station");
    }
 
-	return rc;
+	return offset;
 }
 
 /*-------------------------------------------------------------------------
@@ -1111,6 +1116,8 @@ static QAT_Command_Status_t Extend_Command_PyhMode(uint32_t Op_Type, uint32_t Pa
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
 	uint8_t deviceId =qat_get_active_device();
 	qapi_WLAN_Phy_Mode_e phyMode = 0;
+   char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
+   int offset = 0;
    char * wmode;
 
    if (0 == pg_wifi_shell_cxt->wlan_enabled)
@@ -1159,13 +1166,13 @@ static QAT_Command_Status_t Extend_Command_PyhMode(uint32_t Op_Type, uint32_t Pa
       }
       case QAT_OP_QUERY:
       {
-         QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+CWPHYMODE:");
-         qat_get_phy_mode();
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+CWPHYMODE:");
+         qat_get_phy_mode(&buffer, offset);
       }
       default:
       ;
    }
-   rc = QAT_Response_Str(QAT_RC_OK, NULL);
+   rc = QAT_Response_Str(QAT_RC_OK, buffer);
    return rc;
 }
 
@@ -1190,6 +1197,7 @@ static QAT_Command_Status_t Extend_Command_CountryCode(uint32_t Op_Type, uint32_
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
 	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
    char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
+   int offset = 0;
 	
     if (0 == p_cxt->wlan_enabled)
     {
@@ -1222,8 +1230,9 @@ static QAT_Command_Status_t Extend_Command_CountryCode(uint32_t Op_Type, uint32_
       }
       case QAT_OP_QUERY:
       {
-         QAT_Response_Str(QAT_RC_QUIET_NO_CR, "\r\n+CWCOUNTRY:");
-         qat_get_country_code();
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "\r\n+CWCOUNTRY:");
+         qat_get_country_code(&buffer, offset);
+         QAT_Response_Str(QAT_RC_QUIET, buffer);
       }
       default:
       ;
@@ -1250,8 +1259,8 @@ static QAT_Command_Status_t Extend_Command_SetModeOption(uint32_t Op_Type, uint3
    qapi_Status_t ret = QAPI_OK;
    uint8_t deviceId = qat_get_active_device();
    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
-   char *param = "";
-   char *ssid = "";
+   char *param = NULL;
+   char *ssid = NULL;
    int ssidlen = 0;
 
    if(pg_wifi_shell_cxt->wlan_enabled == 0) {
@@ -1335,6 +1344,8 @@ static QAT_Command_Status_t Extend_Command_SetOperatingMode(uint32_t Op_Type, ui
 {
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
    char *hidden = "";
+   int offset = 0;
+   char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
 
    if(pg_wifi_shell_cxt->wlan_enabled == 0) {
       QAT_Response_Str(QAT_RC_ERROR, "+CWMODE:wlan is not enabled");
@@ -1365,8 +1376,8 @@ static QAT_Command_Status_t Extend_Command_SetOperatingMode(uint32_t Op_Type, ui
 
       case QAT_OP_QUERY:
       {
-         QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+CWMODE:");
-         qat_get_op_mode();
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+CWMODE:");
+         qat_get_op_mode(&buffer, offset);
          break;
       }
       case QAT_OP_EXEC:
@@ -1377,7 +1388,7 @@ static QAT_Command_Status_t Extend_Command_SetOperatingMode(uint32_t Op_Type, ui
       default:
       ;
    }
-   rc = QAT_Response_Str(QAT_RC_OK, NULL);
+   rc = QAT_Response_Str(QAT_RC_OK, buffer);
    return rc;
 }
 
@@ -1402,6 +1413,7 @@ static QAT_Command_Status_t Extend_Command_Connect(uint32_t Op_Type, uint32_t Pa
 	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
    char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
    qapi_Status_t ret = QAPI_OK;
+   int32_t offset = 0;
 
    if (0 == p_cxt->wlan_enabled)
    {
@@ -1415,23 +1427,28 @@ static QAT_Command_Status_t Extend_Command_Connect(uint32_t Op_Type, uint32_t Pa
       {
          if(p_cxt->connected == true)
          {
-            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWJAP:%s,%d,", p_cxt->ssid, p_cxt->channel_frequency);
-            QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+            offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+CWJAP:%s,%d,", p_cxt->ssid, p_cxt->channel_frequency);
          }
          else 
          {
-            QAT_Response_Str(QAT_RC_QUIET_NO_CR, "+CWJAP:NA,NA,");
+            offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+CWJAP:NA,NA,");
          }
 
-         qat_get_rssi();
-         QAT_Response_Str(QAT_RC_QUIET_NO_CR, ",");
-         qat_get_wifi_power_mode();
-         QAT_Response_Str(QAT_RC_QUIET_NO_CR, ",");
-         qat_get_device_mac_address();
-         QAT_Response_Str(QAT_RC_QUIET_NO_CR, ",");
-	      qat_get_op_mode();
-         QAT_Response_Str(QAT_RC_QUIET_NO_CR, ",");
-         qat_get_phy_mode();
+         offset = qat_get_rssi(&buffer, offset);
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, ",");
+
+         offset = qat_get_wifi_power_mode(&buffer, offset);
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, ",");
+         
+         offset = qat_get_device_mac_address(&buffer, offset);
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, ",");
+
+	      offset = qat_get_op_mode(&buffer, offset);
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, ",");
+
+         qat_get_phy_mode(&buffer, offset);
+
+         QAT_Response_Str(QAT_RC_QUIET, buffer);
 
          break;
       }
@@ -1584,6 +1601,8 @@ static QAT_Command_Status_t Extend_Command_ANTIINF(uint32_t Op_Type, uint32_t Pa
 	    }
 		
 	    length = sizeof(rts_rate);
+	    rts_rate = 0;
+		
 	    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
 	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
 	                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS_RATE_2G,
@@ -2051,6 +2070,81 @@ static QAT_Command_Status_t Extend_Command_BMISSTHR(uint32_t Op_Type, uint32_t P
 
    return rc;
 }
+
+/**
+   @brief WPS
+
+   This command will enable and start WPS PBC connect, or disable WPS PBC.
+
+   @param[in] Op_Type          The input command type.
+   @param[in] Parameter_Count  Number of parameters that were entered into the
+                               command line.
+   @param[in] Parameter_List   List of parameters entered into the command line.
+*/
+
+static QAT_Command_Status_t Extend_Command_WPS(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+   QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+   uint8_t auth_floor = 0;
+   uint8_t wps_enable = 0;
+	uint8_t deviceId = qat_get_active_device();
+	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+   wps_context_t wps_context;
+   char buffer[WLAN_RESPONSE_BUFFER_LENGTH] = {0};
+   qapi_Status_t ret = QAPI_OK;
+   uint8_t wps_mode = 0;
+   char wps_pin[32];
+
+   if (0 == p_cxt->wlan_enabled)
+   {
+      QAT_Response_Str(QAT_RC_ERROR, "+WPS:Enable WLAN before get the WLAN infomation");
+      return rc;
+   }
+
+   switch (Op_Type)
+   {
+      case QAT_OP_EXEC_W_PARAM:    /* AT+WPS=0/1 */
+      {
+         if( Parameter_Count < 1 || !Parameter_List ) {
+            QAT_Response_Str(QAT_RC_ERROR, NULL);
+            return rc;
+         }
+
+         wps_enable = Parameter_List[0].Integer_Value;
+         if (wps_enable != 0 && wps_enable != 1) {
+            QAT_Response_Str(QAT_RC_ERROR, NULL);
+            return rc;
+         }
+         if (Parameter_Count == 2) {
+            auth_floor = Parameter_List[1].Integer_Value;
+         }
+
+         wps_mode = QAPI_WLAN_WPS_PBC_MODE_E;
+         wps_context.connect_flag = 1;
+         memset(wps_pin, 0, 32);
+
+         if (wps_enable == 1) {
+            if(qapi_WLAN_Start_Wps(deviceId, wps_context.connect_flag, wps_mode, wps_pin, auth_floor) != 0)
+            {
+               snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+WPS:WPS failed\r\n");
+               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+               return rc;
+            }
+            p_cxt->wps_stage = WPS_SCAN;
+            wps_context.wps_in_progress = true;
+         } else {
+            qapi_WLAN_Stop_Wps(deviceId, p_cxt->wps_stage);
+            p_cxt->wps_stage = WPS_NONE;
+            wps_context.wps_in_progress = false;
+         }
+      }
+      default:
+      ;
+   }
+   rc = QAT_Response_Str(QAT_RC_OK, NULL);
+   return rc;
+}
+
 void Initialize_QAT_Wlan_Demo (void)
 {
 	qbool_t RetVal;

@@ -69,6 +69,7 @@
 #endif
 
 #include "halphy_bdf.h"
+#include "qapi_rram.h"
 
 #ifdef SUPPORT_REGULATORY
 #include "halphy_regulatory_api.h"
@@ -290,6 +291,7 @@ const binary_desriptor_t wlan_desriptor_t __attribute__ ((section(".wlan_version
  ******************************************************************************/
 extern int8_t nt_rram_read(uint32_t address, void *rdata, uint32_t length);
 extern int8_t nt_rram_write(uint32_t dst, const void *wdata, uint32_t length);
+extern qbool_t rram_udpart_init();
 #ifdef FERMION_SILICON
 extern uint32_t UART_Send_direct(char *txbuf,uint32_t buflen);
 #define UART_SEND_DIRECT(str)   UART_Send_direct((str),strlen(str))
@@ -434,6 +436,7 @@ int main(
 #endif
 
     pka_init(&g_pka_ctxt);
+    rram_udpart_init();
 
 #if (CONFIG_QCCSDK_DEMO)
     #if (CONFIG_QCCSDK_CONSOLE)

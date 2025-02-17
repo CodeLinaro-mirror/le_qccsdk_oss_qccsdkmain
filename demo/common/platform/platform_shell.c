@@ -21,6 +21,15 @@
 #include "qapi_rtc.h"
 #include "wifi_fw_pmu_ts_cfg.h"
 #include "ferm_hkadc_drv.h"
+#ifdef SUPPORT_QCSPI_SLAVE
+#include "qcspi_slave_api.h"
+#endif
+#include "qapi_rram.h"
+#include "nt_hw.h"
+
+
+
+extern bool rram_udpart_init_done;
 
 static qapi_Status_t platform_reset(uint32_t __attribute__((__unused__)) parameters_count, QAPI_Console_Parameter_t __attribute__((__unused__)) * parameters)
 {
@@ -91,6 +100,171 @@ static qapi_Status_t write_mem(uint32_t Parameter_Count, QAPI_Console_Parameter_
 }
 #endif
 
+static qapi_Status_t rram_read(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint32_t i;
+    uint32_t address;
+    uint32_t byte_cnt;
+    char *buffer = NULL;
+    uint32_t partid;
+
+    if(!rram_udpart_init_done) {
+        printf("rram was not inited\n");
+        return QAPI_ERROR;
+    }
+
+    if (Parameter_Count != 3 || Parameter_List == NULL || 
+        Parameter_List[0].Integer_Value < 0 || Parameter_List[1].Integer_Value < 0 || Parameter_List[2].Integer_Value < 0) {
+        printf("Read <partid> <Addr> <Cnt>\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    partid = Parameter_List[0].Integer_Value;
+    address = Parameter_List[1].Integer_Value;
+    byte_cnt = Parameter_List[2].Integer_Value;
+
+    buffer = malloc(byte_cnt);
+    if (buffer == NULL)
+    {
+        printf("ERROR: No enough memory\n");
+        return QAPI_ERR_NO_MEMORY;
+    }
+    memset(buffer, 0, byte_cnt);
+
+	if(qapi_rram_read(partid, address, buffer, byte_cnt) == 0){
+		printf("Read data : %s\n", buffer);
+	}
+	else
+	{
+		printf("Read Failed");
+        return QAPI_ERROR;
+	}
+
+    free(buffer);
+    return QAPI_OK;
+}
+
+static qapi_Status_t rram_write(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint32_t partid;
+    uint32_t address;
+    uint32_t byte_cnt;
+    char *buffer = NULL;
+
+    if(!rram_udpart_init_done) {
+        printf("rram was not inited\n");
+        return QAPI_ERROR;
+    }
+
+    if (Parameter_Count != 3 || Parameter_List == NULL || 
+        Parameter_List[0].Integer_Value < 0 || Parameter_List[1].Integer_Value < 0) {
+        printf("Write <Addr> <Cnt> <Value string>\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    partid = Parameter_List[0].Integer_Value;   
+    address = Parameter_List[1].Integer_Value;
+    buffer = Parameter_List[2].String_Value;
+    byte_cnt = strlen(buffer);
+    if(byte_cnt > 65536) {
+        /* The max len of QLI buffer is 256 bytes, here should be a limitation */
+        printf("The string length should be less than 65536 Bytes\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+	if(qapi_rram_write(partid, address, buffer, byte_cnt) == 0) {
+		printf("dxe rram Write Data : %s\n", buffer);
+	}
+	else
+	{
+		printf("Write Failed");
+	}
+
+    return QAPI_OK;
+}
+
+#define RRAM_OP_UNIT 1024
+static qapi_Status_t rram_test(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    qapi_Status_t status = QAPI_OK;
+    uint32_t i, len;
+    uint32_t offset;
+    uint32_t byte_cnt;
+    uint32_t *buffer = NULL;
+    uint32_t *read_buffer = NULL;
+    uint32_t partid;
+
+    if (Parameter_Count != 3 || Parameter_List == NULL || 
+        Parameter_List[0].Integer_Value < 0 || 
+        Parameter_List[1].Integer_Value < 0 || 
+        Parameter_List[2].Integer_Value < 0) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    partid = Parameter_List[0].Integer_Value; 
+    offset = Parameter_List[1].Integer_Value;
+    byte_cnt = Parameter_List[2].Integer_Value;
+    buffer = malloc(byte_cnt);
+    if (buffer == NULL) {
+        printf("ERROR: No enough memory\n");
+        return QAPI_ERR_NO_MEMORY;
+    }
+
+    if(byte_cnt > 65536) { // 64KB
+        printf("Test size should less 64K\n");
+        free(buffer);
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    printf("Total test size %d bytes\n",byte_cnt);
+
+    read_buffer = malloc(byte_cnt);
+    if (read_buffer == NULL) {
+        printf("ERROR: No enough memory\n");
+        free(buffer);
+        return QAPI_ERR_NO_MEMORY;
+    }
+        
+    while(byte_cnt) {
+        if(byte_cnt >= RRAM_OP_UNIT) {
+            len = RRAM_OP_UNIT;
+        }else {
+            len = byte_cnt;
+        }
+
+        memset(buffer, 0, sizeof(buffer));
+        memset(read_buffer, 0, sizeof(read_buffer));
+        for(i = 0; i < len; i++) {
+            buffer[i] = i%256;
+        }
+        
+        status = qapi_rram_write(partid, offset, buffer, len);
+        if(status != QAPI_OK) {
+            printf("Buf(%d) test failed(%d)\n",i,status);
+            break;
+        }
+
+        status = qapi_rram_read(partid, offset, read_buffer, len);
+        if(status != QAPI_OK) {
+            printf("rram read test failed(%d)\n",i, status);
+            break;
+        }
+
+        if(memcmp(read_buffer, buffer, len) != 0) {
+            status = QAPI_ERROR;
+            printf("Verify failed at offset 0x%x\n", offset);
+            break;
+        }
+
+        offset += len;
+        byte_cnt -= len;
+        printf("Verify OK at offset 0x%x\n", offset);
+    }
+
+    free(buffer);
+    free(read_buffer);
+    return status;
+}
+
 static qapi_Status_t bgtest(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     uint32_t time_s = 5;
@@ -130,9 +304,12 @@ qapi_Status_t platform_demo_free(uint32_t Parameter_Count, QAPI_Console_Paramete
         return QAPI_ERROR;
     }
 
-    printf("           total       used       free       min_free\n");
-    printf("Heap:   %8d   %8d   %8d       %8d\n", hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes);
-
+    printf("                  total       used       free         min_free\n");
+    printf("Heap:           %8d   %8d   %8d       %8d\n", hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes);
+#if !CONFIG_MATTER_ENABLE
+    printf("lwip heap:     %8d   %8d   %8d       %8d\n", hs.lwip_total_Bytes, hs.lwip_total_Bytes-hs.lwip_free_Bytes, hs.lwip_free_Bytes, hs.lwip_min_ever_free_bytes);
+    printf("lwip pool:     %8d   %8d   %8d       %8d\n", hs.lwip_total_pool, hs.lwip_total_pool-hs.lwip_free_pool, hs.lwip_free_pool, hs.lwip_min_ever_free_pool);
+#endif    
     return QAPI_OK;
 }
 
@@ -394,6 +571,23 @@ static qapi_Status_t platform_demo_info(uint32_t Parameter_Count, QAPI_Console_P
     return QAPI_OK;
 }
 
+#ifdef SUPPORT_QCSPI_SLAVE
+static qapi_Status_t platform_qcspi_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+	if (Parameter_Count != 1) {
+		printf("Invalid number of arguments\r\n");
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+
+    if(0 == Parameter_List[0].Integer_Value)
+		qcspi_slv_deinit ();
+	else
+		qcspi_slv_init ();        
+
+    return QAPI_OK;
+}
+#endif
+
 static qapi_Status_t platform_demo_getcx(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     (void)(Parameter_Count);
@@ -562,6 +756,34 @@ platform_demo_time_zone_error:
     print_usage_set_time_zone();
     return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
 }
+static qapi_Status_t platform_demo_check_boot_reason(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{	
+	uint32_t data = 0;
+
+	if(QAPI_OK == qapi_Core_Obtain_Boot_Reason(&data))
+	{
+		if(0 == data & PMU_BASE_pmu_PMU_SYSTEM_STATUS_COLD_WARM_BOOT_Msk)
+		{
+			printf("Status: boot from cold boot\r\n");
+		}
+		else if(QWLAN_PMU_SYSTEM_STATUS_WARM_BOOT_FROM_SLEEP_MASK == (uint32_t)(data & QWLAN_PMU_SYSTEM_STATUS_WARM_BOOT_FROM_SLEEP_MASK))
+		{	
+			printf("Status: boot from dtim sleep\r\n");
+		}
+		else if(QWLAN_PMU_SYSTEM_STATUS_WARM_BOOT_FROM_DEEPSLEEP_MASK == (uint32_t)(data & QWLAN_PMU_SYSTEM_STATUS_WARM_BOOT_FROM_DEEPSLEEP_MASK))
+		{
+			printf("Status: boot from deep sleep\r\n");
+		}
+		else
+		{
+			printf("Status: unknown status %d\r\n", data);
+		}
+		return QAPI_OK;
+	}
+	else
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
+	
+}
 
 const QAPI_Console_Command_t platform_shell_cmds[] =
 {
@@ -571,6 +793,10 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
     {read_mem, "read_mem", "<addr> <size:1|2|4>", "read memory\n"},
     {write_mem, "write_mem", "<addr> <size:1|2|4> <value>", "write memory\n"},
 #endif
+    {rram_read, "rram_read", "<address> <count>",    "Read rram data"},
+    {rram_write,"rram_write","<address>  <count> <string>",                      "Write data to rram, count <= 200"},
+    {rram_test, "rram_test", "<address> <size(KB)>",    "rram data test. size <=64.\n"\
+                            "write test will write 0~16 in cycles and verify it \n"},
     {bgtest, "bgtest", "[time_s(5)] [interval_s(1)]", "background command test\n"},
     {platform_demo_free, "free", "\n", "display the heap size and an approximation of free amount of heap bytes\n"},
     {platform_demo_watchdog_reset, "wdrst", "\n", "trigger watchdog reset\n"},
@@ -581,6 +807,10 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
     {platform_demo_calcxoneshot, "calcxoneshot", "<tempC> <vbatmV>", "calculate cx(ULP-SMPS2) oneshot_code accordting to tempC(-40C, 125C) and vbatmV(1600mV, 3600mV)\n"},
     {platform_demo_setcxoneshot, "setcxoneshot", "<oneshot> [tempC] [vbatmV]\n", "if oneshot not zero, just set; else, calculate oneshot according to tempC and vbatmV then set. This will disable cxoneshot update in sleep\n"},
     {platform_demo_time_zone, "time_zone", "<zone>\n", "set time zone\n"},
+#ifdef SUPPORT_QCSPI_SLAVE
+    {platform_qcspi_enable, "qcspi", "<0|1>\n", "enable/disable qcspi. 1: enable, 0:disable\n"},
+#endif    
+    {platform_demo_check_boot_reason, "boot_reason", "\n", "check boot reason\n"},
 };
 
 const QAPI_Console_Command_Group_t platform_shell_cmd_group = {"platform", sizeof(platform_shell_cmds) / sizeof(QAPI_Console_Command_t), platform_shell_cmds};

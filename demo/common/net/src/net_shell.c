@@ -29,6 +29,7 @@
 #endif
 
 #include "ping.h"
+#include "prefix.h"
 #include "iperf.h"
 #include "pmtud_demo.h"
 #include "safeAPI.h"
@@ -672,24 +673,21 @@ static qapi_Status_t ifconfig(uint32_t __attribute__((__unused__)) Parameter_Cou
                    net_set_ip(netif, &gw_addr, IPv4_GATEWAY_IDX);
                }
             }
-            else {
-                return QAPI_NET_ERR_INVALID_IPADDR;
-            }
 #endif /* LWIP_IPV4 */
 #if LWIP_IPV6
-        	if (IP_IS_V6_VAL(ip_addr)) {
+        	else if (IP_IS_V6_VAL(ip_addr)) {
                 int idx;
-        		idx = atoi(Parameter_List[1].String_Value);
+        		idx = atoi(Parameter_List[2].String_Value);
         		if ((idx < 1) && (idx > 2)) {
         			info_printf("Invalid index selected for ipv6 address index set to default \r\n");
         			idx = 1;
         		}
         		net_set_ip(netif, &ip_addr, idx); //setting ipv6 address
         	}
+#endif /* LWIP_IPV6 */
             else {
                 return QAPI_NET_ERR_INVALID_IPADDR;
             }
-#endif /* LWIP_IPV6 */
             break;
         default:
             return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
@@ -698,7 +696,8 @@ static qapi_Status_t ifconfig(uint32_t __attribute__((__unused__)) Parameter_Cou
     return QAPI_OK;
 }
 
-#define CFG_PING_MAX_TX 1470
+#define CFG_PING_MAX_TX 10000 //increase the max_size from 1470 to 10000 to pass WFA 11N-5.2.35/36
+#define CFG_PING6_MAX_TX 1450
 static qapi_Status_t pingv4(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
     ip_addr_t ip_addr;
@@ -712,6 +711,32 @@ static qapi_Status_t pingv4(uint32_t __attribute__((__unused__)) Parameter_Count
 
     if (Parameter_Count < 1 || Parameter_List == NULL) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    NETIF_FOREACH(netif) {
+        is_empty = 0;
+        break;
+    }
+    if(is_empty){
+        info_printf("Default network interface not initialized");
+        return QAPI_ERROR;
+    }
+
+    if( Parameter_Count >= 1){
+        ptr = Parameter_List[0].String_Value;
+        if(!ipaddr_aton(ptr,&ip_addr)){
+            info_printf("error :invalid IP Addres. Please try again\n");
+            return QAPI_ERROR;
+        }
+        if (ip6_addr_islinklocal(ip_2_ip6(&ip_addr))){
+            if(get_netif_by_device(AP_DEVICE)){
+                ip_addr.u_addr.ip6.zone = nt_get_netifidx_by_devmode(AP_DEVICE);
+            }else if(get_netif_by_device(STA_DEVICE)){
+                ip_addr.u_addr.ip6.zone = nt_get_netifidx_by_devmode(STA_DEVICE);
+            }else{
+                ;
+            }
+        }
     }
 
     for (i = 1; i < Parameter_Count ; i++) {
@@ -733,34 +758,60 @@ static qapi_Status_t pingv4(uint32_t __attribute__((__unused__)) Parameter_Count
                 size = Parameter_List[i].Integer_Value;
                 /* if repsonse client does not support IP fragment when size > 1538( data is1472)Bytes,
                 will not get response with some AP */
-                if (size > CFG_PING_MAX_TX) {
+                if(IP_IS_V6(&ip_addr) && size > CFG_PING6_MAX_TX){
+                    info_printf("Size should be <= %d\n", CFG_PING6_MAX_TX);
+                    return QAPI_ERROR;
+                }
+                if (IP_IS_V4(&ip_addr) && size > CFG_PING_MAX_TX) {
                     info_printf("Size should be <= %d\n", CFG_PING_MAX_TX);
                     return QAPI_ERROR;
                 }
             }
         }
     } /* for loop */
-
-    NETIF_FOREACH(netif) {
-        is_empty = 0;
-        break;
-    }
-    if(is_empty){
-        info_printf("Default network interface not initialized");
-        return QAPI_ERROR;
-    }
-
-    if( Parameter_Count >= 1){
-        ptr = Parameter_List[0].String_Value;
-        if(!ipaddr_aton(ptr,&ip_addr)){
-            info_printf("error :invalid IP Addres. Please try again\n");
-            return QAPI_ERROR;
-        }
-    }
-
     info_printf("Pinging %s with %u bytes of data:\r\n",ipaddr_ntoa(&ip_addr),(unsigned int)size);
     ping(&ip_addr, size, count, delay);
 
+    return QAPI_OK;
+}
+
+
+/*****************************************************************************
+ *              [0]          [1]      [2]             [3]               [4]
+ * prefix <interface_name> <v6addr> <prefixlen> <prefix_lifetime> <valid_lifetime>
+ ****************************************************************************/
+
+static qapi_Status_t prefix_v6(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    ip_addr_t v6addr;
+    uint32_t prefixlen = 0;
+    uint32_t prefix_lifetime = 0;
+    uint32_t valid_lifetime = 0;
+    char *interface_name;
+    char *ptr = NULL;
+    uint8_t netid = 0;
+
+    if (Parameter_Count < 5)
+    {
+        return QAPI_ERROR;
+    }
+
+    interface_name  = Parameter_List[0].String_Value;
+    prefixlen       = Parameter_List[2].Integer_Value;
+    prefix_lifetime = Parameter_List[3].Integer_Value;
+    valid_lifetime  = Parameter_List[4].Integer_Value;
+    ptr = Parameter_List[1].String_Value;
+
+    if(!ipaddr_aton(ptr,&v6addr)){
+        info_printf("error :invalid IP Addres. Please try again\n");
+        return QAPI_ERROR;
+    }
+
+    if(strncmp(interface_name, "wlan0", 5) == 0 ) {
+        netid = nt_get_netifidx_by_devmode(AP_DEVICE);
+    }
+
+    prefix_send(&v6addr, prefixlen, prefix_lifetime, valid_lifetime, netid);
     return QAPI_OK;
 }
 
@@ -985,11 +1036,13 @@ const QAPI_Console_Command_t net_shell_cmds[] =
                                 "                                       iptype: v4, v6 , v4v6, v6v4 \n",
                                     "\n Resolve a hostname (string) into an IP address"},
     {pingv4,         "ping",     "\n\nping <host> [ -s (packet lengh)] [-c (count)] [-d (delay(ms))]\n",
-                                    "\nSend ICMP ECHO_REQUEST to network hosts in IPv4 network"},
+                                    "\nSend ICMP ECHO_REQUEST to network hosts in IPv4/IPv6 network"},
     {iperf,         "iperf",     "\n\nUsage: iperf [-s|-c host] [-p][-i][-t][-n][-l][-b][-S]\n",
                                     "\niperf test"},
     {iperf_quit,         "iperf_quit",     "\n\nUsage: iperf quit\n",
-                                    "\nquit iperf"},
+                                    "\nquit iperf"}, 
+    {prefix_v6,         "prefix",     "\n\nprefix <interface> [(<ipv6addr> <prefixlen> <prefix_lifetime> <valid_lifetime>)]\n",
+                                    "\nSend prefix to network hosts in IPv6 network"},
 #ifdef CONFIG_NET_SSL_DEMO
 	{ssl_client,         "ssl_client",     "\n\nUsage: ssl_client [param1] [value] [param2] [value]...\n",
 									"\nssl client command"},

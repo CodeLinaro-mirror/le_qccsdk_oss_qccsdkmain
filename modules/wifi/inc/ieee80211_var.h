@@ -53,6 +53,7 @@ struct ieee80211_common_ie {
     uint8_t     *ie_country;
     uint8_t     *ie_wpa;
     uint8_t     *ie_rsn;
+    uint8_t     *ie_rsnx;
 #ifdef NT_FN_WMM
     uint8_t     *ie_wmminfo;
     uint8_t     *ie_wmmparam;

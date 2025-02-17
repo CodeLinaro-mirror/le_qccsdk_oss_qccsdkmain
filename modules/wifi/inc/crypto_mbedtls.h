@@ -815,6 +815,20 @@ size_t crypto_ec_prime_len_bits(struct crypto_ec *e);
 const struct crypto_bignum * crypto_ec_get_prime(struct crypto_ec *e);
 
 /**
+ * crypto_ec_get_a - Get curve coefficients a
+ * @e: EC context from crypto_ec_init()
+ * Returns: curve coefficients a
+ */
+const struct crypto_bignum *crypto_ec_get_a(struct crypto_ec *e);
+
+/**
+ * crypto_ec_get_b - Get curve coefficients b
+ * @e: EC context from crypto_ec_init()
+ * Returns: curve coefficients b
+ */
+const struct crypto_bignum *crypto_ec_get_b(struct crypto_ec *e);
+
+/**
  * crypto_ec_get_order - Get order of an EC group
  * @e: EC context from crypto_ec_init()
  * Returns: Order (bignum) of the group

@@ -211,6 +211,10 @@
 	#endif
 
 	/* flag for enabling WPS */
+	#ifndef CONFIG_WPS
+	#define CONFIG_WPS
+	#endif
+
 #ifdef CONFIG_WPS
 	#ifndef NT_FN_WPS
 	#define NT_FN_WPS
@@ -232,6 +236,11 @@
 	#ifndef NT_FN_WPA3
 	#define NT_FN_WPA3
 	#endif//NT_FN_WPA3
+
+        /* flag for enabling PMK caching */
+        #ifndef FM_PMK_CACHING
+        #define FM_PMK_CACHING
+        #endif//FM_PMK_CACHING
 
 	/* flag for enabling H/W Crypto */
 	#ifndef NT_FN_HW_CRYPTO

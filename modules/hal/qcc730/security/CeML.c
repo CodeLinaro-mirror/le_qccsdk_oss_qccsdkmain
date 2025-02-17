@@ -358,6 +358,7 @@ CeMLErrorType CeMLDeInit (void)
   //DO NOT disable QCC CLK
   //CeElDisableClock();
   CeElMutexExit();
+  CeEL_mutex_deinit();
   return CEML_ERROR_SUCCESS;
 }
 
@@ -441,8 +442,8 @@ CeMLErrorType  _CeMlHashUpdate (CeMLHashAlgoCntxType *ctx_ptr,
       outIoVec.iov->dwLen = CECL_HASH_SHA256_IV_LEN;
     }
   
-    ret_val = CeElCryptoShaDxeXfer(inIoVec.iov->pvBase, inIoVec.iov->dwLen, outIoVec.iov->pvBase, outIoVec.iov->dwLen);
-    while( !(HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_REG) & QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_OPERATION_DONE_MASK));
+    ret_val = CeElCryptoDxeShaXfer(inIoVec.iov->pvBase, inIoVec.iov->dwLen, outIoVec.iov->pvBase, outIoVec.iov->dwLen);
+    //while( !(HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_REG) & QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_OPERATION_DONE_MASK));
     if (CEML_ERROR_SUCCESS != ret_val) 
     {
 	   //ctx_ptr->non_blocking_ptr.pending_dm_request = 0;
@@ -2548,6 +2549,10 @@ CeMLErrorType CeMLCipherData (CeMLCntxHandle       *ceMlHandle,
   boolean              ccm_star_encr_mode = FALSE;  
   uint8                ccmstar_iv[CEML_AES_IV_SIZE];
   uint8                ccmstar_cbcmac_iv[CEML_AES_IV_SIZE];
+  uint32_t             regVal=0;
+  uint8_t count = 0;
+  uint8_t index = 0;
+#define BLOCK_SZ 4
   /* Sanity check inputs */
   if ((!ceMlHandle) || (!ceMlHandle->pClientCtxt))
   {
@@ -2689,12 +2694,16 @@ CeMLErrorType CeMLCipherData (CeMLCntxHandle       *ceMlHandle,
 
       curr_blk_size = (ioVecIn_tmp.iov->dwLen % CEML_MAX_BLOCK_SIZE);
 	  if(ctx_ptr->mode == CECL_CIPHER_MODE_CCM  && ctx_ptr->dir == CECL_CIPHER_ENCRYPT )  {
-		  curr_out_blk_size = curr_blk_size + ctx_ptr->macLn;
-		  output_len   = input_len + ctx_ptr->macLn;
+		  //curr_out_blk_size = curr_blk_size + ctx_ptr->macLn;
+          
+		  //output_len   = input_len + ctx_ptr->macLn;
+          curr_out_blk_size = curr_blk_size ;
+          output_len   = input_len ;
 	  }
 	  else if(ctx_ptr->mode == CECL_CIPHER_MODE_CCM && ctx_ptr->dir == CECL_CIPHER_DECRYPT) {
-		  curr_out_blk_size = curr_blk_size - ctx_ptr->macLn;
 		  output_len   = input_len - ctx_ptr->macLn;
+          curr_out_blk_size = curr_blk_size - ctx_ptr->macLn;
+		  
 	  }
 
       if(curr_blk_size == 0)
@@ -2755,6 +2764,31 @@ CeMLErrorType CeMLCipherData (CeMLCntxHandle       *ceMlHandle,
     ctx_ptr->firstBlock = 0;
   } /* while */
 
+//#if 1
+    if(ctx_ptr->mode == CECL_CIPHER_MODE_CCM  && ctx_ptr->dir == CECL_CIPHER_ENCRYPT ) 
+    {
+        //if(ctx_ptr->macLn % BLOCK_SZ)
+        {
+            count = ctx_ptr->macLn / BLOCK_SZ;
+            for(index=0; index < count; index++)
+            {
+                //printf("copy tag, index:%d count:%d\n",index, count);
+                regVal = HAL_REG_RD(CECL_CE_DATA_OUT + index*4);
+                //printf("0x%08x\n", regVal);
+                memcpy(output_ptr + index*4, &regVal, 4);
+                //printf("ioVecOut->iov->pvBase:%p ioVecOut_tmp.iov->pvBase:%p ioVecIn_tmp.iov->dwLen:0x%02x ctx_ptr->payloadLn:0x%02x input_len:0x%02x\n", ioVecOut->iov->pvBase, ioVecOut_tmp.iov->pvBase, ioVecIn_tmp.iov->dwLen, ctx_ptr->payloadLn, input_len);
+            }
+
+            if(ctx_ptr->macLn % BLOCK_SZ)
+            {
+                regVal = HAL_REG_RD(CECL_CE_DATA_OUT + index*4);
+                //printf("copy tag, index:%d count:%d\n",index, count);
+                //printf("0x%08x\n", regVal);
+                memcpy(output_ptr + index*4, &regVal, ctx_ptr->macLn % BLOCK_SZ);
+            }
+        }
+    }
+//#endif
   //Make sure we set in/out lengths/ptr again
   ioVecIn.iov->dwLen   = input_len;
   ioVecOut->iov->dwLen = output_len;

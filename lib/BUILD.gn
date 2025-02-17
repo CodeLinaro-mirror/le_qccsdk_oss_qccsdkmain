@@ -22,7 +22,7 @@ lib_src = [
     "libc/source/printf.c",
     "libc/source/assert.c",
     "libc/source/safeAPI.c",
-#"libc/source/3rdparty/crt_abstractions.c",
+    "libc/source/3rdparty/crt_abstractions.c",
     "misc/src/fifo.c",
     "misc/src/sort.c",
     "misc/src/nt_osal.c",

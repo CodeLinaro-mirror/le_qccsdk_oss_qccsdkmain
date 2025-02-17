@@ -36,6 +36,7 @@ struct ieee80211_plcp_hdr {
 #define IEEE80211_PLCP_SERVICE  0x00
 
 #define IEEE80211_NWID_LEN  32
+#define IEEE80211_RSNX_LEN 3
 
 typedef struct ssid_s {
     uint8_t ssid_len;
@@ -617,6 +618,7 @@ enum {
 #endif	// NT_FN_FTM
 	IEEE80211_ELEMID_TWT     	= 216,  /* 802.11ax TWT IE */
 	IEEE80211_ELEMID_VENDOR     = 221,  /* vendor private */
+    IEEE80211_ELEMID_RSNXE      = 244,  
 	IEEE80211BA_ELEMID_EXTENSION		= 255
 };
 
@@ -624,7 +626,8 @@ enum {
 enum {
     IEEE80211_ELEMID_EXT_PASSWORD_IDENTIFIER = 33,
     IEEE80211_ELEMID_EXT_HE_CAP_ELEMENT      = 35,
-    IEEE80211_ELEMID_EXT_HE_OP_ELEMENT       = 36
+    IEEE80211_ELEMID_EXT_HE_OP_ELEMENT       = 36,
+    IEEE80211_ELEMID_EXT_ANTI_CLOGGING_ELEMENT = 93
 };
 
 #define IEEE80211_SSID_MAXLEN   32

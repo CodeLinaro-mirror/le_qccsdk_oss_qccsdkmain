@@ -28,6 +28,7 @@
 //#define UART_HTC_INSTANCE QAPI_UART_INSTANCE_SE2_E
 
 extern void* QCLI_Context;
+extern QAT_Transfer_Mode_t QAT_Transfer_Mode;
 
 //#define QAT_LOG_ENABLE
 #ifdef QAT_LOG_ENABLE
@@ -60,10 +61,10 @@ extern void* QCLI_Context;
 #define UART_CMD_PATTERN             0x76
 #define UART_TX_MAX_LEN 			 128
 #define UART_RECV_MAX_LEN		     UART_TX_MAX_LEN
-#define UART_RECV_TASK_TIMEOUT	     500 //ms
+#define UART_RECV_TASK_TIMEOUT	     50 //ms
 //#define UART_HTC_BUFFER_HEADER_SIZE sizeof(UART_HTC_BUFFER_HEADRT_t)  // ???? this need be adajust.
 
-#define INPUT_BUFFER_SIZE        1024
+#define INPUT_BUFFER_SIZE        1500
 unsigned char Uart_Rcv_Buff[INPUT_BUFFER_SIZE];
 
 #ifdef PAL_USE_RTT_CONSOLE
@@ -206,6 +207,7 @@ void UartRxTasks()
 	uint32_t Total = 0;
 	uint8_t end_char_found = 0;
 	char *Uart_Rcv_Buff = NULL;
+	char QAT_Rcv_Buff[INPUT_BUFFER_SIZE]={0};
 	
     Uart = INSTANCE_2_UART(UART_HTC_INSTANCE);
 	
@@ -215,37 +217,45 @@ void UartRxTasks()
         printf("UART Instance %d does not exist.\n", Uart->Instance);
         return ;
     }
-	
+
+	Uart_Rcv_Buff = (char *)nt_osal_allocate_memory(INPUT_BUFFER_SIZE);
+	if (Uart_Rcv_Buff == NULL)
+		return ;
 	while(1)
 	{
-		end_char_found = 0;
 		
-		Uart_Rcv_Buff = (char *)nt_osal_allocate_memory(INPUT_BUFFER_SIZE);
-		if (Uart_Rcv_Buff == NULL)
-			return ;
-
 		memset(Uart_Rcv_Buff, 0, INPUT_BUFFER_SIZE);
 		
-		Status = qapi_UART_Receive(Uart->Instance, Uart_Rcv_Buff, INPUT_BUFFER_SIZE, &Recved);
-		if (Recved > 0) {
+		Status = qapi_UART_Receive(Uart->Instance, Uart_Rcv_Buff, 1, &Recved);
+		if (Recved > 0) 
+		{
+			QAT_Rcv_Buff[Total] = Uart_Rcv_Buff[0];
 			Total += Recved;
-		
-	        for(i = 0; i < Recved; i ++)
-	        {
-				if(Uart_Rcv_Buff[i] == PAL_INPUT_END_OF_LINE_CHARACTER)
-					end_char_found = 1;
-	        }
-			if ((i % UART_RECV_MAX_LEN) == 0) {
-				printf("\r\n");
+			
+			if((Uart_Rcv_Buff[0] == PAL_INPUT_END_OF_LINE_CHARACTER)
+				&& (Total > 1))
+			{
+				end_char_found = 1;
 			}
-
-            printf("%c", Uart_Rcv_Buff[i]);
-			//sprintf("\r\n");
+			else if((Uart_Rcv_Buff[0] == PAL_INPUT_END_OF_LINE_CHARACTER)
+				&& (Total == 1))//end char received but no cmd
+			{
+				memset(QAT_Rcv_Buff, 0, INPUT_BUFFER_SIZE);
+				Total = 0;
+				end_char_found = 0;
+			}
+				
 			if(Process_Input_Data_Handle && end_char_found == 1)
-				    Process_Input_Data_Handle(Len, Uart_Rcv_Buff);
+			{
+				if(QAT_Transfer_Mode == QAT_Transfer_Mode_ONLINE_DATA_E)
+					Total--;
+				Process_Input_Data_Handle(Total, QAT_Rcv_Buff);
+				memset(QAT_Rcv_Buff, 0, INPUT_BUFFER_SIZE);
+				Total = 0;
+				end_char_found = 0;
+			}
 	    }
 		
-		nt_osal_free_memory((char*)Uart_Rcv_Buff);
 	}
 }
 
@@ -294,7 +304,7 @@ static qapi_Status_t UartInit(qapi_UART_Instance_t Instance, uint32_t BaudRate, 
 	Config.num_Stop_Bits = Uart->NumStopBits = NumStopBits;
 	Config.enable_Loopback = 0;
 
-    Result = qapi_UART_Open_With_Rx_Timeout(Uart->Instance, &Config, UART_RECV_TASK_TIMEOUT);
+    Result = qapi_UART_Open(Uart->Instance, &Config);
     if (Result != QAPI_OK)
     {
         goto fail;

@@ -18,6 +18,7 @@
 #include "lwip/ip6_addr.h"
 #include "timer.h"
 #include "safeAPI.h"
+#include "data_path.h"
 
 #ifdef CONFIG_NET_IPERF
 
@@ -37,6 +38,7 @@ extern QAPI_Console_Group_Handle_t net_shell_cmd_group_handle;              /* H
 
 #define IPV6_TCLASS 16 /* int; set IPV6 traffic class */
 #define IS_IPV6_MULTICAST(ipv6_Address) (((uint8_t *)ipv6_Address)[0] == 0xff)
+
 /* loopback behavior (disabled or enabled) for multicast packets */
 #define IPV6_MC_LPBK_DIS 0 /**< Disable loopback behavior for multicast packets. */
 #define IPV6_MC_LPBK_EN 1  /**< Enable loopback behavior for multicast packets. */
@@ -76,7 +78,7 @@ extern void qurt_thread_sleep(uint32_t duration);
 //uint8_t iperf_tx_quit;
 //uint8_t iperf_rx_quit;
 
-#define MAX_STREAM 4
+#define MAX_STREAM 10
 uint8_t iperf_stream_id[MAX_STREAM] = {0};
 uint16_t bench_udp_rx_port_in_use[MAX_STREAM] = {0}; /* Used to prevent two udp rx streams from using the same port */
 
@@ -90,7 +92,8 @@ qurt_mutex_t serverLock;                                /* Lock to protect the g
 int sessionRefCount = 0;                                /* Total number of active TCP/SSL RX sessions */
 int tcpRefCount = 0;                                    /* Number of active TCP RX sessions */
 bench_tcp_server_t g_tcpServers[BENCH_TCP_MAX_SERVERS]; /* Array of TCP Server objects */
-int serverRefCount = 0;                                 /* Total number of active TCP/SSL Servers */
+int serverRefCount = 0;
+bool tcp_rx_rslt_created = false;                       /* indicate iperf_rx_show_result thread is created for tcp server */
 
 /***************************************************************************************
  *
@@ -100,6 +103,10 @@ int serverRefCount = 0;                                 /* Total number of activ
 #define TCP_QUEUE_PBUF_THRESHOLD_DEFAULT    21
 #define TCP_QUEUE_PBUF_THRESHOLD_LOW    12
 #define TCP_QUEUE_PBUF_THRESHOLD_STEP    3
+
+#define Mbps (1000 * 1000)
+#define Kbps 1000
+
 extern uint8_t tcp_queue_pbuf_threshold;
 void iperf_incrs_tcp_queue_pbuf_thrsh(void)
 {
@@ -749,8 +756,12 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
     int operation_mode = -1;
     int reverse_mode = 0;
     unsigned int udpRate = IPERF_DEFAULT_UDP_RATE;
+    unsigned int tcpRate = IPERF_DEFAULT_TCP_RATE;
+    unsigned int bandwidth_unit = 0;
+    char *rateString = NULL;
     unsigned short mcastEnabled = 0;
     int ip_tos = 0;
+    unsigned int sndbuf_size = 0;
 
     unsigned int ipAddress = 0;
     unsigned int numOfPkts = 0;
@@ -760,7 +771,8 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
     THROUGHPUT_CXT *tCxt = NULL;
     // THROUGHPUT_CXT *rCxt = NULL;
     uint32_t v6 = 0;
-    // char *receiver_ip;
+    char *receiver_ip;
+    uint8_t v6addr[16] = {0};
 
     // memset(&tCxt, 0, sizeof(THROUGHPUT_CXT));
     // memset(&rCxt, 0, sizeof(THROUGHPUT_CXT));
@@ -804,49 +816,27 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         {
             index++;
             operation_mode = IPERF_CLIENT;
-
-            if (inet_pton(AF_INET, Parameter_List[index].String_Value, &ipAddress) != 0)
-            {
-#if 0
-
-                    /* check if it's IPV6 */
-                    receiver_ip = Parameter_List[index].String_Value;
-                    if (inet_pton(AF_INET6, receiver_ip, tCxt.params.tx_params.v6addr) != 0)
-                    {
-                        IPERF_PRINTF("Incorrect IP address %s\n", receiver_ip);
-                        return QAPI_ERR_INVALID_PARAM;
-                    }
-                    else
-                    {
-                        /* is valid IPV6*/
-                        if (QAPI_IS_IPV6_LINK_LOCAL(tCxt.params.tx_params.v6addr) ||
-                            IS_IPV6_MULTICAST(tCxt.params.tx_params.v6addr))
-                        {
-                            /* if this is a link local address, then the interface must be specified after % */
-
-                            char * interface_name = (char*) bench_common_GetInterfaceNameFromStr(receiver_ip);
-                            if (!interface_name)
-                            {
-                                IPERF_PRINTF("this is a link local address, then the interface must be specified after %\n", receiver_ip);
-                                return QAPI_ERR_INVALID_PARAM;
-                            }
-
-                            if (qapi_Net_IPv6_Get_Scope_ID(interface_name, &tCxt.params.tx_params.scope_id) != 0)
-                            {
-                                IPERF_PRINTF("Failed to get scope id for the interface %s\n", interface_name);
-                                return QAPI_ERR_INVALID_PARAM;
-                            }
-                        }
-                    }
-#endif
-            }
-            else
+            receiver_ip = Parameter_List[index].String_Value;
+            if (inet_pton(AF_INET, receiver_ip, &ipAddress) == 1)
             {
                 /* is valid IPV4 */
                 if ((ipAddress & 0xf0000000) == 0xE0000000) // 224.xxx.xxx.xxx - 239.xxx.xxx.xxx
                 {
                     mcastEnabled = 1;
                 }
+            }
+            else if (inet_pton(AF_INET6, receiver_ip, &v6addr) == 1)
+            {
+                /* is valid IPV6*/
+                if (IS_IPV6_MULTICAST(v6addr))
+                {
+                    mcastEnabled = 1;
+                }
+            }
+            else
+            {
+                IPERF_PRINTF("Incorrect IP address %s\n", receiver_ip);
+                return QAPI_ERR_INVALID_PARAM;
             }
             index++;
         }
@@ -901,22 +891,44 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         else if (0 == strcmp(Parameter_List[index].String_Value, "-b"))
         {
             index++;
-            udpRate = Parameter_List[index].Integer_Value;
+            rateString = Parameter_List[index].String_Value;
             index++;
 
-            if (udpRate == 0 || udpRate > 100)
+            if (rateString[strlen(rateString) - 1] == 'M')
             {
-                IPERF_PRINTF("error: invalid bandwidth value, unit is Mbps, should less 100\n");
-                return QAPI_ERR_INVALID_PARAM;
+                rateString[strlen(rateString) - 1] = '\0';
+                udpRate = atoi(rateString);
+                tcpRate = udpRate;
+                bandwidth_unit = 0; // Mbps
+                if (udpRate == 0 || udpRate > 100)
+                {
+                    IPERF_PRINTF("error: invalid bandwidth value, unit is Mbps, should less 100\n");
+                    return QAPI_ERR_INVALID_PARAM;
+                }
             }
+            else if (rateString[strlen(rateString) - 1] == 'K')
+            {
+                rateString[strlen(rateString) - 1] = '\0';
+                udpRate = atoi(rateString);
+                tcpRate = udpRate;
+                bandwidth_unit = 1;  //Kbps
+                if (udpRate == 0 || udpRate > 100000)
+                {
+                    IPERF_PRINTF("error: invalid bandwidth value, unit is Kbps, should less 100000\n");
+                    return QAPI_ERR_INVALID_PARAM;
+                }
+            }
+            else 
+            {
+                IPERF_PRINTF("error: invalid bandwidth format, valid input example: \"500K\" or \"5M\"\n");
+            }
+            
         }
-#if TO_CHECK
         else if (0 == strcmp(Parameter_List[index].String_Value, "-V"))
         {
             index++;
             v6 = 1;
         }
-#endif
         else if (0 == strcmp(Parameter_List[index].String_Value, "-S"))
         {
             index++;
@@ -933,6 +945,16 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             IPERF_PRINTF("Usage: iperf [-s|-c host] [options]\n");
             IPERF_PRINTF("       iperf [-h]\n");
         }
+        else if (0 == strcmp(Parameter_List[index].String_Value, "-w"))
+        {
+            index++;
+            sndbuf_size = Parameter_List[index].Integer_Value;
+            if(sndbuf_size <= 0 || sndbuf_size > 24)
+            {
+                IPERF_PRINTF("error: invalid sndbuf size value\n");
+                return QAPI_ERR_INVALID_PARAM;
+            }
+        }
         else
         {
             /*silent ignore*/
@@ -948,12 +970,18 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
     memset(tCxt, 0, sizeof(THROUGHPUT_CXT));
     tCxt->pktStats.iperf_display_interval = interval;
     tCxt->pktStats.iperf_udp_rate = udpRate;
+    tCxt->pktStats.iperf_tcp_rate = tcpRate;
+    tCxt->bandwidth_unit = bandwidth_unit;
+
+    tCxt->tcp_snd_buf = sndbuf_size*TCP_MSS;
 
     if (operation_mode == IPERF_CLIENT)
     {
         iperf_tx_quit = 0;
         tCxt->params.tx_params.v6 = v6;
         tCxt->params.tx_params.ip_address = ipAddress;
+        memscpy(tCxt->params.tx_params.v6addr, sizeof(tCxt->params.tx_params.v6addr), v6addr, sizeof(v6addr));
+        tCxt->params.tx_params.scope_id = nt_get_netifidx_by_devmode(STA_DEVICE);
         tCxt->params.tx_params.ip_tos = ip_tos;
         if (pktSize > 0)
         {
@@ -986,11 +1014,11 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             {
                 if (protocol == TCP)
                 {
-                    pktSize = min(pktSize, IPERF_MAX_PACKET_SIZE_TCPV6);
+                    pktSize = IPERF_MAX_PACKET_SIZE_TCPV6;
                 }
                 else
                 {
-                    pktSize = min(pktSize, IPERF_MAX_PACKET_SIZE_UDPV6);
+                    pktSize = IPERF_MAX_PACKET_SIZE_UDPV6;
                 }
             }
             else
@@ -1189,6 +1217,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
                     IPERF_PRINTF("TCP result task creation failed\r\n");
                     goto RET_OK;
                 }
+                tcp_rx_rslt_created = true;
             }
         }
     }
@@ -1587,7 +1616,6 @@ void iperf_udp_ack_finish(THROUGHPUT_CXT *p_tCxt, struct sockaddr *faddr, uint32
     }
 }
 
-#define Mbps 1000000
 static void iperf_client_send(void *arg)
 {
     THROUGHPUT_CXT *p_tCxt = (THROUGHPUT_CXT *)arg;
@@ -1610,6 +1638,13 @@ static void iperf_client_send(void *arg)
     uint32_t iperf_udp_packets_counter = 0;
     uint32_t iperf_udp_start_time = 0;
     uint32_t iperf_curr_time;
+    uint32_t iperf_tcp_packets_per_second = 0;
+    uint32_t iperf_tcp_packets_per_divided_second = 0;
+    uint32_t iperf_tcp_packets_per_res_second = 0;
+    uint32_t iperf_tcp_packets_counter = 0;
+    uint32_t iperf_tcp_start_time = 0;
+    uint32_t qurt_sleep_one_second_to_be_divided = 10;
+    uint32_t qurt_sleep_counter = 0;
 
     /* Sending.*/
     IPERF_PRINTF("Sending\n");
@@ -1628,8 +1663,49 @@ static void iperf_client_send(void *arg)
     /* Convert bps to B/s, and then to packets/sec */
     if (p_tCxt->protocol == UDP)
     {
-        iperf_udp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_udp_rate * Mbps / 8) / p_tCxt->params.tx_params.packet_size);
+        if (p_tCxt->bandwidth_unit == 0)  /* Mbps */
+        {
+            iperf_udp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_udp_rate * Mbps / 8) / p_tCxt->params.tx_params.packet_size);
+        }
+        else /* Kbps */
+        {
+            iperf_udp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_udp_rate * Kbps / 8) / p_tCxt->params.tx_params.packet_size);
+        }
         app_get_time(&iperf_udp_start_time);
+    }
+    else if (p_tCxt->protocol == TCP && p_tCxt->pktStats.iperf_tcp_rate != 0)
+    {
+        /* calculate the packets according to the rate */
+        if (p_tCxt->bandwidth_unit == 0)
+        {
+            iperf_tcp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_tcp_rate * Mbps / 8) / p_tCxt->params.tx_params.packet_size);
+        }
+        else
+        {
+            iperf_tcp_packets_per_second = 1 + ((p_tCxt->pktStats.iperf_tcp_rate * Kbps / 8) / p_tCxt->params.tx_params.packet_size);
+        }
+
+        /* divide the time to different slices according to the packets send per second */
+        if (iperf_tcp_packets_per_second > 20)
+        {
+            qurt_sleep_one_second_to_be_divided = 10;
+            iperf_tcp_packets_per_divided_second = iperf_tcp_packets_per_second / qurt_sleep_one_second_to_be_divided;
+            iperf_tcp_packets_per_res_second = iperf_tcp_packets_per_second - iperf_tcp_packets_per_divided_second * qurt_sleep_one_second_to_be_divided;
+        }
+        else if (iperf_tcp_packets_per_second > 5 && iperf_tcp_packets_per_second <= 20)
+        {
+            qurt_sleep_one_second_to_be_divided = 5;
+            iperf_tcp_packets_per_divided_second = iperf_tcp_packets_per_second / qurt_sleep_one_second_to_be_divided;
+            iperf_tcp_packets_per_res_second = iperf_tcp_packets_per_second - iperf_tcp_packets_per_divided_second * qurt_sleep_one_second_to_be_divided;
+        }
+        else
+        {
+            qurt_sleep_one_second_to_be_divided = 5;
+            iperf_tcp_packets_per_divided_second = 1;
+            iperf_tcp_packets_per_res_second = 0;
+        }
+        
+        app_get_time(&iperf_tcp_start_time);
     }
     iperf_display_interval = p_tCxt->pktStats.iperf_display_interval; // second
     iperf_display_last = p_tCxt->pktStats.first_time;
@@ -1782,6 +1858,39 @@ static void iperf_client_send(void *arg)
                     iperf_udp_packets_counter = 0;
                 }
             }
+            else if (p_tCxt->protocol == TCP && p_tCxt->pktStats.iperf_tcp_rate != 0)
+            {
+                iperf_tcp_packets_counter++;
+
+                if (( qurt_sleep_counter < qurt_sleep_one_second_to_be_divided - 1) && (iperf_tcp_packets_counter == iperf_tcp_packets_per_divided_second) ||
+                    (qurt_sleep_counter == qurt_sleep_one_second_to_be_divided - 1) && (iperf_tcp_packets_counter == iperf_tcp_packets_per_divided_second + iperf_tcp_packets_per_res_second))
+                {
+                    uint32_t iperf_diff_time = 0;
+
+                    /* Get the current time and calculate the sleep needed till the end of the second */
+                    // app_get_time(&iperf_curr_time);
+                    iperf_curr_time = now;
+                    iperf_diff_time = iperf_curr_time - iperf_tcp_start_time;
+
+                    /* Check that the diff is less than a second. If it's more than 1/QURT_SLEEP_ONE_SECOND_TO_BE_DIVIDED second,
+                     * it means that we were asked to limit the bandwidth to a value we cannot
+                     * reach, so we are behind. In this case, no sleep is required, just push as much as
+                     * we can...
+                     */
+                    if (qurt_sleep_counter == qurt_sleep_one_second_to_be_divided - 1)
+                        qurt_sleep_counter = 0;
+
+                    if (iperf_diff_time < (1000 / qurt_sleep_one_second_to_be_divided))
+                    {
+                        qurt_thread_sleep((1000 / qurt_sleep_one_second_to_be_divided) - iperf_diff_time);
+                        qurt_sleep_counter++;
+                    }
+
+                    /* Restart the timer and clear the counter */
+                    app_get_time(&iperf_tcp_start_time);
+                    iperf_tcp_packets_counter = 0;
+                }
+            }
             /*Test mode can be "number of packets" or "fixed time duration"*/
             if (p_tCxt->params.tx_params.test_mode == PACKET_TEST)
             {
@@ -1904,6 +2013,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         foreign_addr6.sin6_port = htons(p_tCxt->params.tx_params.port);
         foreign_addr6.sin6_family = family;
         foreign_addr6.sin6_scope_id = p_tCxt->params.tx_params.scope_id;
+        foreign_addr6.sin6_flowinfo = 0;
 
         to = (struct sockaddr *)&foreign_addr6;
         tolen = sizeof(foreign_addr6);
@@ -1936,8 +2046,12 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
     }
 
     IPERF_PRINTF("------------------------------------------------------------\n");
-    IPERF_PRINTF("Client connecting to %s, UDP port %d, bandwidth:%dMbps\n", ip_str, p_tCxt->params.tx_params.port,
-                 p_tCxt->pktStats.iperf_udp_rate);
+    if (p_tCxt->bandwidth_unit == 0)
+        IPERF_PRINTF("Client connecting to %s, UDP port %d, bandwidth:%dMbps\n", ip_str, p_tCxt->params.tx_params.port,
+                    p_tCxt->pktStats.iperf_udp_rate);
+    else
+        IPERF_PRINTF("Client connecting to %s, UDP port %d, bandwidth:%dKbps\n", ip_str, p_tCxt->params.tx_params.port,
+            p_tCxt->pktStats.iperf_udp_rate);
     IPERF_PRINTF("------------------------------------------------------------\n");
 
     /* Create UDP socket */
@@ -2057,12 +2171,6 @@ void iperf_rx_show_result(void *arg)
     while (1)
     {
         qurt_thread_sleep(iperf_display_interval);
-
-        if(iperf_rx_quit)
-        {
-            IPERF_PRINTF("Warning: iperf_rx_quit, iperf_rx_show_result quit! \n");
-             break;
-        }
 
         app_get_time(&iperf_curr_time);
 
@@ -2483,7 +2591,8 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         foreign_addr6.sin6_port = htons(p_tCxt->params.tx_params.port);
         foreign_addr6.sin6_family = family;
         foreign_addr6.sin6_scope_id = p_tCxt->params.tx_params.scope_id;
-
+        foreign_addr6.sin6_flowinfo = 0;
+        
         to = (struct sockaddr *)&foreign_addr6;
         tolen = sizeof(foreign_addr6);
         tos_opt = IPV6_TCLASS;
@@ -2515,6 +2624,11 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
     {
         IPERF_PRINTF("ERROR: Unable to create socket\n");
         goto ERROR_1;
+    }
+
+    if(p_tCxt->tcp_snd_buf > 0)
+    {
+        setsockopt(p_tCxt->sock_peer, SOL_SOCKET,SO_SNDBUF, &p_tCxt->tcp_snd_buf, sizeof(int));
     }
 
     if (p_tCxt->params.tx_params.ip_tos > 0)
@@ -2761,10 +2875,16 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
     do
     {
-        if (iperf_rx_quit || tcp_server->exit || (get_device_connect_state() == false))
+        if ((iperf_rx_quit && !tcp_rx_rslt_created) || tcp_server->exit || (get_device_connect_state() == false))
         {
             goto tcp_rx_QUIT2;
         }
+
+        if(iperf_rx_quit && tcp_rx_rslt_created)
+        {
+            goto tcp_rx_QUIT;
+        }
+
         FD_SET(tcp_server->sockfd, &rset);
         tv.tv_sec = 10;
         if(select(tcp_server->sockfd+1, &rset, NULL, NULL, &tv) > 0)

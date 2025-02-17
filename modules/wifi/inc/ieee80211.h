@@ -349,6 +349,8 @@ typedef uint8_t *ieee80211_mgt_beacon_t;
 #define WFD_OUI_TYPE        0x09        /* WiFi-Direct IE */
 #define WFDSP_OUI_TYPE      0x0a        /* WiFi-Display IE */
 
+#define TRANSITION_DISABLE_WPA3_PERSONAL	0x01
+
 #define WMM_OUI         0xf25000
 #define WMM_OUI_TYPE        0x02
 #define WMM_INFO_OUI_SUBTYPE    0x00
@@ -477,10 +479,14 @@ enum {
     IEEE80211_STATUS_GRP_CIPHER         = 41,
     IEEE80211_STATUS_PAIR_CIPHER        = 42,
     IEEE80211_STATUS_AKMP               = 43,
+    IEEE80211_STATUS_INVALID_PMKID      = 53,
 
 	IEEE80211_STATUS_ANTI_CLOGGING_TOKEN_REQ	= 76,
 	IEEE80211_STATUS_UNSUPPORTED_FFC_GRP	= 77,
 	IEEE80211_STATUS_UNKNOWN_PASSWORD_IDENTIFIER	= 123,
+#if (defined NT_FN_WPA3)
+    IEEE80211_STATUS_SAE_HASH_TO_ELEMENT    =126,
+#endif
     /*
      *  Below UNDEF code will never be used in
      *  any real 802.11 frames, only reported to

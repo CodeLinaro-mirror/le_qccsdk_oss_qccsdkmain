@@ -49,12 +49,23 @@ extern wmi_msg_struct_t g_Cmd_Translation_wifi_hndl;
 #include "wlan_wmi.h"
 #endif
 
+#include "hal_int_modules.h"
+#include "mlme_api.h"
+#include "cnxmgmt_internal.h"
+#include "nt_socpm_sleep.h"
+#include "wlan_power.h"
+
+
 #define MAX_NUM_APPS_CONFIG   2
 WMI_IF_ADD_CMD *g_apps_ip_config[MAX_NUM_APPS_CONFIG] = {NULL, NULL};
 #define GET_APPS_CONFIG_INDEX(net_if_idx)    (net_if_idx % MAX_NUM_APPS_CONFIG)
 
 
 #define SIZEOF_PBUF LWIP_MEM_ALIGN_SIZE(sizeof(struct pbuf))
+
+bool wakeup_cb(uint16_t type, bool bm_cast, void* pbuf, uint16_t len);
+
+bool (*wakeup_cb_net)(uint16_t type, bool bm_cast,void* pbuf,uint16_t len);
 
 ip_addr_t ip_address[MAX_ROLE];
 ip_addr_t _ip_address[MAX_ROLE];
@@ -433,6 +444,7 @@ nt_dpm_realloc_network_buffer(void *buf, uint32_t length)
  * @return NT_OK on success.
  *
  */
+static const uint8_t bc_add[NT_MAC_ADDR_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 uint8_t
 nt_dpm_forward_eth_packet_to_stack(p_ndpA ad, void *rx_frame, void *eth_frame, uint32_t length, device_t *dev)
 {
@@ -458,6 +470,32 @@ nt_dpm_forward_eth_packet_to_stack(p_ndpA ad, void *rx_frame, void *eth_frame, u
             nt_dpm_tm.rx_stat[NETIF_INPUT].valid = 1;
         }
 #endif
+        struct eth_hdr *ethhdr;
+        ethhdr = (struct eth_hdr *)p->payload;
+        u16_t type = ntohs(ethhdr->type);
+        NT_BOOL bm_cast = FALSE;
+        // NT_BOOL in_whitelist = FALSE;
+
+        if((!memcmp(ethhdr->dest.addr, bc_add, NT_MAC_ADDR_SIZE)) || 
+            ((ethhdr->dest.addr[0] & NT_DPM_MULTICAST_BIT) == 0x1))
+        {
+            bm_cast=TRUE;
+        }
+
+        // NT_LOG_PRINT(COMMON, ERR,"forward2stack, bm_cast:%d\r\n", bm_cast);
+        if(bm_cast)
+        {
+            PM_STRUCT *pPmStruct = NULL;
+            pPmStruct = (PM_STRUCT *)gdevp->pPmStruct;
+            if(pPmStruct->bmps_rx_filter_enabled)
+            {
+                if(wakeup_cb_net)
+                {
+                    wakeup_cb_net(type,bm_cast, p->payload,p->len);
+                }
+            }
+        }
+
         err = netif->input(p, netif);
         if (err != ERR_OK) {
             //NT_LOG_DPM_CRIT("\r\nunable to receive packet on current network interface\r\n",err,0,0);

@@ -50,6 +50,7 @@ static QAT_Command_Status_t Extend_Command_MqttSub(uint32_t Op_Type, uint32_t Pa
 static QAT_Command_Status_t Extend_Command_MqttUnSub(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_MqttDisconnect(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_MqttDestroy(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_MqttMode(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 
 
 /* The following is the complete command list for the QAT common command demo. */
@@ -69,6 +70,7 @@ static QAT_Command_t QAT_MQTT_Command_List[] =
    {"+MQTTUNSUB",   Extend_Command_MqttUnSub,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
    {"+MQTTDISCONN",   Extend_Command_MqttDisconnect,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
    {"+MQTTDESTROY",   Extend_Command_MqttDestroy,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
+   {"+MQTTMODE",   Extend_Command_MqttMode,   QAT_OP_EXEC|QAT_OP_EXEC_W_PARAM},
 };
 
 /*-------------------------------------------------------------------------
@@ -98,7 +100,7 @@ static QAT_Command_t QAT_MQTT_Command_List[] =
  *-----------------------------------------------------------------------*/
 
 qbool_t QAT_Data_Transfer_Mode_Handle(uint32_t Length, uint8_t *Buffer);
-
+uint8_t isRecvHex = 0;
 
 static QAT_Command_Status_t Extend_Command_MqttDestroy(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
@@ -144,6 +146,47 @@ static QAT_Command_Status_t Extend_Command_MqttDestroy(uint32_t Op_Type, uint32_
          }
 
          memset((void*)buffer, 0, MQTT_STR_BUFFER_LENGTH);
+         break;
+      }
+      
+      default:
+         ;
+   }
+   
+   return rc;
+}
+
+static QAT_Command_Status_t Extend_Command_MqttMode(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+
+   QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+   qapi_Status_t result = QAPI_OK;
+   char buffer[MQTT_STR_BUFFER_LENGTH];
+
+   switch (Op_Type)
+   {
+      case QAT_OP_EXEC:		     /* AT+MQTTMODE */
+      {	
+
+         snprintf(buffer, MQTT_STR_BUFFER_LENGTH, "+MQTTMODE=<0|1: string|hex>");
+         rc = QAT_Response_Str(QAT_RC_OK, buffer);
+         memset((void*)buffer, 0, MQTT_STR_BUFFER_LENGTH);
+         break;
+      }
+      
+      case QAT_OP_EXEC_W_PARAM: 	     /* AT+MQTTMODE */
+      {
+		 if((Parameter_List[0].Integer_Value != 0) 
+		 	&& (Parameter_List[0].Integer_Value != 1))
+		 {
+			rc = QAT_Response_Str(QAT_RC_ERROR, "Invalid parameter!");
+		 }
+		 else
+		 {
+			isRecvHex = Parameter_List[0].Integer_Value;
+			rc = QAT_Response_Str(QAT_RC_OK, NULL);
+		 }
+         
          break;
       }
       

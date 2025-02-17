@@ -112,6 +112,14 @@
 #define PING_RESULT(ping_ok)
 #endif
 
+#ifndef ICMPV6_CHECKSUM_REQUIRED
+#define ICMPV6_CHECKSUM_REQUIRED 1
+#endif
+
+#ifndef ICMPV6_CHECKSUM_POSITION_OFFSET
+#define ICMPV6_CHECKSUM_POSITION_OFFSET 2
+#endif
+
 /* ping variables */
 static const ip_addr_t* ping_target;
 ip_addr_t ping_addr;
@@ -208,7 +216,9 @@ ping_prepare_echo( icmpm_echo_hdr *iecho, u16_t len)
     ((char*)iecho)[sizeof(icmpm_echo_hdr) + i] = (char)i;
   }
 
-  icmpm_2_icmpg(iecho)->chksum = inet_chksum(icmpm_2_icmpg(iecho), len);
+  if(IP_IS_V4(ping_target)){
+    icmpm_2_icmpg(iecho)->chksum = inet_chksum(icmpm_2_icmpg(iecho), len);
+  }
 }
 
 #if PING_USE_SOCKETS
@@ -564,6 +574,8 @@ ping(ip_addr_t *ip_addr, uint32_t no_of_bytes, uint32_t no_of_pkts, uint32_t del
 #endif
 #if LWIP_IPV6
 	if(IP_IS_V6(ping_target)){
+    ping_pcb_v6->chksum_reqd = ICMPV6_CHECKSUM_REQUIRED;
+    ping_pcb_v6->chksum_offset = ICMPV6_CHECKSUM_POSITION_OFFSET;
 		ping_timeout(ping_pcb_v6);
 		//preetham sys_timeout(10, ping_timeout, ping_pcb_v6);
 	}

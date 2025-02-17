@@ -226,6 +226,8 @@ typedef enum _WPS_REQUEST_TYPE {
 #define WPS_AUTH_WPA     0x0008
 #define WPS_AUTH_WPA2    0x0010
 #define WPS_AUTH_WPA2PSK 0x0020
+#define WPS_AUTH_WPA3PSK 0x0040
+#define WPS_AUTH_WPA2WPA3PSK 0x0080
 #define WPS_AUTH_TYPES (WPS_AUTH_OPEN | WPS_AUTH_WPA2PSK)
 
 /* Encryption Type Flags */
@@ -518,6 +520,14 @@ typedef struct _WPS_START_INFO_FROM_HOST {
         uint8_t  bad_ap_count;
 } WPS_START_INFO_FROM_HOST;
 
+typedef struct WPS_INPUT_INFO {
+        uint8_t  ssid[MAX_SSID_LEN + 1];
+        uint8_t  ssid_len;
+        uint8_t  peer_mac_addr[ETH_ALEN];
+        uint16_t  channel;
+} WPS_INPUT_INFO;
+
+
 #define GET_DEV_WPS_CTX(dev, wps)   (wps = (WPS_CONTEXT *) (dev)->wps_ctx)
 #define PUT_DEV_WPS_CTX(dev, wps)   ((dev)->wps_ctx = (void *) (wps))
 
@@ -595,7 +605,7 @@ typedef struct _WPS_CONTEXT {
         WSC_OP_CODE in_op_code;
 
         WPS_START_INFO_FROM_HOST start_info;
-
+        WPS_INPUT_INFO input_info;
         uint32_t flag;
         TimerHandle_t timer;
 
@@ -635,6 +645,7 @@ typedef struct _WPS_CONTEXT {
 	    struct eap_state Eap_state;
 	    TimerHandle_t wps_pin_lock_timeout;
 	    uint8_t wps_init_flag ;
+	    uint8_t auth_floor;
 } WPS_CONTEXT;
 
 #endif //NT_FN_WPS

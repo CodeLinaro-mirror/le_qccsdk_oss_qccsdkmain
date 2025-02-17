@@ -26,6 +26,9 @@ void wps_send_packet(devh_t *dev,WPS_CONTEXT *wps, uint8_t eapol_type,
 void  wps_save_remote_info(WPS_CONTEXT *wps, uint8_t *ssid,
         uint16_t ssid_len, uint8_t *bssid,
         uint8_t channel, uint8_t auth, uint16_t encrypt);
+uint8_t  wps_check_input_info(WPS_CONTEXT *wps, uint8_t *ssid,
+        uint16_t ssid_len, uint8_t *bssid,
+        uint8_t channel, uint8_t auth, uint16_t encrypt);
 int wps_add_to_bad_ap_list(WPS_CONTEXT *wps, uint8_t *bad_ap_mac);
 uint8_t wps_check_for_bad_ap(WPS_CONTEXT *wps, uint8_t *ap_mac);
 void  wps_parse_ie(devh_t *dev, WPS_CONTEXT *wps, uint8_t *pBuffer,

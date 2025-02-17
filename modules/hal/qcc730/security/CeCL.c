@@ -305,6 +305,7 @@ CeCLErrorType CeCLIOCtlSetHashCntx(CeCLHashAlgoCntxType *ctx_ptr)
 
   /* Write the CRYPTO_CE_SEG_SIZE register: Multiple of 16
      For 1-pass SHA1, this value should be same as the total length */
+#if 0 //only for PIO mode
   if (ctx_ptr->dataLn % 16)
   {
     /* Not a multiple of 16/64 bytes */
@@ -315,6 +316,8 @@ CeCLErrorType CeCLIOCtlSetHashCntx(CeCLHashAlgoCntxType *ctx_ptr)
   {
     HAL_REG_WR(CECL_CE_SEG_SIZE, ctx_ptr->dataLn);
   }
+  #endif
+HAL_REG_WR(CECL_CE_SEG_SIZE, ctx_ptr->dataLn);
 
   /* Set the SEG START to 0 */
   HAL_REG_WR(CECL_CE_AUTH_SEG_START, 0);
@@ -395,6 +398,7 @@ CeCLErrorType CeCLIOCtlGetHashCntx(CeCLHashAlgoCntxType *ctx_ptr)
    ctx_ptr->auth_bytecnt[0] = HW_REG_RD(CECL_CE_AUTH_BYTECNT0); 
    ctx_ptr->auth_bytecnt[1] = HW_REG_RD(CECL_CE_AUTH_BYTECNT1);
 
+#if 0 // only for PIO mode
    ctx_ptr->auth_iv[0] = HW_REG_RD(CECL_CE_AUTH_IV0);
    ctx_ptr->auth_iv[1] = HW_REG_RD(CECL_CE_AUTH_IV1);
    ctx_ptr->auth_iv[2] = HW_REG_RD(CECL_CE_AUTH_IV2);
@@ -403,6 +407,7 @@ CeCLErrorType CeCLIOCtlGetHashCntx(CeCLHashAlgoCntxType *ctx_ptr)
    ctx_ptr->auth_iv[5] = HW_REG_RD(CECL_CE_AUTH_IV5);
    ctx_ptr->auth_iv[6] = HW_REG_RD(CECL_CE_AUTH_IV6);
    ctx_ptr->auth_iv[7] = HW_REG_RD(CECL_CE_AUTH_IV7);
+#endif
 
 
 #if 0
@@ -464,6 +469,9 @@ CeCLErrorType CeCLIOCtlSetCipherCntx(CeCLCipherCntxType *ctx_ptr)
   //Clear encryption and authentication seg config registers
   HAL_REG_WR(CECL_CE_ENCR_SEG_CFG, 0);
   HAL_REG_WR(CECL_CE_AUTH_SEG_CFG, 0);
+  HAL_REG_WR(CECL_CE_ENCR_SEG_SIZE, 0);
+  HAL_REG_WR(CECL_CE_ENCR_SEG_SIZE, 0);
+  HAL_REG_WR(CECL_CE_AUTH_SEG_SIZE, 0);
   
   if (ctx_ptr->dir != CECL_CIPHER_BYPASS)
   {
@@ -567,9 +575,10 @@ CeCLErrorType CeCLIOCtlSetCipherCntx(CeCLCipherCntxType *ctx_ptr)
         }
         else
         {
-          encr_seg_start = ctx_ptr->dataLn - ctx_ptr->payloadLn - ctx_ptr->macLn;
+
           encr_seg_size  = ctx_ptr->payloadLn + ctx_ptr->macLn;
           auth_seg_size  = ctx_ptr->dataLn - ctx_ptr->macLn;
+          encr_seg_start = ctx_ptr->dataLn - ctx_ptr->payloadLn - ctx_ptr->macLn;
         } 
       }
 

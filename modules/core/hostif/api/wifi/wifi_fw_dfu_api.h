@@ -12,7 +12,8 @@
 
 #include "wifi_fw_cmn_api.h"
     
-#define MAX_DFU_DATA_LEN (16320) //((16*1024)-64)
+//#define MAX_DFU_DATA_LEN (16320) //((16*1024)-64)
+#define MAX_DFU_DATA_LEN (0x400) //1024
     
 /* These IDs are used to identify the resource */
 typedef enum soft_id 

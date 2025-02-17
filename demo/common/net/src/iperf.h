@@ -40,6 +40,7 @@
 #define BYTES_PER_KILO_BYTE 1024
 
 #define  IPERF_DEFAULT_UDP_RATE  1//(BYTES_PER_KILO_BYTE * BYTES_PER_KILO_BYTE); // Default UDP Rate, 1 Mbit/sec
+#define  IPERF_DEFAULT_TCP_RATE  0 // Default tcp rate, 0 means not fixed.
 
 /* iperf3 control states */
 #define TEST_START        1
@@ -163,6 +164,7 @@ typedef struct stats {
     uint32_t    iperf_time_sec;
     uint32_t    iperf_stream_id;
     uint32_t    iperf_udp_rate;
+    uint32_t    iperf_tcp_rate;
 } STATS;
 
 typedef struct throughput_cxt
@@ -187,8 +189,10 @@ typedef struct throughput_cxt
     uint8_t is_iperf:1;
     uint8_t print_buf:1;
     uint8_t echo:1;
+    uint8_t bandwidth_unit:1;  /* 0:Mbps 1:Kbps*/
     void *session;
     TaskHandle_t rx_task_handler;
+    uint16_t tcp_snd_buf;
 } THROUGHPUT_CXT;
 
 typedef struct {

@@ -48,6 +48,7 @@ source_set("drivers") {
             "platform/qapi_heap_status.c",
             "platform/qapi_fatal_err.c",
             "platform/qapi_rtc.c",
+            "platform/qapi_rram.c",
         ]
     }
     if (CONFIG_FW_UPGRADE) { 

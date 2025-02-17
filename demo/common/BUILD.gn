@@ -9,6 +9,7 @@ net_demo_src = [
     "net/src/iperf.c",
     "net/src/ssl_demo.c",
     "net/src/ping.c",
+    "net/src/prefix.c",
     "//modules/net/rvr_lite/src/rvr_lite.c",
 ]
 
@@ -65,11 +66,12 @@ qcc_demo_src = [
 not_needed("*", [ ])
 
 config("_config") {
+    include_dirs = []
     if (CONFIG_PROF) {
-        include_dirs = prof_demo_inc
+        include_dirs += prof_demo_inc
     }
     if (CONFIG_FW_UPGRADE) {
-        include_dirs = ota_demo_inc
+        include_dirs += ota_demo_inc
     }
 }
 
@@ -100,6 +102,8 @@ source_set("common") {
         sources += qtmr_demo_src
     }
     if (CONFIG_LOWPOWER_SHELL) {
+        include_dirs += ["//../comp/lwip/src/include/lwip"]
+        include_dirs += ["//../comp/lwip/src/include/lwip/prot"]
         sources += lowpower_demo_src
     }
     if (CONFIG_PROF) {
@@ -109,6 +113,7 @@ source_set("common") {
         sources += flash_demo_src
     }
     if (CONFIG_PLATFORM_SHELL) {
+        include_dirs += ["//modules/hal/qcc730/qcspi"]
         sources += [ "platform/platform_shell.c" ]
     }
     if (CONFIG_WLAN) {

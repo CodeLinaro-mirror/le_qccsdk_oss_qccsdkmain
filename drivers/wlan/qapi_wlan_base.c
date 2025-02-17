@@ -9,6 +9,12 @@
 #include "safeAPI.h"
 #include <unistd.h>
 
+typedef enum {
+    WPS_NONE,
+    WPS_SCAN,
+    WPS_CONNECTED
+} WPS_STAGE_TYPE;
+
 qapi_Status_t qapi_WLAN_Error (void)
 {
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
@@ -319,4 +325,51 @@ qapi_Status_t qapi_WLAN_Recv_Mgmt_Frames (uint8_t *buffer, uint32_t buffer_len, 
     
     return wlan_recv_mgmt_frame(buffer, buffer_len, frame_len, timeout);
 }
+
+#ifdef CONFIG_WPS
+qapi_Status_t qapi_WLAN_Start_Wps(uint8_t device_ID,
+                             qapi_WLAN_WPS_Connect_Action_e connect_Action,
+                             qapi_WLAN_WPS_Mode_e mode,
+                             const char  *pin,
+                             uint8_t auth_floor)
+{
+    qapi_Status_t ret = QAPI_WLAN_ERROR;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    p_cxt->wps_in_progress = 1;
+    p_cxt->wps_stage = WPS_SCAN;
+    WLAN_QAPI_LOCK();
+    ret = wmi_start_wps_process(device_ID, connect_Action, mode, pin, auth_floor);
+    WLAN_QAPI_UNLOCK();
+    return ret;
+}
+
+qapi_Status_t qapi_WLAN_Stop_Wps (uint8_t device_ID, uint8_t wps_stage)
+{
+    qapi_Status_t ret = QAPI_OK;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    p_cxt->wps_stage = wps_stage;
+
+    if (p_cxt->wps_stage == WPS_CONNECTED && p_cxt->wps_in_progress)
+    {
+        WLAN_QAPI_LOCK();
+        ret = wmi_disconnect();
+        qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+        memset(&p_cxt->connect_cmd, 0, sizeof(WMI_CONNECT_CMD));
+        memset(&p_cxt->passphrase_cmd, 0, sizeof(WMI_SET_PASSPHRASE_CMD));
+        wlan_clear_privacy();
+        wlan_preset_specific_param();
+        qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+        WLAN_QAPI_UNLOCK();
+    }
+    else if (p_cxt->wps_stage == WPS_SCAN && p_cxt->wps_in_progress)
+    {
+        WLAN_QAPI_LOCK();
+        ret = wmi_stop_scan();
+        WLAN_QAPI_UNLOCK();
+    }
+    p_cxt->wps_in_progress = 0;
+    return ret;
+}
+
+#endif
 

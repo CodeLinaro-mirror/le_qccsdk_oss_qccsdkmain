@@ -235,6 +235,7 @@ typedef enum {
 	WMI_BMPS_ENABLE_CMDID,
 	WMI_BMPS_IGNORE_BCMC_CMDID,
 	WMI_BMPS_TIMING_CFG_CMDID, //0xa0=160
+    WMI_BMPS_RX_FILTER_ENABLE_CMDID,
 	WMI_IMPS_CFG_CMDID,
 	WMI_GET_STATISTICS_CMDID,
     WMI_SLEEP_CLK_CAL_DONE_CMDID, /* Updates the xocnt based on current temperature from the sleep clock cal results */
@@ -282,6 +283,7 @@ typedef enum {
 	WMI_SEND_RAW_FRAME_EVTID,
 	WMI_MGMT_FRAME_FILTER_EVTID,
     WMI_GET_TX_POWER_EVTID,
+    WMI_WPS_FAIL_EVTID,
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
 
@@ -1297,7 +1299,7 @@ typedef PREPACK struct {
     WMI_WPS_DEV_TYPE      pri_dev_type;
     uint8_t     	      device_mode ;
     uint8_t  			  devId ;
-
+    uint8_t  			  auth_floor;
 } POSTPACK WMI_WPS_START_CMD;
 
 /* WMI_WPS_SET_CONFIG_STATE_CMD */

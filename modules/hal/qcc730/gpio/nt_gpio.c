@@ -211,7 +211,7 @@ void nt_gpio_preset(void)
         regval = NT_REG_RD(QWLAN_PMU_CFG_IOPAD_PU_REG); // pu
         NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, regval | 0x0002C000); //0-18,25,26 : no pu, 14/15/17: pd
         #endif
-		
+
 		/* UART op3: GPIO1 GPIO3*/
 		/* UART op1: GPIO13 GPIO14*/
 		/* UART op0: GPIO11 GPIO12*/

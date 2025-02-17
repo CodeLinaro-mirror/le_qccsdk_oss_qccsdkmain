@@ -203,7 +203,7 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
 
 	if (eth_hdr->usFrameType == dp_htons(NT_IP_FRAME_TYPE)) {
 		ip_header = (ip_header_t *)((uint8_t *)eth_hdr + sizeof(ethernet_header_t));
-		dpm_tid = ip_header->ucDifferentiatedServicesCode & 0x7;
+		dpm_tid = (ip_header->ucDifferentiatedServicesCode >> 5) & 0x7;
 	} else if (eth_hdr->usFrameType == dp_htons(NT_IPV6_FRAME_TYPE)) {
 		ip6_header = (ip6_header_t *)((uint8_t *)eth_hdr + sizeof(ethernet_header_t));
 		dpm_tid = (((dp_ntohl(ip6_header->ulVersionTCFlowLabel) >> 20) & 0xff) & 0x7);

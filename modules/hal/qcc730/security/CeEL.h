@@ -330,6 +330,7 @@ CeELErrorType CeElfree_Env(void* ptr);
  *
  */
 void CeEL_mutex_init (void);
+void CeEL_mutex_deinit(void);
 
 /**
  * @brief  Lock the CeEL mutex

@@ -506,6 +506,41 @@ typedef struct ecsa_ctx_s
 	nt_osal_timer_handle_t ecsa_timer;
 }ecsa_ctx_t;
 #endif /*FEATURE_STA_ECSA*/
+
+#ifdef FM_PMK_CACHING
+#define NT_PMKINFO_MAX          1
+#define NT_PMKSA_MAX            5
+
+typedef struct pmkinfo_s
+{
+    uint8_t                    pmk[WMI_PMK_LEN];
+    uint8_t                    pmkid[SAE_PMKID_LEN];
+}pmkinfo_t;
+
+typedef struct pmksa_s
+{
+    uint8_t                     ni_macaddr[IEEE80211_ADDR_LEN];   /* peer mac address */
+    uint8_t                     num;
+    uint8_t                     replace_idx;
+    pmkinfo_t                   pmkinfo[NT_PMKINFO_MAX];
+}pmksa_t;
+
+typedef struct pmkcaching_s
+{
+    uint8_t                     num;
+    uint8_t                     replace_idx;  
+    pmksa_t                     pmksa[NT_PMKSA_MAX];
+}pmkcaching_t;
+#endif /*FM_PMK_CACHING*/
+
+typedef struct wpa3_tdi_ctx_s
+{
+	unsigned char		ssid[WMI_MAX_SSID_LEN + 1];
+	uint8_t				ssid_len;
+	uint8_t				mode;
+	uint32_t			last_update_time;
+}wpa3_tdi_ctx_t;
+
 typedef struct dev_common_s {
 	uint8_t						conc_mode;				//AP_STA concurrency or no concurrency
 	uint8_t						active_dev_cnt;			//Active device count
@@ -603,6 +638,33 @@ typedef struct devh_s {
     unsigned char 				ssid[WMI_MAX_SSID_LEN + 1];
     uint8_t 					ssid_len;
 
+ /**
+	 * sae_pwe - SAE mechanism for PWE derivation
+	 * 0 = hunting-and-pecking loop only
+	 * 1 = hash-to-element only
+	 * 2 = both hunting-and-pecking loop and hash-to-element enabled
+	 */
+    int sae_pwe;
+    struct sae_pt *pt;
+    
+    /**
+	 * sae_password - SAE password
+	 *
+	 * This parameter can be used to set a password for SAE. By default, the
+	 * passphrase value is used if this separate parameter is not used, but
+	 * passphrase follows the WPA-PSK constraints (8..63 characters) even
+	 * though SAE passwords do not have such constraints.
+	 */
+	char *sae_password;
+
+    /**
+	 * sae_password_id - SAE password identifier
+	 *
+	 * This parameter can be used to identify a specific SAE password. If
+	 * not included, the default SAE password is used instead.
+	 */
+    char *sae_password_id;
+
     void                        *pRateCtrl;
 
     void                        *pApDevStruct;
@@ -664,6 +726,12 @@ typedef struct devh_s {
  	ecsa_ctx_t *ecsa_ctx;
 #endif
     struct anti_param_s anti_param;
+
+#ifdef FM_PMK_CACHING
+    pmkcaching_t                pmkcaching;
+#endif
+
+    wpa3_tdi_ctx_t wpa3_tdi_ctx;
 
 } devh_t;
 
@@ -743,6 +811,16 @@ void nt_wlan_init_dev_macaddr_for_conc(dev_common_t *pDevCmn);
 void nt_wlan_set_channel_idx(uint8_t chIdx);
 uint8_t nt_wlan_chck_ch_idx(uint8_t curr_chindex, NT_BOOL flag);
 void* nt_wlan_get_global_dev_addr(void *);
+
+#ifdef FM_PMK_CACHING
+void nt_wlan_save_pmk_info(devh_t *dev, conn_t *conn);
+void nt_wlan_clear_pmk_info(devh_t *dev);
+pmksa_t* nt_wlan_find_pmksa_by_addr(devh_t *dev, uint8_t *pAddr);
+uint8_t* nt_wlan_find_pmk_by_pmkid(devh_t *dev, uint8_t *pAddr, uint8_t *pmkid);
+void nt_wlan_clear_pmksa_by_addr(devh_t *dev, uint8_t *pAddr);
+void nt_wlan_set_sae_pmk(devh_t *dev, uint8_t *pAddr, uint8_t *pmkid);
+#endif /*FM_PMK_CACHING*/
+
 
 #ifdef __cplusplus
 }

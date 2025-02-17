@@ -40,6 +40,7 @@ extern void* QCLI_Context;
 #define QAT_EVENT_TXQ 0x1
 
 #define QAT_STR_BUFFER_LENGTH					  128
+#define QAT_OUTPUT_MAX_LENGTH					  1400
 
 QAT_Transfer_Mode_t QAT_Transfer_Mode = QAT_Transfer_Mode_AT_COMMAND_E;
 QAT_Transfer_Mode_Handle_t QAT_Transfer_Mode_Handle = NULL;
@@ -138,24 +139,20 @@ qbool_t QAT_Data_Transfer_Mode_Handle(uint32_t Length, uint8_t *Buffer)
          /* Process all received data. */
          while(Length)
          {
-            /* Check for a valid character, which here is any non control
-                  code lower ASCII (0x20 ' ' to 0x7E '~'). */
-            if((*Buffer >= ' ') && (*Buffer <= '~'))
+           
+            /* Make sure that the command buffer can fit the character. */
+            if(HTC_Context.Input_Length < QAT_MAXIMUM_COMMAND_STRING_LENGTH)
             {
-               /* Make sure that the command buffer can fit the character. */
-               if(HTC_Context.Input_Length < QAT_MAXIMUM_COMMAND_STRING_LENGTH)
-               {
-                  if(QAT_Echo_Enable)
-                  {
-                     QAT_Output(1, Buffer);
-                  }
-                  
-                  HTC_Context.Input_String[HTC_Context.Input_Length] = Buffer[0];
-                  HTC_Context.Input_Length++;
-            
-               }
+              if(QAT_Echo_Enable)
+              {
+                 QAT_Output(1, Buffer);
+              }
+              
+              HTC_Context.Input_String[HTC_Context.Input_Length] = Buffer[0];
+              HTC_Context.Input_Length++;
+        
             }
- 
+    
             /* Move to the next character in the buffer. */
             Buffer ++;
             Length --;
@@ -260,12 +257,24 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
             else
             {
                Result = false;
+               QAT_Response_Str(QAT_RC_ERROR, NULL);
                break;
             }
          }
          else if(HTC_Context.Input_String[Index] == '?')
          {
             Index ++;
+			
+			if((HTC_Context.Input_String[Index] != ';') 
+				&& (HTC_Context.Input_String[Index] != '\r')
+				&& (HTC_Context.Input_String[Index] != NULL))
+			{
+			   Result = false;
+               QAT_Response_Str(QAT_RC_ERROR, NULL);
+
+               break;
+			}
+				
             HTC_Context.Command_Flag |= QAT_STR_QU;
             *(char*)(Command_Name) = '\0';
 			is_exec = 0;
@@ -411,6 +420,7 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
                         {
                         	  QAT_Printf("Invalid escape sequence \\x\n");
                         	  Result = false;
+                             QAT_Response_Str(QAT_RC_ERROR, NULL);
                         }
                      
                      }
@@ -418,12 +428,14 @@ static int Process_AT_Extend_Command(uint32_t *Command_Index)
                      {
                         QAT_Printf("Invalid escape sequence \"\\%c\"\n", HTC_Context.Input_String[Index + 1]);
                         Result = false;
+                        QAT_Response_Str(QAT_RC_ERROR, NULL);
                      }
                   }
                   else
                   {
                      QAT_Printf("Invalid escape sequence\n");
                      Result = false;
+                     QAT_Response_Str(QAT_RC_ERROR, NULL);
                   }
                }
             
@@ -1048,28 +1060,117 @@ qapi_Status_t QAT_Output(uint32_t Length, const char *Buffer)
     return ret;
 }
 
+/**
+   @brief Passes characters input from the command line to the QCLI module for
+          processing.
+ 
+   @param[in] Length  Number of bytes in the provided buffer.
+   @param[in] Buffer  Buffer containing the inputted data.
+ 
+   @return
+    - true if QCLI was initialized successfully.
+    - false if initialization failed.
+*/
+QAT_Command_Status_t QAT_Response_Buffer(int Ret_Code, char *Buffer, uint32_t Length)
+{
+   QAT_Tx_Queue_t *Tx_Queue, *Tx_Queue_Head;
+   uint32_t Len_Need;
+   char *Ptr;
+   int len;
+ 
+   if(!Buffer || !Length ||(Ret_Code > QAT_RC_MAX))
+   {
+	  return QAT_STATUS_ERROR_E;
+   }
+   
+   if(Ret_Code != QAT_RC_QUIET){
+      Len_Need = sizeof(QAT_Tx_Queue_t)+strlen((char*)QAT_Result_Str[Ret_Code])+Length+sizeof("\r\n");
+   }else{
+      Len_Need = sizeof(QAT_Tx_Queue_t)+strlen((char*)QAT_Result_Str[Ret_Code])+Length;
+   }
+   
+   /* extra bytes: \r\n <CMD name> */
+   Tx_Queue = malloc(Len_Need + 1);
+   if(Tx_Queue)
+   {
+      memset(Tx_Queue, 0, (Len_Need + 1));
+      Tx_Queue->Buffer = (uint8_t*)((char*)Tx_Queue + sizeof(QAT_Tx_Queue_t));
+      Ptr = (char*)Tx_Queue->Buffer;
+      // len = snprintf(Ptr, Len_Need, "%s", "\r\n");
+      // Ptr += len;
+      // Tx_Queue->Len = len;
+      if(Buffer && Length)
+      {
+         memcpy(Ptr, Buffer, Length); 
+         Ptr += Length;      
+         // memcpy(Ptr, "\r\n", 2);
+         // Ptr += 2;
+         // Tx_Queue->Len += (Length + 2);
+         Tx_Queue->Len += Length;
+      }	 
+      if(Ret_Code != QAT_RC_QUIET)
+      {
+         if(QAT_Result_Str[Ret_Code] && strlen(QAT_Result_Str[Ret_Code]))
+         {
+            memcpy(Ptr, (char*)QAT_Result_Str[Ret_Code], strlen(QAT_Result_Str[Ret_Code]));
+            Ptr += strlen(QAT_Result_Str[Ret_Code]);
+            memcpy(Ptr, "\r\n", 2);
+            Ptr += 2;
+            Tx_Queue->Len += (strlen(QAT_Result_Str[Ret_Code]) + 2);
+         }
+      }
+      /* queue buffer, then signal */
+      qurt_mutex_lock(&HTC_Context.mutex);
+      if(!HTC_Context.Tx_Queue)
+      {
+         HTC_Context.Tx_Queue = Tx_Queue;
+      }
+      else
+      {
+         Tx_Queue_Head = HTC_Context.Tx_Queue;
+         while(Tx_Queue_Head && Tx_Queue_Head->Next)
+         {
+            Tx_Queue_Head = Tx_Queue_Head->Next;
+         }
+         Tx_Queue_Head->Next = Tx_Queue;
+      }
+      qurt_mutex_unlock(&HTC_Context.mutex);
+      qurt_signal_set(&qat_task_start, QAT_EVENT_TXQ);
+   }
+   return QAT_STATUS_SUCCESS_E;
+}
+
 static void QAT_TxTasks(void *arg)
 {
    QAT_Tx_Queue_t *Next=NULL;
    uint32_t signal;
-
+   uint16_t chunkSize = 0;
+   uint16_t offset = 0;
+   
    while(1)
    {
 		signal = qurt_signal_wait(&qat_task_start, QAT_EVENT_TXQ, QURT_SIGNAL_ATTR_CLEAR_MASK);
    		qurt_mutex_lock(&HTC_Context.mutex);
 		Next = HTC_Context.Tx_Queue;
+		
 		while(Next){
-			  //printf("xmt %d\n", Next->Len);
-              QAT_Output(Next->Len, (char*)Next->Buffer);
-            
-              if(Next->CB)
-              {
-                 Next->CB(Next->CB_Context, NULL);
-              }
-              free((uint8_t *)Next);
+
+			  while(Next->Len > offset)
+			  {
+				chunkSize = (Next->Len - offset > QAT_OUTPUT_MAX_LENGTH)? QAT_OUTPUT_MAX_LENGTH:(Next->Len - offset); 
+				QAT_Output(chunkSize, (char*)(Next->Buffer+offset));
+				offset += chunkSize;
+			  }
+              //QAT_Output(Next->Len, (char*)Next->Buffer);
 
 			  HTC_Context.Tx_Queue = Next->Next;
+		
+              free((uint8_t *)Next);
+			  
 			  Next = HTC_Context.Tx_Queue;
+			  
+			  offset = 0;
+			  chunkSize = 0;
 		}
 		
 		qurt_mutex_unlock(&HTC_Context.mutex);
@@ -1085,7 +1186,7 @@ qbool_t QAT_TxTask_Initialize(void)
    memset(&HTC_Context, 0, sizeof(HTC_Context));
    qurt_mutex_create(&HTC_Context.mutex);
 
-   ret_val =  (uint32_t)nt_qurt_thread_create(QAT_TxTasks, "qat_tx_task", 1024, NULL, 6, &qat_tx_task_hdl);
+   ret_val =  (uint32_t)nt_qurt_thread_create(QAT_TxTasks, "qat_tx_task", 4096, NULL, 6, &qat_tx_task_hdl);
    if(ret_val != pdPASS)
    {
   	 printf("QAT: task creation failed out of memory\r\n");
@@ -1116,7 +1217,7 @@ qbool_t QAT_RxTask_Start()
     qbool_t Ret_Val = true;
 	uint32_t ret_val;
 
-    ret_val =  (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 1024, NULL, 8, &qat_rx_task_hdl);
+    ret_val =  (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 4096, NULL, 6, &qat_rx_task_hdl);
     if(ret_val != pdPASS)
     {
    	 printf("QAT: task creation failed out of memory\r\n");
