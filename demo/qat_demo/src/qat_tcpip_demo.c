@@ -63,7 +63,6 @@ static QAT_Command_t QAT_TCPIP_Command_List[] =
     {"+CIPSERVER",      Extend_Command_Server,          QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
     {"+CIPUDPSERVER",   Extend_Command_UdpServer,       QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
     {"+CIPMODE",        Extend_Command_Mode,            QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
-
 };
 
 /*-------------------------------------------------------------------------
@@ -147,7 +146,7 @@ bool udp_server_ipd_message_print_flag = true;
 static int tcp_listen_fd = INVALID_FD;
 static int udp_listen_fd = INVALID_FD;
 
-static uint8_t v6_enable = 0;
+static uint8_t v6_enable = 1;
 extern struct nd6_router_list_entry default_router_list[];
 /*-------------------------------------------------------------------------
  * Function Definitions
@@ -659,19 +658,21 @@ static QAT_Command_Status_t Extend_Command_SetStation(uint32_t Op_Type, uint32_t
             }
 
             // For now, use the IPv6 default router address as the DNS server address.
-            if (default_router_list[0].neighbor_entry != NULL) {
-                char addr_str[INET6_ADDRSTRLEN];
-                ip6addr_ntoa_r(&default_router_list[0].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
-                offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s", addr_str);
-            }
-            if (default_router_list[1].neighbor_entry != NULL) {
-                char addr_str[INET6_ADDRSTRLEN];
-                ip6addr_ntoa_r(&default_router_list[1].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
-                offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s", addr_str);
-            }else{
-                char addr_str[INET6_ADDRSTRLEN];
-                ip6addr_ntoa_r(&default_router_list[0].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
-                offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s", addr_str);
+            if(v6_enable){
+                if (default_router_list[0].neighbor_entry != NULL) {
+                    char addr_str[INET6_ADDRSTRLEN];
+                    ip6addr_ntoa_r(&default_router_list[0].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
+                    offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", addr_str);
+                }
+                if (default_router_list[1].neighbor_entry != NULL) {
+                    char addr_str[INET6_ADDRSTRLEN];
+                    ip6addr_ntoa_r(&default_router_list[1].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
+                    offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", addr_str);
+                }else{
+                    char addr_str[INET6_ADDRSTRLEN];
+                    ip6addr_ntoa_r(&default_router_list[0].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
+                    offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", addr_str);
+                }
             }
 
             rc = QAT_Response_Str(QAT_RC_OK, buffer);
@@ -996,6 +997,7 @@ static void client_recv_thread(void *arg)
         if(g_client_conns_t[*p_id].thread_quit){
             closesocket(client_fd);
             CircularBuffer_Destroy(g_client_conns_t[*p_id].cb);
+            g_client_conns_t[*p_id].cb = NULL;
             cleanGlobalQueue(client_queue, *p_id);
             qurt_mutex_lock(&client_mutex);
             ipd_message_print_flag = true;
@@ -1121,6 +1123,7 @@ static void client_recv_thread(void *arg)
 client_recv_fail:
     closesocket(client_fd);
     CircularBuffer_Destroy(g_client_conns_t[*p_id].cb);
+    g_client_conns_t[*p_id].cb = NULL;
     cleanGlobalQueue(client_queue, *p_id);
     qurt_mutex_lock(&client_mutex);
     ipd_message_print_flag = true;
@@ -2299,7 +2302,12 @@ static QAT_Command_Status_t Extend_Command_Server(uint32_t Op_Type, uint32_t Par
                     } else if (strcmp(Parameter_List[2].String_Value, "SSL") == 0) {
                         protocol_type = PROTOCOL_SSL;                       
                     } else if (strcmp(Parameter_List[2].String_Value, "TCPv6") == 0) {
-                        protocol_type = PROTOCOL_TCPv6;
+                        if(v6_enable){
+                            protocol_type = PROTOCOL_TCPv6; 
+                        }else{
+                            QAT_Response_Str(QAT_RC_ERROR, "+CIPSERVER:IPv6 is not enable\r\n");
+                            return rc;
+                        }
                     } else if(strcmp(Parameter_List[2].String_Value, "SSLv6") == 0) {
                         protocol_type = PROTOCOL_SSLv6;
                     } else {
@@ -2693,7 +2701,12 @@ static QAT_Command_Status_t Extend_Command_UdpServer(uint32_t Op_Type, uint32_t 
                     if (strcmp(Parameter_List[2].String_Value, "UDP") == 0) {
                         protocol_type = PROTOCOL_UDP;
                     } else if (strcmp(Parameter_List[2].String_Value, "UDPv6") == 0) {
-                        protocol_type = PROTOCOL_UDPv6;                       
+                        if(v6_enable){
+                            protocol_type = PROTOCOL_UDPv6;  
+                        }else{
+                            QAT_Response_Str(QAT_RC_ERROR, "+CIPUDPSERVER:IPv6 is not enable\r\n");
+                            return rc;
+                        }
                     } else {
                         protocol_type = PROTOCOL_INVALID;
                         QAT_Response_Str(QAT_RC_ERROR, "+CIPUDPSERVER:protocol_type is invalid\r\n");
@@ -2733,15 +2746,14 @@ static QAT_Command_Status_t Extend_Command_UdpServer(uint32_t Op_Type, uint32_t 
                     struct sockaddr_in6 *addr6 = (struct sockaddr_in6*)&local_addr;
                     addr6->sin6_len = sizeof(struct sockaddr_in);
                     addr6->sin6_family = AF_INET6;
-                    addr6->sin6_addr= in6addr_any;
-                    addr6->sin6_port = htons(tcp_config.params.port);
+                    addr6->sin6_port = htons(udp_config.params.port);
                     inet6_addr_from_ip6addr(&addr6->sin6_addr, ip_2_ip6(ip6_local_addr));
                 }else{
                     ip_addr_t *ip_local_addr = (ip_addr_t *)netif_ip_addr4(netif);
                     struct sockaddr_in *addr4 = (struct sockaddr_in*)&local_addr;
                     addr4->sin_len = sizeof(struct sockaddr_in);
                     addr4->sin_family = AF_INET;
-                    addr4->sin_port = htons(tcp_config.params.port);
+                    addr4->sin_port = htons(udp_config.params.port);
                     inet_addr_from_ip4addr(&(addr4->sin_addr), ip_2_ip4(ip_local_addr));
                 }
 
