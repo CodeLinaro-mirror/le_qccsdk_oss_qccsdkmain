@@ -1672,7 +1672,7 @@ typedef struct{
     uint16_t chan_freq;  //Channel frequency in MHz
     uint8_t bssid[IEEE80211_ADDR_LEN];
     ssid_t  ssid;
-    uint8_t  security_mode;
+    uint32_t  security_mode;
     int8_t  rssi;
     uint8_t wlan_mode;
 }ap_info;
