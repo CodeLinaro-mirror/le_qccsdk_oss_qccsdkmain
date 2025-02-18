@@ -158,6 +158,7 @@ uint8_t  dc_freq_to_chindex(dev_common_t *pDevCmn, uint32_t frequency);
 static void _wlan_fill_scan_info(qapi_WLAN_BSS_Scan_Info_t *dst, const ap_info *src)
 {
     uint16_t channel = src->chan_freq;
+    uint8_t rsn_Cipher, rsn_Auth, wpa_Cipher, wpa_Auth;
     extern int32_t wlan_freq_to_channel(uint16_t *channel);
     wlan_freq_to_channel(&channel);
     dst->channel = channel;
@@ -169,33 +170,48 @@ static void _wlan_fill_scan_info(qapi_WLAN_BSS_Scan_Info_t *dst, const ap_info *
     memscpy(dst->ssid, dst->ssid_Length, src->ssid.ssid, dst->ssid_Length);
     dst->rssi = src->rssi;
     //src->wlan_mode  //wlan phy mode, WLAN_PHY_MODE, no map
-    switch (src->security_mode) {
-    case WMI_NONE_AUTH:
-        break;
-    case WMI_WPA_AUTH:
+    if(src->security_mode >> 16) {
         dst->security_Enabled = 1;
-        dst->wpa_Auth = __QAPI_WLAN_SECURITY_AUTH_1X;
-        break;
-    case WMI_WPA2_AUTH:
+        wpa_Cipher = src->security_mode >> 24;
+        wpa_Auth = (src->security_mode >> 16 & 0x00FF);
+        if(wpa_Cipher & TKIP_CRYPT)
+            dst->wpa_Cipher |= __QAPI_WLAN_CIPHER_TYPE_TKIP;
+
+        if(wpa_Cipher & AES_CRYPT)
+            dst->wpa_Cipher |= __QAPI_WLAN_CIPHER_TYPE_CCMP;
+
+        if(wpa_Cipher & WEP_CRYPT)
+            dst->wpa_Cipher |= __QAPI_WLAN_CIPHER_TYPE_WEP;
+
+        if(wpa_Auth & WMI_WPA_AUTH)
+            dst->wpa_Auth |= __QAPI_WLAN_SECURITY_AUTH_1X;
+
+        if(wpa_Auth & WMI_WPA_PSK_AUTH)
+            dst->wpa_Auth |= __QAPI_WLAN_SECURITY_AUTH_PSK;
+    }
+
+    if(src->security_mode & 0xFFFF) {
         dst->security_Enabled = 1;
-        dst->rsn_Auth = __QAPI_WLAN_SECURITY_AUTH_1X;
-        break;
-    case WMI_WPA_PSK_AUTH:
-        dst->security_Enabled = 1;
-        dst->wpa_Auth = __QAPI_WLAN_SECURITY_AUTH_PSK;
-        break;
-    case WMI_WPA2_PSK_AUTH:
-        dst->security_Enabled = 1;
-        dst->rsn_Auth = __QAPI_WLAN_SECURITY_AUTH_PSK;
-        break;
-    case WMI_WPA3_SHA256_AUTH:
-        dst->security_Enabled = 1;
-        dst->rsn_Auth = __QAPI_WLAN_SECURITY_AUTH_SAE;
-        break;
-    case WMI_WPA_AUTH_CCKM:
-    case WMI_WPA2_AUTH_CCKM:
-    default:
-        warn_printf("security_mode=%d not supprted\n", src->security_mode);
+        rsn_Auth = src->security_mode & 0xFF;
+        rsn_Cipher = (src->security_mode & 0xFF00) >> 8;
+        if(rsn_Cipher & TKIP_CRYPT)
+            dst->rsn_Cipher |= __QAPI_WLAN_CIPHER_TYPE_TKIP;
+
+        if(rsn_Cipher & AES_CRYPT)
+            dst->rsn_Cipher |= __QAPI_WLAN_CIPHER_TYPE_CCMP;
+
+        if(rsn_Cipher & WEP_CRYPT)
+            dst->rsn_Cipher |= __QAPI_WLAN_CIPHER_TYPE_WEP;
+
+        if(rsn_Auth & WMI_WPA2_AUTH)
+            dst->rsn_Auth |= __QAPI_WLAN_SECURITY_AUTH_1X;
+
+        if((rsn_Auth & WMI_WPA2_PSK_AUTH))
+            dst->rsn_Auth |= __QAPI_WLAN_SECURITY_AUTH_PSK;
+
+        if(rsn_Auth & WMI_WPA3_SHA256_AUTH)
+            dst->rsn_Auth |= __QAPI_WLAN_SECURITY_AUTH_SAE;
+
     }
 }
 
