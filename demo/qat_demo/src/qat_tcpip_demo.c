@@ -298,11 +298,13 @@ static void qat_ping_recv(int s, char *buffer, char *buf)
                 }else if(IP_IS_V6_VAL(from_addr)){
                     icmp_header = (icmpm_echo_hdr *)(buf + sizeof(struct ip6_hdr));
                 }
+
+                if((icmpm_2_icmp(icmp_header)->type != ICMP_ER) && (icmpm_2_icmp6(icmp_header)->type != ICMP6_TYPE_EREP)){
+                    continue;
+                }
+                
                 if((icmpm_2_icmp(icmp_header)->id == QAT_PING_ID) && (icmpm_2_icmp(icmp_header)->seqno == htons(qat_ping_seq_num))) 
                 {
-                    if((icmpm_2_icmp(icmp_header)->type != ICMP_ER) && (icmpm_2_icmp6(icmp_header)->type != ICMP6_TYPE_EREP)){
-                        continue;
-                    }
                     qat_ping_recv_count++;
                     memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
                     snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPPING:%s,%u,%lu\r\n", ipaddr_ntoa(&from_addr), ntohs(icmpm_2_icmp(icmp_header)->seqno), (sys_now()-qat_ping_time));
