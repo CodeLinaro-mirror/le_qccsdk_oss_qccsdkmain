@@ -61,7 +61,7 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #define DEFAULT_THREAD_STACKSIZE        3000
 #define DEFAULT_THREAD_PRIO             3
 #define LWIP_NETCONN                    0
-#define MEMP_NUM_UDP_PCB                4		/** Maximum number of PCB allocation for UDP allowed at any instance in system */
+#define MEMP_NUM_UDP_PCB                5		/** Maximum number of PCB allocation for UDP allowed at any instance in system */
 #define DEFAULT_TCP_RECVMBOX_SIZE		64		/** mailbox size for the incoming packets on a NETCONN_TCP. */
 #define DEFAULT_UDP_RECVMBOX_SIZE		64		/** mailbox size for the incoming packets on a NETCONN_UDP. */
 #define DEFAULT_RAW_RECVMBOX_SIZE		64		/** mailbox size for the incoming packets on a NETCONN_RAW. */
