@@ -2640,7 +2640,7 @@ static QAT_Command_Status_t Extend_Command_UdpServer(uint32_t Op_Type, uint32_t 
                     local_port = addr4->sin_port;
                     inet_ntop(AF_INET, &addr4->sin_addr, local_ip, sizeof(local_ip));
                     peer_port = g_listen_udp_clients[i].addr.v4_addr.sin_port;
-                    inet_ntop(AF_INET6, &g_listen_udp_clients[i].addr.v4_addr.sin_addr, peer_ip, sizeof(peer_ip));
+                    inet_ntop(AF_INET, &g_listen_udp_clients[i].addr.v4_addr.sin_addr, peer_ip, sizeof(peer_ip));
                 }
 
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPUDPSERVER:");
