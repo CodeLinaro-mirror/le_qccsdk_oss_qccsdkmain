@@ -207,5 +207,7 @@ nt_status_t wlan_dc_register_event_handler(devh_t *dev, wlan_dc_event_handler ev
 nt_status_t wlan_dc_unregister_event_handler(devh_t *dev, wlan_dc_event_handler evhandler);
 #endif /* SUPPORT_EVENT_HANDLERS */
 
+void dc_set_channel_filter(devh_t *dev, WLAN_PHY_MODE mode);
+
 #endif  /* _DISCOVERY_API_H_ */
 
