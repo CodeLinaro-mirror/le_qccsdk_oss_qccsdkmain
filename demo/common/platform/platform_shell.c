@@ -190,8 +190,8 @@ static qapi_Status_t rram_test(uint32_t Parameter_Count, QAPI_Console_Parameter_
     uint32_t i, len;
     uint32_t offset;
     uint32_t byte_cnt;
-    uint32_t *buffer = NULL;
-    uint32_t *read_buffer = NULL;
+    char *buffer = NULL;
+    char *read_buffer = NULL;
     uint32_t partid;
 
     if (Parameter_Count != 3 || Parameter_List == NULL || 
@@ -223,20 +223,18 @@ static qapi_Status_t rram_test(uint32_t Parameter_Count, QAPI_Console_Parameter_
         free(buffer);
         return QAPI_ERR_NO_MEMORY;
     }
-        
     while(byte_cnt) {
         if(byte_cnt >= RRAM_OP_UNIT) {
             len = RRAM_OP_UNIT;
         }else {
             len = byte_cnt;
         }
-
         memset(buffer, 0, sizeof(buffer));
         memset(read_buffer, 0, sizeof(read_buffer));
-        for(i = 0; i < len; i++) {
-            buffer[i] = i%256;
+        for(i = 0; i < len - 1; i++) {
+            buffer[i] = 'a';
         }
-        
+        buffer[len - 1] = '\0';
         status = qapi_rram_write(partid, offset, buffer, len);
         if(status != QAPI_OK) {
             printf("Buf(%d) test failed(%d)\n",i,status);
