@@ -626,6 +626,7 @@ static void wmi_set_mgmt_filter_event(void *msg)
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
 
+#ifdef CONFIG_WPS
 static void wmi_stop_scan_event(void *msg)
 {
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
@@ -659,6 +660,7 @@ static void wmi_wps_fail_event(void *msg)
 
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
+#endif
 
 static void wmi_chan_switch_event(void *msg)
 {
@@ -765,12 +767,15 @@ static void wmi_event_dispatch(event_t event_id, void *data)
             break;
 		case WMI_MGMT_FRAME_FILTER_EVTID:
 			wmi_set_mgmt_filter_event(data);
+            break;
+#ifdef CONFIG_WPS
 		case WMI_SCAN_STOP_EVTID:
 			wmi_stop_scan_event(data);
 			break;
 		case WMI_WPS_FAIL_EVTID:
 			wmi_wps_fail_event(data);
 			break;
+#endif
         default:
             break;
     }
