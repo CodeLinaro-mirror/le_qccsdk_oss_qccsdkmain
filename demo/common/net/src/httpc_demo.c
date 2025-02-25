@@ -34,10 +34,10 @@
 #define MAX_PRINTF_LENGTH                   256
 
 #define REQUEST_TIMEOUT_MS                  5000    /* 5 sec */
-#define BODY_BUFFER_SIZE                    300
+#define BODY_BUFFER_SIZE                    3000
 #define HEADER_BUFFER_SIZE                  200
 #define RX_BUFFER_SIZE                      512
-#define MAX_URL_LENGTH                      128
+#define MAX_URL_LENGTH                      256
 #define MAX_HOST_LENGTH                     64
 #define MAX_CHUNK_SIZE                      1460   /* MAX TCP Segment */
 #define HEX_BYTES_PER_LINE                  16
@@ -52,6 +52,7 @@ uint16_t httpc_demo_max_header_len = 0;
 uint16_t at_httpc_method = 0;
 uint16_t httpc_recvie_count = 0;
 uint16_t at_rec_data_finish = 0;
+uint16_t at_rec_error_code = 0;
 #endif
 
 
@@ -260,8 +261,11 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
     uint32_t tmp_len;
     uint32_t contentlength=0;
     
+    uint32_t print_len = MAX_PRINTF_LENGTH;
 #ifdef CONFIG_QAT_HTTPC_DEMO
-    char buffer[MAX_PRINTF_LENGTH+1];
+#define MAX_QAT_PRINTF_LENGTH            1360
+     print_len = MAX_QAT_PRINTF_LENGTH - 10;
+    char buffer[MAX_QAT_PRINTF_LENGTH];
 #endif
 
 
@@ -289,60 +293,62 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
             else
             {
 #ifdef CONFIG_QAT_HTTPC_DEMO
-               HTTPC_PRINTF("HTTP Client Demo state %d\n", state);
+               //HTTPC_PRINTF("HTTP Client Demo state %d\n", state);
                if((0 == httpc_recvie_count) && ((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD)))
                {
-                    snprintf(buffer, MAX_PRINTF_LENGTH, "+HTTPCGET: data:");
+                    snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "+HTTPCGET: data:");
                     QAT_Response_Str(QAT_RC_QUIET, buffer);
-                    memset((void*)buffer, 0, MAX_PRINTF_LENGTH);
+                    memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
                }
                
                httpc_recvie_count++;
 #endif
                 uint8_t * data = NULL;
-                if ((data = malloc(MAX_PRINTF_LENGTH+1)) == NULL)
+                if ((data = malloc(print_len+1)) == NULL)
                 {
                     HTTPC_PRINTF("HTTP Client Demo malloc error %d\n", state);
                     return;
                 }
 
                 /*print buffer is only 256B*/
-                if( temp->length > MAX_PRINTF_LENGTH)
+                if( temp->length > print_len)
                 {
                     tmp_len = temp->length;
-                    while(tmp_len > MAX_PRINTF_LENGTH)
+                    while(tmp_len > print_len)
                     {
-                        //memcpy(data, temp->data, MAX_PRINTF_LENGTH);
-                        memscpy(data, MAX_PRINTF_LENGTH+1, temp->data, MAX_PRINTF_LENGTH);
-                        data[MAX_PRINTF_LENGTH] = '\0';
+                        //memcpy(data, temp->data, print_len);
+                        memscpy(data, print_len+1, temp->data, print_len);
+                        data[print_len] = '\0';
 
 #ifdef CONFIG_QAT_HTTPC_DEMO
                         if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD))
                         {
-                            snprintf(buffer, MAX_PRINTF_LENGTH, "%s",data);
-                            QAT_Response_Str(QAT_RC_QUIET, buffer);
-                            memset((void*)buffer, 0, MAX_PRINTF_LENGTH);
+                            snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "%s",data);
+                            
+                            QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                            memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
                         }
 #else
                     HTTPC_PRINTF("%s", data);
 #endif
 
-                        temp->data += MAX_PRINTF_LENGTH;
-                        tmp_len -= MAX_PRINTF_LENGTH;
+                        temp->data += print_len;
+                        tmp_len -= print_len;
 
                     }
                     if( tmp_len > 0 )
                     {
                         //memcpy(data, temp->data, tmp_len);
-                        memscpy(data, MAX_PRINTF_LENGTH+1, temp->data, tmp_len);
+                        memscpy(data, print_len+1, temp->data, tmp_len);
                         data[tmp_len] = '\0';
                         
 #ifdef CONFIG_QAT_HTTPC_DEMO
                         if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD))
                         {
-                            snprintf(buffer, MAX_PRINTF_LENGTH, "%s\r\n",data);
-                            QAT_Response_Str(QAT_RC_QUIET, buffer);
-                            memset((void*)buffer, 0, MAX_PRINTF_LENGTH);
+                            snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "%s",data);
+                            //QAT_Response_Buffer(QAT_RC_QUIET, buffer,tmp_len);
+                            QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                            memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
                         }
 #else
                     HTTPC_PRINTF("%s", data);
@@ -352,15 +358,15 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
                 else
                 {
                     //memcpy(data, temp->data, temp->length);
-                    memscpy(data, MAX_PRINTF_LENGTH+1, temp->data, temp->length);
+                    memscpy(data, print_len+1, temp->data, temp->length);
                     data[temp->length] = '\0';
                     
 #ifdef CONFIG_QAT_HTTPC_DEMO
                     if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD))
                     {
-                        snprintf(buffer, MAX_PRINTF_LENGTH, "%s\r\n",data);
-                        QAT_Response_Str(QAT_RC_QUIET, buffer);
-                        memset((void*)buffer, 0, MAX_PRINTF_LENGTH);
+                        snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "%s",data);
+                        QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                        memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
                     }
 #else
                     HTTPC_PRINTF("%s", data);
@@ -375,21 +381,38 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
         if (state == QAPI_NET_HTTPC_RX_FINISHED)
         {
 #ifdef CONFIG_QAT_HTTPC_DEMO
-           
+
            if(at_httpc_method == QAT_HTTP_GETSIZE)
            {
-                //snprintf(buffer, MAX_PRINTF_LENGTH, "+HTTPCGETSIZE: total size:%d,context_length:%d",*ptotal_len,contentlength);
-                snprintf(buffer, MAX_PRINTF_LENGTH, "+HTTPCGETSIZE: %d",contentlength);
-                QAT_Response_Str(QAT_RC_QUIET, buffer);
-                memset((void*)buffer, 0, MAX_PRINTF_LENGTH);
+                if((resp_code >= 200) && (resp_code < 300))
+                {
+                    snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "+HTTPC: %d\r\n",contentlength);
+                    QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                }
+                else
+                {
+                    snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "+HTTPC: ERROR, Resp_code:%d\r\n",resp_code);
+                    QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                }
+                
+                memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
            }
            else if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD))
            {
-                snprintf(buffer, MAX_PRINTF_LENGTH, "+HTTPCGET: size:%d",*ptotal_len);
-                QAT_Response_Str(QAT_RC_QUIET, buffer);
-                memset((void*)buffer, 0, MAX_PRINTF_LENGTH);
+                if((resp_code >= 200) && (resp_code < 300))
+                {
+                    snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "+HTTPC: size:%d\r\n",*ptotal_len);
+                    QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                }
+                else
+                {
+                    snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "+HTTPC: ERROR, Resp_code:%d\r\n",resp_code);
+                    QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                }
+                memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
            }
-           
+  
+           at_rec_error_code = resp_code;
            httpc_recvie_count = 0;
            at_rec_data_finish = 1;
 #endif
@@ -1131,9 +1154,7 @@ qapi_Status_t httpc_command_conn(struct http_client_demo_s *arg, uint32_t Parame
 
     if (arg->sslCfg != NULL)                          /* SSL parameters are parsed */
     {
-        HTTPC_PRINTF("sstest: sslcfg start\n");
         error = qapi_Net_HTTPc_Configure_SSL(arg->client, arg->sslCfg);
-        HTTPC_PRINTF("sstest: sslcfg error: %d\n",error);
     }
 
     if (error == QAPI_OK)
@@ -1534,19 +1555,19 @@ usage:
         if (Parameter_Count > 2) {
             len = Parameter_List[2].Integer_Value;
         }
-
-        if (len > BODY_BUFFER_SIZE)
-            len = BODY_BUFFER_SIZE;
-        
+   
 #ifdef CONFIG_QAT_HTTPC_DEMO
         if (Parameter_Count > 2) 
         {
             body = malloc(len+1);
             memcpy(body, Parameter_List[3].String_Value, len);
             *(body + len) = '\0';
-        }    
+        }
 
 #else
+        if (len > BODY_BUFFER_SIZE)
+            len = BODY_BUFFER_SIZE;
+
         body = httpc_malloc_body_demo(len);
 
 #endif
@@ -1568,6 +1589,7 @@ usage:
             return QAPI_ERROR;
         }
         error = qapi_Net_HTTPc_Add_Header_Field(arg->client, Parameter_List[2].String_Value, Parameter_List[3].String_Value);
+        HTTPC_PRINTF("addheader,name:%s,val:%s\n",Parameter_List[2].String_Value,Parameter_List[3].String_Value);
     }
     else if (strcmp(command, "clearheader") == 0)
     {

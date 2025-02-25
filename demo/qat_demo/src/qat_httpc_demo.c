@@ -11,12 +11,7 @@
 #include "qapi_heap_status.h"
 #include "qat.h"
 #include "qat_api.h"
-#include "qurt_internal.h"
-#include "fcntl.h"
 #include "nt_osal.h"
-#include "qurt_mutex.h"
-#include "wifi_fw_version.h"
-#include "wifi_fw_pmu_ts_cfg.h"
 #include "httpc_demo.h"
 #include "qapi_status.h"
 #include "qapi_console.h"
@@ -113,7 +108,7 @@ static QAT_Command_Status_t Extend_Command_HttpGetSize(uint32_t Op_Type, uint32_
             timeout = Parameter_List[1].Integer_Value;
             if(!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout>180000))
             {
-                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid content type\r\n");
+                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid timeout value\r\n");
                  rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                  goto rlt;
             }
@@ -124,11 +119,6 @@ static QAT_Command_Status_t Extend_Command_HttpGetSize(uint32_t Op_Type, uint32_
          {
              rc = QAT_Response_Str(QAT_RC_OK, NULL);
          }
-         else
-         {
-             rc = QAT_Response_Str(QAT_RC_ERROR, NULL);
-         }
-
 
          break;
       }
@@ -210,11 +200,6 @@ static QAT_Command_Status_t Extend_Command_HttpGet(uint32_t Op_Type, uint32_t Pa
         {
             rc = QAT_Response_Str(QAT_RC_OK, NULL);
         }
-        else
-        {
-            rc = QAT_Response_Str(QAT_RC_ERROR, NULL);
-        }
-                  
 
          break;
       }
@@ -240,14 +225,14 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
    {
       case QAT_OP_EXEC:		     /* AT+WRTMEM */
       {	
-         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST=<\"url\">,<length>\r\n");
+         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST=<\"url\">,<length>,[<\"http_req_header\">],[...]\r\n");
          rc = QAT_Response_Str(QAT_RC_OK, buffer);
          break;
       }
       
       case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
       {
-            if(Parameter_Count != 2)
+            if(Parameter_Count < 2)
             {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST:Invalid Parameter Count %d\r\n", Parameter_Count);
                 rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
@@ -256,7 +241,7 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
 
             if(FALSE == saveUrl(Parameter_List[0].String_Value))
             {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST:Invalid URL \r\n");
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST:Save URL fail \r\n");
                 rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                 goto rlt;
             }
@@ -275,7 +260,7 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
                 }   
             }
 
-            if(!Parameter_List[1].Integer_Is_Valid)
+            if(!Parameter_List[1].Integer_Is_Valid || Parameter_List[1].Integer_Value < 1)
             {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST:Invalid length value\r\n");
                 rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
@@ -290,6 +275,29 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
             }
 
             g_https_cfg.data_len = Parameter_List[1].Integer_Value;
+            
+            //save header field
+            if(Parameter_Count >2)
+            {
+                uint8_t headerfield_num = Parameter_Count -2;
+                for(uint8_t i=0; i < headerfield_num; i++)
+                {
+                    if(FALSE == saveheaderfield(Parameter_List[2+i].String_Value))
+                    {
+                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT: save headerfield fail\r\n");
+                        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        goto rlt;
+                    }
+                }
+            }
+
+            //malloc buffer
+            if(!create_send_buffer(g_https_cfg.data_len))
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT: buffer malloc fail \r\n");
+                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto rlt;
+            }
             
             extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
             memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+HTTPPOST",strlen("+HTTPPOST"));
@@ -306,27 +314,43 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
       {
             uint32_t revlen = Parameter_Count;
             char * output_buf = (char*)Parameter_List;
-            if(revlen > HTTP_BODY_BUFFER_SIZE)
+
+            if(revlen < g_https_cfg.data_len)
             {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST:data length can't bigger than 300\r\n");
-               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-               goto rlt;
+                if(g_https_cfg.send_buff == NULL){
+                    if(!create_send_buffer(g_https_cfg.data_len))
+                    {
+                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST: buffer malloc fail \r\n");
+                        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+                        goto rlt;
+                    }
+                }
+                
+                savedata(output_buf);
+
+                if(g_https_cfg.buff_offset < g_https_cfg.data_len)
+                {
+                    QAT_Response_Str(QAT_RC_OK, NULL);
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, ">\r\n");
+                    QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                }
+                else
+                {
+                    result = at_httpc_post(g_https_cfg.temp_url,g_https_cfg.data_len,g_https_cfg.send_buff);
+
+                    QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+                    reset_temp_resource();
+                }
+            }
+            else  //send directly
+            {
+                result = at_httpc_post(g_https_cfg.temp_url,g_https_cfg.data_len,output_buf);
+                QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+                reset_temp_resource();
             }
             
-           printf("post url:%d \r\n",g_https_cfg.temp_url);
-           result = at_httpc_post(g_https_cfg.temp_url,revlen,output_buf);
-
-           QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
-
-           if(result!=QAPI_OK)
-           {
-             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST:SEND FAIL\r\n");
-             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-             goto rlt;
-
-           }
-
-            break;
+           break;
       }
       
       default:
@@ -346,22 +370,16 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
 
    switch (Op_Type)
    {
-      case QAT_OP_QUERY:
+      case QAT_OP_EXEC:
       {
-         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT=<\"url\">,<content_type>,<length>\r\n");
+         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT=<\"url\">,<content_type>,<length>,[<\"http_req_header\">],[...]\r\n");
          rc = QAT_Response_Str(QAT_RC_OK, buffer);
          break;
       }
 
-      case QAT_OP_EXEC:		     /* AT+WRTMEM */
-      {	
-
-         break;
-      }
-      
       case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
       {
-         if(Parameter_Count != 3)
+         if(Parameter_Count < 3)
          {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT:Invalid Parameter Count %d\r\n", Parameter_Count);
             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
@@ -370,11 +388,10 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
          
          if(FALSE == saveUrl(Parameter_List[0].String_Value))
          {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT:Invalid URL \r\n");
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT:Save URL fail\r\n");
             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
             goto rlt;
          }
-         printf("temp_url: %s\n", g_https_cfg.temp_url);
 
          if(strlen(g_https_cfg.temp_url) == 0)
          {
@@ -391,14 +408,15 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
          }
          
          uint8_t content_type = (uint8_t)Parameter_List[1].Integer_Value;
-         if(!Parameter_List[1].Integer_Is_Valid || (content_type < 0 || content_type>4))
+         if(!Parameter_List[1].Integer_Is_Valid || 
+            (content_type < QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED || content_type > QAT_CONTENT_TYPE_TEXT_XML))
          {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT:Invalid content type\r\n");
             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
             goto rlt;
          }
 
-         if(!Parameter_List[2].Integer_Is_Valid)
+         if(!Parameter_List[2].Integer_Is_Valid || Parameter_List[2].Integer_Value < 1)
          {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT:Invalid length value\r\n");
             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
@@ -411,10 +429,30 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
             goto rlt;
          }
+
+         //g_https_cfg.content_type = content_type;
+         if(!save_content_type(content_type))
+         {
+             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT: save headerfield content_type fail\r\n");
+             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+             goto rlt;
+         }
          
-         g_https_cfg.content_type = content_type;
          g_https_cfg.data_len = Parameter_List[2].Integer_Value;
-         
+
+         if(Parameter_Count >3)
+         {
+           uint8_t headerfield_num = Parameter_Count -3;
+           for(uint8_t i=0; i < headerfield_num; i++)
+           {
+                if(FALSE == saveheaderfield(Parameter_List[3+i].String_Value))
+                {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT: save headerfield fail\r\n");
+                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto rlt;
+                }
+           }
+         }
 
         extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
         memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+HTTPPUT",strlen("+HTTPPUT"));
@@ -431,30 +469,41 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
       {
             uint32_t revlen = Parameter_Count;
             char * output_buf = (char*)Parameter_List;
-            if(revlen > HTTP_BODY_BUFFER_SIZE)
+
+            if(revlen < g_https_cfg.data_len)
             {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT:data length can't bigger than 300\r\n");
-               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-               goto rlt;
-            }
+                if(g_https_cfg.send_buff == NULL){
+                    if(!create_send_buffer(g_https_cfg.data_len))
+                    {
+                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT: buffer malloc fail \r\n");
+                        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+                        goto rlt;
+                    }
+                }
+                
+                savedata(output_buf);
 
-            if(revlen > g_https_cfg.data_len)
+                if(g_https_cfg.buff_offset < g_https_cfg.data_len)
+                {
+                    QAT_Response_Str(QAT_RC_OK, NULL);
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, ">\r\n");
+                    QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                }
+                else
+                {
+                    result = at_httpc_put(g_https_cfg.temp_url,g_https_cfg.data_len,g_https_cfg.send_buff);
+                    QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+                    reset_temp_resource();
+                }
+            }
+            else  //send directly
             {
-               //todo
+                result = at_httpc_put(g_https_cfg.temp_url,g_https_cfg.data_len,output_buf);
+                QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+                reset_temp_resource();
             }
-
-           result = at_httpc_put(g_https_cfg.temp_url,revlen,output_buf);
-            
-           QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
-
-           if(result!=QAPI_OK)
-           {
-             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT:SEND FAIL\r\n");
-             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-             goto rlt;
-
-           }
-
+      
             break;
       }
       
@@ -469,8 +518,6 @@ rlt:
 
 static QAT_Command_Status_t Extend_Command_HttpUrlCfg(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
-
-    char *buffer_test;
     QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
     char buffer[HTTP_STR_BUFFER_LENGTH];
 
@@ -537,6 +584,7 @@ static QAT_Command_Status_t Extend_Command_HttpUrlCfg(uint32_t Op_Type, uint32_t
 
             memset(g_https_cfg.url, 0, len+1);
             g_https_cfg.url_size = len;
+            g_https_cfg.buff_offset = 0;
 
             extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
             memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+HTTPURLCFG",strlen("+HTTPURLCFG"));
@@ -552,30 +600,26 @@ static QAT_Command_Status_t Extend_Command_HttpUrlCfg(uint32_t Op_Type, uint32_t
             //revlen is contain the '\0'
             uint32_t revlen = Parameter_Count;
             char * output_buf = (char*)Parameter_List;
-            //uint32_t valid_data_len = (revlen <= (ask_data_len - g_https_cfg.url_size))? 
-            //                        revlen-1 : (ask_data_len - g_https_cfg.url_size);
-
-            //snprintf(buffer, HTTP_STR_BUFFER_LENGTH,"+HTTPSSLCFG:url_size:%d\r\n", g_https_cfg.url_size);
-            //QAT_Response_Str(QAT_RC_OK, buffer);
-            //memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
-
-            if(revlen>0) 
+            if(revlen > 0)
             {
-                 if(revlen <= g_https_cfg.url_size)
-                 {
-                     memcpy(g_https_cfg.url, output_buf, revlen);
-                     g_https_cfg.url_size = revlen -1;
-                 }
-                 else
-                 {
-                     memcpy(g_https_cfg.url, output_buf, g_https_cfg.url_size);
-                     g_https_cfg.url[g_https_cfg.url_size] = '\0';
-                 }
+                g_https_cfg.buff_offset += 
+                        snprintf((char*)(g_https_cfg.url + g_https_cfg.buff_offset), 
+                        g_https_cfg.url_size - g_https_cfg.buff_offset +1,"%s", output_buf) - 1;
             }
-            
-            rc = QAT_Response_Str(QAT_RC_OK, NULL);
-            QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
 
+            if(g_https_cfg.buff_offset < g_https_cfg.url_size)
+            {
+                QAT_Response_Str(QAT_RC_OK, NULL);
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, ">\r\n");
+                QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+            }
+            else
+            {
+                rc = QAT_Response_Str(QAT_RC_OK, NULL);
+                QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
+                reset_temp_resource();
+            }
+  
             break;
       }
 
@@ -598,7 +642,6 @@ rlt:
 
 static QAT_Command_Status_t Extend_Command_HttpSslCfg(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
-   //char *buffer_test;
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
    qapi_Status_t result = QAPI_OK;
    qbool_t  isIntegerValid = false;
@@ -776,6 +819,94 @@ rlt:
    return rc;
 }
 
+static QAT_Command_Status_t Extend_Command_HttpNetCfg(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+   QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+   qapi_Status_t result = QAPI_OK;
+   qbool_t  isIntegerValid = false;
+   char buffer[HTTP_STR_BUFFER_LENGTH];
+
+   switch (Op_Type)
+   {
+      case QAT_OP_EXEC:		     /* AT+WRTMEM */
+      {	
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG=<type>,<port>\r\n");
+        rc = QAT_Response_Str(QAT_RC_OK, buffer);
+        break;
+      }
+      
+      case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
+      {
+
+        if(Parameter_Count !=2)
+        {
+           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid Parameter Count %d\r\n", Parameter_Count);
+           rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+           goto rlt;
+        }
+        
+        int type = Parameter_List[0].Integer_Value;
+        isIntegerValid = Parameter_List[0].Integer_Is_Valid;
+
+        if(!isIntegerValid||(type>2 ||type<1) )
+        {
+           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid type value\r\n");
+           rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+           goto rlt;
+        }
+
+        int port = Parameter_List[1].Integer_Value;
+        isIntegerValid = Parameter_List[1].Integer_Is_Valid;
+        
+        if(!isIntegerValid)
+        {
+           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid port value\r\n");
+           rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+           goto rlt;
+        }
+
+        if(type == QAT_HTTP)
+        {
+            g_https_cfg.http_port = port;
+            g_https_cfg.http_port_set = TRUE;
+
+            //0 is reserved
+            if(port == 0)
+               g_https_cfg.http_port_set = FALSE; 
+
+        }
+        else if(type == QAT_HTTPS)
+        {
+            g_https_cfg.https_port = port;
+            g_https_cfg.https_port_set = TRUE;
+
+            //0 is reserved
+            if(port == 0)
+               g_https_cfg.https_port_set = FALSE;
+        }
+        
+        QAT_Response_Str(QAT_RC_OK, NULL);
+        
+        break;
+      }
+
+      case QAT_OP_QUERY:
+      {
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH,"+HTTPNETCFG:http port:%d, https port:%d\r\n", 
+        g_https_cfg.http_port, g_https_cfg.https_port);
+
+        rc = QAT_Response_Str(QAT_RC_OK, buffer);
+        break;
+      }
+      
+      default:
+         ;
+   }
+rlt:
+   memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
+   return rc;
+}
+
 /**
    @brief Processes the Extend command from the QAT.
 
@@ -801,7 +932,7 @@ static QAT_Command_Status_t Extend_Command_HttpClient(uint32_t Op_Type, uint32_t
    {
       case QAT_OP_EXEC:		     /* AT+WRTMEM */
       {	
-         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT=<opt>,<content-type>,<\"url\">,[<\"data\">]\r\n");
+         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT=<opt>,<content-type>,<\"url\">,[<\"data\">],[<\"http_req_header\">],[...]\r\n");
          rc = QAT_Response_Str(QAT_RC_OK, buffer);
 
          break;
@@ -810,27 +941,28 @@ static QAT_Command_Status_t Extend_Command_HttpClient(uint32_t Op_Type, uint32_t
       case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
       {
       
-        if(Parameter_Count<1 || Parameter_Count>5)
+        if(Parameter_Count<3)
         {
-           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid Parameter Count %d\r\n", Parameter_Count);
+           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: Invalid Parameter Count %d\r\n", Parameter_Count);
            rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
            goto rlt;
         }
         
         int32_t opt = Parameter_List[0].Integer_Value;
 
-        if(!Parameter_List[0].Integer_Is_Valid || (opt < 1 || opt>5) )
+        if(!Parameter_List[0].Integer_Is_Valid || (opt < QAT_HTTP_CLIENT_HEAD || opt > QAT_HTTP_CLIENT_PUT) )
         {
-           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid opt type\r\n");
+           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: Invalid opt type\r\n");
            rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
            goto rlt;
         }
         
         int32_t content_type = Parameter_List[1].Integer_Value;
         
-        if(!Parameter_List[1].Integer_Is_Valid || (content_type < 0 || content_type>4))
+        if(!Parameter_List[1].Integer_Is_Valid || 
+            (content_type < QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED || content_type > QAT_CONTENT_TYPE_TEXT_XML))
         {
-           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid content type\r\n");
+           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: Invalid content type\r\n");
            rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
            goto rlt;
         }
@@ -845,27 +977,39 @@ static QAT_Command_Status_t Extend_Command_HttpClient(uint32_t Op_Type, uint32_t
             }
             else
             {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "there is no valid url\r\n");
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: there is no valid url\r\n");
                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                goto rlt;
             }   
          }
-        if(Parameter_Count == 4)
+        if(Parameter_Count >= 4)
         {
             data_buf = Parameter_List[3].String_Value;
         }
+
+        if(Parameter_Count >4)
+        {
+           uint8_t headerfield_num = Parameter_Count - 4;
+           for(uint8_t i=0; i < headerfield_num; i++)
+           {
+                if(FALSE == saveheaderfield(Parameter_List[4+i].String_Value))
+                {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: save headerfield fail\r\n");
+                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto rlt;
+                }
+           }
+        }
         
-        g_https_cfg.content_type = content_type;
-        
+        //g_https_cfg.content_type = content_type;
+        if(!save_content_type(content_type))
+        {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: save headerfield content_type fail\r\n");
+            rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+            goto rlt;
+        }
+
         result = at_httpc_request(opt,url,data_buf);
-        if(result == QAPI_OK)
-        {
-            rc = QAT_Response_Str(QAT_RC_OK, NULL);
-        }
-        else
-        {
-            rc = QAT_Response_Str(QAT_RC_ERROR, NULL);
-        }
 
         break;
       }
@@ -876,6 +1020,7 @@ static QAT_Command_Status_t Extend_Command_HttpClient(uint32_t Op_Type, uint32_t
 
 rlt:
    memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
+   reset_temp_resource();
    return rc;
 }
 
@@ -921,10 +1066,9 @@ qapi_Status_t at_httpc_new_session (char *url,int32_t timeout)
     Parameter_List[Parameter_Count].Integer_Is_Valid =true;
     Parameter_List[Parameter_Count].Integer_Value = timeout;
     Parameter_Count++;
-    printf("isSecureSession ?\n");
+
     if(isSecureSession(url))
     {
-        printf("isSecureSession:yes\n");
         int scheme = g_https_cfg.https_auth_type;
         if (scheme == AT_HTTPS_NOT_AUTH) {
            //nothing to do
@@ -1004,11 +1148,25 @@ qapi_Status_t at_httpc_conn(char *url)
     Parameter_List[Parameter_Count].Integer_Is_Valid =true;
     if(isSecureSession(url))
     {
-        Parameter_List[Parameter_Count].Integer_Value = HTTPS_DEFAULT_PORT;
+        if(g_https_cfg.https_port_set)
+        {
+            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_port;
+        }
+        else
+        {
+            Parameter_List[Parameter_Count].Integer_Value = HTTPS_DEFAULT_PORT;
+        }
     }
     else
     {
-        Parameter_List[Parameter_Count].Integer_Value = HTTP_DEFAULT_PORT;
+        if(g_https_cfg.http_port_set)
+        {
+            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.http_port;
+        }
+        else
+        {
+            Parameter_List[Parameter_Count].Integer_Value = HTTP_DEFAULT_PORT;
+        }
     }
     
     Parameter_Count++;
@@ -1152,7 +1310,7 @@ qapi_Status_t at_httpc_setparameter(char *data_buf)
     return rlt;
 }
 
-qapi_Status_t at_httpc_addheaderfield(uint8_t content_type)
+qapi_Status_t at_httpc_addheaderfield(/*uint8_t headfield_type,*/uint8_t index)
 {
     qapi_Status_t rlt = QAPI_OK;
     char buffer[HTTP_STR_BUFFER_LENGTH];
@@ -1164,58 +1322,77 @@ qapi_Status_t at_httpc_addheaderfield(uint8_t content_type)
     Parameter_List[Parameter_Count].Integer_Is_Valid = true;
     Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
     Parameter_Count++;
-
-    switch(content_type)
+    
+#if 0
+    if(headfield_type == QAT_HEAD_CONTENT_TYPE)
     {
-        
-        case QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED:
+        switch(index)
         {
-           //it's default type, like: Content-Type: application/x-www-form-urlencoded
-           Parameter_List[Parameter_Count].String_Value = "Content-Type";
-           Parameter_Count++;
-           
-           Parameter_List[Parameter_Count].String_Value = "application/x-www-form-urlencoded";
-           Parameter_Count++;
-           break;
-        }
-        case QAT_CONTENT_TYPE_JSON:
-        {
-           Parameter_List[Parameter_Count].String_Value = "Content-Type";
-           Parameter_Count++;
-           
-           Parameter_List[Parameter_Count].String_Value = "application/json";
-           Parameter_Count++;
-
-           break;
-        }
-        case QAT_CONTENT_TYPE_FORM_DATA:
-        {
-
-           Parameter_List[Parameter_Count].String_Value = "Content-Type";
-           Parameter_Count++;
-           
-           Parameter_List[Parameter_Count].String_Value = "multipart/form-data";
-           Parameter_Count++;
-
-
-           break;
-        }
-        case QAT_CONTENT_TYPE_TEXT_XML:
-        {
-           Parameter_List[Parameter_Count].String_Value = "Content-Type";
-           Parameter_Count++;
-           
-           Parameter_List[Parameter_Count].String_Value = " text/xml";
-           Parameter_Count++;
-
-
-           break;
-        }
-
-        default:
-         ;
             
+            case QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED:
+            {
+               //it's default type, like: Content-Type: application/x-www-form-urlencoded
+               Parameter_List[Parameter_Count].String_Value = "Content-Type";
+               Parameter_Count++;
+               
+               Parameter_List[Parameter_Count].String_Value = "application/x-www-form-urlencoded";
+               Parameter_Count++;
+               break;
+            }
+            case QAT_CONTENT_TYPE_JSON:
+            {
+               Parameter_List[Parameter_Count].String_Value = "Content-Type";
+               Parameter_Count++;
+               
+               Parameter_List[Parameter_Count].String_Value = "application/json";
+               Parameter_Count++;
+
+               break;
+            }
+            case QAT_CONTENT_TYPE_FORM_DATA:
+            {
+
+               Parameter_List[Parameter_Count].String_Value = "Content-Type";
+               Parameter_Count++;
+               
+               Parameter_List[Parameter_Count].String_Value = "multipart/form-data";
+               Parameter_Count++;
+
+
+               break;
+            }
+            case QAT_CONTENT_TYPE_TEXT_XML:
+            {
+               Parameter_List[Parameter_Count].String_Value = "Content-Type";
+               Parameter_Count++;
+               
+               Parameter_List[Parameter_Count].String_Value = " text/xml";
+               Parameter_Count++;
+
+
+               break;
+            }
+
+            default:
+             ;
+                
+        }
     }
+    else  //the other header fields set here
+    {
+        Parameter_List[Parameter_Count].String_Value = g_https_cfg.header_field[index].name;
+        Parameter_Count++;
+
+        Parameter_List[Parameter_Count].String_Value = g_https_cfg.header_field[index].value;
+        Parameter_Count++;
+    }
+#endif
+
+    Parameter_List[Parameter_Count].String_Value = g_https_cfg.header_field[index].name;
+    Parameter_Count++;
+
+    Parameter_List[Parameter_Count].String_Value = g_https_cfg.header_field[index].value;
+    Parameter_Count++;
 
     rlt = httpc_command_handler(Parameter_Count,Parameter_List);
     if(rlt != QAPI_OK)
@@ -1230,6 +1407,7 @@ qapi_Status_t at_httpc_addheaderfield(uint8_t content_type)
     memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
     return rlt;
 }
+
 
 qapi_Status_t at_httpc_setbodydata(char *data_buf,uint32_t len)
 {
@@ -1270,7 +1448,7 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
 {
     qapi_Status_t rlt = QAPI_OK;
     char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_PATH_STR_BUFFER_LENGTH];
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
 
     //httpc stop
@@ -1308,11 +1486,10 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
         QAT_Response_Str(QAT_RC_ERROR, buffer);
         goto endpiont;
     }
-
-    printf("HTTPCPUT: addheaderfield\r\n");
+#if 0
     if(g_https_cfg.content_type != QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED)
     {
-        rlt = at_httpc_addheaderfield(g_https_cfg.content_type);
+        rlt = at_httpc_addheaderfield(QAT_HEAD_CONTENT_TYPE,g_https_cfg.content_type);
         if(rlt != QAPI_OK)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: add headerfield fail\r\n");
@@ -1321,22 +1498,35 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
     
         }
     }
+#endif
+    if(g_https_cfg.header_field_num > 0)
+    {
+       for(uint8_t i=0; i < g_https_cfg.header_field_num; i++)
+       {
+           rlt = at_httpc_addheaderfield(i);
+           if(rlt != QAPI_OK)
+           {
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: add headerfield fail, index:%d\r\n",i);
+               QAT_Response_Str(QAT_RC_ERROR, buffer);
+               goto endpiont;
+   
+           }
+       }
+        
+    }
 
-    //prepare data
-    //ttpc setparam <client_num> <key> <value>
+    //httpc setparam <client_num> <key> <value>
     if((data_buf != NULL) && (opt==QAT_HTTP_CLIENT_POST ||opt==QAT_HTTP_CLIENT_PUT))
     {
         //process key/value data, example: key1=value1&key2=value2
+#if 0
         if(strstr(data_buf,"="))
         {
-            
             rlt = at_httpc_setparameter(data_buf);
             if(rlt!= QAPI_OK)
             {
                 goto endpiont;
             }
-
-            
         }
         else
         {
@@ -1348,6 +1538,14 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
                 goto endpiont;
             }
         }
+#endif
+       //httpc setbody data
+       uint32_t revlen = strlen(data_buf);
+       rlt = at_httpc_setbodydata(data_buf,revlen);
+       if(rlt!= QAPI_OK)
+       {
+           goto endpiont;
+       }
     }
 
 
@@ -1421,6 +1619,24 @@ endpiont:
    {
       if(at_rec_data_finish || (rlt != QAPI_OK))
       {
+           if(at_rec_data_finish)
+           {
+              if((at_httpc_method == QAT_HTTP_POST)||(at_httpc_method == QAT_HTTP_PUT))
+              {
+                  snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
+                  QAT_Response_Str(QAT_RC_OK, buffer);
+              }
+              else
+              {
+                  QAT_Response_Str(QAT_RC_OK, NULL);
+              }
+           }
+           else
+           {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: SEND FAIL, error_code:%d\r\n",rlt);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+           }
+      
            //httpc disconn
            rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
            if(rlt != QAPI_OK)
@@ -1444,7 +1660,7 @@ endpiont:
 
       if(count>HTTP_WAIT_RSP_TIME)
       {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: SEND FAIL\r\n");
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: SEND FAIL, timeout\r\n");
         QAT_Response_Str(QAT_RC_ERROR, buffer);
 
         //httpc disconn
@@ -1474,7 +1690,7 @@ qapi_Status_t at_httpc_getsize (char *url, int32_t timeout)
 {
     qapi_Status_t rlt = QAPI_OK;
     char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_PATH_STR_BUFFER_LENGTH];
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
 
     //httpc stop
@@ -1556,14 +1772,14 @@ endpiont:
         if(rlt != QAPI_OK)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: session disconn fail\r\n");
-            QAT_Response_Str(QAT_RC_QUIET, buffer);
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
         }
         //httpc stop
         rlt = at_httpc_stop();
         if(rlt != QAPI_OK)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: client stop fail\r\n");
-            QAT_Response_Str(QAT_RC_QUIET, buffer);
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
         }
 
          break;
@@ -1574,22 +1790,22 @@ endpiont:
 
       if(count>HTTP_WAIT_RSP_TIME)
       {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: timeout!\r\n");
-        QAT_Response_Str(QAT_RC_QUIET, buffer);
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: GET FAIL, timeout!\r\n");
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
 
         //httpc disconn
         rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
         if(rlt != QAPI_OK)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: session disconn fail\r\n");
-            QAT_Response_Str(QAT_RC_QUIET, buffer);
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
         }
         //httpc stop
         rlt = at_httpc_stop();
         if(rlt != QAPI_OK)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: client stop fail\r\n");
-            QAT_Response_Str(QAT_RC_QUIET, buffer);
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
         }
         break;
       }
@@ -1605,7 +1821,7 @@ qapi_Status_t at_httpc_get (char *url, int32_t timeout)
 {
     qapi_Status_t rlt = QAPI_OK;
     char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_PATH_STR_BUFFER_LENGTH];
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
 
 //#if 0
@@ -1687,14 +1903,14 @@ endpiont:
           if(rlt != QAPI_OK)
           {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: session disconn fail\r\n");
-            QAT_Response_Str(QAT_RC_QUIET, buffer);
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
           }
           //httpc stop
           rlt = at_httpc_stop();
           if(rlt != QAPI_OK)
           {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: client stop fail\r\n");
-            QAT_Response_Str(QAT_RC_QUIET, buffer);
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
           }
           
           break;
@@ -1705,22 +1921,22 @@ endpiont:
 
         if(count>HTTP_WAIT_RSP_TIME)
         {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: get fail, timeout\r\n");
-            QAT_Response_Str(QAT_RC_QUIET, buffer);
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: GET FAIL, timeout\r\n");
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
 
             //httpc disconn
             rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
             if(rlt != QAPI_OK)
             {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: session disconn fail\r\n");
-                QAT_Response_Str(QAT_RC_QUIET, buffer);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
             }
             //httpc stop
             rlt = at_httpc_stop();
             if(rlt != QAPI_OK)
             {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: client stop fail\r\n");
-                QAT_Response_Str(QAT_RC_QUIET, buffer);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
             }
         }
    
@@ -1733,7 +1949,7 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
 {
     qapi_Status_t rlt = QAPI_OK;
     char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_PATH_STR_BUFFER_LENGTH];
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
 
     //httpc stop
@@ -1771,9 +1987,8 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
         QAT_Response_Str(QAT_RC_ERROR, buffer);
         goto endpiont;
     }
-    
-    printf("HTTPCPUT: addheaderfield\r\n");
-    rlt = at_httpc_addheaderfield(g_https_cfg.content_type);
+#if 0
+    rlt = at_httpc_addheaderfield(QAT_HEAD_CONTENT_TYPE,g_https_cfg.content_type);
     if(rlt != QAPI_OK)
     {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: add headerfield fail\r\n");
@@ -1781,8 +1996,24 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
         goto endpiont;
 
     }
+#endif
+    if(g_https_cfg.header_field_num > 0)
+    {
+       for(uint8_t i=0; i < g_https_cfg.header_field_num; i++)
+       {
+           rlt = at_httpc_addheaderfield(i);
+           if(rlt != QAPI_OK)
+           {
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: add headerfield fail, index:%d\r\n",i);
+               QAT_Response_Str(QAT_RC_ERROR, buffer);
+               goto endpiont;
+   
+           }
+       }
+        
+    }
     
-    printf("HTTPCPUT: setbodydata\r\n");
+    //printf("HTTPCPUT: setbodydata\r\n");
     rlt = at_httpc_setbodydata(data, data_len);
     if(rlt != QAPI_OK)
     {
@@ -1833,13 +2064,13 @@ endpiont:
        {
            if(at_rec_data_finish)
            {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: SEND OK\r\n");
-               QAT_Response_Str(QAT_RC_QUIET, buffer);
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
+                QAT_Response_Str(QAT_RC_OK, buffer);
            }
            else
            {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: SEND FAIL\r\n");
-                QAT_Response_Str(QAT_RC_QUIET, buffer);
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: SEND FAIL, error_code:%d\r\n",rlt);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
            }
            
            //httpc disconn
@@ -1865,8 +2096,8 @@ endpiont:
 
       if(count>HTTP_WAIT_RSP_TIME)
       {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: SEND FAIL\r\n");
-        QAT_Response_Str(QAT_RC_QUIET, buffer);
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: SEND FAIL, timeout\r\n");
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
 
         //httpc disconn
         rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
@@ -1895,7 +2126,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
 {
     qapi_Status_t rlt = QAPI_OK;
     char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_PATH_STR_BUFFER_LENGTH];
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
 
     //httpc stop
@@ -1916,7 +2147,6 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         goto endpiont;
     }
 
-    printf("post new session:%d \r\n",url);
     //httpc new session
      rlt = at_httpc_new_session(url,TIMEOUT_MS);
     if(rlt != QAPI_OK)
@@ -1925,7 +2155,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         QAT_Response_Str(QAT_RC_OK, buffer);
         goto endpiont;
     }
-    printf("post conn:%d \r\n",url);
+
     //httpc conn
     rlt = at_httpc_conn(url);
     if(rlt != QAPI_OK)
@@ -1935,9 +2165,24 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         goto endpiont;
     }
 
+    if(g_https_cfg.header_field_num > 0)
+    {
+       for(uint8_t i=0; i < g_https_cfg.header_field_num; i++)
+       {
+           rlt = at_httpc_addheaderfield(i);
+           if(rlt != QAPI_OK)
+           {
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: add headerfield fail, index:%d\r\n",i);
+               QAT_Response_Str(QAT_RC_ERROR, buffer);
+               goto endpiont;
+   
+           }
+       }
+        
+    }
 
     rlt = at_httpc_setbodydata(data, data_len);
-    printf("post setbody\r\n");
+    //printf("post setbody\r\n");
 
     if(rlt == QAPI_OK)
     {
@@ -1958,10 +2203,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         Parameter_List[Parameter_Count].Integer_Is_Valid =false;
         Parameter_List[Parameter_Count].String_Value = path_url;
         Parameter_Count++;
-        printf("post path_url:%d \r\n",path_url);
-    
-        
-        
+
         at_httpc_method = QAT_HTTP_POST;
         rlt = httpc_command_handler(Parameter_Count,Parameter_List);
         if(rlt != QAPI_OK)
@@ -1981,13 +2223,13 @@ endpiont:
       {
            if(at_rec_data_finish)
            {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND OK\r\n");
-               QAT_Response_Str(QAT_RC_QUIET, buffer);
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
+               QAT_Response_Str(QAT_RC_OK, buffer);
            }
            else
            {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL\r\n");
-                QAT_Response_Str(QAT_RC_QUIET, buffer);
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, error_code:%d\r\n",rlt);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
            }
 
 
@@ -2014,8 +2256,8 @@ endpiont:
 
       if(count>HTTP_WAIT_RSP_TIME)
       {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL\r\n");
-        QAT_Response_Str(QAT_RC_QUIET, buffer);
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, timeout\r\n");
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
 
         //httpc disconn
         rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
@@ -2104,10 +2346,7 @@ void parseURL(const char *url, char *protocol, char *domain, char *path)
 //get host like http://www.baidu.com
 void gethostURL(const char *url, char*hostURL)
 {
-     const char *orignalurl = url;
-    
-     printf("orignal url: %s\n", orignalurl);
-
+    const char *orignalurl = url;
     const char *protocol_end = strstr(url, "://"); 
     if (protocol_end != NULL) 
     { 
@@ -2206,9 +2445,196 @@ qbool_t saveUrl(const char *url)
 
         rlt= TRUE;
     }
+    else  //user may can use "" as url,that means the configured url will be used
+    {
+        rlt= TRUE;
+    } 
 
     return rlt;
 }
+
+qbool_t saveheaderfield(const char *headerfield)
+{
+   qbool_t rlt = FALSE;
+   char buffer[HTTP_STR_BUFFER_LENGTH];
+
+   if(g_https_cfg.header_field_num < QAT_HTTPC_MAX_HEADER_FIELD)
+   {
+       struct at_header_field* header_field = &g_https_cfg.header_field[g_https_cfg.header_field_num];
+       if(header_field->name != NULL)
+       {
+           free(header_field->name);
+           header_field->name = NULL;
+       }
+       if(header_field->value != NULL)
+       {
+           free(header_field->value);
+           header_field->value = NULL;
+       }
+       
+       const char *name_end = strstr(headerfield, ":"); 
+       if (name_end != NULL) 
+       { 
+           uint32 name_len = name_end - headerfield;
+           if(name_len > 0)
+           {
+                header_field->name = malloc(name_len +1);
+                if (!header_field->name) {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc:memory malloc fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    return rlt;
+                }
+            
+                memset(header_field->name, 0, name_len+1);
+                snprintf(header_field->name, name_len + 1, headerfield);
+                
+                uint32 len = strlen(headerfield);
+
+                header_field->value = malloc(len -name_len + 1);
+                memcpy(header_field->value, name_end+1, len -name_len);
+                header_field->value[len -name_len] = '\0';
+                
+                g_https_cfg.header_field_num ++;
+
+                rlt= TRUE;
+           }
+    	} 
+
+       
+   }
+   else
+   {
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc:the number of header_field is bigger than %d\r\n",QAT_HTTPC_MAX_HEADER_FIELD);
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
+   }
+
+   return rlt;
+}
+
+qbool_t save_content_type(uint8_t content_type)
+{
+   qbool_t rlt = FALSE;
+   char buffer[HTTP_STR_BUFFER_LENGTH];
+   char* name = "Content-Type";
+
+   if(g_https_cfg.header_field_num < QAT_HTTPC_MAX_HEADER_FIELD)
+   {
+       struct at_header_field* header_field = &g_https_cfg.header_field[g_https_cfg.header_field_num];
+       if(header_field->name != NULL)
+       {
+           free(header_field->name);
+           header_field->name = NULL;
+       }
+       if(header_field->value != NULL)
+       {
+           free(header_field->value);
+           header_field->value = NULL;
+       }
+
+       int name_len = strlen(name);
+       header_field->name = malloc(name_len +1);
+       if (!header_field->name) {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc:memory malloc fail\r\n");
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
+            return rlt;
+       }
+    
+       memset(header_field->name, 0, name_len+1);
+       snprintf(header_field->name, name_len + 1, name);
+        
+       switch(content_type)
+       {
+            case QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED:
+            {
+               //it's default type, like: Content-Type: application/x-www-form-urlencoded
+               char* value = "application/x-www-form-urlencoded";
+               uint32 val_len = strlen(value);
+               
+               header_field->value = malloc(val_len + 1);
+               if (!header_field->name) {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc:memory malloc fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    return rlt;
+               }
+               
+               memset(header_field->value, 0, val_len+1);
+               snprintf(header_field->value, val_len + 1, value);
+               rlt = TRUE;
+               
+               break;
+            }
+            case QAT_CONTENT_TYPE_JSON:
+            {
+               char* value = "application/json";
+               uint32 val_len = strlen(value);
+               
+               header_field->value = malloc(val_len + 1);
+               if (!header_field->name) {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc:memory malloc fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    return rlt;
+               }
+               
+               memset(header_field->value, 0, val_len+1);
+               snprintf(header_field->value, val_len + 1, value);
+               rlt = TRUE;
+               
+               break;
+            }
+            case QAT_CONTENT_TYPE_FORM_DATA:
+            {
+
+               char* value = "multipart/form-data";
+               uint32 val_len = strlen(value);
+               
+               header_field->value = malloc(val_len + 1);
+               if (!header_field->name) {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc:memory malloc fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    return rlt;
+               }
+               
+               memset(header_field->value, 0, val_len+1);
+               snprintf(header_field->value, val_len + 1, value);
+               rlt = TRUE;
+               
+               break;
+            }
+            case QAT_CONTENT_TYPE_TEXT_XML:
+            {
+               char* value = "text/xml";
+               uint32 val_len = strlen(value);
+               
+               header_field->value = malloc(val_len + 1);
+               if (!header_field->name) {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc:memory malloc fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    return rlt;
+               }
+               
+               memset(header_field->value, 0, val_len+1);
+               snprintf(header_field->value, val_len + 1, value);
+               rlt = TRUE;
+
+               break;
+            }
+
+            default:
+              return rlt
+             ;
+       }
+
+       g_https_cfg.header_field_num ++;
+   }
+   else
+   {
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc:the number of header_field is bigger than %d\r\n",QAT_HTTPC_MAX_HEADER_FIELD);
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
+   }
+
+   return rlt;
+}
+
 
 void resetSslInfo()
 {
@@ -2235,8 +2661,120 @@ qbool_t isSecureSession(const char *url)
     return rlt;
 }
 
+qbool_t create_send_buffer(int length)
+{
+    qbool_t rlt = FALSE;
 
+    if (g_https_cfg.send_buff != NULL) {
+         free(g_https_cfg.send_buff);
+         g_https_cfg.send_buff = NULL;
+    }
 
+    //more 1 bit for '\0'
+    g_https_cfg.send_buff = malloc(length+1);  
+    if (!g_https_cfg.send_buff) {
+       return rlt;
+    }
+
+    memset(g_https_cfg.send_buff, 0, length+1);
+    rlt = TRUE;
+    
+    return rlt;
+}
+
+void savedata(const char *data)
+{ 
+   //the length of send_buff is  g_https_cfg.data_len +1, more one bit for '\0'
+   g_https_cfg.buff_offset += 
+    snprintf((char*)(g_https_cfg.send_buff + g_https_cfg.buff_offset), g_https_cfg.data_len - g_https_cfg.buff_offset +1,
+            "%s", data) - 1;
+}
+
+void reset_temp_resource()
+{
+    //g_https_cfg.content_type = QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED;
+    for(uint8 i =0; i<g_https_cfg.header_field_num; i++ )
+    {
+       struct at_header_field* header_field = &g_https_cfg.header_field[i];
+       if(header_field->name != NULL)
+       {
+           free(header_field->name);
+           header_field->name = NULL;
+       }
+       if(header_field->value != NULL)
+       {
+           free(header_field->value);
+           header_field->value = NULL;
+       }
+    }
+    
+    g_https_cfg.header_field_num = 0;
+    g_https_cfg.buff_offset =0;
+    
+    if (g_https_cfg.send_buff != NULL) {
+         free(g_https_cfg.send_buff);
+         g_https_cfg.send_buff = NULL;
+    }
+
+    if (g_https_cfg.temp_url != NULL) {
+         free(g_https_cfg.temp_url);
+         g_https_cfg.temp_url = NULL;
+    }
+}
+
+qbool_t is_succ_resp_code(int errorcode)
+{
+    if (errorcode >= 200 && errorcode < 300) 
+    {
+      return TRUE;
+    }
+    return FALSE;
+}
+
+#if 0
+void reset_resource()
+{
+    resetSslInfo();
+
+    g_https_cfg.http_port = HTTP_DEFAULT_PORT;
+    g_https_cfg.http_port_set = FALSE;
+    g_https_cfg.https_port = HTTPS_DEFAULT_PORT;
+    g_https_cfg.https_port_set = FALSE;
+    
+    for(uint8 i =0; i<g_https_cfg.header_field_num; i++ )
+    {
+       struct at_header_field* header_field = &g_https_cfg.header_field[i];
+       if(header_field->name != NULL)
+       {
+           free(header_field->name);
+           header_field->name = NULL;
+       }
+       if(header_field->value != NULL)
+       {
+           free(header_field->value);
+           header_field->value = NULL;
+       }
+    }
+    
+    g_https_cfg.header_field_num = 0;
+    g_https_cfg.buff_offset =0;
+    
+    if (g_https_cfg.send_buff != NULL) {
+         free(g_https_cfg.send_buff);
+         g_https_cfg.send_buff = NULL;
+    }
+
+    if (g_https_cfg.url != NULL) {
+         free(g_https_cfg.url);
+         g_https_cfg.url = NULL;
+    }
+
+    if (g_https_cfg.temp_url != NULL) {
+         free(g_https_cfg.temp_url);
+         g_https_cfg.temp_url = NULL;
+    }
+}
+#endif
 static int at_arg_is_string(const char *arg)
 {
     int len = strlen(arg);
