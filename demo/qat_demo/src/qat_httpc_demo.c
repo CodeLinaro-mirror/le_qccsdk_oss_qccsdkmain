@@ -113,13 +113,8 @@ static QAT_Command_Status_t Extend_Command_HttpGetSize(uint32_t Op_Type, uint32_
                  goto rlt;
             }
         }
- 
-         result = at_httpc_getsize(url,timeout);
-         if(result == QAPI_OK)
-         {
-             rc = QAT_Response_Str(QAT_RC_OK, NULL);
-         }
 
+         result = at_httpc_getsize(url,timeout);
          break;
       }
 
@@ -188,7 +183,7 @@ static QAT_Command_Status_t Extend_Command_HttpGet(uint32_t Op_Type, uint32_t Pa
             timeout = Parameter_List[1].Integer_Value;
             if(!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout>180000))
             {
-                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid content type\r\n");
+                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid timeout value\r\n");
                  rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                  goto rlt;
             }
@@ -196,12 +191,8 @@ static QAT_Command_Status_t Extend_Command_HttpGet(uint32_t Op_Type, uint32_t Pa
         
 
         result = at_httpc_get(url,timeout);
-        if(result == QAPI_OK)
-        {
-            rc = QAT_Response_Str(QAT_RC_OK, NULL);
-        }
 
-         break;
+        break;
       }
       
       default:
@@ -1450,6 +1441,7 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
     char buffer[HTTP_STR_BUFFER_LENGTH];
     char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
+    qbool_t conn_enable = FALSE;
 
     //httpc stop
     rlt = at_httpc_stop();
@@ -1486,6 +1478,7 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
         QAT_Response_Str(QAT_RC_ERROR, buffer);
         goto endpiont;
     }
+    conn_enable = TRUE;
 #if 0
     if(g_https_cfg.content_type != QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED)
     {
@@ -1506,7 +1499,7 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
            rlt = at_httpc_addheaderfield(i);
            if(rlt != QAPI_OK)
            {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: add headerfield fail, index:%d\r\n",i);
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: add headerfield fail, index:%d\r\n",i);
                QAT_Response_Str(QAT_RC_ERROR, buffer);
                goto endpiont;
    
@@ -1623,7 +1616,7 @@ endpiont:
            {
               if((at_httpc_method == QAT_HTTP_POST)||(at_httpc_method == QAT_HTTP_PUT))
               {
-                  snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
+                  snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
                   QAT_Response_Str(QAT_RC_OK, buffer);
               }
               else
@@ -1633,17 +1626,21 @@ endpiont:
            }
            else
            {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: SEND FAIL, error_code:%d\r\n",rlt);
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: SEND FAIL, error_code:%d\r\n",rlt);
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
            }
       
            //httpc disconn
-           rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-           if(rlt != QAPI_OK)
+           if(conn_enable)
            {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: session disconn fail\r\n");
-               QAT_Response_Str(QAT_RC_ERROR, buffer);
+              rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+              if(rlt != QAPI_OK)
+              {
+                  snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: session disconn fail\r\n");
+                  QAT_Response_Str(QAT_RC_ERROR, buffer);
+              }
            }
+           
            //httpc stop
            rlt = at_httpc_stop();
            if(rlt != QAPI_OK)
@@ -1658,18 +1655,22 @@ endpiont:
       sleep(1);
       count++;
 
-      if(count>HTTP_WAIT_RSP_TIME)
+      if(count >= HTTP_WAIT_RSP_TIME)
       {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: SEND FAIL, timeout\r\n");
         QAT_Response_Str(QAT_RC_ERROR, buffer);
 
         //httpc disconn
-        rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-        if(rlt != QAPI_OK)
+        if(conn_enable)
         {
-           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: session disconn fail\r\n");
-           QAT_Response_Str(QAT_RC_ERROR, buffer);
+            rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+            if(rlt != QAPI_OK)
+            {
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: session disconn fail\r\n");
+               QAT_Response_Str(QAT_RC_ERROR, buffer);
+            }
         }
+        
         //httpc stop
         rlt = at_httpc_stop();
         if(rlt != QAPI_OK)
@@ -1692,6 +1693,8 @@ qapi_Status_t at_httpc_getsize (char *url, int32_t timeout)
     char buffer[HTTP_STR_BUFFER_LENGTH];
     char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
+    uint32 max_time_wait = timeout/1000 < 1?1:timeout/1000;
+    qbool_t conn_enable = FALSE;
 
     //httpc stop
     rlt = at_httpc_stop();
@@ -1725,9 +1728,10 @@ qapi_Status_t at_httpc_getsize (char *url, int32_t timeout)
     if(rlt != QAPI_OK)
     {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: connection fail\r\n");
-        QAT_Response_Str(QAT_RC_QUIET, buffer);
+        QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
         goto endpiont;
     }
+    conn_enable = TRUE;
 
     //Construct client request Command
     //httpc {get | head | post | put | delete | patch} <client_num> [<url>] [<chunk_flag>] [<chunk_size>]
@@ -1766,14 +1770,33 @@ endpiont:
    {
       if(at_rec_data_finish || (rlt != QAPI_OK))
       {
-        
-        //httpc disconn
-        rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-        if(rlt != QAPI_OK)
+        if(at_rec_data_finish)
         {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: session disconn fail\r\n");
-            QAT_Response_Str(QAT_RC_ERROR, buffer);
+            if(is_succ_resp_code(at_rec_error_code))
+            {
+                QAT_Response_Str(QAT_RC_OK, NULL);
+            }
+            else
+            {
+                QAT_Response_Str(QAT_RC_ERROR, NULL);
+            }
+            
         }
+        else
+        {
+            QAT_Response_Str(QAT_RC_ERROR, NULL);
+        }
+        //httpc disconn
+        if(conn_enable)
+        {
+            rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+            if(rlt != QAPI_OK)
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: session disconn fail\r\n");
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+            }
+        }
+        
         //httpc stop
         rlt = at_httpc_stop();
         if(rlt != QAPI_OK)
@@ -1788,18 +1811,22 @@ endpiont:
       sleep(1);
       count++;
 
-      if(count>HTTP_WAIT_RSP_TIME)
+      if(count >= max_time_wait)
       {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: GET FAIL, timeout!\r\n");
         QAT_Response_Str(QAT_RC_ERROR, buffer);
 
         //httpc disconn
-        rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-        if(rlt != QAPI_OK)
+        if(conn_enable)
         {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: session disconn fail\r\n");
-            QAT_Response_Str(QAT_RC_ERROR, buffer);
+            rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+            if(rlt != QAPI_OK)
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: session disconn fail\r\n");
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+            }
         }
+        
         //httpc stop
         rlt = at_httpc_stop();
         if(rlt != QAPI_OK)
@@ -1823,8 +1850,9 @@ qapi_Status_t at_httpc_get (char *url, int32_t timeout)
     char buffer[HTTP_STR_BUFFER_LENGTH];
     char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
+    uint32 max_time_wait = timeout/1000 < 1?1:timeout/1000;
+    qbool_t conn_enable = FALSE;
 
-//#if 0
     //httpc stop
     rlt = at_httpc_stop();
     if(rlt != QAPI_OK)
@@ -1833,7 +1861,6 @@ qapi_Status_t at_httpc_get (char *url, int32_t timeout)
         QAT_Response_Str(QAT_RC_QUIET, buffer);
         goto endpiont;
     }
-//#endif
 
     //httpc start
     rlt = at_httpc_start();
@@ -1861,6 +1888,7 @@ qapi_Status_t at_httpc_get (char *url, int32_t timeout)
         QAT_Response_Str(QAT_RC_QUIET, buffer);
         goto endpiont;
     }
+    conn_enable = TRUE;
 
     //Construct client request Command
     //httpc {get | head | post | put | delete | patch} <client_num> [<url>] [<chunk_flag>] [<chunk_size>]
@@ -1898,13 +1926,34 @@ endpiont:
     {
        if(at_rec_data_finish || (rlt != QAPI_OK))
        {
-          //httpc disconn
-          rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-          if(rlt != QAPI_OK)
-          {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: session disconn fail\r\n");
-            QAT_Response_Str(QAT_RC_ERROR, buffer);
-          }
+          if(at_rec_data_finish)
+           {
+                if(is_succ_resp_code(at_rec_error_code))
+                {
+                    QAT_Response_Str(QAT_RC_OK, NULL);
+                }
+                else
+                {
+                    QAT_Response_Str(QAT_RC_ERROR, NULL);
+                }
+                
+           }
+           else
+           {
+                QAT_Response_Str(QAT_RC_ERROR, NULL);
+           }
+           
+           //httpc disconn
+           if(conn_enable)
+           {
+             rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+             if(rlt != QAPI_OK)
+             {
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: session disconn fail\r\n");
+               QAT_Response_Str(QAT_RC_ERROR, buffer);
+             }
+           }
+          
           //httpc stop
           rlt = at_httpc_stop();
           if(rlt != QAPI_OK)
@@ -1918,19 +1967,24 @@ endpiont:
 
         sleep(1);
         count++;
+        printf("test count:%d, max:%d\n",count,max_time_wait);
 
-        if(count>HTTP_WAIT_RSP_TIME)
+        if(count>=max_time_wait)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: GET FAIL, timeout\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
 
             //httpc disconn
-            rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-            if(rlt != QAPI_OK)
+            if(conn_enable)
             {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: session disconn fail\r\n");
-                QAT_Response_Str(QAT_RC_ERROR, buffer);
+                rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+                if(rlt != QAPI_OK)
+                {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: session disconn fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                }
             }
+            
             //httpc stop
             rlt = at_httpc_stop();
             if(rlt != QAPI_OK)
@@ -1938,6 +1992,8 @@ endpiont:
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: client stop fail\r\n");
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
             }
+
+            break;
         }
    
     }
@@ -1951,6 +2007,7 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
     char buffer[HTTP_STR_BUFFER_LENGTH];
     char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
+    qbool_t conn_enable = FALSE;
 
     //httpc stop
     rlt = at_httpc_stop();
@@ -1987,6 +2044,7 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
         QAT_Response_Str(QAT_RC_ERROR, buffer);
         goto endpiont;
     }
+    conn_enable = TRUE;
 #if 0
     rlt = at_httpc_addheaderfield(QAT_HEAD_CONTENT_TYPE,g_https_cfg.content_type);
     if(rlt != QAPI_OK)
@@ -2074,12 +2132,16 @@ endpiont:
            }
            
            //httpc disconn
-           rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-           if(rlt != QAPI_OK)
+           if(conn_enable)
            {
-             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: session disconn fail\r\n");
-             QAT_Response_Str(QAT_RC_ERROR, buffer);
+              rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+              if(rlt != QAPI_OK)
+              {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: session disconn fail\r\n");
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+              }
            }
+           
            //httpc stop
            rlt = at_httpc_stop();
            if(rlt != QAPI_OK)
@@ -2094,18 +2156,22 @@ endpiont:
        sleep(1);
        count++;
 
-      if(count>HTTP_WAIT_RSP_TIME)
+      if(count >= HTTP_WAIT_RSP_TIME)
       {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: SEND FAIL, timeout\r\n");
         QAT_Response_Str(QAT_RC_ERROR, buffer);
 
         //httpc disconn
-        rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-        if(rlt != QAPI_OK)
+        if(conn_enable)
         {
-         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: session disconn fail\r\n");
-         QAT_Response_Str(QAT_RC_ERROR, buffer);
+            rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+            if(rlt != QAPI_OK)
+            {
+             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: session disconn fail\r\n");
+             QAT_Response_Str(QAT_RC_ERROR, buffer);
+            }
         }
+
         //httpc stop
         rlt = at_httpc_stop();
         if(rlt != QAPI_OK)
@@ -2128,6 +2194,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
     char buffer[HTTP_STR_BUFFER_LENGTH];
     char path_url[HTTP_URL_STR_BUFFER_LENGTH];
     uint16 count = 0;
+    qbool_t conn_enable = FALSE;
 
     //httpc stop
     rlt = at_httpc_stop();
@@ -2164,6 +2231,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         QAT_Response_Str(QAT_RC_OK, buffer);
         goto endpiont;
     }
+    conn_enable = TRUE;
 
     if(g_https_cfg.header_field_num > 0)
     {
@@ -2234,12 +2302,16 @@ endpiont:
 
 
            //httpc disconn
-           rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-           if(rlt != QAPI_OK)
+           if(conn_enable)
            {
-             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
-             QAT_Response_Str(QAT_RC_ERROR, buffer);
+              rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+              if(rlt != QAPI_OK)
+              {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+              }
            }
+           
            //httpc stop
            rlt = at_httpc_stop();
            if(rlt != QAPI_OK)
@@ -2260,12 +2332,16 @@ endpiont:
         QAT_Response_Str(QAT_RC_ERROR, buffer);
 
         //httpc disconn
-        rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-        if(rlt != QAPI_OK)
+        if(conn_enable)
         {
-         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
-         QAT_Response_Str(QAT_RC_ERROR, buffer);
+            rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+            if(rlt != QAPI_OK)
+            {
+             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+             QAT_Response_Str(QAT_RC_ERROR, buffer);
+            }
         }
+        
         //httpc stop
         rlt = at_httpc_stop();
         if(rlt != QAPI_OK)
