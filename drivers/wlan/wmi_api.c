@@ -480,6 +480,17 @@ static void wmi_set_param_event(void *msg)
 	SET_PDEV_PARAM_RESULT *buffer = (SET_PDEV_PARAM_RESULT*)msg;
 
 	qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    if (p_cxt->wlan_set_param_block_mode) {
+        uint8_t num = 0;
+        while (buffer->param_id != p_cxt->param_id) {
+            vTaskDelay(10 / portTICK_PERIOD_MS);
+            num++;
+            if (num >= 100) {
+                err_printf("param id can not match\n");
+                break;
+            }
+        }
+    }
 	if (buffer->param_id == p_cxt->param_id && p_cxt->wlan_set_param_block_mode) {
 		if(buffer->status == WIFI_STATUS_SUCCESS) {
 			set_wlan_qapi_error(QAPI_OK);
