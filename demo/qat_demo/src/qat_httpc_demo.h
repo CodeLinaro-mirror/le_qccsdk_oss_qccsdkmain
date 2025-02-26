@@ -61,7 +61,6 @@ struct at_https_global_config {
     char *send_buff;      //len <= HTTP_BODY_BUFFER_SIZE
     uint32_t buff_offset;
     uint32_t data_len;
-    //uint8_t content_type;
     uint8_t header_field_num;
     struct at_header_field header_field[QAT_HTTPC_MAX_HEADER_FIELD];
 };
@@ -153,7 +152,6 @@ AT+HTTPPOST:     Post HTTP data
 AT+HTTPPUT:      put HTTP data
 AT+HTTPURLCFG:   set/get long HTTP URL
 AT+HTTPSSLCFG:   set/get HTTP certificate
-AT+HTTPHEAD:     set/get HTTP HEAD
 */
 static QAT_Command_t QAT_HTTPC_Command_List[] =
 {
