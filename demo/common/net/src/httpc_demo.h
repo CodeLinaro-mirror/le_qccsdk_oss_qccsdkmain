@@ -34,7 +34,7 @@
 
 #ifdef CONFIG_QAT_HTTPC_DEMO
 extern uint16_t at_httpc_method;
-extern uint16_t at_rec_data_finish;
+extern int at_rec_state;
 extern uint16_t at_rec_error_code;
 
 

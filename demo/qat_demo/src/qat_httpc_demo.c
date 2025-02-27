@@ -17,7 +17,7 @@
 #include "qapi_console.h"
 #include "qcli_api.h"
 #include "qat_httpc_demo.h"
-
+#include "qapi_httpc.h"
 
 
 /*-------------------------------------------------------------------------
@@ -1115,7 +1115,7 @@ qapi_Status_t at_httpc_conn(char *url)
     char host[HTTP_HOST_STR_BUFFER_LENGTH];
     
     //reset flag at_httpc_stop
-    at_rec_data_finish = 0;
+    at_rec_state = QAPI_NET_HTTPC_RX_MORE_DATA;
     
     //Construct connect Command
     //httpc conn <client_num> <origin_server or proxy> [<port>]
@@ -1438,8 +1438,8 @@ endpiont:
 qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
 {
     qapi_Status_t rlt = QAPI_OK;
-    char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
+    char buffer[HTTP_STR_BUFFER_LENGTH]= {0};
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH]= {0};
     uint16 count = 0;
     qbool_t conn_enable = FALSE;
 
@@ -1592,7 +1592,13 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
     Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
     Parameter_Count++;
 
-    getpathURL(url,path_url);
+    if(!getpathURL(url,path_url))
+    {
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: get object url fail\r\n");
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
+        rlt = QAPI_ERR_INVALID_PARAM;
+        goto endpiont;
+    }
     Parameter_List[Parameter_Count].Integer_Is_Valid =false;
     Parameter_List[Parameter_Count].String_Value = path_url;
     Parameter_Count++;
@@ -1610,9 +1616,9 @@ endpiont:
 
    while(1)
    {
-      if(at_rec_data_finish || (rlt != QAPI_OK))
+      if((at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) || (rlt != QAPI_OK))
       {
-           if(at_rec_data_finish)
+           if(at_rec_state == QAPI_NET_HTTPC_RX_FINISHED)
            {
               if((at_httpc_method == QAT_HTTP_POST)||(at_httpc_method == QAT_HTTP_PUT))
               {
@@ -1624,12 +1630,33 @@ endpiont:
                   QAT_Response_Str(QAT_RC_OK, NULL);
               }
            }
+           else if(at_rec_state < QAPI_NET_HTTPC_RX_FINISHED)
+           {
+                if((at_httpc_method == QAT_HTTP_POST)||(at_httpc_method == QAT_HTTP_PUT))
+                 {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: SEND FAIL, error_code:%d\r\n",at_rec_state);
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                 }
+                 else
+                 {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: operation FAIL, error_code:%d\r\n",at_rec_state);
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                 }
+           }
            else
            {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: SEND FAIL, error_code:%d\r\n",rlt);
-                QAT_Response_Str(QAT_RC_ERROR, buffer);
+                if((at_httpc_method == QAT_HTTP_POST)||(at_httpc_method == QAT_HTTP_PUT))
+                {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: SEND FAIL, error_code:%d\r\n",rlt);
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                }
+                else
+                {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: operation FAIL, error_code:%d\r\n",rlt);
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                }
            }
-      
+           
            //httpc disconn
            if(conn_enable)
            {
@@ -1657,7 +1684,7 @@ endpiont:
 
       if(count >= HTTP_WAIT_RSP_TIME)
       {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: SEND FAIL, timeout\r\n");
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCLIENT: timeout\r\n");
         QAT_Response_Str(QAT_RC_ERROR, buffer);
 
         //httpc disconn
@@ -1690,8 +1717,8 @@ endpiont:
 qapi_Status_t at_httpc_getsize (char *url, int32_t timeout)
 {
     qapi_Status_t rlt = QAPI_OK;
-    char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
+    char buffer[HTTP_STR_BUFFER_LENGTH]= {0};
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH]= {0};
     uint16 count = 0;
     uint32 max_time_wait = timeout/1000 < 1?1:timeout/1000;
     qbool_t conn_enable = FALSE;
@@ -1746,7 +1773,13 @@ qapi_Status_t at_httpc_getsize (char *url, int32_t timeout)
     Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
     Parameter_Count++;
     
-    getpathURL(url,path_url);
+    if(!getpathURL(url,path_url))
+    {
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: get object url fail\r\n");
+        QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+        rlt = QAPI_ERR_INVALID_PARAM;
+        goto endpiont;
+    }
     Parameter_List[Parameter_Count].Integer_Is_Valid =false;
     Parameter_List[Parameter_Count].String_Value = path_url;
     Parameter_Count++;
@@ -1768,9 +1801,9 @@ endpiont:
 
    while(1)
    {
-      if(at_rec_data_finish || (rlt != QAPI_OK))
+      if((at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) || (rlt != QAPI_OK))
       {
-        if(at_rec_data_finish)
+        if(at_rec_state == QAPI_NET_HTTPC_RX_FINISHED)
         {
             if(is_succ_resp_code(at_rec_error_code))
             {
@@ -1782,10 +1815,16 @@ endpiont:
             }
             
         }
-        else
+        else if(at_rec_state < QAPI_NET_HTTPC_RX_FINISHED)
+        {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGETSIZE: HTTP Client Receive error: %d\r\n",at_rec_state);
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
+        }
+        else //rlt != QAPI_OK
         {
             QAT_Response_Str(QAT_RC_ERROR, NULL);
         }
+        
         //httpc disconn
         if(conn_enable)
         {
@@ -1847,8 +1886,8 @@ endpiont:
 qapi_Status_t at_httpc_get (char *url, int32_t timeout)
 {
     qapi_Status_t rlt = QAPI_OK;
-    char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
+    char buffer[HTTP_STR_BUFFER_LENGTH] = {0};
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH] = {0};
     uint16 count = 0;
     uint32 max_time_wait = timeout/1000 < 1?1:timeout/1000;
     qbool_t conn_enable = FALSE;
@@ -1903,7 +1942,13 @@ qapi_Status_t at_httpc_get (char *url, int32_t timeout)
     Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
     Parameter_Count++;
 
-    getpathURL(url,path_url);
+    if(!getpathURL(url,path_url))
+    {
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: get object url fail\r\n");
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
+        rlt = QAPI_ERR_INVALID_PARAM;
+        goto endpiont;
+    }
     Parameter_List[Parameter_Count].Integer_Is_Valid =false;
     Parameter_List[Parameter_Count].String_Value = path_url;
     Parameter_Count++;
@@ -1924,10 +1969,10 @@ qapi_Status_t at_httpc_get (char *url, int32_t timeout)
 endpiont:
     while(1)
     {
-       if(at_rec_data_finish || (rlt != QAPI_OK))
+       if((at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) || (rlt != QAPI_OK))
        {
-          if(at_rec_data_finish)
-           {
+          if(at_rec_state == QAPI_NET_HTTPC_RX_FINISHED)
+          {
                 if(is_succ_resp_code(at_rec_error_code))
                 {
                     QAT_Response_Str(QAT_RC_OK, NULL);
@@ -1937,6 +1982,11 @@ endpiont:
                     QAT_Response_Str(QAT_RC_ERROR, NULL);
                 }
                 
+           }
+           else if(at_rec_state < QAPI_NET_HTTPC_RX_FINISHED)
+           {
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: HTTP Client Receive error: %d\r\n",at_rec_state);
+               QAT_Response_Str(QAT_RC_ERROR, buffer);
            }
            else
            {
@@ -2004,8 +2054,8 @@ endpiont:
 qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
 {
     qapi_Status_t rlt = QAPI_OK;
-    char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
+    char buffer[HTTP_STR_BUFFER_LENGTH]= {0};
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH]= {0};
     uint16 count = 0;
     qbool_t conn_enable = FALSE;
 
@@ -2097,7 +2147,13 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
         Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
         Parameter_Count++;
         
-        getpathURL(url,path_url);
+        if(!getpathURL(url,path_url))
+        {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: get object url fail\r\n");
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
+            rlt = QAPI_ERR_INVALID_PARAM;
+            goto endpiont;
+        }
         Parameter_List[Parameter_Count].Integer_Is_Valid =false;
         Parameter_List[Parameter_Count].String_Value = path_url;
         Parameter_Count++;
@@ -2118,12 +2174,17 @@ endpiont:
 
     while(1)
     {
-       if(at_rec_data_finish || (rlt != QAPI_OK))
+       if((at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) || (rlt != QAPI_OK))
        {
-           if(at_rec_data_finish)
+           if(at_rec_state == QAPI_NET_HTTPC_RX_FINISHED)
            {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
                 QAT_Response_Str(QAT_RC_OK, buffer);
+           }
+           else if(at_rec_state < QAPI_NET_HTTPC_RX_FINISHED)
+           {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: SEND FAIL, error_code:%d\r\n",at_rec_state);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
            }
            else
            {
@@ -2191,8 +2252,8 @@ endpiont:
 qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
 {
     qapi_Status_t rlt = QAPI_OK;
-    char buffer[HTTP_STR_BUFFER_LENGTH];
-    char path_url[HTTP_URL_STR_BUFFER_LENGTH];
+    char buffer[HTTP_STR_BUFFER_LENGTH]= {0};
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH]= {0};
     uint16 count = 0;
     qbool_t conn_enable = FALSE;
 
@@ -2201,7 +2262,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
     if(rlt != QAPI_OK)
     {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
-        QAT_Response_Str(QAT_RC_OK, buffer);
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
         goto endpiont;
     }
 
@@ -2210,7 +2271,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
     if(rlt != QAPI_OK)
     {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client start fail\r\n");
-        QAT_Response_Str(QAT_RC_OK, buffer);
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
         goto endpiont;
     }
 
@@ -2219,7 +2280,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
     if(rlt != QAPI_OK)
     {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session setup fail\r\n");
-        QAT_Response_Str(QAT_RC_OK, buffer);
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
         goto endpiont;
     }
 
@@ -2228,7 +2289,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
     if(rlt != QAPI_OK)
     {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: connection fail\r\n");
-        QAT_Response_Str(QAT_RC_OK, buffer);
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
         goto endpiont;
     }
     conn_enable = TRUE;
@@ -2267,7 +2328,13 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
         Parameter_Count++;
     
-        getpathURL(url,path_url);
+        if(!getpathURL(url,path_url))
+        {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: get object url fail\r\n");
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
+            rlt = QAPI_ERR_INVALID_PARAM;
+            goto endpiont;
+        }
         Parameter_List[Parameter_Count].Integer_Is_Valid =false;
         Parameter_List[Parameter_Count].String_Value = path_url;
         Parameter_Count++;
@@ -2277,7 +2344,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         if(rlt != QAPI_OK)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: handle client request fail\r\n");
-            QAT_Response_Str(QAT_RC_OK, buffer);
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
             goto endpiont;
         }
 
@@ -2287,17 +2354,22 @@ endpiont:
 
    while(1)
    {
-      if(at_rec_data_finish || (rlt != QAPI_OK))
+      if((at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) || (rlt != QAPI_OK))
       {
-           if(at_rec_data_finish)
+           if((at_rec_state == QAPI_NET_HTTPC_RX_FINISHED))
            {
                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
                QAT_Response_Str(QAT_RC_OK, buffer);
            }
+           else if(at_rec_state < QAPI_NET_HTTPC_RX_FINISHED)
+           {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, error_code:%d\r\n",at_rec_state);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+           }
            else
            {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, error_code:%d\r\n",rlt);
-                QAT_Response_Str(QAT_RC_ERROR, buffer);
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, error_code:%d\r\n",rlt);
+               QAT_Response_Str(QAT_RC_ERROR, buffer);
            }
 
 
@@ -2466,31 +2538,34 @@ qbool_t getpathURL(const char *url, char*pathURL)
     	url = protocol_end + 3;
         
         const char *path_start = strchr(url, '/');
-    	if (path_start != NULL) 
+    	if (path_start != NULL)
     	{ 
-		  snprintf(pathURL, HTTP_URL_STR_BUFFER_LENGTH, path_start);
-          rlt=TRUE;
+            snprintf(pathURL, HTTP_URL_STR_BUFFER_LENGTH, path_start);
+            rlt=TRUE;
     	}
     	else 
     	{ 
-    	  //nothing
+    	    pathURL = "/";
+            rlt=TRUE;
         } 
 
     } 
     else 
     { 
         const char *path_start = strchr(url, '/');
-    	if (path_start != NULL) 
+    	//if ((path_start != NULL) && (strlen(path_start) > 1) )
+    	if (path_start != NULL)
     	{ 
 		  snprintf(pathURL, HTTP_URL_STR_BUFFER_LENGTH, path_start);
           rlt=TRUE;
     	}
     	else 
     	{ 
-    	  //nothing
+    	   pathURL = "/";
+           rlt=TRUE;
         } 
     }
-    printf("host: %s\n", pathURL);
+    printf("object URL: %s\n", pathURL);
     return rlt;
 }
 
