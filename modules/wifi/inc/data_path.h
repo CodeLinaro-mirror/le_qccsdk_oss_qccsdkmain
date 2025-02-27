@@ -207,6 +207,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define GET_RX_RATE_FROM_BD(bd) (phy_rates[(bd)->rateIndex])
 #define GET_MPDU_LEN_FROM_BD(bd) ((bd)->mpduLength)
 #define DPM_TO_COEX_QUEUE_TIMEOUT 0
+#define DPM_ALLOWED_BCMC_NUM      3
 
 #if 0
 /* 			Rate Index and Rate (in Kbps) mapping
