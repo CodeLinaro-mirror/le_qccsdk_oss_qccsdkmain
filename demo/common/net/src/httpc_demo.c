@@ -51,7 +51,7 @@ uint16_t httpc_demo_max_header_len = 0;
 #ifdef CONFIG_QAT_HTTPC_DEMO
 uint16_t at_httpc_method = 0;
 uint16_t httpc_recvie_count = 0;
-uint16_t at_rec_data_finish = 0;
+int at_rec_state = 0;
 uint16_t at_rec_error_code = 0;
 #endif
 
@@ -414,7 +414,6 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
   
            at_rec_error_code = resp_code;
            httpc_recvie_count = 0;
-           at_rec_data_finish = 1;
 #endif
             HTTPC_PRINTF("=========> http client Received: total size %d, Resp_code %d\n", *ptotal_len, resp_code);
            *ptotal_len = 0; // Finished
@@ -453,6 +452,12 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
             HTTPC_PRINTF("HTTP Client Receive error: %d\nPlease input 'httpc disconnect %d'\n", state, hc->num);
         *ptotal_len = 0;
     }
+    
+#ifdef CONFIG_QAT_HTTPC_DEMO
+    at_rec_state = state;
+    HTTPC_PRINTF("HTTP state: %d\n",state);
+
+#endif
 }
 
 char * httpc_malloc_body_demo(uint32_t len)
