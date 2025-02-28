@@ -397,7 +397,7 @@ static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Par
 
     while (index < Parameter_Count)
     {
-        if (0 == strcmp(Parameter_List[index].String_Value, "-a"))
+        if (0 == strcasecmp(Parameter_List[index].String_Value, "-a"))
         {
             index++;
             if(Parameter_List[index].Integer_Value !=0 && Parameter_List[index].Integer_Value !=1)
@@ -406,13 +406,13 @@ static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Par
             op = Parameter_List[index].Integer_Value;
             index++;
         }
-        else if (0 == strcmp(Parameter_List[index].String_Value, "-u"))
+        else if (0 == strcasecmp(Parameter_List[index].String_Value, "-u"))
         {
             index++;
             port = Parameter_List[index].Integer_Value;
             index++;
         } 
-        else if (0 == strcmp(Parameter_List[index].String_Value, "-q"))
+        else if (0 == strcasecmp(Parameter_List[index].String_Value, "-q"))
         {
             index++;
             for(uint16_t i=0;i<UDP_WHITELIST_LEN;i++)
@@ -420,7 +420,13 @@ static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Par
                 printf("%d ",udp_whitelist_arr[i]);
             }
             printf("\r\n");
-        } 
+            return QAPI_OK;
+        }
+        else
+        {
+            printf("Arguments not valid!\r\n");
+            return QAPI_OK;
+        }
     }
 
     if(op)      
