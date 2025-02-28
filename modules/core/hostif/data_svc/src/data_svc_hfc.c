@@ -72,6 +72,7 @@ bool data_svc_get_hfc_data_buff(void* p_element, uint16_t len)
 {
     configASSERT(NULL != p_element);
     ring_element_t* p_elem = (ring_element_t *)p_element;
+    memset(p_elem, 0, sizeof(ring_element_t));
     uint32_t* buf = nt_osal_allocate_memory(len);
     if(buf != NULL)
     {
@@ -159,7 +160,7 @@ int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint32_t tim
     {
         return QAPI_ERR_INVALID_PARAM;
     }
-	
+
 	if (nt_osal_queue_msg_receive(qcspi_hfc_recv_queue, &msg, timeout) == NT_QUEUE_SUCCESS) 
 	{
 	    len = msg.len;
@@ -173,7 +174,11 @@ int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint32_t tim
 		{
 		    *info = msg.id;
 		}
-		memcpy(p_buff, msg.data, len);
+#ifdef MEM_CPY_VIA_DXE
+        nt_dpm_memcpy(p_buff, msg.data, len);
+#else
+        memcpy(p_buff, msg.data, len);
+#endif
 		ret = QAPI_OK;
 		free(msg.buf);
 	}
@@ -236,11 +241,11 @@ int32_t data_svc_hfc_queue_send(ring_element_t *p_elem, hfc_msg_type_t type)
     {
         RINGIF_PRINT_LOG_ERR("hfc queue send fail", 0);
     }
-#elif defined(CONFIG_QCSPI_HFC_ATCMD_ENABLE)    
+#elif defined(CONFIG_QCSPI_HFC_ATCMD_ENABLE)
 	if(NT_QUEUE_FAIL == nt_osal_queue_send(qcspi_hfc_recv_queue, (void*)&msg, portMAX_DELAY))
 	{
 		RINGIF_PRINT_LOG_ERR("hfc queue send fail", 0);
-	}	
+	}
     //printf("data_svc_hfc_queue_send len %d\r\n", msg.len);
 #else
     (void)msg;
