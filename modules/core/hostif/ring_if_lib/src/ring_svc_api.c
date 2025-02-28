@@ -497,16 +497,20 @@ uint8_t ringif_a2f_process_pkts(uint8_t ring_id, _pfn_process pfn_process, _pfn_
         }
         num_processed++;
 
-        if(TRUE == pfn_refill(p_elem)) {
-            num_refilled++;
-        } else {
+        while (FALSE == pfn_refill(p_elem)) {
+            RINGIF_PRINT_LOG_ERR("p_elem alloc fail");
             memset(p_elem, 0, sizeof(ring_element_t));
         }
+        num_refilled++;
+
         idx = (idx + 1) % p_ring_ctx->ring_num_elem;
+        /* Update read index to current value */
+        *p_ring_ctx->p_read_idx = idx;
+        //RINGIF_PRINT_LOG_ERR("Read:%d Wr:%d ElemSize:%d numElem:%d", idx, wr_idx, p_ring_ctx->ring_elem_size, p_ring_ctx->ring_num_elem);
     }
     
     /* Update read index to current value */
-    *p_ring_ctx->p_read_idx = idx;
+    //*p_ring_ctx->p_read_idx = idx;
     
     /* Start the timer if job is not complete */
     if((FALSE == b_process_done) || (num_refilled < num_processed)) {
