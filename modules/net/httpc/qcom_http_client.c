@@ -286,6 +286,10 @@ httpc_dns_found(const char* hostname, const ip_addr_t *ipaddr, void *arg)
     (void)arg;
     if(ipaddr)
     {
+        if(arg)
+        {
+           memmove(arg, ipaddr, sizeof(ip_addr_t));
+        }
         g_httpc_dns_found = 1;
         htdbgprintf("%s http host IP is  %s\r\n",hostname, ipaddr_ntoa(ipaddr));
     }
@@ -308,8 +312,9 @@ httpc_dns_found(const char* hostname, const ip_addr_t *ipaddr, void *arg)
 static
 int http_client_resolve(httpclient_sess *sess)
 {
-    ip_addr_t ipaddr;
+    ip_addr_t ipaddr = {0};
     uint16_t count = 0;
+    g_httpc_dns_found = 0;
     htdbgprintf("%s() Flags:0x%x\n", __func__, sess->hcs_flags);
 
     /* Find port no */
@@ -358,7 +363,7 @@ int http_client_resolve(httpclient_sess *sess)
 
     htdbgprintf("%s(): need dns to resolve.\n", __func__);
 
-    dns_gethostbyname((char *)sess->hcs_host, &ipaddr, httpc_dns_found, NULL);
+    dns_gethostbyname((char *)sess->hcs_host, &ipaddr, httpc_dns_found, &ipaddr);
 
     while((g_httpc_dns_found == 0) && (count++ < 5))
     {
@@ -548,6 +553,8 @@ httpclient_sess* http_client_newsess(
     session->hcs_buf_len = httpc_max_body_length;
     session->hcs_headerbuf_len = httpc_max_header_length;
     qurt_mutex_unlock(g_httpc_ctxt->lh);
+    
+    htdbgprintf("HTTPC: timeout%d\n",session->timeout);
 
     if ((session->hcs_buffer = malloc(session->hcs_buf_len)) == NULL)
     {
@@ -665,6 +672,8 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
 #elif LWIP_IPV6
 	family = AF_INET6;
 #endif
+
+
     /* Create a socket if it is not created already */
     if (sess->hcs_socket == INVALID_SOCKET)
     {
@@ -681,11 +690,19 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
     }
     sock = sess->hcs_socket;
     setsockopt(sess->hcs_socket, SOL_SOCKET, O_NONBLOCK, NULL, 0);
+#if 0
+    int rlt= fcntl(sock, F_GETFL, O_NONBLOCK);
+    if (rlt < 0) {
+        printf("sstest set non-blocking mode failed :%d\n",rlt);
+        close(sock);
+    }
+#endif
 
 #if LWIP_IPV4
     if (AF_INET == family)
     {
 #if LWIP_IPV6
+
         htdbgprintf("%s() Addr 0x%08x port %u\n", __func__, sess->hcs_addr.u_addr.ip4, sess->hcs_port);
 #else
 		htdbgprintf("%s() Addr 0x%08x port %u\n", __func__, sess->hcs_addr, sess->hcs_port);
@@ -701,6 +718,7 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         s_addr.sin_len = sizeof(struct sockaddr_in);
         to = (struct sockaddr *)&s_addr;
         tolen = sizeof(s_addr);
+        
 
     }
     else
@@ -754,6 +772,25 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
     htdbgprintf("%s():%d Sending Connect req on index[%d]\n", __func__,__LINE__,sess->index);
 
     error = connect(sock, to, tolen);
+    
+#if 0
+    struct timeval timeout;
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 0;
+    
+    fd_set writefds;
+    FD_ZERO(&writefds);
+    FD_SET(sock, &writefds);
+
+    int result = select(sock + 1, NULL, &writefds, NULL, &timeout);
+    if (result > 0 && FD_ISSET(sock, &writefds)) {
+      printf("sstest conn succ\n");
+    } else {
+      printf("sstest conn fail\n");
+      close(sock);
+    }
+#endif
+    
     if(error)
     {
         htdbgprintf("t_connect failure Err:%d\n", error);
