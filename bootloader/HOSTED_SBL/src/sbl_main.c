@@ -213,6 +213,8 @@ loader_start( void* arg){
 	else if(err == SBL_FUNC_SUCCESS)
 	{
 		sbl_printf("HOSTED SBL boot\r\n");
+                //clear the magic
+                clear_dfu_table_hdr();
 	}
 	//switch (*(char *)(pbl_share.data.cmd)){
 	switch (*pbl_cmd){

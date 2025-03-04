@@ -366,6 +366,11 @@ static void init_config_table(void)
 	p_fermion_dfu_defaults->table_hdr = WIFI_FW_SBL_ENTERED_PATTERN;
 }
 
+void clear_dfu_table_hdr(void)
+{
+    p_fermion_dfu_defaults->table_hdr = 0x0;
+}
+
 /*
 * @brief: to check the a2f dfu ring is empty
 * @param:  void
