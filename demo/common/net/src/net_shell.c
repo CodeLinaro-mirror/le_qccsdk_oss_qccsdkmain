@@ -552,7 +552,7 @@ net_set_ip(struct netif *netif, ip_addr_t *ip, s8_t idx)
 #if LWIP_IPV6
     if(IP_IS_V6_VAL(*ip)) {
         netif_ip6_addr_set(netif, idx, (const ip6_addr_t*)ip_2_ip6(ip));
-        netif_ip6_addr_set_state(netif,idx,IP6_ADDR_VALID);
+        netif_ip6_addr_set_state(netif,idx,IP6_ADDR_TENTATIVE);
     }
 #endif
 #if LWIP_IPV4

@@ -790,7 +790,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         IPERF_PRINTF("  -n = The number of buffers to transmit\n");
         IPERF_PRINTF("  -b = Set target bandwidth to Mbits/sec\n");
         IPERF_PRINTF("  -S = Set TOS for TCP\n");
-        // IPERF_PRINTF("  -V = IPV6\n");
+        IPERF_PRINTF("  -V = IPV6\n");
 
         return QAPI_ERR_INVALID_PARAM;
     }

@@ -26,6 +26,7 @@
 #include "ip.h"
 #include "dns.h"
 #include "priv/nd6_priv.h"
+#include "ip6_addr.h"
 
 /*-------------------------------------------------------------------------
  * Function Declarations
@@ -2827,17 +2828,29 @@ static QAT_Command_Status_t Extend_Command_EnableV6(uint32_t Op_Type, uint32_t P
 
             if(value){
                 NETIF_FOREACH(netif) {
-                    for(int i = 0 ; i < LWIP_IPV6_NUM_ADDRESSES; i++){
-                        if (!ip6_addr_isany(netif_ip6_addr(netif, i)))
-                            netif_ip6_addr_set_state(netif, i, IP6_ADDR_VALID);
+                    if(strncmp(netif->name, "st", 2) == 0) {
+                        netif->ip6_autoconfig_enabled = 1;
+                        netif_create_ip6_linklocal_address(netif, 1);
+                        nd6_restart_netif(netif);
+                    }else if(strncmp(netif->name, "ap", 2) == 0){
+                        netif->ip6_autoconfig_enabled = 1;
+                        netif_create_ip6_linklocal_address(netif, 1);
+                        nd6_restart_netif(netif);                        
+                    }else if(strncmp(netif->name, "lo", 2) == 0){
+                        netif->ip6_addr_state[0] = IP6_ADDR_VALID;
                     }
                 }
                 v6_enable = 1;
             }else{
                 NETIF_FOREACH(netif) {
-                    for(int i = 0 ; i < LWIP_IPV6_NUM_ADDRESSES; i++){
-                        if(ip6_addr_isvalid(netif_ip6_addr_state(netif, i)))
+                    if((strncmp(netif->name, "st", 2) == 0) || (strncmp(netif->name, "ap", 2) == 0)) {
+                        netif->ip6_autoconfig_enabled = 0;
+                        for (int i = 0; i < LWIP_IPV6_NUM_ADDRESSES; ++i) {
+                            ip6_addr_set_zero(&netif->ip6_addr[i].u_addr.ip6);
                             netif_ip6_addr_set_state(netif, i, IP6_ADDR_INVALID);
+                        }
+                    }else if(strncmp(netif->name, "lo", 2) == 0){
+                        netif->ip6_addr_state[0] = IP6_ADDR_INVALID;
                     }
                 }
                 v6_enable = 0;
