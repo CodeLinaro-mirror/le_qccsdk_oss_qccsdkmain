@@ -123,7 +123,7 @@ static qapi_Status_t rram_read(uint32_t Parameter_Count, QAPI_Console_Parameter_
     address = Parameter_List[1].Integer_Value;
     byte_cnt = Parameter_List[2].Integer_Value;
 
-    buffer = malloc(byte_cnt);
+    buffer = (char *)malloc(byte_cnt * sizeof(char));
     if (buffer == NULL)
     {
         printf("ERROR: No enough memory\n");
@@ -204,7 +204,7 @@ static qapi_Status_t rram_test(uint32_t Parameter_Count, QAPI_Console_Parameter_
     partid = Parameter_List[0].Integer_Value; 
     offset = Parameter_List[1].Integer_Value;
     byte_cnt = Parameter_List[2].Integer_Value;
-    buffer = malloc(byte_cnt);
+    buffer = (char *)malloc(byte_cnt * sizeof(char));
     if (buffer == NULL) {
         printf("ERROR: No enough memory\n");
         return QAPI_ERR_NO_MEMORY;
@@ -217,7 +217,7 @@ static qapi_Status_t rram_test(uint32_t Parameter_Count, QAPI_Console_Parameter_
     }
     printf("Total test size %d bytes\n",byte_cnt);
 
-    read_buffer = malloc(byte_cnt);
+    read_buffer = (char *)malloc(byte_cnt * sizeof(char));
     if (read_buffer == NULL) {
         printf("ERROR: No enough memory\n");
         free(buffer);
@@ -231,10 +231,11 @@ static qapi_Status_t rram_test(uint32_t Parameter_Count, QAPI_Console_Parameter_
         }
         memset(buffer, 0, sizeof(buffer));
         memset(read_buffer, 0, sizeof(read_buffer));
-        for(i = 0; i < len - 1; i++) {
+ 
+        for(i = 0; i < len; i++) {
             buffer[i] = 'a';
         }
-        buffer[len - 1] = '\0';
+        buffer[len] = '\0';
         status = qapi_rram_write(partid, offset, buffer, len);
         if(status != QAPI_OK) {
             printf("Buf(%d) test failed(%d)\n",i,status);
