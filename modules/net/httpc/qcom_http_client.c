@@ -40,6 +40,7 @@
 #include "lwip/tcpip.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
+#include "lwip/err.h"
 #include "ip_addr.h"
 #include "netifapi.h"
 #include "data_path.h"
@@ -362,13 +363,20 @@ int http_client_resolve(httpclient_sess *sess)
      */
 
     htdbgprintf("%s(): need dns to resolve.\n", __func__);
+    err_enum_t err = dns_gethostbyname((char *)sess->hcs_host, &ipaddr, httpc_dns_found, &ipaddr);
 
-    dns_gethostbyname((char *)sess->hcs_host, &ipaddr, httpc_dns_found, &ipaddr);
-
-    while((g_httpc_dns_found == 0) && (count++ < 5))
+    if(err == ERR_OK)
     {
-        qurt_thread_sleep(1000);
+        g_httpc_dns_found  =1;
     }
+    else if(err == ERR_INPROGRESS)
+    {
+        while((g_httpc_dns_found == 0) && (count++ < 5))
+        {
+            qurt_thread_sleep(1000);
+        }
+    }
+
     if(g_httpc_dns_found == 1)
     {
 #if LWIP_IPV4 && LWIP_IPV6
@@ -673,7 +681,6 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
 	family = AF_INET6;
 #endif
 
-
     /* Create a socket if it is not created already */
     if (sess->hcs_socket == INVALID_SOCKET)
     {
@@ -757,7 +764,7 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         s_addr6.sin6_port = htons(sess->hcs_port);
         to = (struct sockaddr *)&s_addr6;
         tolen = sizeof(s_addr6);
-        //htdbgprintf("%s() %d IPv6 Addr:%s port %u\n", __func__, __LINE__, inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.a.addr6), temp,sizeof(temp)), sess->hcs_port);
+        //htdbgprintf("%s() %d IPv6 Addr:%s port %u\n", __func__, __LINE__, inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.u_addr.ip6)), sess->hcs_port);
     }
     else
 #endif
