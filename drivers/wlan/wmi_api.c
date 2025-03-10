@@ -12,10 +12,12 @@
 #ifdef CONFIG_WPS
 #include "wps_def.h"
 #endif
+#include "wlan_power.h"
 
 typedef void (*wlan_evt_fn_table)(void*);
 
 extern qurt_pipe_t msg_wfm_wmi_id;
+extern ppm_common_t g_ppm_common_struct;
 
 static void wmi_enabled_event(void *msg)
 {
@@ -387,8 +389,11 @@ static void wmi_join_comp_event(void *msg)
             qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
             if (p_cxt->connected) {
                 qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_CONNECT_COMPLETED);
+
+                stop_imps_cnx_wait_timer();
             } else {
                 qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_DISCONNECTED);
+                start_imps_cnx_wait_timer(g_ppm_common_struct.imps_struct_ctx.recnx_wait_time_ms);
             }
             qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
         }
@@ -421,8 +426,10 @@ done:
 	if(p_cxt->opmode == WHAL_M_STA) {
 		if (p_cxt->connected == false) {
 			wlan_drv_roaming_start();
+            start_imps_cnx_wait_timer(g_ppm_common_struct.imps_struct_ctx.recnx_wait_time_ms);
 		} else {
 			wlan_drv_roaming_stop();
+            stop_imps_cnx_wait_timer();
 		}
 	}
 
@@ -441,6 +448,9 @@ static void wmi_disconnect_event(void *msg)
 	WMI_DISC_EVT *evt = (WMI_DISC_EVT *)msg;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
     qapi_WLAN_Join_Comp_Evt_t *p_qapi_join_evt = &p_cxt->connect_result;
+
+    info_printf("start_imps_cnx_wait_timer\r\n");
+    start_imps_cnx_wait_timer(g_ppm_common_struct.imps_struct_ctx.recnx_wait_time_ms);
 
     qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
 	{

@@ -210,19 +210,46 @@ static qapi_Status_t bmps_timing_cfg(uint32_t Parameter_Count, QAPI_Console_Para
 
 static qapi_Status_t imps_cfg(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-    if( Parameter_Count != 5 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid ||
+    if( Parameter_Count != 6 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid ||
         !Parameter_List[1].Integer_Is_Valid || !Parameter_List[2].Integer_Is_Valid ||
         !Parameter_List[3].Integer_Is_Valid || !Parameter_List[4].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
     uint8_t enable;
-    uint32_t slp_time, recnx_wait, wmi_wait, cnx_wait;
+    uint32_t slp_time, recnx_wait, wmi_wait, cnx_wait, sleep_mode;
     enable = Parameter_List[0].Integer_Value ? 1 : 0;
     slp_time = Parameter_List[1].Integer_Value;
     recnx_wait = Parameter_List[2].Integer_Value;
     wmi_wait = Parameter_List[3].Integer_Value;
     cnx_wait = Parameter_List[4].Integer_Value;
-    return qapi_imps_cfg(enable, slp_time, recnx_wait, wmi_wait, cnx_wait);
+    sleep_mode = Parameter_List[5].Integer_Value;
+    return qapi_imps_cfg(enable, slp_time, recnx_wait, wmi_wait, cnx_wait, sleep_mode);
+}
+
+static qapi_Status_t imps_sleep(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if(  !Parameter_List || !Parameter_List[0].Integer_Is_Valid ) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    uint8_t enable;
+    uint32_t slp_time, recnx_wait, wmi_wait, cnx_wait, sleep_mode;
+
+    if(Parameter_List[0].Integer_Value )
+    {
+        if( Parameter_Count != 3 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid ) {
+           return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+        }
+        enable   = Parameter_List[0].Integer_Value;
+        recnx_wait = Parameter_List[1].Integer_Value;
+        slp_time = Parameter_List[2].Integer_Value;
+
+
+        return qapi_imps_enter_sleep(enable,recnx_wait,slp_time);
+    }
+    else
+    {
+        return qapi_imps_disable_sleep();
+    }
 }
 
 static qapi_Status_t slp_clk_cal_act(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
@@ -493,7 +520,8 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
     {bmps_ignore_bcmc, "bmps_ignore_bcmc", "<1/0>", "Ignore Bcast/Mcast wakeup during BMPS(DTIM)\n"},
     {bmps_idle_time, "bmps_idle_time", "<Idle time in ms>", "Cfg max idle time prior entering into BMPS(DTIM) sleep\n"},
     {bmps_timing_cfg, "bmps_timing_cfg", "<preBcn in us> <bcnWait in us> <telePreBcnInc in us> <teleBcnWaitInc in us>", "Cfg BMPS timing parameters\n"},
-    {imps_cfg, "imps_cfg", "<1:Enable|0:Disable> <deepsleep time in ms> <recnx timeout in ms> <cmd proc in ms> <cnx timeout in ms>", "Cfg BMPS timing parameters\n"},
+    {imps_cfg, "imps_cfg", "<1:Enable|0:Disable> <deepsleep time in ms> <recnx timeout in ms> <cmd proc in ms> <cnx timeout in ms> <sleep mode: 2:qapi_mcu_sleep | 3:qapi_standby>", "Cfg BMPS timing parameters\n"},
+    {imps_sleep, "imps_sleep", "<1:Enable|0:Disable> <wait time in ms> <sleep time in ms> ", "Enable IMPS Directly,default mode is qapi_mcu_sleep\n"},
     {slp_clk_cal_act, "slp_clk_cal_act", "<1/0>", "Enable/disable slp_clk_cal in active mode\n"},
     {bmps_force_dtim, "bmps_force_dtim", "<Forced DTIM count>", "Force DTIM count\n"},
 #ifdef CONFIG_CPR_ENABLE
