@@ -254,19 +254,26 @@ static QAT_Command_Status_t Extend_Command_Info(uint32_t Op_Type, uint32_t Param
                                command line.
    @param[in] Parameter_List   List of parameters entered into the command line.
 */
+void qat_common_rst_timer_callback()
+{
+    nt_system_sw_reset();
+}
+
 static QAT_Command_Status_t Extend_Command_Reset(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
    char *buffer;
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
-
+   TimerHandle_t rst_timer_handle;
+   
    switch (Op_Type)
    {
       case QAT_OP_EXEC: 	     /* AT+RST */
       {
 		 rc = QAT_Response_Str(QAT_RC_OK, NULL);
 		 /*Wait for sending OK*/
-		 sleep(1);
-		 nt_system_sw_reset();
+         rst_timer_handle = nt_qurt_timer_create("rst_timer", 100, TRUE,
+			NULL, qat_common_rst_timer_callback);
+         qurt_timer_start(rst_timer_handle, 0);
          break;
       }
       
