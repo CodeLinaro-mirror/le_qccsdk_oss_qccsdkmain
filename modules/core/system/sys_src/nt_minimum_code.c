@@ -22,6 +22,7 @@
 #include "nt_gpio_api.h"
 #include "wifi_fw_internal_api.h"
 #include "wifi_fw_pmu_ts_cfg.h"
+#include "hal_int_modules.h"
 
 #if defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD)
 #include "wifi_fw_cpr_driver.h"
@@ -593,6 +594,14 @@ slp_switch:
             g_socpm_struct.in_warm_boot = FALSE;
             // will full wake, so start to process uart rx
             process_uart_rx_irq = 1;
+            
+            /* After changing DPU default routing to WQ11 in first RRI, it is observed that mgmt frames being send in WQ11(RX_DATA)
+               Restore Default DPU routing to WQ12 to get mgmt frames in WQ12 here after wakeup
+            */
+            HAL_REG_WR(QWLAN_RXP_DEFAULT_HW_INSERT_DPU_PARAM_REG,
+             QWLAN_RXP_DEFAULT_HW_INSERT_DPU_PARAM_NE_BIT_MASK |
+            (HAL_BMUWQ_DXE_RX_WQ1 << QWLAN_RXP_DEFAULT_HW_INSERT_DPU_PARAM_DPU_ROUTING_FLAG_OFFSET));
+
             /*restoring saved context*/
             nt_socpm_ctxt_restore();
             // should never get here
