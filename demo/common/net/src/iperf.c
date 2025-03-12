@@ -1777,7 +1777,7 @@ static void iperf_client_send(void *arg)
                 else
                 {
                     IPERF_PRINTF("TX err:%d\n", errno);
-                    if(EAGAIN == errno)
+                    if(EAGAIN == errno || ENOMEM == errno)
                         break;
                     app_get_time(&p_tCxt->pktStats.last_time);
                     if(ERR_TIMEOUT == errno || ERR_OK == errno)

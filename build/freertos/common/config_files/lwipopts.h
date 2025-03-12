@@ -139,7 +139,11 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #define MEM_ALIGNMENT                   4U
 #define TCP_MSS                         1460
 
+#if (CONFIG_LWIP_MULTIPLE_STREAMS)
+#define MEMP_NUM_PBUF                   128
+#else
 #define MEMP_NUM_PBUF                   64
+#endif
 
 #if defined LWIPERF_PERF_BUILD
 #define MEM_SIZE                        120000
