@@ -249,6 +249,8 @@ typedef enum {
     WMI_SET_APPIE_CMDID,
     WMI_SET_TX_POWER,
     WMI_GET_TX_POWER_CMDID,
+	WMI_IMPS_SLEEP_EXIT_CMDID,
+	WMI_IMPS_TIMEDOUT_HNDL_CMDID,
     WMI_CMD_MAX, /* Note: This cmd should be the last in the WMI_COMMAND_ID ENUM */
 } WMI_COMMAND_ID;
 
@@ -426,6 +428,7 @@ typedef enum  //@Wmi generic timedout handler events
 	/*Periodic traffic idle timer timeout event*/
 	periodicTrafficIdleTimer_eventid,
 #endif	
+	pmImpsTimeoutFunc_evntid,
 	invalid_evntid = 0xff
 }wmi_tmdout_evnthndl_t;
 
@@ -1683,6 +1686,7 @@ typedef PREPACK struct{
     uint32_t recnx_wait;
     uint32_t cmd_proc_wait;
     uint32_t cnx_wait;
+    uint8_t policy;
 } POSTPACK WMI_IMPS_CFG;
 
 typedef PREPACK struct{

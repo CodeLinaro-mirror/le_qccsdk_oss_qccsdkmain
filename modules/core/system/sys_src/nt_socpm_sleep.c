@@ -1207,7 +1207,7 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
          */
         nt_socpm_resume_f = 1;
 #ifdef SUPPORT_IMPS_IMPROVEMENTS
-        if((g_ppm_common_struct.imps_struct_ctx.imps_registered == TRUE) && g_ppm_common_struct.imps_struct_ctx.imps_enabled)
+        if((g_ppm_common_struct.imps_struct_ctx.imps_registered == TRUE) && g_ppm_common_struct.imps_struct_ctx.imps_enabled && g_ppm_common_struct.imps_struct_ctx.policy == Standby)
         {
             nt_wpm_register_imps_standby();
         }
@@ -1243,11 +1243,15 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
                     && _socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_mode != clk_gtd_sleep)
                 {
                     _socpm_os_tmr.slp_mode = nt_socpm_sleep_solver(_socpm_os_tmr.slp_time);
+                    NT_LOG_PRINT(SOCPM, INFO, "nt_socpm_sleep_solver");
                 }
                 else
                 {
                     _socpm_os_tmr.slp_mode = clk_gtd_sleep;
                 }
+
+                NT_LOG_PRINT(SOCPM, INFO, " _socpm_slp_lst_head %d slp_time: %d _socpm_last_slp_count:%d updated_slp_val: %d slp_mode: %d ", _socpm_slp_lst_head, (uint32_t)_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time/1000, _socpm_last_slp_count, (uint32_t)updated_slp_val,_socpm_os_tmr.slp_mode);
+
             }
         }
         else
@@ -1529,7 +1533,7 @@ static sleep_mode nt_socpm_sleep_solver(uint64_t sleep_time)
 {
     sleep_mode slp_mode = clk_gtd_sleep;
 
-    if (sleep_time > get_sleep_exit_hw_delay(mcu_sleep))
+    if ((sleep_time > get_sleep_exit_hw_delay(mcu_sleep)) && (sleep_time >= (_socpm_slp_time_supp_min_ms * 1000)))
     {
         slp_mode = mcu_sleep;
     }

@@ -45,6 +45,7 @@ typedef struct {
     bool imps_cnx_timer_started;
 #endif /* SUPPORT_IMPS_IMPROVEMENTS */
     bool imps_registered;            /* Register for IMPS at imps_cnx_wait_timer timeout cb and handled it in idle task */
+    uint8_t policy;            /*  use mcu sleep or deep sleep */
 } IMPS_STRUCT_CTX_t;
 
 /*timer*/
@@ -86,8 +87,9 @@ void *nt_wpm_imps_stats(void);
 
 #ifdef SUPPORT_IMPS_IMPROVEMENTS
 void nt_imps_cnx_timeout_cb(void);
-void start_imps_cnx_wait_timer(uint32_t timeout_value);
-void stop_imps_cnx_wait_timer();
+void _pm_post_pmImps_timeout_msg(TimerHandle_t thandle);
+void start_imps_cnx_wait_timer(uint32_t timeout_value); 
+void stop_imps_cnx_wait_timer(); 
 #endif /* SUPPORT_IMPS_IMPROVEMENTS */
 
 #endif /* CORE_WIFI_SME_INC_NT_IMPS_H_ */

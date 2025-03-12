@@ -481,6 +481,7 @@ extern ppm_common_t g_ppm_common_struct;
 
 void *pmInit(devh_t*);
 void pmIdleTimeoutFunc(TimerHandle_t timer_handle);
+void pmImpsTimeoutFunc(TimerHandle_t timer_handle);
 void pmPspollTimeoutFunc(TimerHandle_t timer_handle);
 void pm_deinit(void *pm_inst);
 //static void pmInfraPmEnable(devh_t *, uint8_t);

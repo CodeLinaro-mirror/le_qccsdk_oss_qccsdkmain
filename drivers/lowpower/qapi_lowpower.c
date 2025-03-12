@@ -9,10 +9,14 @@
 
 #include "qapi_lowpower.h"
 #include "nt_socpm_sleep.h"
+#include "nt_imps.h"
 #include "lowpower_internal.h"
+#include "wlan_power.h"
 
 
 lpr_wmi_t g_lowpower_wmi;
+extern ppm_common_t g_ppm_common_struct;
+
 extern void nt_watchdog_timer_freeze(void);
 extern bool (*wakeup_cb_dtim)(uint16_t type, bool bm_cast,void* pbuf,uint16_t len);
 extern bool (*wakeup_cb_net)(uint16_t type, bool bm_cast,void* pbuf,uint16_t len);
@@ -70,27 +74,65 @@ qapi_Status_t qapi_deepsleep_enter(uint8_t wkup_src, uint64_t sleep_time)
    The API config and enable IMPS (using deepsleep with AON timer as wkup source).
 
    @param[in] enable        1: Enable; 0: disable. Below parameters are valid only when enable is 1;
-   @param[in] sleep_time  Sleep time in ms, during deepsleep state;
-   @param[in] recnx_wait  Re-connection timeout in ms. When wlan disconnect/connect_fail happens, this timer will start; if connect success happens then cancel the timer; if timeout, system will determine whether to enter into deepsleep;
-   @param[in] wmi_wait    Wmi_wait time in ms. Upon recnx_wait timeout, check if there's any WMI cmd received during the wmi_wait duration, if no then goto deepsleep, if yes then start a timer with wmi_wait duration;
-   @param[in] cnx_wait     Time in ms. Use for ENABLE_IMPS_TIMER_ON_BOOTUP feature, means starting this timer during bootup, if there's no wlan connection during this period, then system enters into deepsleep;
-
+   @param[in] sleep_time  Sleep time in ms, during sleep state;
+   @param[in] recnx_wait  Re-connection timeout in ms. When wlan disconnect/connect_fail happens, this timer will start; if connect success happens then cancel the timer; if timeout, system will determine whether to enter into sleep;
+   @param[in] wmi_wait    Wmi_wait time in ms. Upon recnx_wait timeout, check if there's any WMI cmd received during the wmi_wait duration, if no then goto sleep, if yes then start a timer with wmi_wait duration;
+   @param[in] cnx_wait     Time in ms. Use for ENABLE_IMPS_TIMER_ON_BOOTUP feature, means starting this timer during bootup, if there's no wlan connection during this period, then system enters into sleep;
+   
    @return
    - QAPI_OK                             --  IMPS cfg and enable/disable successfully.
 */
-qapi_Status_t qapi_imps_cfg(uint8_t enable, uint32_t sleep_time, uint32_t recnx_wait, uint32_t wmi_wait, uint32_t cnx_wait)
+qapi_Status_t qapi_imps_cfg(uint8_t enable, uint32_t sleep_time, uint32_t recnx_wait, uint32_t wmi_wait, uint32_t cnx_wait, qapi_sleep_mode sleep_mode)
 {
     WMI_IMPS_CFG *pdata = (WMI_IMPS_CFG *)&g_lowpower_wmi;
     if (enable != 0 && enable != 1) {
         return QAPI_ERR_INVALID_PARAM;
     }
+
+    if (sleep_mode != qapi_mcu_sleep && sleep_mode != qapi_standby) {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
     memset(pdata, 0, sizeof(*pdata));
     pdata->enable = enable;
     pdata->slp_time = sleep_time;
     pdata->recnx_wait = recnx_wait;
     pdata->cmd_proc_wait = wmi_wait;
     pdata->cnx_wait = cnx_wait;
+    pdata->policy = sleep_mode;
     wmi_cmd_send(WMI_IMPS_CFG_CMDID, pdata, sizeof(*pdata));
+    return QAPI_OK;
+}
+
+/**
+   @brief Config and enable IMPS.
+
+   The API config and enable IMPS (using deepsleep with AON timer as wkup source).
+
+   @param[in] enable        1: Enable; 0: disable. Below parameters are valid only when enable is 1;
+   @param[in] wait_time  Sleep time in ms, during sleep state;
+   @param[in] sleep_time  Sleep time in ms, during sleep state;
+
+   @return
+   - QAPI_OK                             --  IMPS cfg and enable/disable successfully.
+*/
+qapi_Status_t qapi_imps_enter_sleep(uint8_t enable,uint32_t wait_time,uint32_t sleep_time)
+{
+    
+    g_ppm_common_struct.imps_struct_ctx.imps_sleep_time = sleep_time;
+    g_ppm_common_struct.imps_struct_ctx.imps_enabled = enable;
+    g_ppm_common_struct.imps_struct_ctx.recnx_wait_time_ms = wait_time;
+    g_ppm_common_struct.imps_struct_ctx.policy = qapi_mcu_sleep;
+    start_imps_cnx_wait_timer(wait_time);
+    return QAPI_OK;
+}
+
+qapi_Status_t qapi_imps_disable_sleep(void)
+{
+    if (g_ppm_common_struct.imps_struct_ctx.imps_cnx_timer_started) {
+        nt_stop_timer(g_ppm_common_struct.imps_struct_ctx.imps_cnx_wait_timer);
+    }
+    g_ppm_common_struct.imps_struct_ctx.imps_enabled = FALSE;
     return QAPI_OK;
 }
 
