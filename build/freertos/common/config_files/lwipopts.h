@@ -87,7 +87,7 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #ifdef NT_FN_IPV6
 #define LWIP_IPV6                       1
 #define LWIP_IPV6_FRAG                  0
-#define LWIP_IPV6_REASS                 0
+#define LWIP_IPV6_REASS                 1
 #if NT_FN_DHCP6
 #define LWIP_IPV6_DHCP6                 1
 #ifdef SUPPORT_RING_IF
