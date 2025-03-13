@@ -2838,7 +2838,7 @@ void savedata(const char *data)
    //the length of send_buff is  g_https_cfg.data_len +1, more one bit for '\0'
    g_https_cfg.buff_offset += 
     snprintf((char*)(g_https_cfg.send_buff + g_https_cfg.buff_offset), g_https_cfg.data_len - g_https_cfg.buff_offset +1,
-            "%s", data) - 1;
+            "%s", data);
 }
 
 void reset_temp_resource()
