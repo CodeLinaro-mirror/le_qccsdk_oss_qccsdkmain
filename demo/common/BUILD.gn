@@ -114,6 +114,7 @@ source_set("common") {
     }
     if (CONFIG_PLATFORM_SHELL) {
         include_dirs += ["//modules/hal/qcc730/qcspi"]
+        include_dirs += ["//modules/core/system/inc"]
         sources += [ "platform/platform_shell.c" ]
     }
     if (CONFIG_WLAN) {

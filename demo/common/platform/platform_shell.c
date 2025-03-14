@@ -26,7 +26,13 @@
 #endif
 #include "qapi_rram.h"
 #include "nt_hw.h"
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+#include "err.h"
+#include "errlog.h"
 
+extern unsigned int __rram_region_end_address;
+#define COREDUMP_TEST_INVALID_ADDRESS (__rram_region_end_address + 0x1000)
+#endif
 
 
 extern bool rram_udpart_init_done;
@@ -784,6 +790,212 @@ static qapi_Status_t platform_demo_check_boot_reason(uint32_t Parameter_Count, Q
 	
 }
 
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    int r = 0;
+    volatile unsigned int *p;
+    int (*pF)(void);
+    const unsigned short _UDF[4] = {0xDEAD, 0xDEAD, 0xDEAD, 0xDEAD};
+    volatile unsigned int a;
+    volatile unsigned int b;
+
+    // Enable fault on unaligned access
+    SCB->CCR = 0xFF;
+
+    if ( Parameter_Count != 1 ) {
+        printf("Invalid number of arguments\r\n");
+        printf("===================== unit test command =====================\n");
+        printf("Usage: platform coredumptest <test case index>\n");
+        printf("0: Trigger an assertion.\n");
+        printf("1: Trigger an usage fault or hard fault by executing an address without thumb bit set.\n");
+        printf("2: Trigger an usage fault or hard fault by reading from 0x00000000.\n");
+        printf("3: Trigger an usage fault or hard fault by writing to 0x00000000.\n");
+        printf("4: Trigger an usage fault or hard fault by executing an undefined instruction.\n");
+        printf("5: Trigger an usage fault or hard fault by an unaligned word access.\n");
+        printf("6: Trigger an usage fault or hard fault by dividing by zero.\n");
+        printf("7: Trigger a bus fault or hard fault by reading from a reserved address.\n");
+        printf("8: Trigger a bus fault or hard fault by writing to a reserved address.\n");
+        printf("9: Trigger a bus fault or hard fault by executing at a reserved address.\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    if (!Parameter_List[0].Integer_Is_Valid || Parameter_List[0].Integer_Value > 9) {
+        printf("Test case index shoud be an integer less than 10.\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    switch (Parameter_List[0].Integer_Value)
+    {
+        /* Trigger an assertion */
+        case 0:
+            configASSERT(0);
+            break;
+        /* Trigger an usage fault or hard fault by executing an address without thumb bit set. */        
+        case 1:
+            pF = (int (*)(void))0x00000000;
+            r = pF();
+            break;
+        /* Trigger an usage fault or hard fault by reading from 0x00000000. */
+        case 2:
+            p = (unsigned int *)0x00000000;
+            r = *p;
+            break;
+        /* Trigger an usage fault or hard fault by writing to 0x00000000. */
+        case 3:
+            p = (unsigned int *)0x00000000;
+            *p = 0x00BADA55;
+            break;
+        /* Trigger an usage fault or hard fault by executing an undefined instruction. */
+        case 4:
+            pF = (int (*)(void))(((char *)&_UDF) + 1);
+            r = pF();
+            break;
+        /* Trigger an usage fault or hard fault by an unaligned word access. */
+        case 5:
+            p = (unsigned int *)0x2a002;
+            r = *p;
+            break;
+        /* Trigger an usage fault or hard fault by dividing by zero. */
+        case 6:
+            a = 1;
+            b = 0;
+            r = a / b;
+            printf("r = 0x%x\n",r);  /* to prevent compiler optimization */
+            break;
+        /* Trigger a bus fault or hard fault by reading from a reserved address. */
+        case 7:
+            p = (unsigned int *)COREDUMP_TEST_INVALID_ADDRESS;
+            r = *p;
+            break;
+        /* Trigger a bus fault or hard fault by writing to a reserved address. */
+        case 8:
+            p = (unsigned int *)COREDUMP_TEST_INVALID_ADDRESS;
+            *p = 0x00BADA55;
+            break;
+        /* Trigger a bus fault or hard fault by executing at a reserved address. */
+        case 9:
+            pF = (int (*)(void))COREDUMP_TEST_INVALID_ADDRESS;
+            r = pF();
+            break;
+        default:
+            printf("Test case index shoud be an integer less than 10\n");
+    }
+    return QAPI_OK;
+}
+
+
+static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    coredump_type coredump_buf;
+    int ret = 0;
+
+    if ( Parameter_Count != 1 )
+    {
+        printf("Invalid number of arguments\r\n");
+        printf("Usage: platform coredumpinfo <0: get and clear coredumpinfo; 1: get but not clear coredumpinfo>\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    if ((Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1))
+    {
+        printf("Invalid parameter, shoud be 0 or 1\n");
+        printf("Usage: platform coredumpinfo <0: get and clear coredumpinfo; 1: get but not clear coredumpinfo>\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    /* address: 0x36A000 */
+    ret = qapi_rram_read(COREDUMP_PARTID, COREDUMP_ADDRESS_OFFSET, (uint8_t *)&coredump_buf, sizeof(coredump_type));
+
+    if (ret == QAPI_OK)
+    {
+        printf( "\r\n");
+        printf( "============== coredump start ==============\r\n");
+        printf( "coredump version = [%d]\r\n", coredump_buf.version);
+        printf( "os type=[%d]\r\n", coredump_buf.os.type);
+        printf( "os version = [%d]\r\n", coredump_buf.os.version);
+        printf( "arch version = [%X]\r\n", coredump_buf.arch.version);
+        printf( "error message = [%s]\r\n", (char*)coredump_buf.err.message);
+        printf( "file name = [%s]\r\n", (char*)coredump_buf.err.filename);
+        printf( "line number = [%d]\r\n",coredump_buf.err.linenum);
+        printf( "param[0] = [%d]\r\n",coredump_buf.err.param[0]);
+        printf( "param[1] = [%d]\r\n",coredump_buf.err.param[1]);
+        printf( "param[2] = [%d]\r\n",coredump_buf.err.param[2]);
+        printf( "image basic info = [%s]\r\n",coredump_buf.image.image_variant_string);
+        printf( "iamge build info = [%s]\r\n",coredump_buf.image.qc_image_version_string);
+        printf( "\r\n");
+        printf( "core reg info:\r\n"
+            "R0    %08X   R1    %08X\r\n"
+			"R2    %08X   R3    %08X\r\n"
+			"R12   %08X   LR    %08X\r\n"
+			"PC    %08X   PSR   %08X\r\n",
+			coredump_buf.arch.regs.name.r0, coredump_buf.arch.regs.name.r1,
+			coredump_buf.arch.regs.name.r2, coredump_buf.arch.regs.name.r3,
+			coredump_buf.arch.regs.name.r12, coredump_buf.arch.regs.name.lr,
+			coredump_buf.arch.regs.name.pc, coredump_buf.arch.regs.name.psr);
+        printf( "ICSR  %08X   VTOR  %08X\r\n"
+			"AIRCR %08X   SCR   %08X \r\n"
+			"CCR   %08X\r\n" ,
+			coredump_buf.arch.regs.name.icsr,coredump_buf.arch.regs.name.vtor,
+			coredump_buf.arch.regs.name.aircr, coredump_buf.arch.regs.name.scr,
+			coredump_buf.arch.regs.name.ccr);
+        printf( "SHPR1 %08x  SHPR2 %08x \r\n"
+			"SHPR3 %08x\r\n",
+            coredump_buf.arch.regs.name.shpr1, coredump_buf.arch.regs.name.shpr2,
+            coredump_buf.arch.regs.name.shpr3);
+        printf( "SHCSR %08X   CFSR  %08X \r\n"
+			"HFSR  %08X   DFSR  %08X \r\n"
+			"MMFAR %08X\r\n",
+            coredump_buf.arch.regs.name.shcsr, coredump_buf.arch.regs.name.cfsr,
+            coredump_buf.arch.regs.name.hfsr, coredump_buf.arch.regs.name.dfsr,
+            coredump_buf.arch.regs.name.mmfar);
+        printf( "BFAR  %08X   AFSR %08X \r\n"
+			"PFR0  %08X   PFR1 %08X \r\n"
+			"DFR   %08X\r\n",
+            coredump_buf.arch.regs.name.bfar, coredump_buf.arch.regs.name.afsr,
+            coredump_buf.arch.regs.name.pfr0, coredump_buf.arch.regs.name.pfr1,
+            coredump_buf.arch.regs.name.dfr);
+        printf( "ADR     %08X   MMFR[0] %08X \r\n"
+			"MMFR[1] %08X   MMFR[2] %08X \r\n"
+			"MMFR[3] %08X\r\n",
+            coredump_buf.arch.regs.name.adr, coredump_buf.arch.regs.name.mmfr[0],
+            coredump_buf.arch.regs.name.mmfr[1], coredump_buf.arch.regs.name.mmfr[2],
+            coredump_buf.arch.regs.name.mmfr[3]);
+        printf( "ISAR[0] %08X  ISAR[1] %08X \r\n"
+			"ISAR[2] %08X  ISAR[3] %08X \r\n"
+			"ISAR[4] %08X  CPACR   %08X\r\n",
+            coredump_buf.arch.regs.name.isar[0], coredump_buf.arch.regs.name.isar[1],
+            coredump_buf.arch.regs.name.isar[2], coredump_buf.arch.regs.name.isar[3],
+            coredump_buf.arch.regs.name.isar[4], coredump_buf.arch.regs.name.cpacr);
+        printf( "NVIC_ISPR0 %08X   NVIC_ISPR1 %08X   NVIC_ISPR2 %08X\r\n",
+            coredump_buf.arch.regs.name.ispr[0], coredump_buf.arch.regs.name.ispr[1],
+            coredump_buf.arch.regs.name.ispr[2]);
+        printf( "NVIC_ISER0 %08X   NVIC_ISER1 %08X   NVIC_ISER2 %08X\r\n",
+            coredump_buf.arch.regs.name.iser[0], coredump_buf.arch.regs.name.iser[1],
+            coredump_buf.arch.regs.name.iser[2]);
+        printf( "============== coredump end ==============\r\n");
+        printf( "\r\n");
+
+        if (Parameter_List[0].Integer_Value == 0)
+        {
+            memset(&coredump_buf, 0, sizeof(coredump_type));
+            ret = qapi_rram_write(COREDUMP_PARTID, COREDUMP_ADDRESS_OFFSET, (uint8_t *)&coredump_buf, sizeof(coredump_type));
+            if (ret == QAPI_OK)
+            {
+                printf("coredumpinfo is cleared\n");
+            }
+            else
+            {
+                printf("fail to clear coredumpinfo\n");
+            }
+        }
+    }
+    else
+    {
+        printf( "fail to read coredumpinfo\r\n");
+    }
+    return QAPI_OK;
+}
+#endif
+
 const QAPI_Console_Command_t platform_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -810,6 +1022,10 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
     {platform_qcspi_enable, "qcspi", "<0|1>\n", "enable/disable qcspi. 1: enable, 0:disable\n"},
 #endif    
     {platform_demo_check_boot_reason, "boot_reason", "\n", "check boot reason\n"},
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+    {platform_demo_coredumptest, "coredumptest", "\n", "unit test for coredump function\n"},
+    {platform_demo_get_coredumpinfo, "coredumpinfo", "\n", "dump the coredump info\n"},
+#endif
 };
 
 const QAPI_Console_Command_Group_t platform_shell_cmd_group = {"platform", sizeof(platform_shell_cmds) / sizeof(QAPI_Console_Command_t), platform_shell_cmds};
