@@ -8,7 +8,7 @@ import socket
 import subprocess
 import traceback
 import random
-
+PACK_ENABLE = os.getenv('PACK_ENABLE', 'False') == 'True'
 class GDB_Client_Error(Exception):
     '''
     General GDB client error and super class for all GDB client exceptions.
@@ -51,11 +51,15 @@ class GDB_Client(object):
         '''
         self.server_port = server_port
 
-        if 'GDB_CLIENT_PATH' in os.environ:
-            # Get it from an environemnt variable
-            self.client_path = os.environ['GDB_CLIENT_PATH']
+        if PACK_ENABLE:
+            self.client_path = sys._MEIPASS
+        
         else:
-            raise GDB_Client_Error('GDB_CLIENT_PATH is not in environemnt variable')
+            if 'GDB_CLIENT_PATH' in os.environ:
+            # Get it from an environemnt variable
+                self.client_path = os.environ['GDB_CLIENT_PATH']
+            else:
+                raise GDB_Client_Error('GDB_CLIENT_PATH is not in environemnt variable')
 
         self.client_exe = client_exe
         self.udp_server = udp_port
@@ -128,9 +132,11 @@ class GDB_Client(object):
                     self.client_log.write(b'\n********************************************************************************\n')
             else:
                 self.client_log = open(os.devnull, 'wb')
-
-            self.client_proc = subprocess.Popen([os.path.join(self.client_path, self.client_exe), '-command', __file__.rstrip('c'), '-batch', '-return-child-result'], stdout=self.client_log)
-
+				
+            if PACK_ENABLE:
+                self.client_proc = subprocess.Popen([os.path.join(sys._MEIPASS, 'bin', self.client_exe), '-command', __file__.rstrip('c'), '-batch', '-return-child-result'], stdout=self.client_log)
+            else:
+                self.client_proc = subprocess.Popen([os.path.join(self.client_path, self.client_exe), '-command', __file__.rstrip('c'), '-batch', '-return-child-result'], stdout=self.client_log)
             # wait for the GDB client to connect to the socket
             response, address = self.udp_socket.recvfrom(GDB_Client.MAX_PACKET_SIZE)
             if address[0] != GDB_Client.SOCKET_ADDR:

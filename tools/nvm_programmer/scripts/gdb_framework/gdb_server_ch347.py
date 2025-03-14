@@ -5,6 +5,10 @@
 import subprocess
 import os
 import time
+import sys
+
+PACK_ENABLE = os.getenv('PACK_ENABLE', 'False') == 'True'
+
 
 def add_arguments(parser):
     '''
@@ -29,20 +33,26 @@ class GDB_Server(object):
             no_start_server: Flag indicating the server does not need to be started
         '''
         # Get the server path
-        if ('server_path' in kwargs) and (kwargs['server_path']):
-            # Path is provided as an argument so just use it.
-            self.server_path = kwargs['server_path']
-        elif 'OPENOCD_PATH' in os.environ:
-            # Get it from an environemnt variable
-            self.server_path = os.environ['OPENOCD_PATH']
+        if PACK_ENABLE:
+            self.server_path = sys._MEIPASS
         else:
-            raise Exception('There is no server_path and OPENOCD_PATH in environment variable.')
+            if ('server_path' in kwargs) and (kwargs['server_path']): 
+                # Path is provided as an argument so just use it.
+                self.server_path = kwargs['server_path']
+            elif 'OPENOCD_PATH' in os.environ:
+                # Get it from an environemnt variable
+                self.server_path = os.environ['OPENOCD_PATH']
+            else:
+                raise Exception('There is no server_path and OPENOCD_PATH in environment variable.')
 
         self.start_server = kwargs['start_server']
         if ('server_script' in kwargs) and (kwargs['server_script']):
             self.server_script = kwargs['server_script']
         else:
-            self.server_script = './qcc730_openocd_ch347.cfg'
+            if PACK_ENABLE:
+                self.server_script = os.path.join(sys._MEIPASS, 'qcc730_openocd_ch347.cfg')
+            else:
+                self.server_script = './qcc730_openocd_ch347.cfg'
 
         self.server_script = self.server_script.replace(os.sep, '/')
 
@@ -51,7 +61,10 @@ class GDB_Server(object):
         if (os.name == 'posix'):
             self.executable = 'openocd'
         else:
-            self.executable = 'openocd.exe'
+            if PACK_ENABLE:
+                self.executable = os.path.join(sys._MEIPASS, 'openocd.exe')
+            else:
+                self.executable = 'openocd.exe'
 
         if (os.path.exists(os.path.join(self.server_path, self.executable)) == False):
             raise Exception("The gdb server executable file {} is not exist.".format(os.path.join(self.server_path, self.executable)))
