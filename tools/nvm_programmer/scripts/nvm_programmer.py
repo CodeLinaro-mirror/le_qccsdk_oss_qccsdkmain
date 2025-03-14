@@ -25,7 +25,7 @@ if PACK_ENABLE:
 else:
     FW_UPGRADE_SCRIPTS_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../fw_upgrade"))
     sys.path.append(FW_UPGRADE_SCRIPTS_PATH)
-    from fw_upgrade.gen_download_table import Download_Table
+    from gen_download_table import Download_Table
 
 import re
 import subprocess
