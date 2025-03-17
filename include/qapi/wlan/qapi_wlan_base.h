@@ -199,6 +199,7 @@ typedef struct {
     uint8_t host_initiated; /* Specify whether join is host initiated or not*/
     uint8_t reason_code;
     uint16_t channel_frequency;
+    uint8_t passphrase[__QAPI_WLAN_PASSPHRASE_LEN + 1]; /* passphrase of joind AP */
     uint16_t reserved2;
 } qapi_WLAN_Join_Comp_Evt_t;
 

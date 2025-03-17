@@ -349,6 +349,10 @@ static void _wlan_fill_join_event (qapi_WLAN_Join_Comp_Evt_t *dst, const WMI_JOI
     } else {
         dst->evt_hdr.status = QAPI_WLAN_ERR_EPROTO;
     }
+
+    if(p_cxt->opmode == WHAL_M_STA)
+        memscpy(dst->passphrase, WMI_PASSPHRASE_LEN+1, src->passphrase, WMI_PASSPHRASE_LEN+1);
+
     memscpy(dst->bssid, __QAPI_WLAN_MAC_LEN, src->bssid, __QAPI_WLAN_MAC_LEN);
     dst->ssid_Length = src->ssid.ssid_len;
     memscpy(dst->ssid, dst->ssid_Length, src->ssid.ssid, dst->ssid_Length);
