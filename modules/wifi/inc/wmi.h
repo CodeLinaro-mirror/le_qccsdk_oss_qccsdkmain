@@ -320,6 +320,7 @@ typedef struct {
     uint16_t channel_frequency; /*frequency of current channel*/
     uint8_t bssid[IEEE80211_ADDR_LEN]; /* bssid of the ap joined */
     ssid_t ssid; /*ssid of joind AP */
+    uint8_t passphrase[WMI_PASSPHRASE_LEN+1]; /* passphrase of the ap joined */
 }POSTPACK WMI_JOIN_EVT;
 
 typedef struct {

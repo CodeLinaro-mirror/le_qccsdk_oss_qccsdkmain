@@ -267,8 +267,8 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
          } else {
             offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "+EVT:wlan_disconn:%d,%d,%02x-%02x-%02x-%02x-%02x-%02x,", cxnInfo->reason_code, cxnInfo->bss_Connection_Status,mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
          }
-         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "%d","NA","%d,%d",
-                  cxnInfo->channel_frequency, cxnInfo->assoc_id, cxnInfo->host_initiated);
+         offset += snprintf(buffer + offset, WLAN_RESPONSE_BUFFER_LENGTH - offset, "%d,%d,%d,%s,%s",
+                  cxnInfo->channel_frequency, cxnInfo->assoc_id, cxnInfo->host_initiated,p_cxt->ssid,cxnInfo->passphrase);
          break;
       }
       case QAPI_WLAN_DISCONNECT_CB_E: {
