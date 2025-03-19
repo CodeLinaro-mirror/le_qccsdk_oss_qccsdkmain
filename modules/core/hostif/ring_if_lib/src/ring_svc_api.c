@@ -298,6 +298,55 @@ bool ringif_ring_empty(ring_ctx_t *p_ring_ctx)
 }
 
 /*
+* @brief  Checks if the element buffer is NULl or not.
+* @param  ring_ctx_t : Context pointer of the ring.
+* @param  idx        : Index of ring element.
+* @return TRUE if the element buffer is empty and FALSE otherwise.
+*
+*/
+bool ringif_ring_buf_full(ring_ctx_t *p_ring_ctx, uint8_t idx)
+{
+    ring_element_t *element = NULL;
+	uint8_t this_elem_null = 0;
+	uint8_t next_elem_null = 0;
+
+	
+    if(NULL == p_ring_ctx) {
+        RINGIF_PRINT_LOG_ERR("RingIF_Err: p_ring_ctx NULL\r\n");
+        return TRUE;
+    }
+
+    if(NULL == p_ring_ctx->p_ring_base) {
+        RINGIF_PRINT_LOG_ERR("RingIF_Err: Ring base NULL for ring_id: %d\r\n", p_ring_ctx->ring_id);
+        return TRUE;
+    }
+
+	element = (p_ring_ctx->p_ring_base + idx * p_ring_ctx->ring_elem_size);
+
+    if((element->p_buf != NULL) || (element->p_buf_start != NULL)) {
+        this_elem_null = 1;
+    }
+
+    if (idx == 0) {
+        idx = p_ring_ctx->ring_num_elem -1;
+	} else {
+        idx = idx - 1;
+	}
+		
+	element = (p_ring_ctx->p_ring_base + idx * p_ring_ctx->ring_elem_size);
+
+	if((element->p_buf != NULL) || (element->p_buf_start != NULL)) {
+        next_elem_null = 1;
+    }
+
+	if (this_elem_null && next_elem_null) {
+		return TRUE;
+	} else {
+        return FALSE;
+	}
+}
+
+/*
 * @brief  Checks if the F2A Ring has any used elements to be freed
 * @param  ring_ctx_t            : Context pointer of the ring
 * @return uint8_t               : Number of used elements pending to be cleared
@@ -715,16 +764,22 @@ bool ringif_a2f_refill_bufs(uint8_t ring_id, _pfn_refill_elem pfn_refill_elem) {
 bool ringif_f2a_clear_used_bufs(uint8_t ring_id, _pfn_clear_elem pfn_clear_elem) {
     uint8_t idx;
     uint8_t num_cleared = 0;
+	uint8_t read_idx;
+	uint8_t write_idx;
+	uint8_t idx_clear_pending;
+	
     ring_ctx_t *p_ring_ctx = ringif_f2a_ring_ctx(ring_id);
 	if (p_ring_ctx == NULL) {
         RINGIF_PRINT_LOG_ERR("RingIF_Err: NULL context %d\r\n", ring_id);
 		return FALSE;
 	}
-    uint8_t read_idx = *p_ring_ctx->p_read_idx;
-
-    if(p_ring_ctx->ring_idx_to_clear ==  read_idx) {
+    read_idx = *p_ring_ctx->p_read_idx;
+	write_idx = *p_ring_ctx->p_write_idx;
+	idx_clear_pending = p_ring_ctx->ring_idx_clear_pending;
+	
+    if(p_ring_ctx->ring_idx_to_clear == read_idx) {
         RINGIF_PRINT_LOG_INFO("ringif_f2a_clear_used_bufs already cleared (id%d), p_ring_ctx->ring_idx_to_clear:%d\r\n", ring_id, p_ring_ctx->ring_idx_to_clear);
-		if ((*p_ring_ctx->p_write_idx != read_idx) || (p_ring_ctx->ring_idx_clear_pending == 0)) {
+		if ((write_idx != read_idx) || !ringif_ring_buf_full(p_ring_ctx, p_ring_ctx->ring_idx_to_clear)) {
 			return TRUE;            		    
 		}
     }
