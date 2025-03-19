@@ -168,53 +168,53 @@ static void scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
          offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "+CWLAP:%s,%.2x-%.2x-%.2x-%.2x-%.2x-%.2x,%d,%d,", temp_ssid, 
             list[i].bssid[0],list[i].bssid[1],list[i].bssid[2],list[i].bssid[3],list[i].bssid[4],list[i].bssid[5], list[i].channel, list[i].rssi);
          if(list[i].security_Enabled) {
-            if(list[i].rsn_Auth) {
-               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "802.1X");
+            if ((list[i].rsn_Auth || list[i].rsn_Cipher)) {
+               if ((list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) || (list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK)) {
+                  if (list[i].wpa_Auth || list[i].wpa_Cipher)
+                     offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WPA/WPA2,");
+                  else if (list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE)
+                     offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WPA2/WPA3,");
+                  else
+                     offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WPA2,");
                }
-               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "PSK");
+               else if (list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE){
+                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WPA3,");
                }
-               if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "SAE");
-               }
+               if(list[i].rsn_Cipher){
+                  if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP){
+                     offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WEP,");
+                  }
+                  if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP){
+                     if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP)
+                        offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP/CCMP");
+                     else
+                        offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP");
+                  }
+                  else if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP){
+                     offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "CCMP");
+                  }
+              }
             }
+            else if(list[i].wpa_Auth || list[i].wpa_Cipher){
+               offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WPA,");
 
-            if(list[i].rsn_Cipher){
-               /* AP security can support multiple options hence we check each one separately. Note rsn == wpa2 */
-               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WEP");
+               if(list[i].wpa_Cipher) {
+                  if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP) {
+                     offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WEP,");
+                  }
+                  if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP) {
+                     if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP)
+                        offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP/CCMP");
+                     else
+                        offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP");
+                  }
+                  if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP) {
+                     offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "CCMP");
+                  }
                }
-               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP");
-               }
-               if(list[i].rsn_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "AES");
-               }
-            }
-
-            if(list[i].wpa_Auth) {
-               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "802.1X");
-               }
-               if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "PSK");
-               }
-            }
-
-            if(list[i].wpa_Cipher) {
-               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_WEP) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "WEP");
-               }
-               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_TKIP) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "TKIP");
-               }
-               if(list[i].wpa_Cipher & __QAPI_WLAN_CIPHER_TYPE_CCMP) {
-                  offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "AES");
-               }
-            }
+         }
          } else {
-            offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "NONE");
+            offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "NONE,NONE");
          }
          QAT_Response_Str(QAT_RC_QUIET, buffer);
       }
