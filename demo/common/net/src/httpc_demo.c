@@ -34,12 +34,12 @@
 #define MAX_PRINTF_LENGTH                   256
 
 #define REQUEST_TIMEOUT_MS                  5000    /* 5 sec */
-#define BODY_BUFFER_SIZE                    3000
-#define HEADER_BUFFER_SIZE                  200
+#define BODY_BUFFER_SIZE                    3010
+#define HEADER_BUFFER_SIZE                  300
 #define RX_BUFFER_SIZE                      512
 #define MAX_URL_LENGTH                      256
 #define MAX_HOST_LENGTH                     64
-#define MAX_CHUNK_SIZE                      1460   /* MAX TCP Segment */
+#define MAX_CHUNK_SIZE                      3010  //should <= BODY_BUFFER_SIZE
 #define HEX_BYTES_PER_LINE                  16
 
 static uint8_t hd = 0;
@@ -648,7 +648,7 @@ void httpc_command_help(void)
     HTTPC_PRINTF("httpc destroy <client_num>\n");
     HTTPC_PRINTF("httpc conn <client_num> <origin_server or proxy> [<port>]\n");
     HTTPC_PRINTF("httpc disconn <client_num>\n");
-    HTTPC_PRINTF("httpc {get | head | post | put | delete | patch} <client_num> [<url>] [<chunk_flag>] [<chunk_size>]\n");
+    HTTPC_PRINTF("httpc {get | head | post | put | delete | patch} <client_num> [<url>] [<chunk_flag>] [<chunk_size>] [<total_size>]\n");
     HTTPC_PRINTF(" where <chunk_flag> <value> are:\n");
     HTTPC_PRINTF("       chunk_flag 0x00|0x01|0x80|0x81 = 0x00: non chunk encoded without http header; 0x01: non chunk encoded with http header\n");
     HTTPC_PRINTF("                                        0x80: chunk encoded without http header; 0x81: chunk encoded with http header\n");
@@ -904,7 +904,6 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                 case 'a':   /* -c ca_list */
                     i++;
                     calist = Parameter_List[i].String_Value;
-                    printf("test: calist:%s\r\n",calist);
                     if(arg->sslCert == NULL)
                     {
                         arg->sslCert = malloc(sizeof(qapi_Ssl_Cert_t));
@@ -926,7 +925,6 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                 case 'c':   /* -c cert */
                     i++;
                     cert_file = Parameter_List[i].String_Value;
-                    printf("test: cert_file:%s\r\n",cert_file);
                     if(arg->sslCert == NULL)
                     {
                         arg->sslCert = malloc(sizeof(qapi_Ssl_Cert_t));
@@ -947,7 +945,6 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                 case 'k':   /* -k cert */
                     i++;
                     pri_key = Parameter_List[i].String_Value;
-                    printf("test: pri_key:%s\r\n",pri_key);
                     if(arg->sslCert == NULL)
                     {
                         arg->sslCert = malloc(sizeof(qapi_Ssl_Cert_t));
@@ -1503,12 +1500,13 @@ usage:
         return QAPI_ERROR;
 #endif
     }
-    else if(Parameter_Count == 5 && req_cmd)
+    else if(Parameter_Count == 6 && req_cmd)
     {
         char *chunk = NULL;
         char *url = Parameter_List[2].String_Value;
         uint8_t chunk_flag = Parameter_List[3].Integer_Value;
         uint32_t chunk_size = Parameter_List[4].Integer_Value;
+        int32_t total_size = Parameter_List[5].Integer_Value;
 
         if (strlen(url) > MAX_URL_LENGTH)
         {
@@ -1518,18 +1516,18 @@ usage:
 
         if(chunk_size > MAX_CHUNK_SIZE)
         {
-            HTTPC_PRINTF("Chunk size too long. Cannot be over %d\n", MAX_CHUNK_SIZE);
+            HTTPC_PRINTF("Chunk size %d, it's too long. Cannot be over %d\n", chunk_size,MAX_CHUNK_SIZE);
             return QAPI_ERROR;
         }
-
+#ifndef CONFIG_QAT_HTTPC_DEMO
         if(chunk_size > 0)
         {
             chunk = httpc_malloc_body_demo(chunk_size);
         }
-
-        if(chunk)
+#endif
+        error = qapi_Net_HTTPc_Send_Chunk(arg->client, req_cmd, (const char *)url, chunk, chunk_size, chunk_flag,total_size);
+        if(chunk != NULL)
         {
-            error = qapi_Net_HTTPc_Send_Chunk(arg->client, req_cmd, (const char *)url, chunk, chunk_size, chunk_flag);
             free(chunk);
         }
     }
@@ -1564,18 +1562,22 @@ usage:
 #ifdef CONFIG_QAT_HTTPC_DEMO
         if (Parameter_Count > 2) 
         {
-            body = malloc(len+1);
-            memcpy(body, Parameter_List[3].String_Value, len);
-            *(body + len) = '\0';
+            body = Parameter_List[3].String_Value;
         }
+        if (!body)
+            return QAPI_ERROR;
 
+        HTTPC_PRINTF("body len = %d\n", strlen(body));
+
+        error = qapi_Net_HTTPc_Set_Body(arg->client, (const char*)body, strlen(body));
+        body = NULL;
 #else
         if (len > BODY_BUFFER_SIZE)
             len = BODY_BUFFER_SIZE;
 
-        body = httpc_malloc_body_demo(len);
+        //body = malloc(len+1);
 
-#endif
+        body = httpc_malloc_body_demo(len);
 
         if (!body)
 		    return QAPI_ERROR;
@@ -1583,8 +1585,8 @@ usage:
         HTTPC_PRINTF("body len = %d\n", strlen(body));
 
 		error = qapi_Net_HTTPc_Set_Body(arg->client, (const char*)body, strlen(body));
-
         free(body);
+#endif
     }
     else if (strcmp(command, "addheaderfield") == 0)
     {

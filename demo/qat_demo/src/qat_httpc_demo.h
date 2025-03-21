@@ -24,13 +24,16 @@
 #define QAT_HTTPC_MAXIMUM_NUMBER_OF_KEY_VALUE         (QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS-2)
 #define QAT_HTTPC_CLIENT_INDEX                        1
 #define HTTP_HOST_STR_BUFFER_LENGTH					  50
-#define HTTP_BODY_BUFFER_SIZE                         1000
+#define HTTP_BODY_BUFFER_SIZE                         10000
 #define HTTP_WAIT_RSP_TIME                            10   
 #define FILE_PATH_STR_BUFFER_LENGTH                   32
 #define HTTP_URL_STR_BUFFER_LENGTH                    256
 #define HTTPS_DEFAULT_PORT                            443
 #define HTTP_DEFAULT_PORT                             80
-#define QAT_HTTPC_MAX_HEADER_FIELD                    5
+#define QAT_HTTPC_MAX_HEADER_FIELD                    10
+#define QAT_MAX_CHUNK_SIZE                            3000
+#define QAT_CHUNK_INTERVAL                            100  //ms
+
 
 
 struct at_header_field{
@@ -94,6 +97,7 @@ typedef enum {
 	/*supported http client methods */
 	QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED,  //application/x-www-form-urlencoded, default value
 	QAT_CONTENT_TYPE_JSON,                   //application/json
+	QAT_CONTENT_TYPE_ZIP,                    //application/zip
 	QAT_CONTENT_TYPE_FORM_DATA,              // multipart/form-data
 	QAT_CONTENT_TYPE_TEXT_XML                // text/xml
 } qat_content_type;
