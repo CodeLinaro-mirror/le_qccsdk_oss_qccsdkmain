@@ -27,6 +27,7 @@
 #include "dns.h"
 #include "priv/nd6_priv.h"
 #include "ip6_addr.h"
+#include "netif.h"
 
 /*-------------------------------------------------------------------------
  * Function Declarations
@@ -45,6 +46,7 @@ static QAT_Command_Status_t Extend_Command_RecvData(uint32_t Op_Type, uint32_t P
 static QAT_Command_Status_t Extend_Command_Server(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_UdpServer(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_Mode(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_IPV6Prefix(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 
 /* The following is the complete command list for the QAT common command demo. */
 /** List of global commands that are supported when in a group. */
@@ -64,6 +66,9 @@ static QAT_Command_t QAT_TCPIP_Command_List[] =
     {"+CIPSERVER",      Extend_Command_Server,          QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
     {"+CIPUDPSERVER",   Extend_Command_UdpServer,       QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
     {"+CIPMODE",        Extend_Command_Mode,            QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
+#if LWIP_IPV6
+    {"+CIPV6PREFIX",    Extend_Command_IPV6Prefix,      QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
+#endif
 };
 
 /*-------------------------------------------------------------------------
@@ -103,6 +108,8 @@ static QAT_Command_t QAT_TCPIP_Command_List[] =
 
 #define QAT_OK                                      0
 #define QAT_ERROR                                   -1
+
+#define QAT_IPV6PREFIX_LEN_MAX        19
 
 /**********************************************************************************************************/
 /* Globals											                                                      */
@@ -149,6 +156,7 @@ static int udp_listen_fd = INVALID_FD;
 
 static uint8_t v6_enable = 1;
 extern struct nd6_router_list_entry default_router_list[];
+char ipv6_prefix[40] ="2001:db8"; //set the default prefix
 /*-------------------------------------------------------------------------
  * Function Definitions
  *-----------------------------------------------------------------------*/
@@ -3025,6 +3033,125 @@ static QAT_Command_Status_t Extend_Command_Mode(uint32_t Op_Type, uint32_t Param
     }
     return rc;
 }
+
+#if LWIP_IPV6
+static int is_valid_prefix(const char *str);
+
+static QAT_Command_Status_t Extend_Command_IPV6Prefix(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+    char buf[QAT_CMD_IP_BUFFER_LENGTH] = {0};
+    char *ptr = NULL;
+    int len = 0;
+    char ip_str[40];
+    ip6_addr_t addr;
+
+    struct netif *netif = NULL;
+
+    netif = get_netif_by_device(AP_DEVICE);
+    if( NULL == netif) {
+      QAT_IP_PRINTF("+CIPV6PREFIX: AP network interface not initialized\r\n");
+      return rc;
+    }
+
+    switch (Op_Type)
+    {
+        case QAT_OP_EXEC:
+        {
+            QAT_Response_Str(QAT_RC_OK, "AT+CIPV6PREFIX=<prefix>");
+            break;
+        }
+        case QAT_OP_QUERY:
+        {
+            snprintf(buf, QAT_CMD_IP_BUFFER_LENGTH, "+CIPV6PREFIX:%s", ipv6_prefix);
+            QAT_Response_Str(QAT_RC_OK, buf);
+            break;
+        }
+        case QAT_OP_EXEC_W_PARAM:
+        {
+            if( Parameter_Count != 1 || !Parameter_List )
+            {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPV6PREFIX:Invalid input parameter!\r\n");
+                return rc;
+            }
+            ptr = Parameter_List[0].String_Value;
+            if (!is_valid_prefix(ptr)) {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPV6PREFIX:IPv6 Prefix format error\r\n");
+                return rc;
+            }
+            len = strlen(ptr);
+            if(len == 0 || len > QAT_IPV6PREFIX_LEN_MAX){
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPV6PREFIX:IPv6 Prefix format error\r\n");
+                return rc;
+            } else {
+              //try to check whether it is a valid prefix
+              memset(ip_str, 0, sizeof(ip_str));
+              strlcpy(ip_str, ptr, sizeof(ip_str));
+              strlcat(ip_str, "::1", sizeof(ip_str));
+              memset(&addr, 0, sizeof(ip6_addr_t));
+              if(ip6addr_aton(ip_str, &addr) == 0 ) {
+                QAT_Response_Str(QAT_RC_ERROR, "+CIPV6PREFIX:IPv6 Prefix format error\r\n");
+                return rc;
+              } else {
+                //check global or not
+                if( (addr.addr[0] & PP_HTONL(0xe0000000)) == PP_HTONL(0x20000000) ) {
+                  //config netif and save the prefix
+                  netif_ip6_addr_set(netif, 1, &addr);
+                  netif->ip6_autoconfig_enabled = 1;
+                  netif_ip6_addr_set_state(netif, 1, IP6_ADDR_TENTATIVE);
+                  strlcpy(ipv6_prefix, ptr, sizeof(ipv6_prefix));
+                  rc = QAT_Response_Str(QAT_RC_OK, NULL);
+                  break;
+                } else {
+                  QAT_Response_Str(QAT_RC_ERROR, "+CIPV6PREFIX:IPv6 Prefix format error\r\n");
+                  return rc;
+                }
+              }
+            }
+        }
+    }
+    return rc;
+}
+
+static
+int is_valid_prefix(const char *str) {
+  if (strlen(str) > 19) {
+    return 0;
+  }
+
+  int colon_count = 0;
+  int is_valid = 1;
+  int last_colon_pos = -1;
+
+  if( str[0] == ':' || str[strlen(str) -1] == ':') {
+    return 0;
+  }
+
+  for (int i = 0; str[i] != '\0'; i++) {
+    char c = str[i];
+    if (c == ':') {
+      colon_count++;
+      if (last_colon_pos == i-1) {
+        is_valid = 0;
+        break;
+      }
+      last_colon_pos = i;
+
+    } else {
+      if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+        is_valid  = 0;
+        break;
+      }
+    }
+  }
+
+  if (colon_count != 3) {
+    return 0;
+  }
+
+  return is_valid;
+}
+#endif
 
 void Initialize_QAT_TCPIP_Demo (void)
 {
