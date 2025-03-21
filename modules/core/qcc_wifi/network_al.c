@@ -72,6 +72,8 @@ ip_addr_t _ip_address[MAX_ROLE];
 ip_addr_t netmask[MAX_ROLE];
 ip_addr_t default_gw[MAX_ROLE];
 nt_osal_semaphore_handle_t ntSleepSemaphoreHandle=NULL;
+static uint32_t last_ip_32 = 0;
+
 /**
  * @ingroup network_al
  * Fetch IP address from network interface in network order.
@@ -794,9 +796,13 @@ static void nt_dpm_netif_dhcp_hdlr(struct netif* p_netif)
                 ip_addr_t* p_ip;
                 p_ip=&(p_netif->ip_addr);
                 ip_32=ip_addr_get_ip4_u32(p_ip);
-                nt_dpm_ip_addr_ready_ind(netif_id, NETIF_IP_TYPE_DYNAMIC, NETIF_IP_VER_V4, ip_32, NULL);
+                if(ip_32 != last_ip_32){
+                    last_ip_32 = ip_32;
+                    nt_dpm_ip_addr_ready_ind(netif_id, NETIF_IP_TYPE_DYNAMIC, NETIF_IP_VER_V4, ip_32, NULL);
+                }
                 return;
             } else {
+                last_ip_32 = 0;
                 struct dhcp *dhcp = netif_dhcp_data(p_netif);
                 NT_LOG_PRINT(COMMON, ERR,"DHCP v4 indication, dhcp state:%d\r\n",dhcp->state);
             }
