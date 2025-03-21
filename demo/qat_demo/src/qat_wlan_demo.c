@@ -68,7 +68,7 @@ static QAT_Command_t QAT_Wifi_Command_List[] =
    {"+CWENABLE", Extend_Command_Enable,   QAT_OP_EXEC},
    {"+CWQABLE",  Extend_Command_Disable,  QAT_OP_EXEC},
    {"+CWMODE",   Extend_Command_SetOperatingMode,      QAT_OP_EXEC_W_PARAM | QAT_OP_QUERY | QAT_OP_EXEC},
-   {"+CWLAP",    Extend_Command_Scan,     QAT_OP_EXEC},
+   {"+CWLAP",    Extend_Command_Scan,     QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+CWWPA",    Extend_Command_SetWpaParameters,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+CWPWD",    Extend_Command_SetWpaPassphrase,      QAT_OP_EXEC_W_PARAM | QAT_OP_EXEC},
    {"+CWJAP",    Extend_Command_Connect,      QAT_OP_EXEC_W_PARAM | QAT_OP_QUERY | QAT_OP_EXEC},
@@ -212,14 +212,14 @@ static void scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                      offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "CCMP");
                   }
                }
-         }
+            }
          } else {
             offset += snprintf(buffer + offset, WLAN_STR_BUFFER_LENGTH - offset, "NONE,NONE");
+            
          }
          QAT_Response_Str(QAT_RC_QUIET, buffer);
+         sys_msleep(10);
       }
-      
-
    }
 
    return;
@@ -607,31 +607,24 @@ static QAT_Command_Status_t Extend_Command_Scan(uint32_t Op_Type, uint32_t Param
 
    switch (Op_Type)
    {
-      case QAT_OP_EXEC:  /* AT+CWLAP */
-      {
-         qurt_mutex_lock(&p_cxt->wifi_shell_cxt_mutex);
-         p_cxt->scan_mode = SCAN_MODE_BLOCKING;
-         if(Parameter_Count >= 1 && Parameter_List[0].Integer_Is_Valid) {
-            int32_t param_scan_mode = Parameter_List[0].Integer_Value;
-            if((param_scan_mode < SCAN_MODE_BLOCKING) || (param_scan_mode > SCAN_MODE_UNBLOCKING)) {
-               snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWLAP:FAIL,%d", param_scan_mode);
-               QAT_Response_Str(QAT_RC_ERROR, buffer);
-               qurt_mutex_unlock(&p_cxt->wifi_shell_cxt_mutex);
-               return rc;
-            }
-            p_cxt->scan_mode = param_scan_mode;
-         }
-         if(Parameter_Count >= 2 && !Parameter_List[1].Integer_Is_Valid) {
-            uint8_t ssid_Length = strlen((char *) Parameter_List[1].String_Value);
+      case QAT_OP_EXEC_W_PARAM:{
+         if(Parameter_Count >= 1 && !Parameter_List[1].Integer_Is_Valid) {
+            uint8_t ssid_Length = strlen((char *) Parameter_List[0].String_Value);
             if(ssid_Length > __QAPI_WLAN_MAX_SSID_LEN) {
                QAT_Response_Str(QAT_RC_ERROR, "+CWLAP:SSID length exceeds Maximum value");
                qurt_mutex_unlock(&p_cxt->wifi_shell_cxt_mutex);
                return rc;
             }
             scan_param.ssid_Length = ssid_Length;
-            memscpy(scan_param.ssid, ssid_Length, Parameter_List[1].String_Value, ssid_Length);
+            memscpy(scan_param.ssid, ssid_Length, Parameter_List[0].String_Value, ssid_Length);
             scan_ssid = true;
          }
+      }
+     
+      case QAT_OP_EXEC:   /* AT+CWLAP */
+      {
+         qurt_mutex_lock(&p_cxt->wifi_shell_cxt_mutex);
+         p_cxt->scan_mode = SCAN_MODE_BLOCKING;
          if(QAT_STATUS_SUCCESS_E != qapi_WLAN_Get_Param (deviceId,
 									__QAPI_WLAN_PARAM_GROUP_WIRELESS,
 									__QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
@@ -680,6 +673,7 @@ static QAT_Command_Status_t Extend_Command_Scan(uint32_t Op_Type, uint32_t Param
       }
       break;
    }
+
       default:
       ;
    }
