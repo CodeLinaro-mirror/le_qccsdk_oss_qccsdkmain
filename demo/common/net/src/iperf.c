@@ -3068,6 +3068,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         if (conn_sock < 0)
         {
             IPERF_PRINTF("select error\n");
+            app_get_time(&sess->pktStats.last_time);
             goto tcp_rx_QUIT;
         }
         else if (conn_sock == 0)
@@ -3078,6 +3079,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
             if ((curtime - iperf_select_start_time) / 1000 > 20)
             {
                 IPERF_PRINTF("select timeout %d,%s\n", errno, strerror(errno));
+                app_get_time(&sess->pktStats.last_time);
                 goto tcp_rx_QUIT;
             }
             continue;
