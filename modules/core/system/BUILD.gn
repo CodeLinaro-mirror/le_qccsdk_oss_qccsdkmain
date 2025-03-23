@@ -7,6 +7,8 @@ system_inc = [
     "../common",
     "//modules/hal/qcc730/fs",
     "//modules/hal/qcc730/wdt",
+    "//modules/wifi/inc/",
+    "//modules/core/common/",
 ]
 
 system_src = [
@@ -51,4 +53,7 @@ source_set("system") {
     if (CONFIG_MPU_ENABLE) {
         sources += [ "sys_src/ferm_mpu.c" ]
     }
+    if (CONFIG_WIFI_FW_COREDUMP_SUPPORT) {
+        sources += [ "sys_src/err.c" ]
+}
 }

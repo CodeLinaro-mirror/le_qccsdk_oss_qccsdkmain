@@ -144,4 +144,6 @@ declare_args() {
 
     CONFIG_WPS_LIB=false
     CONFIG_LWIP_MULTIPLE_STREAMS = false
+
+    CONFIG_WIFI_FW_COREDUMP_SUPPORT= false
 }
