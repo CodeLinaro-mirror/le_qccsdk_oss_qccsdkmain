@@ -29,8 +29,13 @@
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
 #include "err.h"
 #include "errlog.h"
+#include "qapi_lowpower.h"
 
 extern unsigned int __rram_region_end_address;
+int g_coredump_under_dtim_test_index = 0;
+static uint32_t bmps_start;
+static nt_osal_timer_handle_t bmps_timer;
+
 #define COREDUMP_TEST_INVALID_ADDRESS (__rram_region_end_address + 0x1000)
 #endif
 
@@ -791,7 +796,7 @@ static qapi_Status_t platform_demo_check_boot_reason(uint32_t Parameter_Count, Q
 }
 
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+static void coredump_test(int coredump_test_index)
 {
     int r = 0;
     volatile unsigned int *p;
@@ -800,85 +805,86 @@ static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_C
     volatile unsigned int a;
     volatile unsigned int b;
 
-    // Enable fault on unaligned access
-    SCB->CCR = 0xFF;
-
-    if ( Parameter_Count != 1 ) {
-        printf("Invalid number of arguments\r\n");
-        printf("===================== unit test command =====================\n");
-        printf("Usage: platform coredumptest <test case index>\n");
-        printf("0: Trigger an assertion.\n");
-        printf("1: Trigger an usage fault or hard fault by executing an address without thumb bit set.\n");
-        printf("2: Trigger an usage fault or hard fault by reading from 0x00000000.\n");
-        printf("3: Trigger an usage fault or hard fault by writing to 0x00000000.\n");
-        printf("4: Trigger an usage fault or hard fault by executing an undefined instruction.\n");
-        printf("5: Trigger an usage fault or hard fault by an unaligned word access.\n");
-        printf("6: Trigger an usage fault or hard fault by dividing by zero.\n");
-        printf("7: Trigger a bus fault or hard fault by reading from a reserved address.\n");
-        printf("8: Trigger a bus fault or hard fault by writing to a reserved address.\n");
-        printf("9: Trigger a bus fault or hard fault by executing at a reserved address.\n");
-        return QAPI_ERR_INVALID_PARAM;
-    }
-    if (!Parameter_List[0].Integer_Is_Valid || Parameter_List[0].Integer_Value > 9) {
-        printf("Test case index shoud be an integer less than 10.\n");
-        return QAPI_ERR_INVALID_PARAM;
-    }
-
-    switch (Parameter_List[0].Integer_Value)
+    switch (coredump_test_index)
     {
         /* Trigger an assertion */
         case 0:
             configASSERT(0);
             break;
-        /* Trigger an usage fault or hard fault by executing an address without thumb bit set. */        
+        /* Trigger an usage fault or hard fault by executing null pointer. */        
         case 1:
             pF = (int (*)(void))0x00000000;
             r = pF();
             break;
-        /* Trigger an usage fault or hard fault by reading from 0x00000000. */
-        case 2:
-            p = (unsigned int *)0x00000000;
-            r = *p;
-            break;
-        /* Trigger an usage fault or hard fault by writing to 0x00000000. */
-        case 3:
-            p = (unsigned int *)0x00000000;
-            *p = 0x00BADA55;
-            break;
-        /* Trigger an usage fault or hard fault by executing an undefined instruction. */
-        case 4:
-            pF = (int (*)(void))(((char *)&_UDF) + 1);
-            r = pF();
-            break;
-        /* Trigger an usage fault or hard fault by an unaligned word access. */
-        case 5:
-            p = (unsigned int *)0x2a002;
-            r = *p;
-            break;
         /* Trigger an usage fault or hard fault by dividing by zero. */
-        case 6:
+        case 2:
             a = 1;
             b = 0;
             r = a / b;
             printf("r = 0x%x\n",r);  /* to prevent compiler optimization */
             break;
         /* Trigger a bus fault or hard fault by reading from a reserved address. */
-        case 7:
+        case 3:
             p = (unsigned int *)COREDUMP_TEST_INVALID_ADDRESS;
             r = *p;
             break;
         /* Trigger a bus fault or hard fault by writing to a reserved address. */
-        case 8:
+        case 4:
             p = (unsigned int *)COREDUMP_TEST_INVALID_ADDRESS;
             *p = 0x00BADA55;
             break;
         /* Trigger a bus fault or hard fault by executing at a reserved address. */
-        case 9:
+        case 5:
             pF = (int (*)(void))COREDUMP_TEST_INVALID_ADDRESS;
             r = pF();
             break;
         default:
             printf("Test case index shoud be an integer less than 10\n");
+        }
+}
+static void coredump_bmps_timer_cb(void)
+{
+    coredump_test(g_coredump_under_dtim_test_index);
+    printf("test index = %d\n", g_coredump_under_dtim_test_index);
+    nt_delete_timer(bmps_timer);
+}
+
+static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    // Enable fault on unaligned access
+
+    if ( Parameter_Count != 3 ) {
+        printf("Invalid number of arguments\r\n");
+        printf("===================== unit test command =====================\n");
+        printf("Usage: platform coredumptest <test case index: 0~5> <bmps_enable:1/0> [timeout in ms to trigger crash]\n");
+        printf("                              0: Trigger an assertion.\n");
+        printf("                              1: Trigger an usage fault or hard fault by executing at null pointer.\n");
+        printf("                              2: Trigger an usage fault or hard fault by dividing by zero.\n");
+        printf("                              3: Trigger a bus fault or hard fault by reading from a reserved address.\n");
+        printf("                              4: Trigger a bus fault or hard fault by writing to a reserved address.\n");
+        printf("                              5: Trigger a bus fault or hard fault by executing at a reserved address.\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    if (!Parameter_List[0].Integer_Is_Valid || Parameter_List[0].Integer_Value > 5) {
+        printf("Test case index shoud be an integer less than 6.\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    if (Parameter_List[1].Integer_Value == 1)   /* bmps enable */
+    {
+        g_coredump_under_dtim_test_index = Parameter_List[0].Integer_Value;
+        bmps_timer = nt_create_timer(coredump_bmps_timer_cb, NULL, Parameter_List[2].Integer_Value, FALSE); // ms
+        if (!bmps_timer)
+            return QAPI_ERROR;
+        if (nt_start_timer(bmps_timer) != NT_TIMER_SUCCESS)
+            return QAPI_ERROR;
+        bmps_start = hres_timer_curr_time_us();
+        printf("BMPS timer started! curr: %u\n", bmps_start);
+        qapi_bmps_cfg(1, 0);
+    }
+    else
+    {
+        coredump_test(Parameter_List[0].Integer_Value);
     }
     return QAPI_OK;
 }
@@ -902,8 +908,9 @@ static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QA
         return QAPI_ERR_INVALID_PARAM;
     }
 
-    /* address: 0x36A000 */
-    ret = qapi_rram_read(COREDUMP_PARTID, COREDUMP_ADDRESS_OFFSET, (uint8_t *)&coredump_buf, sizeof(coredump_type));
+    /* address: 0x36b000 + offset */
+    //ret = qapi_rram_read(COREDUMP_PARTID, , (uint8_t *)&coredump_buf, sizeof(coredump_type));
+    ret = qapi_coredump_read(&coredump_buf);
 
     if (ret == QAPI_OK)
     {
@@ -977,7 +984,7 @@ static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QA
         if (Parameter_List[0].Integer_Value == 0)
         {
             memset(&coredump_buf, 0, sizeof(coredump_type));
-            ret = qapi_rram_write(COREDUMP_PARTID, COREDUMP_ADDRESS_OFFSET, (uint8_t *)&coredump_buf, sizeof(coredump_type));
+            ret = qapi_coredump_write(&coredump_buf);
             if (ret == QAPI_OK)
             {
                 printf("coredumpinfo is cleared\n");
@@ -992,6 +999,46 @@ static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QA
     {
         printf( "fail to read coredumpinfo\r\n");
     }
+    return QAPI_OK;
+}
+
+static qapi_Status_t platform_demo_set_coredumpflag(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    /* check the number of arguments */
+    if ( Parameter_Count != 2 )
+    {
+        printf("Invalid number of arguments\r\n");
+        printf("Usage: platform coredumpflag <0/1: if print all the ram info> <0/1: if rram for coredump is overwrited>\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    /* input value should be 0 or 1*/
+    if ((Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1) || ((Parameter_List[1].Integer_Value != 0 && Parameter_List[1].Integer_Value != 1)))
+    {
+        printf("Invalid parameter, shoud be 0 or 1\n");
+        printf("Usage: platform coredumpflag <0/1: if print all the ram info> <0/1: if rram for coredump is overwrited>\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    /* set ramdump print flag */
+    if (Parameter_List[0].Integer_Value == 0)
+    {
+        qapi_set_ramdump_print_flag(0);
+    }
+    else
+    {
+        qapi_set_ramdump_print_flag(1);
+    }
+
+    if (Parameter_List[1].Integer_Value == 0)
+    {
+        qapi_set_coredump_overwrite_flag(0);
+    }
+    else
+    {
+        qapi_set_coredump_overwrite_flag(1);
+    }
+
     return QAPI_OK;
 }
 #endif
@@ -1023,8 +1070,9 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
 #endif    
     {platform_demo_check_boot_reason, "boot_reason", "\n", "check boot reason\n"},
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-    {platform_demo_coredumptest, "coredumptest", "\n", "unit test for coredump function\n"},
-    {platform_demo_get_coredumpinfo, "coredumpinfo", "\n", "dump the coredump info\n"},
+    {platform_demo_coredumptest, "coredumptest", "<test case index: 0~5> <bmps_enable:1/0> [timeout in ms to trigger crash]\n", "unit test for coredump function\n"},
+    {platform_demo_get_coredumpinfo, "coredumpinfo", "<0/1>\n", "dump the coredump info\n"},
+    {platform_demo_set_coredumpflag, "coredumpflag", "<ramdump_flag> <overwrite_flag>\n", "flag indicating whether all the ram info should be printed and if the rram is overwrited\n"},
 #endif
 };
 

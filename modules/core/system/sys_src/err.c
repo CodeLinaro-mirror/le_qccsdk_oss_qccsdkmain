@@ -62,9 +62,15 @@ void err_invoke_action(void);
  * Reduces code size by eliminating other const strings used for errors.
  */
  const char err_generic_msg[] = "Error Fatal, parameters: %d %d %d";
+ 
+ /* a brif introduction to coredump related rram info*/
+ const char coredump_rram_addr_info[] = "length: coredump size; value: coredump start addr";
 
  /* Struct used to hold coredump data */
  coredump_type * coredump = NULL;
+
+ int g_ramdump_print_flag = 0;
+ wifi_fw_coredump_header_t g_wifi_fw_coredump_header;
  
  /* Ptr used by assembly routines to grab registers */
  /*  (update this as needed if struct changes)      */
@@ -142,6 +148,7 @@ void err_init (void * coredump_ptr)
   if (coredump_ptr == NULL)
     printf("coredump malloc failed\n");
 
+  int ret = 0;
   coredump = coredump_ptr;
   arch_coredump_ptr = (arch_coredump_type*)(&(coredump->arch.regs.array));
 
@@ -151,7 +158,33 @@ void err_init (void * coredump_ptr)
   memset( &(err_preflush_external), 0,
         (sizeof(err_cb_preflush_external_type) * ERR_MAX_PREFLUSH_CB+1));
 
+  /* magic num should not be changed unless be modified by qapi */
+  ret = qapi_rram_read(COREDUMP_PARTID, 0, (uint8_t *)&g_wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
+
+  if (ret != QAPI_OK)
+  {
+    printf("read wifi fw coredump header failed\n");
+  }
   
+  //g_wifi_fw_coredump_header.magic_num = 0;
+
+  (void) strlcpy((char *)&(g_wifi_fw_coredump_header.tlv_desc), coredump_rram_addr_info, 64);
+  g_wifi_fw_coredump_header.tlv.length = sizeof(coredump_type);
+  g_wifi_fw_coredump_header.tlv.value = COREDUMP_ADDR;
+
+  g_wifi_fw_coredump_header.coredump_part_id = COREDUMP_PARTID;
+  g_wifi_fw_coredump_header.coredump_addr_offset = COREDUMP_ADDRESS_OFFSET;
+  g_wifi_fw_coredump_header.coredump_size = sizeof(coredump_type);
+  g_wifi_fw_coredump_header.coredump_start_addr = COREDUMP_ADDR;
+  
+  /* coredump header is saved at the beginning of RAMDUMPMEM */
+  qapi_rram_write(COREDUMP_PARTID, 0, &g_wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
+
+  if (ret != QAPI_OK)
+  {
+    printf("write wifi fw coredump header failed\n");
+  }
+
   err_services_init_complete = TRUE;
 
 } /* err_init */
@@ -184,7 +217,7 @@ void err_deinit (void)
 		  
 } /* err_deinit */
 
-void coredump_print(coredump_type *coredump)
+void coredump_info_print(coredump_type *coredump)
 {
   if (coredump == NULL)
   {
@@ -193,6 +226,7 @@ void coredump_print(coredump_type *coredump)
   else
   {
     printf( "\r\n");
+    printf( "============== coredump start ==============\r\n");
     printf( "coredump version = [%d]\r\n", coredump->version);
     printf( "os type=[%d]\r\n", coredump->os.type);
     printf( "os version = [%d]\r\n", coredump->os.version);
@@ -253,6 +287,7 @@ void coredump_print(coredump_type *coredump)
     printf( "NVIC_ISER0 %08X   NVIC_ISER1 %08X   NVIC_ISER2 %08X\r\n",
       coredump->arch.regs.name.iser[0], coredump->arch.regs.name.iser[1],
       coredump->arch.regs.name.iser[2]);
+    printf( "============== coredump end ==============\r\n");
     printf( "\r\n");
   }
   
@@ -334,18 +369,34 @@ SIDE EFFECTS
   **************************************************************
 
 ===========================================================================*/
-void err_fatal_handler ( void )
+void err_fatal_handler (void)
 {
-  int fptr_index;
-  
-    //coredump_print(coredump);
+    wifi_fw_coredump_header_t wifi_fw_coredump_header;
+    int ret = 0;
 
     /* record the end time of coredump before writing RRAM */
-    err_get_timetick( &(coredump->err.err_handler_end_time));
+    err_get_timetick(&(coredump->err.err_handler_end_time));
 
-    /* write the coredump into the rram */
-    nt_rram_write(COREDUMP_ADDRESS, coredump, sizeof(coredump_type));
-    
+    /* print the coredump info */
+    coredump_info_print(coredump);
+
+    /* check if overwrite the coredump info */
+    ret = nt_rram_read(COREDUMP_PARTITION_START_ADDRESS, &wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
+
+    if (ret == 0 && (wifi_fw_coredump_header.magic_num != WIFi_FW_COREDUMP_MAGIC_NUMBER_1))
+    {
+      /* write the coredump into the rram */
+      nt_rram_write(COREDUMP_ADDR, coredump, sizeof(coredump_type));
+
+      /* if it is the first time of crash */
+      if (wifi_fw_coredump_header.magic_num == WIFi_FW_COREDUMP_MAGIC_NUMBER_0)
+      {
+        wifi_fw_coredump_header.magic_num = WIFi_FW_COREDUMP_MAGIC_NUMBER_1;
+
+        /* for next time, the coredump info will not be saved */
+        nt_rram_write(COREDUMP_PARTITION_START_ADDRESS,  &wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
+      }
+    }
     /* system reboot */
     nt_system_sw_reset();
 } /* err_fatal_handler */
@@ -409,7 +460,7 @@ void err_fatal_jettison_core (
   {
     (void) strlcpy((char *)coredump->err.filename,
                        (char *)file_name,
-                       strlen(file_name) + 1);
+                       ERR_LOG_MAX_FILE_LEN);
   }
   /* Copy message string */
   if (err_msg != NULL)
@@ -494,6 +545,33 @@ void wifi_fw_save_coredump_core_regs(ExceptionStackFrame* frame)
   }
 }
 
+unsigned int bswap_32(unsigned int x)
+{
+    return ((x & 0x000000ff) << 24) |
+           ((x & 0x0000ff00) << 8) |
+           ((x & 0x00ff0000) >> 8) |
+           ((x & 0xff000000) >> 24);
+}
+
+/*=========================================================================
+
+FUNCTION coredump_fault_handler
+
+DESCRIPTION
+  Action to be taken when crash is happening, coredump info will be edited
+  and saved at rram.
+
+DEPENDENCIES
+  None
+
+RETURN VALUE
+  None
+
+SIDE EFFECTS
+  No return from this function
+
+===========================================================================*/
+
 void coredump_fault_handler(
 char *err_msg,
 unsigned int line,       /* From __LINE__ */
@@ -504,11 +582,33 @@ uint32 param3,
 ExceptionStackFrame* frame
 )
 {
+  /* check g_ramdump_print_flag and print all the ram info */
+  static char raminfo_string[20] = {0};
+  uint32 ram_addr = 0;
+  uint32 ram_data = 0;
+  if (g_ramdump_print_flag || CONFIG_WIFI_FW_RAMDUMP_PRINT_FLAG)
+  {
+    printf( "\r\n");
+    printf( "============== ramdump start ==============\r\n");
+    while(ram_addr < (uint32)0xA0000)
+    {
+      memset(raminfo_string, 0, strlen(raminfo_string));
+      ram_data = *(uint32 *)ram_addr;
+      snprintf(raminfo_string, 20, "%08x", bswap_32(ram_data));
+      UART_Send_direct(raminfo_string, strlen(raminfo_string));
+      ram_addr += 4;
+    }
+    printf( "\r\n");
+    printf( "============== ramdump end ==============\r\n");
+    printf( "\r\n");
+  }
+
   /* this flag is used to prevent the case where an assertion happens after the exception */
   static boolean err_fatal_reentrancy_flag;
 
   /* Disable the irqs */
-  __asm volatile("cpsid i" : : : "memory");
+  //__asm volatile("cpsid i" : : : "memory");
+  nt_disable_irq();  // Disable all the interrupts
 
   if (err_fatal_reentrancy_flag == FALSE)
   {
@@ -516,11 +616,9 @@ ExceptionStackFrame* frame
 
     /* Kick Dog */
     nt_watchdog_bark_timer_reset();
-    char *hard_fault_msg = "Exception Detected: Hard Fault";
 
     /* save regs */
-    if (strcmp(err_msg, hard_fault_msg) != 0)
-      wifi_fw_save_coredump_core_regs(frame);
+    wifi_fw_save_coredump_core_regs(frame);
 
     /* save core coredump info */
     err_fatal_jettison_core(err_msg, line, file_name, 0, 0, 0);
@@ -575,7 +673,6 @@ RETURN VALUE
 
 SIDE EFFECTS
   May not return if action is taken (dload, reset, etc.)
-)
 ===========================================================================*/
 void err_invoke_action( void )
 {

@@ -5,6 +5,7 @@
 
 #ifndef ERRLOG_ARMM_H
 #define ERRLOG_ARMM_H
+
 /*===========================================================================
 
                    L O G  P A C K E T S  F O R  E R R
@@ -75,48 +76,48 @@ typedef enum
 
 typedef struct
 {
-  uint32 regs[SIZEOF_ARCH_COREDUMP_REGISTERS];
+  unsigned int regs[SIZEOF_ARCH_COREDUMP_REGISTERS];
 } arch_coredump_array_type;
 
 typedef struct
 {
-  uint32 r0;
-  uint32 r1;
-  uint32 r2;
-  uint32 r3;
-  uint32 r12;
-  uint32 lr;
-  uint32 pc;
-  uint32 psr;
-  uint32 icsr;
-  uint32 vtor;
-  uint32 aircr;
-  uint32 scr;
-  uint32 ccr;
-  uint32 shpr1;
-  uint32 shpr2;
-  uint32 shpr3;
-  uint32 shcsr;
-  uint32 cfsr;
-  uint32 hfsr;
-  uint32 dfsr;
-  uint32 mmfar;
-  uint32 bfar;
-  uint32 afsr;
-  uint32 pfr0;
-  uint32 pfr1;
-  uint32 dfr;
-  uint32 adr;
-  uint32 mmfr[4];
-  uint32 isar[5];
-  uint32 cpacr;
-  uint32 ispr[3];
-  uint32 iser[3];
+  unsigned int r0;
+  unsigned int r1;
+  unsigned int r2;
+  unsigned int r3;
+  unsigned int r12;
+  unsigned int lr;
+  unsigned int pc;
+  unsigned int psr;
+  unsigned int icsr;
+  unsigned int vtor;
+  unsigned int aircr;
+  unsigned int scr;
+  unsigned int ccr;
+  unsigned int shpr1;
+  unsigned int shpr2;
+  unsigned int shpr3;
+  unsigned int shcsr;
+  unsigned int cfsr;
+  unsigned int hfsr;
+  unsigned int dfsr;
+  unsigned int mmfar;
+  unsigned int bfar;
+  unsigned int afsr;
+  unsigned int pfr0;
+  unsigned int pfr1;
+  unsigned int dfr;
+  unsigned int adr;
+  unsigned int mmfr[4];
+  unsigned int isar[5];
+  unsigned int cpacr;
+  unsigned int ispr[3];
+  unsigned int iser[3];
 } arch_coredump_field_type;
 
 union arch_coredump_union
 {
-  uint32                   array[SIZEOF_ARCH_COREDUMP_REGISTERS];
+  unsigned int                   array[SIZEOF_ARCH_COREDUMP_REGISTERS];
   arch_coredump_field_type name;
 };
 

@@ -87,6 +87,7 @@ enum ota_image_id {
 	OTA_IMG_ID_APP,
 	OTA_IMG_ID_BDF,
 	OTA_IMG_ID_UD,
+	OTA_IMG_ID_RAMDUMP,
 };
 
 enum ota_patch_state {

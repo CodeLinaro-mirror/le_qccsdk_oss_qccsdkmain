@@ -84,8 +84,4 @@ config SRRC_BAND_EDGE_SUPPORT
     bool "enable band edge adjust for ch12 and ch13"
     default y
 
-config WIFI_FW_COREDUMP_SUPPORT
-    bool "enable wifi firmware coredump support"
-    default y
-
 endmenu
