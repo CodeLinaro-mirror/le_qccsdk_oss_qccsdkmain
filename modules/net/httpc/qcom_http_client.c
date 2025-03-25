@@ -1617,7 +1617,7 @@ int http_client_sendpkt(httpclient_sess *sess, int32_t socket, uint8_t* buffer, 
 
 }
 
-int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const char *url, const char *chunk_data, int32_t chunk_size, uint8_t chunk_flag)
+int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const char *url, const char *chunk_data, int32_t chunk_size, uint8_t chunk_flag, int32_t total_size)
 {
     char *pktbuf;
     uint32_t pkt_len = 0;
@@ -1714,12 +1714,18 @@ int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const
                                 // "Accept: text/html, */*\r\n"
                                 // "Cache-control: no-cache\r\n"
                                 // "User-Agent: IOE Client\r\n"
-            if(chunk_flag & HTTPC_CHUNKED_MASK)
-            {
-                pkt_len += 52;      // for chunked encoding headers(with above fileds):
-                                    // "Expect: 100-continue\r\n"
-                                    // "Transfer-Encoding: chunked\r\n"
-            }
+        }
+        
+        if(chunk_flag & HTTPC_CHUNKED_MASK)
+        {
+            pkt_len += 52;      // for chunked encoding headers(with above fileds):
+                                // "Expect: 100-continue\r\n"
+                                // "Transfer-Encoding: chunked\r\n"
+        }
+
+        if (sess->hcs_command == HTTP_CLIENT_PUT_CMD)
+        {
+            pkt_len += 24;      // "Content-length: nnnnnn\r\n"
         }
     }
 
@@ -1785,11 +1791,6 @@ int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const
         }
         else
         {
-            if(chunk_flag & HTTPC_CHUNKED_MASK)
-            {
-                offset += snprintf(pktbuf + offset, pkt_len - offset, "Expect: 100-continue\r\n");
-                offset += snprintf(pktbuf + offset, pkt_len - offset, "Transfer-Encoding: chunked\r\n");
-            }
             if(sess->hcs_command == HTTP_CLIENT_POST_CMD)
             {
                 offset += snprintf(pktbuf + offset, pkt_len - offset, "Content-Type: text/plain\r\n");
@@ -1797,6 +1798,17 @@ int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const
             offset += snprintf(pktbuf + offset, pkt_len - offset, "Accept: text/html, */*\r\n");
             offset += snprintf(pktbuf + offset, pkt_len - offset, "Cache-control: no-cache\r\n");
             offset += snprintf(pktbuf + offset, pkt_len - offset, "User-Agent: IOE Client\r\n");
+        }
+        
+        if(chunk_flag & HTTPC_CHUNKED_MASK)
+        {
+            offset += snprintf(pktbuf + offset, pkt_len - offset, "Expect: 100-continue\r\n");
+            offset += snprintf(pktbuf + offset, pkt_len - offset, "Transfer-Encoding: chunked\r\n");
+        }
+
+        if (sess->hcs_command == HTTP_CLIENT_PUT_CMD)
+        {
+            offset += snprintf(pktbuf + offset, pkt_len - offset, "Content-length: %lu\r\n", total_size);
         }
 
         /* Connection header */
@@ -1808,17 +1820,31 @@ int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const
 
     if(chunk_flag & HTTPC_CHUNKED_MASK)
     {
+        
         if(chunk_size > 0)
         {
             offset += snprintf(pktbuf + offset, pkt_len - offset, "%lx\r\n", chunk_size);
-            memcpy(pktbuf + offset, chunk_data, chunk_size);
+            /* HTTP Body for POST/PUT/PATCH command */
+           
+            if (sess->hcs_bufoffset > 0 &&
+                (sess->hcs_command == HTTP_CLIENT_POST_CMD ||
+                 sess->hcs_command == HTTP_CLIENT_PUT_CMD ))
+            {
+                memcpy(pktbuf + offset, sess->hcs_buffer, sess->hcs_bufoffset);
+                offset += sess->hcs_bufoffset;
+            }
+            else
+            {
+                memcpy(pktbuf + offset, chunk_data, chunk_size);
+                offset += chunk_size;
+            }
+            
         }
         else
         {
             offset += snprintf(pktbuf + offset, pkt_len - offset, "%lx\r\n", chunk_size);
         }
-
-        offset += chunk_size;
+        
         offset += snprintf(pktbuf + offset, pkt_len - offset, "\r\n");
     }
     else

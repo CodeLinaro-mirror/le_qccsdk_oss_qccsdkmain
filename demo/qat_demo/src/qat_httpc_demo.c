@@ -291,7 +291,7 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
             }
             
             extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
-            memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+HTTPPOST",strlen("+HTTPPOST"));
+            snprintf(Cur_Data_Mode_Cmd.cur_data_mode_commnd, AT_COMMAND_LENGTH, "+HTTPPOST");
 
             QAT_Transfer_Mode_set(QAT_Transfer_Mode_ONLINE_DATA_E,QAT_Data_Transfer_Mode_Handle);
             QAT_Response_Str(QAT_RC_OK, NULL);
@@ -446,7 +446,7 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
          }
 
         extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
-        memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+HTTPPUT",strlen("+HTTPPUT"));
+        snprintf(Cur_Data_Mode_Cmd.cur_data_mode_commnd, AT_COMMAND_LENGTH, "+HTTPPUT");
 
         QAT_Transfer_Mode_set(QAT_Transfer_Mode_ONLINE_DATA_E,QAT_Data_Transfer_Mode_Handle);
         QAT_Response_Str(QAT_RC_OK, NULL);
@@ -460,7 +460,7 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
       {
             uint32_t revlen = Parameter_Count;
             char * output_buf = (char*)Parameter_List;
-
+            //printf("test revlen:%d\n",revlen);
             if(revlen < g_https_cfg.data_len)
             {
                 if(g_https_cfg.send_buff == NULL){
@@ -483,6 +483,7 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
                 }
                 else
                 {
+                    //printf("test send data len:%d\n",g_https_cfg.data_len);
                     result = at_httpc_put(g_https_cfg.temp_url,g_https_cfg.data_len,g_https_cfg.send_buff);
                     QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
                     reset_temp_resource();
@@ -578,7 +579,7 @@ static QAT_Command_Status_t Extend_Command_HttpUrlCfg(uint32_t Op_Type, uint32_t
             g_https_cfg.buff_offset = 0;
 
             extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
-            memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd,"+HTTPURLCFG",strlen("+HTTPURLCFG"));
+            snprintf(Cur_Data_Mode_Cmd.cur_data_mode_commnd, AT_COMMAND_LENGTH, "+HTTPURLCFG");
 
             QAT_Transfer_Mode_set(QAT_Transfer_Mode_ONLINE_DATA_E,QAT_Data_Transfer_Mode_Handle);
             QAT_Response_Str(QAT_RC_OK, NULL);
@@ -1314,71 +1315,6 @@ qapi_Status_t at_httpc_addheaderfield(/*uint8_t headfield_type,*/uint8_t index)
     Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
     Parameter_Count++;
     
-#if 0
-    if(headfield_type == QAT_HEAD_CONTENT_TYPE)
-    {
-        switch(index)
-        {
-            
-            case QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED:
-            {
-               //it's default type, like: Content-Type: application/x-www-form-urlencoded
-               Parameter_List[Parameter_Count].String_Value = "Content-Type";
-               Parameter_Count++;
-               
-               Parameter_List[Parameter_Count].String_Value = "application/x-www-form-urlencoded";
-               Parameter_Count++;
-               break;
-            }
-            case QAT_CONTENT_TYPE_JSON:
-            {
-               Parameter_List[Parameter_Count].String_Value = "Content-Type";
-               Parameter_Count++;
-               
-               Parameter_List[Parameter_Count].String_Value = "application/json";
-               Parameter_Count++;
-
-               break;
-            }
-            case QAT_CONTENT_TYPE_FORM_DATA:
-            {
-
-               Parameter_List[Parameter_Count].String_Value = "Content-Type";
-               Parameter_Count++;
-               
-               Parameter_List[Parameter_Count].String_Value = "multipart/form-data";
-               Parameter_Count++;
-
-
-               break;
-            }
-            case QAT_CONTENT_TYPE_TEXT_XML:
-            {
-               Parameter_List[Parameter_Count].String_Value = "Content-Type";
-               Parameter_Count++;
-               
-               Parameter_List[Parameter_Count].String_Value = " text/xml";
-               Parameter_Count++;
-
-
-               break;
-            }
-
-            default:
-             ;
-                
-        }
-    }
-    else  //the other header fields set here
-    {
-        Parameter_List[Parameter_Count].String_Value = g_https_cfg.header_field[index].name;
-        Parameter_Count++;
-
-        Parameter_List[Parameter_Count].String_Value = g_https_cfg.header_field[index].value;
-        Parameter_Count++;
-    }
-#endif
-
     Parameter_List[Parameter_Count].String_Value = g_https_cfg.header_field[index].name;
     Parameter_Count++;
 
@@ -1390,11 +1326,8 @@ qapi_Status_t at_httpc_addheaderfield(/*uint8_t headfield_type,*/uint8_t index)
     {
        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC:add headerfield fail\r\n");
        QAT_Response_Str(QAT_RC_ERROR, buffer);
-       //goto endpiont;
      }
 
-    
- //endpiont:
     memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
     return rlt;
 }
@@ -1426,10 +1359,8 @@ qapi_Status_t at_httpc_setbodydata(char *data_buf,uint32_t len)
     {
        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC:set data fail\r\n");
        QAT_Response_Str(QAT_RC_ERROR, buffer);
-       goto endpiont;
     }
-        
-endpiont:
+
     memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
     return rlt;
 
@@ -1479,19 +1410,7 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
         goto endpiont;
     }
     conn_enable = TRUE;
-#if 0
-    if(g_https_cfg.content_type != QAT_CONTENT_TYPE_X_WWW_FORM_URLENCODED)
-    {
-        rlt = at_httpc_addheaderfield(QAT_HEAD_CONTENT_TYPE,g_https_cfg.content_type);
-        if(rlt != QAPI_OK)
-        {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: add headerfield fail\r\n");
-            QAT_Response_Str(QAT_RC_ERROR, buffer);
-            goto endpiont;
-    
-        }
-    }
-#endif
+
     if(g_https_cfg.header_field_num > 0)
     {
        for(uint8_t i=0; i < g_https_cfg.header_field_num; i++)
@@ -2017,7 +1936,7 @@ endpiont:
 
         sleep(1);
         count++;
-        printf("test count:%d, max:%d\n",count,max_time_wait);
+        //printf("test count:%d, max:%d\n",count,max_time_wait);
 
         if(count>=max_time_wait)
         {
@@ -2095,16 +2014,7 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
         goto endpiont;
     }
     conn_enable = TRUE;
-#if 0
-    rlt = at_httpc_addheaderfield(QAT_HEAD_CONTENT_TYPE,g_https_cfg.content_type);
-    if(rlt != QAPI_OK)
-    {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: add headerfield fail\r\n");
-        QAT_Response_Str(QAT_RC_ERROR, buffer);
-        goto endpiont;
 
-    }
-#endif
     if(g_https_cfg.header_field_num > 0)
     {
        for(uint8_t i=0; i < g_https_cfg.header_field_num; i++)
@@ -2120,54 +2030,137 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
        }
         
     }
+
+    //Construct client request Command
+    //httpc {get | head | post | put | delete | patch} <client_num> [<url>] [<chunk_flag>] [<chunk_size>]
+    //chunk_flag 0x00|0x01|0x80|0x81 = 0x00: non chunk encoded without http header;
+    //                                 0x01: non chunk encoded with http header;
+    //                                 0x80: chunk encoded without http header;
+    //                                 0x81: chunk encoded with http header;
+    uint32_t  Parameter_Count =0;
+    QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
+    Parameter_List[0].Integer_Is_Valid =false;
+    Parameter_List[0].String_Value = "put";
+    Parameter_Count++;
+
     
-    //printf("HTTPCPUT: setbodydata\r\n");
-    rlt = at_httpc_setbodydata(data, data_len);
-    if(rlt != QAPI_OK)
+    Parameter_List[Parameter_Count].Integer_Is_Valid = true;
+    Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
+    Parameter_Count++;
+
+    if(!getpathURL(url,path_url))
     {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: set bodydata fail\r\n");
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: get object url fail\r\n");
         QAT_Response_Str(QAT_RC_ERROR, buffer);
+        rlt = QAPI_ERR_INVALID_PARAM;
         goto endpiont;
-
     }
+    Parameter_List[Parameter_Count].Integer_Is_Valid =false;
+    Parameter_List[Parameter_Count].String_Value = path_url;
+    Parameter_Count++;
 
-    if(rlt == QAPI_OK)
+    at_httpc_method = QAT_HTTP_PUT;
+
+
+    //send data
+    if(data_len <= QAT_MAX_CHUNK_SIZE)
     {
-        //Construct client request Command
-        //httpc {get | head | post | put | delete | patch} <client_num> [<url>] [<chunk_flag>] [<chunk_size>]
-    
-        uint32_t  Parameter_Count =0;
-        QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
-        Parameter_List[0].Integer_Is_Valid =false;
-        Parameter_List[0].String_Value = "put";
-        Parameter_Count++;
-    
+        rlt = at_httpc_setbodydata(data, data_len);
         
-        Parameter_List[Parameter_Count].Integer_Is_Valid = true;
-        Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
-        Parameter_Count++;
-        
-        if(!getpathURL(url,path_url))
+        if(rlt == QAPI_OK)
         {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: get object url fail\r\n");
+            rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+            if(rlt != QAPI_OK)
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: handle client request fail\r\n");
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto endpiont;
+            }
+        }
+    }
+    else  //if data len > QAT_MAX_CHUNK_SIZE, need use chunk
+    {
+
+        char * chunkdata = malloc(QAT_MAX_CHUNK_SIZE+1);
+        if(chunkdata == NULL)
+        {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: malloc memory fail\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
-            rlt = QAPI_ERR_INVALID_PARAM;
+            rlt == QAPI_ERR_NO_MEMORY;
             goto endpiont;
         }
-        Parameter_List[Parameter_Count].Integer_Is_Valid =false;
-        Parameter_List[Parameter_Count].String_Value = path_url;
-        Parameter_Count++;
+        //memset(chunkdata, 0, QAT_MAX_CHUNK_SIZE+1);
+        uint16_t sendnum = (data_len+QAT_MAX_CHUNK_SIZE-1)/QAT_MAX_CHUNK_SIZE;
+        char * senddata = data;
+        uint16_t sendatalen = 0;
+        uint16_t chunkflag = 0;
+        Parameter_Count +=3;
+        for(uint16_t count = 0; count < sendnum; count++)
+        {
+            if(count == sendnum-1)
+            {
+                sendatalen = data_len -QAT_MAX_CHUNK_SIZE*count;
+                memcpy(chunkdata, senddata, sendatalen);
+                chunkdata[sendatalen] = '\0';
+            }
+            else
+            {
+                sendatalen = QAT_MAX_CHUNK_SIZE;
+                memcpy(chunkdata, senddata, sendatalen);
+                chunkdata[sendatalen] = '\0';
+            }
+            
+
+            rlt = at_httpc_setbodydata(chunkdata, sendatalen);
+            //printf("post setbody\r\n");
+            if(rlt == QAPI_OK)
+            {
+                if(count == 0){
+                    chunkflag = 129;
+                }
+                else{
+                    chunkflag = 128;
+                }
+                
+                Parameter_List[Parameter_Count-3].Integer_Is_Valid =true;
+                Parameter_List[Parameter_Count-3].Integer_Value = chunkflag;
+
+                Parameter_List[Parameter_Count-2].Integer_Is_Valid =true;
+                Parameter_List[Parameter_Count-2].Integer_Value = sendatalen;
+                
+                Parameter_List[Parameter_Count-1].Integer_Is_Valid =true;
+                Parameter_List[Parameter_Count-1].Integer_Value = data_len;
+                
+                rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+                if(rlt != QAPI_OK)
+                {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: handle client request fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto endpiont;
+                }
+            }
+
+            senddata += sendatalen;
+            sys_msleep(QAT_CHUNK_INTERVAL);
+        }
+
+        //send the chunk end flag
+        Parameter_List[Parameter_Count-3].Integer_Is_Valid =true;
+        Parameter_List[Parameter_Count-3].Integer_Value = 128;
         
-        at_httpc_method = QAT_HTTP_PUT;
-    
+        Parameter_List[Parameter_Count-2].Integer_Is_Valid =true;
+        //no data
+        Parameter_List[Parameter_Count-2].Integer_Value = 0;
+
+        Parameter_List[Parameter_Count-1].Integer_Is_Valid =true;
+        Parameter_List[Parameter_Count-1].Integer_Value = data_len;
+        
         rlt = httpc_command_handler(Parameter_Count,Parameter_List);
         if(rlt != QAPI_OK)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: handle client request fail\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
-            goto endpiont;
         }
-    
     }
 
 endpiont:
@@ -2310,45 +2303,138 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         
     }
 
-    rlt = at_httpc_setbodydata(data, data_len);
-    //printf("post setbody\r\n");
+    //Construct client request Command
+    //httpc {get | head | post | put | delete | patch} <client_num> [<url>] [<chunk_flag>] [<chunk_size>]
+    //chunk_flag 0x00|0x01|0x80|0x81 = 0x00: non chunk encoded without http header;
+    //                                 0x01: non chunk encoded with http header;
+    //                                 0x80: chunk encoded without http header;
+    //                                 0x81: chunk encoded with http header;
+    uint32_t  Parameter_Count =0;
+    QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
+    Parameter_List[0].Integer_Is_Valid =false;
+    Parameter_List[0].String_Value = "post";
+    Parameter_Count++;
 
-    if(rlt == QAPI_OK)
+    
+    Parameter_List[Parameter_Count].Integer_Is_Valid = true;
+    Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
+    Parameter_Count++;
+
+    if(!getpathURL(url,path_url))
     {
-        //Construct client request Command
-        //httpc {get | head | post | put | delete | patch} <client_num> [<url>] [<chunk_flag>] [<chunk_size>]
-        uint32_t  Parameter_Count =0;
-        QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
-        Parameter_List[0].Integer_Is_Valid =false;
-        Parameter_List[0].String_Value = "post";
-        Parameter_Count++;
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: get object url fail\r\n");
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
+        rlt = QAPI_ERR_INVALID_PARAM;
+        goto endpiont;
+    }
+    Parameter_List[Parameter_Count].Integer_Is_Valid =false;
+    Parameter_List[Parameter_Count].String_Value = path_url;
+    Parameter_Count++;
+
+    at_httpc_method = QAT_HTTP_POST;
+
+
     
+    if(data_len <= QAT_MAX_CHUNK_SIZE)
+    {
+        rlt = at_httpc_setbodydata(data, data_len);
         
-        Parameter_List[Parameter_Count].Integer_Is_Valid = true;
-        Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
-        Parameter_Count++;
-    
-        if(!getpathURL(url,path_url))
+        if(rlt == QAPI_OK)
         {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: get object url fail\r\n");
+            rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+            if(rlt != QAPI_OK)
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: handle client request fail\r\n");
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto endpiont;
+            }
+        }
+    }
+    else  //if data len > QAT_MAX_CHUNK_SIZE, need use chunk
+    {
+
+        char * chunkdata = malloc(QAT_MAX_CHUNK_SIZE+1);
+        if(chunkdata == NULL)
+        {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: malloc memory fail\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
-            rlt = QAPI_ERR_INVALID_PARAM;
+            rlt == QAPI_ERR_NO_MEMORY;
             goto endpiont;
         }
-        Parameter_List[Parameter_Count].Integer_Is_Valid =false;
-        Parameter_List[Parameter_Count].String_Value = path_url;
-        Parameter_Count++;
+        //memset(chunkdata, 0, QAT_MAX_CHUNK_SIZE+1);
+        uint16_t sendnum = (data_len+QAT_MAX_CHUNK_SIZE-1)/QAT_MAX_CHUNK_SIZE;
+        char * senddata = data;
+        uint16_t sendatalen = 0;
+        uint16_t chunkflag = 0;
+        Parameter_Count +=3;
+        for(uint16_t count = 0; count < sendnum; count++)
+        {
+            if(count == sendnum-1)
+            {
+                sendatalen = data_len -QAT_MAX_CHUNK_SIZE*count;
+                memcpy(chunkdata, senddata, sendatalen);
+                chunkdata[sendatalen] = '\0';
+            }
+            else
+            {
+                sendatalen = QAT_MAX_CHUNK_SIZE;
+                memcpy(chunkdata, senddata, sendatalen);
+                chunkdata[QAT_MAX_CHUNK_SIZE] = '\0';
+            }
+            
 
-        at_httpc_method = QAT_HTTP_POST;
+            rlt = at_httpc_setbodydata(chunkdata, sendatalen);
+            //printf("post setbody\r\n");
+            if(rlt == QAPI_OK)
+            {
+                if(count == 0){
+                    chunkflag = 129;
+                }
+                else{
+                    chunkflag = 128;
+                }
+                Parameter_List[Parameter_Count-3].Integer_Is_Valid =true;
+                Parameter_List[Parameter_Count-3].Integer_Value = chunkflag;
+  
+                Parameter_List[Parameter_Count-2].Integer_Is_Valid =true;
+                Parameter_List[Parameter_Count-2].Integer_Value = sendatalen;
+                
+                Parameter_List[Parameter_Count-1].Integer_Is_Valid =true;
+                Parameter_List[Parameter_Count-1].Integer_Value = data_len;
+                
+                rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+                if(rlt != QAPI_OK)
+                {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: handle client request fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto endpiont;
+                }
+            }
+
+            senddata += sendatalen;
+            sys_msleep(QAT_CHUNK_INTERVAL);
+        }
+
+        //send the chunk end flag
+        Parameter_List[Parameter_Count-3].Integer_Is_Valid =true;
+        Parameter_List[Parameter_Count-3].Integer_Value = 128;
+        
+        Parameter_List[Parameter_Count-2].Integer_Is_Valid =true;
+        //no data
+        Parameter_List[Parameter_Count-2].Integer_Value = 0;
+
+        Parameter_List[Parameter_Count-1].Integer_Is_Valid =true;
+        Parameter_List[Parameter_Count-1].Integer_Value = data_len;
+
+        
         rlt = httpc_command_handler(Parameter_Count,Parameter_List);
         if(rlt != QAPI_OK)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: handle client request fail\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
-            goto endpiont;
         }
-
     }
+    
 
 endpiont:
 
@@ -2732,6 +2818,24 @@ qbool_t save_content_type(uint8_t content_type)
                
                break;
             }
+            case QAT_CONTENT_TYPE_ZIP:
+            {
+               char* value = "application/zip";
+               uint32 val_len = strlen(value);
+               
+               header_field->value = malloc(val_len + 1);
+               if (!header_field->name) {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc:memory malloc fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    return rlt;
+               }
+               
+               memset(header_field->value, 0, val_len+1);
+               snprintf(header_field->value, val_len + 1, value);
+               rlt = TRUE;
+               
+               break;
+            }
             case QAT_CONTENT_TYPE_FORM_DATA:
             {
 
@@ -2838,7 +2942,7 @@ void savedata(const char *data)
    //the length of send_buff is  g_https_cfg.data_len +1, more one bit for '\0'
    g_https_cfg.buff_offset += 
     snprintf((char*)(g_https_cfg.send_buff + g_https_cfg.buff_offset), g_https_cfg.data_len - g_https_cfg.buff_offset +1,
-            "%s", data);
+            "%s", data)-1;
 }
 
 void reset_temp_resource()

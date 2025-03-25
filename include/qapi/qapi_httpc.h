@@ -426,7 +426,7 @@ qapi_Status_t qapi_Net_HTTPc_Send_Data(qapi_Net_HTTPc_handle_t handle, const cha
   * @return
   * When all data is sent, 0 is returned; on error, non-zero is returned.
   */
-qapi_Status_t qapi_Net_HTTPc_Send_Chunk(qapi_Net_HTTPc_handle_t handle, qapi_Net_HTTPc_Method_e cmd, const char *URL, const char *chunk, uint32_t chunk_size, uint8_t chunk_flag);
+qapi_Status_t qapi_Net_HTTPc_Send_Chunk(qapi_Net_HTTPc_handle_t handle, qapi_Net_HTTPc_Method_e cmd, const char *URL, const char *chunk, uint32_t chunk_size, uint8_t chunk_flag, int32_t total_size);
 
  /** @} */ /* end_addtogroup qapi_networking_httpc */
 
