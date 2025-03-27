@@ -295,6 +295,8 @@ typedef struct {
     uint16_t bmps_bcn_miss_count;       /* Beacon miss count for BMPS cycle */
     /* Running bmiss count for early RX and beacon wait telescopic increment */
     uint16_t bmps_running_bmiss_count;
+    /* Running bmiss count for early RX and beacon wait telescopic increment for debug*/
+    uint16_t bmps_running_bmiss_count_history;
 #ifdef WLAN_BMPS_TBTT_DEBUG
     uint64_t bmps_last_tsf;     /* Last TSF used in sleep time computation */
     uint64_t bmps_slp_us;       /* Last sleep time computed */

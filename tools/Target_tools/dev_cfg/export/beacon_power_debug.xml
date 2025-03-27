@@ -26,17 +26,17 @@
 	  <props id="21" id_name="NT_DEVCFG_SUSPEND_FRAME_IF_WAKEUP_FRAME_RECEIVED " helptext="suspend frame if wakeup frame is received" type=" 0x00000002"> 1 </props>
       <props id="22" id_name="NT_DEVCFG_WUR_SOFT_DTIM_ENABLE" min="1" max="1" helptext="enable/disable wur software dtim" type="0x00000002"> 1 </props>
       <props id="23" id_name="NT_DEVCFG_BASE_EARLY_RX_US" min="100" max="4000" helptext="Base early RX time for beacon reception" type="0x00000002"> 100 </props>
-      <props id="24" id_name="NT_DEVCFG_BASE_BEACON_WAIT_TIME_US" min="10000" max="14000" helptext="Base beacon wait time for beacon reception in power save" type="0x00000002"> 10000 </props>
-      <props id="25" id_name="NT_DEVCFG_BEACON_WAIT_INC_STEP_US" min="0" max="4000" helptext="Telescopic beacon wait increment step" type="0x00000002"> 0 </props>
-	  <props id="26" id_name="NT_DEVCFG_EARLY_RX_STEP_US" min="0" max="8000" helptext="Telescopic early rx increment step" type="0x00000002"> 200 </props>
+      <props id="24" id_name="NT_DEVCFG_BASE_BEACON_WAIT_TIME_US" min="10000" max="25000" helptext="Base beacon wait time for beacon reception in power save" type="0x00000002"> 20000 </props>
+      <props id="25" id_name="NT_DEVCFG_BEACON_WAIT_INC_STEP_US" min="0" max="4000" helptext="Telescopic beacon wait increment step" type="0x00000002"> 1000 </props>
+	  <props id="26" id_name="NT_DEVCFG_EARLY_RX_STEP_US" min="0" max="10000" helptext="Telescopic early rx increment step" type="0x00000002"> 1500 </props>
       <props id="27" id_name="NT_DEVCFG_NO_OF_ACCEPTABLE_BEACON_MISS" min="15" max="15" helptext="number of acceptable beacon miss" type="0x00000002"> 15 </props>
       <props id="28" id_name="NT_DEVCFG_WNM_DTIM_CONFIG" min="2" max="2" helptext="WNM dtim sleep enable/disable/auto(enable/disable depending on proxy arp support on ap) " type="0x00000002"> 2 </props>
       <props id="29" id_name="NT_DEVCFG_MINIMUM_SLEEP_TIME_FOR_AON" min="20" max="20" helptext="Configure minimum sleep time for AON" type="0x00000002"> 20 </props>
       <props id="30" id_name="NT_DEVCFG_SLEEP_CLOCK_SELECTION_FOR_AON" min="0" max="2" helptext="To select sleep clock for AON; select 0 for RC from PMIC, select 1 for XO from RFA and select 2 for XO from PMIC" type="0x00000002">0 </props>
       <props id="31" id_name="NT_DEVGFG_THRESHOLD_WARNING_VOLTAGE_CONFIG" helptext="To configure the threshold voltage level,to have a warning of low voltage" type="0x00000002">0xDD</props>
 	  <props id="32" id_name="NT_DEVCFG_SYSMON_TASK_PERIODICITY_CONFIG" helptext="To configure the periodicity of sysmon task" type="0x00000002"> 60000 </props>
-      <props id="33" id_name="NT_DEVCFG_ACCEPTABLE_TX_COUNT" helptext="To configure acceptale tx count in a idle period" type="0x00000002"> 2 </props>
-      <props id="34" id_name="NT_DEVCFG_ACCEPTABLE_RX_COUNT" helptext="To configure acceptale rx count in a idle period" type="0x00000002"> 2 </props>
+      <props id="33" id_name="NT_DEVCFG_ACCEPTABLE_TX_COUNT" helptext="To configure acceptale tx count in a idle period" type="0x00000002"> 10 </props>
+      <props id="34" id_name="NT_DEVCFG_ACCEPTABLE_RX_COUNT" helptext="To configure acceptale rx count in a idle period" type="0x00000002"> 10 </props>
       <props id="35" id_name="NT_DEVCFG_NO_WAKE_COUNT" helptext="after configured beacon receiption STA will exit sleep then go back to sleep" type="0x00000002"> 0 </props>
       <props id="36" id_name="NT_DEVCFG_F2A_ASSERT_TIMEOUT_MS" min="10" max="10" helptext="Timeout in us, for Aria to assert A2F in response to F2A assertion" type="0x00000002"> 10 </props>
       <props id="37" id_name="NT_DEVCFG_INTER_F2A_INTERVAL_US" min="2" max="2" helptext="Minimum time in us, between F2A deassertion and subsequent F2A pulse" type="0x00000002"> 2 </props>
