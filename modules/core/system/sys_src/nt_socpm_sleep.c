@@ -2172,8 +2172,8 @@ _socpm_slp_fn_process(
                 wkup_delay_us = delta_time_us - slept_time;
             }
 
-            head_sleep_back = _socpm_slp_lst[list_no].slp_info.min_cb_fn(wkup_delay_us);
-
+            // head_sleep_back = _socpm_slp_lst[list_no].slp_info.min_cb_fn(wkup_delay_us);
+      
             _socpm_slp_lst[list_no].slp_info.slp_time =
                 _socpm_get_sleep_slop_adjusted_sleep_time(head_sleep_back);
 

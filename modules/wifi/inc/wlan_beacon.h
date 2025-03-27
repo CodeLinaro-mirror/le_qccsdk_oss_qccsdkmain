@@ -25,6 +25,7 @@ typedef struct tbtt_estimate_s{
     uint64_t last_tsf_dtim;         /* TSF when last DTIM TBTT was computed */
 #endif /* WLAN_BMPS_TBTT_DEBUG */
     uint64_t tbtt_estimate_us;      /* computed tbtt estimate from beacon */
+    uint64_t tbtt_estimate_us_history;      /* computed tbtt estimate from beacon */
     uint16_t dtim_count;            /* dtim count at tbtt sync from beacon */
     uint16_t dtim_period;           /* dtim period at tbtt sync from beacon */
     uint16_t bcn_intval_tu;         /* beacon interval at tbtt sync from beacon */
