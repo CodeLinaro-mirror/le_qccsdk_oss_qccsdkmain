@@ -46,6 +46,8 @@
 #define WDOG_INTR_PENDING_BITMASK 0x400000
 
 extern coredump_type * coredump;
+const char * g_file = NULL;
+uint32_t  g_line;
 
 extern void
 __attribute__((noreturn,weak))
@@ -87,12 +89,34 @@ Reset_Handler(void)
 char g_assert_file_func_line[600];
 void assert_handler(const char *  file,const char* func, const uint32_t line)
 {
-	char *intr_str = g_assert_file_func_line;
-	snprintf(intr_str,600,"Assert @%s,ln %d in %s\n", func,line,file);
-	UART_Send_direct(intr_str,strlen(intr_str));
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Assertion Detected", line, file, 0, 0, 0, NULL);
+    g_line = line;
+    g_file = file;
+    asm volatile(
+    " tst lr,#4       \n"
+    " ite eq          \n"
+    " mrseq r0,msp    \n"
+    " mrsne r0,psp    \n"
+    " mov r1,lr       \n"
+    " ldr r2,=Assert_Handler_C \n"
+    " bx r2"
+
+    : /* Outputs */
+    : /* Inputs */
+    : /* Clobbers */
+);
+#else
+	char *intr_str = g_assert_file_func_line;
+	snprintf(intr_str,600,"Assert @%s,ln %d in %s\r\n", func,line,file);
+	UART_Send_direct(intr_str,strlen(intr_str));
 #endif
+}
+
+void __attribute__ ((section(".after_ram_vectors"),weak,used))
+Assert_Handler_C (ExceptionStackFrame* frame ,
+                     uint32_t lr __attribute__((unused)))
+{
+  coredump_fault_handler("Assertion Detected", g_line, g_file, 0, 0, 0, frame);
 }
 
 void __attribute__ ((section(".after_ram_vectors"),weak))
@@ -147,7 +171,7 @@ else
 #endif // PLATFORM_FERMION
     {
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-    coredump_fault_handler("WDOG Bark", 0, 0, 0, 0, 0, NULL);
+    coredump_fault_handler("WDOG Bark", __LINE__, __FILE__, 0, 0, 0, NULL);
 #endif
 #if defined(DEBUG)
           __DEBUG_BKPT();
@@ -613,8 +637,7 @@ HardFault_Handler_C (ExceptionStackFrame* frame ,
 	UART_Send_direct(interrupt_string , str_len);
 	//memset(interrupt_string,0,sizeof(interrupt_string));
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  wifi_fw_save_coredump_core_regs(frame);
-  coredump_fault_handler("Exception Detected: Hard Fault", 0, 0, 0, 0, frame);
+  coredump_fault_handler("Exception Detected: Hard Fault", __LINE__, __FILE__, 0, 0, 0, frame);
 #endif
 
 #if defined(DEBUG)
@@ -668,7 +691,7 @@ HardFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
   // faults are fatal and it is not possible to return from the handler.
 
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: Hard Fault", 0, 0, 0, 0, 0, frame);
+  coredump_fault_handler("Exception Detected: Hard Fault", __LINE__, __FILE__, 0, 0, 0, frame);
 #endif
 #if defined(TRACE)
   trace_printf ("[HardFault]\n");
@@ -719,7 +742,7 @@ MemManage_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
 	memset(interrupt_string,0,200);
 
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: Memory Management Fault", 0, 0, 0, 0, 0, frame);
+  coredump_fault_handler("Exception Detected: Memory Management Fault", __LINE__, __FILE__, 0, 0, 0, frame);
 #endif
 }
 
@@ -755,7 +778,7 @@ BusFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
 #endif // defined(TRACE)
 
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: Bus Fault", 0, 0, 0, 0, 0, frame);
+  coredump_fault_handler("Exception Detected: Bus Fault", __LINE__, __FILE__, 0, 0, 0, frame);
 #endif
 
 #if defined(DEBUG)
@@ -813,7 +836,7 @@ UsageFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
 #endif // defined(TRACE)
 
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: Usage fault", 0, 0, 0, 0, 0, frame);
+  coredump_fault_handler("Exception Detected: Usage fault", __LINE__, __FILE__, 0, 0, 0, frame);
 #endif
 
 #if defined(DEBUG)
@@ -834,7 +857,7 @@ void __attribute__ ((section(".after_ram_vectors"),weak))
 DebugMon_Handler (void)
 {
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: DebugMon", 0, 0, 0, 0, 0, NULL);
+  coredump_fault_handler("Exception Detected: DebugMon", __LINE__, __FILE__, 0, 0, 0, NULL);
 #endif
 #if defined(DEBUG)
   __DEBUG_BKPT();
@@ -850,7 +873,7 @@ void __attribute__ ((section(".after_ram_vectors"),weak))
 PendSV_Handler (void)
 {
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: PendSV", 0, 0, 0, 0, 0, NULL);
+  coredump_fault_handler("Exception Detected: PendSV", __LINE__, __FILE__, 0, 0, 0, NULL);
 #endif
 #if defined(DEBUG)
   __DEBUG_BKPT();

@@ -54,9 +54,10 @@ extern const char err_generic_msg[];
 /* Type used for post-crash callbacks from error handler */
 typedef void (*err_cb_ptr)(void);
 
-#define COREDUMP_PARTID 4
-#define COREDUMP_ADDRESS 0x36a000
-#define COREDUMP_ADDRESS_OFFSET 0
+#define COREDUMP_PARTID 5                                                              /* partition id                                 */
+#define COREDUMP_PARTITION_START_ADDRESS 0x36b000                                      /* coredump header start addr                   */
+#define COREDUMP_ADDRESS_OFFSET 256                                                    /* coredump info addr offset compared to header */
+#define COREDUMP_ADDR (COREDUMP_PARTITION_START_ADDRESS + COREDUMP_ADDRESS_OFFSET)     /* coredump info start addr                     */
 
 
 

@@ -7,4 +7,5 @@
    <fde address="0xA00000" filename="" format="0" id="2" rank="2" state="1" version="0"/>
    <fde address="0x37A000" filename="" format="0" id="3" rank="2" state="1" version="0"/>
    <fde address="0x36A000" filename="" format="0" id="4" rank="2" state="1" version="0"/>
+   <fde address="0x36B000" filename="" format="0" id="5" rank="2" state="1" version="0"/>
 </fdt>

@@ -90,6 +90,14 @@ config DUMP_PREFIX
 	string "prefix for dump_printf"
 	default "[DUMP]"
 
+config WIFI_FW_COREDUMP_SUPPORT
+        bool "enable wifi firmware coredump support"
+        default y
+
+config WIFI_FW_RAMDUMP_PRINT_FLAG
+        int "when this flag is set, the whole ram info should be printed"
+        default 0
+
 rsource "mpu.Kconfig"
 
 endmenu

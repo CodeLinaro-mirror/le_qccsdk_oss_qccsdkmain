@@ -18,7 +18,6 @@ DESCRIPTION
 ** Includes 
 ** ----------------------------------------------------------------------- */
 #include "errlog_armm.h"
-
 #include "err.h"
 
 
@@ -81,7 +80,7 @@ typedef struct
  ************************************************************************/
 
 #define ERR_LOG_MAX_MSG_LEN     80
-#define ERR_LOG_MAX_FILE_LEN    50 
+#define ERR_LOG_MAX_FILE_LEN    80 
 #define ERR_LOG_NUM_PARAMS       3 
 #define ERR_IMAGE_VERSION_SIZE 128
 
@@ -142,5 +141,34 @@ typedef struct
 
  /* update this version whenever coredump_type changes */
 #define ERR_COREDUMP_VERSION  1
+
+
+/* -----------------------------------------------------------------------
+**                  TLV
+** ----------------------------------------------------------------------- */
+typedef struct tlv_s
+{
+  uint32 type;
+  uint32 length;
+  uint32  value;
+} tlv_t;
+
+
+/* -----------------------------------------------------------------------
+**                  WIFI_FW_COREDUMP_HEADER
+** ----------------------------------------------------------------------- */
+/* needs to written into coredump header by user */
+#define WIFi_FW_COREDUMP_MAGIC_NUMBER_0 0xA8BC41F7 // before first crash
+#define WIFi_FW_COREDUMP_MAGIC_NUMBER_1 0xA8BC41F8 // after first crash
+
+typedef struct wifi_fw_coredump_header_s {
+  uint32 magic_num;
+  char tlv_desc[64];
+  tlv_t tlv;                   /* record coredump address and size */
+  uint32 coredump_part_id;     /* partion id                       */
+  uint32 coredump_addr_offset;      /* rram addr offset                 */
+  uint32 coredump_start_addr;  /* rram start addr                  */
+  uint32 coredump_size;        /* coredump size                    */
+} wifi_fw_coredump_header_t;
 
 #endif /* ERRLOG_H */
