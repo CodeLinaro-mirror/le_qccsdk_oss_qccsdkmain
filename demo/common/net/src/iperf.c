@@ -2464,11 +2464,15 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                 conn_sock = select(p_tCxt->sock_local + 1, &read_fds, NULL, NULL, &tv);
                 if (conn_sock == A_ERROR)
                 {
+                    app_get_time(&p_tCxt->pktStats.last_time);
                     goto ERROR_3; // socket no longer valid
                 }
 
                 if (family == AF_INET && errno == ENOTSOCK) // TODO
+                {
+                    app_get_time(&p_tCxt->pktStats.last_time);
                     goto ERROR_2;
+                }
             } while (conn_sock == 0);
 
             // check recv data
@@ -3058,7 +3062,10 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     do
     {
         if (iperf_rx_quit || (get_device_connect_state() == false))
+        {
+            app_get_time(&sess->pktStats.last_time);
             goto tcp_rx_QUIT;
+        }
 #if 1
         tv.tv_sec = 2;
         tv.tv_usec = 0;
