@@ -143,6 +143,7 @@ typedef struct
 #define ERR_COREDUMP_VERSION  1
 
 
+
 /* -----------------------------------------------------------------------
 **                  TLV
 ** ----------------------------------------------------------------------- */
@@ -154,17 +155,34 @@ typedef struct tlv_s
 } tlv_t;
 
 
+
+/* -----------------------------------------------------------------------
+**                  MISC0_HEADER
+** ----------------------------------------------------------------------- */
+#define WIFi_FW_COREDUMP_MAGIC_NUMBER_0 0xA8BC41F7 // before first crash
+#define WIFi_FW_COREDUMP_MAGIC_NUMBER_1 0xA8BC41F8 // after first crash
+#define MISC0_MAGIC_NUM 0x98989898     // validation verification
+#define MISC0_VERSION 0x1
+#define MISC0_PARTITION_TOTAL_SIZE 0x1000; /* 4KB */
+
+typedef struct misc0_header_t
+{
+  uint32 magic_num;
+  uint16 version;
+  uint16 entry_count;
+  uint32 total_size;
+  uint32 next_start_offset;
+}misc0_header_t;
+
+
 /* -----------------------------------------------------------------------
 **                  WIFI_FW_COREDUMP_HEADER
 ** ----------------------------------------------------------------------- */
 /* needs to written into coredump header by user */
-#define WIFi_FW_COREDUMP_MAGIC_NUMBER_0 0xA8BC41F7 // before first crash
-#define WIFi_FW_COREDUMP_MAGIC_NUMBER_1 0xA8BC41F8 // after first crash
 
 typedef struct wifi_fw_coredump_header_s {
-  uint32 magic_num;
-  char tlv_desc[64];
-  tlv_t tlv;                   /* record coredump address and size */
+  uint32 magic_num;            /* used to control if only save the first coredump info while sequential crashes happen */
+  tlv_t tlv;                   /* record the next start address */
   uint32 coredump_part_id;     /* partion id                       */
   uint32 coredump_addr_offset;      /* rram addr offset                 */
   uint32 coredump_start_addr;  /* rram start addr                  */

@@ -209,37 +209,23 @@ do                                                                       \
 #include "errlog.h"
 #include "qapi_status.h"
 
+#define qapi_m4_coredump_type coredump_type
+
 /*==================================================================================
   FUNCTION         qapi_coredump_read
 ==================================================================================*/
 /**
  *
- * @brief read the coredump info from rram.
- *
- * @param[out] coredump_buf    the buffer that stores the coredump info.
- *
- * @return
- * QAPI_OK -- successful reconstruction of core dump structure
- * Error code -- If there is an error.
+* @brif Read M4 core RAM information from MISC0.
+* 
+* @param[out]Pointer to structure, to get m4 core dump info read out. 
+@param[in] flags  Control flags for core dump info retrieval. Currently unused.
+
+@return
+status QAPI_OK on successful reconstruction of core dump structure,otherwise 
+appropriate error. 
  **/
-qapi_Status_t qapi_coredump_read(coredump_type *coredump_buf);
-
-
-
-/*==================================================================================
-  FUNCTION         qapi_coredump_write
-==================================================================================*/
-/**
- *
-   @brief write the coredump info from rram.
-
-   @param[out] coredump_buf --  the buffer that stores the coredump info
-
-   @return
-    QAPI_OK -- successfully write the core dump info into rram
-    Error code -- If there is an error.
-**/
-qapi_Status_t qapi_coredump_write(coredump_type *coredump_buf);
+qapi_Status_t qapi_coredump_read(qapi_m4_coredump_type *m4_dump_info, int flag);
 
 
 
@@ -251,7 +237,7 @@ qapi_Status_t qapi_coredump_write(coredump_type *coredump_buf);
  * @brief set the ramdump print flag, control the printed ram info after 
  *        crash
  *
- * @param[in] qapi_set_ramdump_flag   if print all the ram info
+ * @param[in] ramdump_print_flag   if print all the ram info
  *        0: specific ram info is not printed after crash
  *        1: specific ram info is printed after crash
  *
@@ -259,25 +245,5 @@ qapi_Status_t qapi_coredump_write(coredump_type *coredump_buf);
  *       QAPI_OK -- successful set the ramdump print flag
  *       Error code -- If there is an error.
  **/
-qapi_Status_t qapi_set_ramdump_flag(int ramdump_print_flag);
-
-
-
-/*==================================================================================
-  FUNCTION         qapi_set_coredump_overwrite_flag
-==================================================================================*/
-/**
- *     
- * @brief set the overwrite flag, for sequential crash, choices can be only 
- *        save the result of the first crash
- *
- * @param[in] qapi_set_ramdump_flag   if print all the ram info
- *        ture: overwrite the coredump info
- *        false: do not overwrite the coredump info
- *
- * @return
- *       QAPI_OK -- successful set the overwrite flag
- *       Error code -- If there is an error.
-**/
-qapi_Status_t qapi_set_coredump_overwrite_flag(int coredump_overwrite_flag);
+ qapi_Status_t qapi_set_ramdump_flag(int ramdump_print_flag);
 #endif
