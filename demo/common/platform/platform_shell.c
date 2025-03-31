@@ -26,7 +26,18 @@
 #endif
 #include "qapi_rram.h"
 #include "nt_hw.h"
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+#include "err.h"
+#include "errlog.h"
+#include "qapi_lowpower.h"
 
+extern unsigned int __rram_region_end_address;
+int g_coredump_under_dtim_test_index = 0;
+static uint32_t bmps_start;
+static nt_osal_timer_handle_t bmps_timer;
+
+#define COREDUMP_TEST_INVALID_ADDRESS (__rram_region_end_address + 0x1000)
+#endif
 
 
 extern bool rram_udpart_init_done;
@@ -123,7 +134,7 @@ static qapi_Status_t rram_read(uint32_t Parameter_Count, QAPI_Console_Parameter_
     address = Parameter_List[1].Integer_Value;
     byte_cnt = Parameter_List[2].Integer_Value;
 
-    buffer = malloc(byte_cnt);
+    buffer = (char *)malloc(byte_cnt * sizeof(char));
     if (buffer == NULL)
     {
         printf("ERROR: No enough memory\n");
@@ -190,8 +201,8 @@ static qapi_Status_t rram_test(uint32_t Parameter_Count, QAPI_Console_Parameter_
     uint32_t i, len;
     uint32_t offset;
     uint32_t byte_cnt;
-    uint32_t *buffer = NULL;
-    uint32_t *read_buffer = NULL;
+    char *buffer = NULL;
+    char *read_buffer = NULL;
     uint32_t partid;
 
     if (Parameter_Count != 3 || Parameter_List == NULL || 
@@ -204,7 +215,7 @@ static qapi_Status_t rram_test(uint32_t Parameter_Count, QAPI_Console_Parameter_
     partid = Parameter_List[0].Integer_Value; 
     offset = Parameter_List[1].Integer_Value;
     byte_cnt = Parameter_List[2].Integer_Value;
-    buffer = malloc(byte_cnt);
+    buffer = malloc(byte_cnt + 1);
     if (buffer == NULL) {
         printf("ERROR: No enough memory\n");
         return QAPI_ERR_NO_MEMORY;
@@ -223,41 +234,40 @@ static qapi_Status_t rram_test(uint32_t Parameter_Count, QAPI_Console_Parameter_
         free(buffer);
         return QAPI_ERR_NO_MEMORY;
     }
-        
     while(byte_cnt) {
         if(byte_cnt >= RRAM_OP_UNIT) {
             len = RRAM_OP_UNIT;
         }else {
             len = byte_cnt;
         }
-
         memset(buffer, 0, sizeof(buffer));
         memset(read_buffer, 0, sizeof(read_buffer));
+ 
         for(i = 0; i < len; i++) {
-            buffer[i] = i%256;
+            buffer[i] = 'a';
         }
-        
+        buffer[len] = '\0';
         status = qapi_rram_write(partid, offset, buffer, len);
         if(status != QAPI_OK) {
-            printf("Buf(%d) test failed(%d)\n",i,status);
+            printf("\r\nBuf(%d) test failed(%d)\n",i,status);
             break;
         }
 
         status = qapi_rram_read(partid, offset, read_buffer, len);
         if(status != QAPI_OK) {
-            printf("rram read test failed(%d)\n",i, status);
+            printf("\r\nrram read test failed(%d)\n",i, status);
             break;
         }
 
         if(memcmp(read_buffer, buffer, len) != 0) {
             status = QAPI_ERROR;
-            printf("Verify failed at offset 0x%x\n", offset);
+            printf("\r\nVerify failed at offset 0x%x\n", offset);
             break;
         }
 
         offset += len;
         byte_cnt -= len;
-        printf("Verify OK at offset 0x%x\n", offset);
+        printf("\r\nVerify OK at offset 0x%x\n", offset);
     }
 
     free(buffer);
@@ -785,6 +795,254 @@ static qapi_Status_t platform_demo_check_boot_reason(uint32_t Parameter_Count, Q
 	
 }
 
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+static void coredump_test(int coredump_test_index)
+{
+    int r = 0;
+    volatile unsigned int *p;
+    int (*pF)(void);
+    const unsigned short _UDF[4] = {0xDEAD, 0xDEAD, 0xDEAD, 0xDEAD};
+    volatile unsigned int a;
+    volatile unsigned int b;
+
+    switch (coredump_test_index)
+    {
+        /* Trigger an assertion */
+        case 0:
+            configASSERT(0);
+            break;
+        /* Trigger an usage fault or hard fault by executing null pointer. */        
+        case 1:
+            pF = (int (*)(void))0x00000000;
+            r = pF();
+            break;
+        /* Trigger an usage fault or hard fault by dividing by zero. */
+        case 2:
+            a = 1;
+            b = 0;
+            r = a / b;
+            printf("r = 0x%x\n",r);  /* to prevent compiler optimization */
+            break;
+        /* Trigger a bus fault or hard fault by reading from a reserved address. */
+        case 3:
+            p = (unsigned int *)COREDUMP_TEST_INVALID_ADDRESS;
+            r = *p;
+            break;
+        /* Trigger a bus fault or hard fault by writing to a reserved address. */
+        case 4:
+            p = (unsigned int *)COREDUMP_TEST_INVALID_ADDRESS;
+            *p = 0x00BADA55;
+            break;
+        /* Trigger a bus fault or hard fault by executing at a reserved address. */
+        case 5:
+            pF = (int (*)(void))COREDUMP_TEST_INVALID_ADDRESS;
+            r = pF();
+            break;
+        default:
+            printf("Test case index shoud be an integer less than 10\n");
+        }
+}
+static void coredump_bmps_timer_cb(void)
+{
+    coredump_test(g_coredump_under_dtim_test_index);
+    printf("test index = %d\n", g_coredump_under_dtim_test_index);
+    nt_delete_timer(bmps_timer);
+}
+
+static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    // Enable fault on unaligned access
+
+    if ( Parameter_Count != 3 ) {
+        printf("Invalid number of arguments\r\n");
+        printf("===================== unit test command =====================\n");
+        printf("Usage: platform coredumptest <test case index: 0~5> <bmps_enable:1/0> [timeout in ms to trigger crash]\n");
+        printf("                              0: Trigger an assertion.\n");
+        printf("                              1: Trigger an usage fault or hard fault by executing at null pointer.\n");
+        printf("                              2: Trigger an usage fault or hard fault by dividing by zero.\n");
+        printf("                              3: Trigger a bus fault or hard fault by reading from a reserved address.\n");
+        printf("                              4: Trigger a bus fault or hard fault by writing to a reserved address.\n");
+        printf("                              5: Trigger a bus fault or hard fault by executing at a reserved address.\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    if (!Parameter_List[0].Integer_Is_Valid || Parameter_List[0].Integer_Value > 5) {
+        printf("Test case index shoud be an integer less than 6.\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    if (Parameter_List[1].Integer_Value == 1)   /* bmps enable */
+    {
+        g_coredump_under_dtim_test_index = Parameter_List[0].Integer_Value;
+        bmps_timer = nt_create_timer(coredump_bmps_timer_cb, NULL, Parameter_List[2].Integer_Value, FALSE); // ms
+        if (!bmps_timer)
+            return QAPI_ERROR;
+        if (nt_start_timer(bmps_timer) != NT_TIMER_SUCCESS)
+            return QAPI_ERROR;
+        bmps_start = hres_timer_curr_time_us();
+        printf("BMPS timer started! curr: %u\n", bmps_start);
+        qapi_bmps_cfg(1, 0);
+    }
+    else
+    {
+        coredump_test(Parameter_List[0].Integer_Value);
+    }
+    return QAPI_OK;
+}
+
+
+static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    coredump_type coredump_buf;
+    int ret = 0;
+
+    if ( Parameter_Count != 1 )
+    {
+        printf("Invalid number of arguments\r\n");
+        printf("Usage: platform coredumpinfo <0: get and clear coredumpinfo; 1: get but not clear coredumpinfo>\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    if ((Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1))
+    {
+        printf("Invalid parameter, shoud be 0 or 1\n");
+        printf("Usage: platform coredumpinfo <0: get and clear coredumpinfo; 1: get but not clear coredumpinfo>\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    /* address: 0x36b000 + offset */
+    //ret = qapi_rram_read(COREDUMP_PARTID, , (uint8_t *)&coredump_buf, sizeof(coredump_type));
+    ret = qapi_coredump_read(&coredump_buf);
+
+    if (ret == QAPI_OK)
+    {
+        printf( "\r\n");
+        printf( "============== coredump start ==============\r\n");
+        printf( "coredump version = [%d]\r\n", coredump_buf.version);
+        printf( "os type=[%d]\r\n", coredump_buf.os.type);
+        printf( "os version = [%d]\r\n", coredump_buf.os.version);
+        printf( "arch version = [%X]\r\n", coredump_buf.arch.version);
+        printf( "error message = [%s]\r\n", (char*)coredump_buf.err.message);
+        printf( "file name = [%s]\r\n", (char*)coredump_buf.err.filename);
+        printf( "line number = [%d]\r\n",coredump_buf.err.linenum);
+        printf( "param[0] = [%d]\r\n",coredump_buf.err.param[0]);
+        printf( "param[1] = [%d]\r\n",coredump_buf.err.param[1]);
+        printf( "param[2] = [%d]\r\n",coredump_buf.err.param[2]);
+        printf( "image basic info = [%s]\r\n",coredump_buf.image.image_variant_string);
+        printf( "iamge build info = [%s]\r\n",coredump_buf.image.qc_image_version_string);
+        printf( "\r\n");
+        printf( "core reg info:\r\n"
+            "R0    %08X   R1    %08X\r\n"
+			"R2    %08X   R3    %08X\r\n"
+			"R12   %08X   LR    %08X\r\n"
+			"PC    %08X   PSR   %08X\r\n",
+			coredump_buf.arch.regs.name.r0, coredump_buf.arch.regs.name.r1,
+			coredump_buf.arch.regs.name.r2, coredump_buf.arch.regs.name.r3,
+			coredump_buf.arch.regs.name.r12, coredump_buf.arch.regs.name.lr,
+			coredump_buf.arch.regs.name.pc, coredump_buf.arch.regs.name.psr);
+        printf( "ICSR  %08X   VTOR  %08X\r\n"
+			"AIRCR %08X   SCR   %08X \r\n"
+			"CCR   %08X\r\n" ,
+			coredump_buf.arch.regs.name.icsr,coredump_buf.arch.regs.name.vtor,
+			coredump_buf.arch.regs.name.aircr, coredump_buf.arch.regs.name.scr,
+			coredump_buf.arch.regs.name.ccr);
+        printf( "SHPR1 %08x  SHPR2 %08x \r\n"
+			"SHPR3 %08x\r\n",
+            coredump_buf.arch.regs.name.shpr1, coredump_buf.arch.regs.name.shpr2,
+            coredump_buf.arch.regs.name.shpr3);
+        printf( "SHCSR %08X   CFSR  %08X \r\n"
+			"HFSR  %08X   DFSR  %08X \r\n"
+			"MMFAR %08X\r\n",
+            coredump_buf.arch.regs.name.shcsr, coredump_buf.arch.regs.name.cfsr,
+            coredump_buf.arch.regs.name.hfsr, coredump_buf.arch.regs.name.dfsr,
+            coredump_buf.arch.regs.name.mmfar);
+        printf( "BFAR  %08X   AFSR %08X \r\n"
+			"PFR0  %08X   PFR1 %08X \r\n"
+			"DFR   %08X\r\n",
+            coredump_buf.arch.regs.name.bfar, coredump_buf.arch.regs.name.afsr,
+            coredump_buf.arch.regs.name.pfr0, coredump_buf.arch.regs.name.pfr1,
+            coredump_buf.arch.regs.name.dfr);
+        printf( "ADR     %08X   MMFR[0] %08X \r\n"
+			"MMFR[1] %08X   MMFR[2] %08X \r\n"
+			"MMFR[3] %08X\r\n",
+            coredump_buf.arch.regs.name.adr, coredump_buf.arch.regs.name.mmfr[0],
+            coredump_buf.arch.regs.name.mmfr[1], coredump_buf.arch.regs.name.mmfr[2],
+            coredump_buf.arch.regs.name.mmfr[3]);
+        printf( "ISAR[0] %08X  ISAR[1] %08X \r\n"
+			"ISAR[2] %08X  ISAR[3] %08X \r\n"
+			"ISAR[4] %08X  CPACR   %08X\r\n",
+            coredump_buf.arch.regs.name.isar[0], coredump_buf.arch.regs.name.isar[1],
+            coredump_buf.arch.regs.name.isar[2], coredump_buf.arch.regs.name.isar[3],
+            coredump_buf.arch.regs.name.isar[4], coredump_buf.arch.regs.name.cpacr);
+        printf( "NVIC_ISPR0 %08X   NVIC_ISPR1 %08X   NVIC_ISPR2 %08X\r\n",
+            coredump_buf.arch.regs.name.ispr[0], coredump_buf.arch.regs.name.ispr[1],
+            coredump_buf.arch.regs.name.ispr[2]);
+        printf( "NVIC_ISER0 %08X   NVIC_ISER1 %08X   NVIC_ISER2 %08X\r\n",
+            coredump_buf.arch.regs.name.iser[0], coredump_buf.arch.regs.name.iser[1],
+            coredump_buf.arch.regs.name.iser[2]);
+        printf( "============== coredump end ==============\r\n");
+        printf( "\r\n");
+
+        if (Parameter_List[0].Integer_Value == 0)
+        {
+            memset(&coredump_buf, 0, sizeof(coredump_type));
+            ret = qapi_coredump_write(&coredump_buf);
+            if (ret == QAPI_OK)
+            {
+                printf("coredumpinfo is cleared\n");
+            }
+            else
+            {
+                printf("fail to clear coredumpinfo\n");
+            }
+        }
+    }
+    else
+    {
+        printf( "fail to read coredumpinfo\r\n");
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t platform_demo_set_coredumpflag(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    /* check the number of arguments */
+    if ( Parameter_Count != 2 )
+    {
+        printf("Invalid number of arguments\r\n");
+        printf("Usage: platform coredumpflag <0/1: if print all the ram info> <0/1: if rram for coredump is overwrited>\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    /* input value should be 0 or 1*/
+    if ((Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1) || ((Parameter_List[1].Integer_Value != 0 && Parameter_List[1].Integer_Value != 1)))
+    {
+        printf("Invalid parameter, shoud be 0 or 1\n");
+        printf("Usage: platform coredumpflag <0/1: if print all the ram info> <0/1: if rram for coredump is overwrited>\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    /* set ramdump print flag */
+    if (Parameter_List[0].Integer_Value == 0)
+    {
+        qapi_set_ramdump_print_flag(0);
+    }
+    else
+    {
+        qapi_set_ramdump_print_flag(1);
+    }
+
+    if (Parameter_List[1].Integer_Value == 0)
+    {
+        qapi_set_coredump_overwrite_flag(0);
+    }
+    else
+    {
+        qapi_set_coredump_overwrite_flag(1);
+    }
+
+    return QAPI_OK;
+}
+#endif
+
 const QAPI_Console_Command_t platform_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -811,6 +1069,11 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
     {platform_qcspi_enable, "qcspi", "<0|1>\n", "enable/disable qcspi. 1: enable, 0:disable\n"},
 #endif    
     {platform_demo_check_boot_reason, "boot_reason", "\n", "check boot reason\n"},
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+    {platform_demo_coredumptest, "coredumptest", "<test case index: 0~5> <bmps_enable:1/0> [timeout in ms to trigger crash]\n", "unit test for coredump function\n"},
+    {platform_demo_get_coredumpinfo, "coredumpinfo", "<0/1>\n", "dump the coredump info\n"},
+    {platform_demo_set_coredumpflag, "coredumpflag", "<ramdump_flag> <overwrite_flag>\n", "flag indicating whether all the ram info should be printed and if the rram is overwrited\n"},
+#endif
 };
 
 const QAPI_Console_Command_Group_t platform_shell_cmd_group = {"platform", sizeof(platform_shell_cmds) / sizeof(QAPI_Console_Command_t), platform_shell_cmds};

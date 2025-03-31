@@ -55,6 +55,9 @@
 */
 #define PAL_ECHO_CHARACTERS                                 (true)
 
+#define AT_COMMAND_LENGTH                            20
+
+
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -133,7 +136,7 @@ typedef struct HTC_Context_s
 */
 typedef struct Cur_Data_Mode_Cmd_s
 {
-   char cur_data_mode_commnd[20];
+   char cur_data_mode_commnd[AT_COMMAND_LENGTH];
    uint32_t Op_Type;
    uint32_t	  Parameter_Count;
    

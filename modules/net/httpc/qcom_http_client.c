@@ -40,6 +40,7 @@
 #include "lwip/tcpip.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
+#include "lwip/err.h"
 #include "ip_addr.h"
 #include "netifapi.h"
 #include "data_path.h"
@@ -286,6 +287,10 @@ httpc_dns_found(const char* hostname, const ip_addr_t *ipaddr, void *arg)
     (void)arg;
     if(ipaddr)
     {
+        if(arg)
+        {
+           memmove(arg, ipaddr, sizeof(ip_addr_t));
+        }
         g_httpc_dns_found = 1;
         htdbgprintf("%s http host IP is  %s\r\n",hostname, ipaddr_ntoa(ipaddr));
     }
@@ -308,8 +313,9 @@ httpc_dns_found(const char* hostname, const ip_addr_t *ipaddr, void *arg)
 static
 int http_client_resolve(httpclient_sess *sess)
 {
-    ip_addr_t ipaddr;
+    ip_addr_t ipaddr = {0};
     uint16_t count = 0;
+    g_httpc_dns_found = 0;
     htdbgprintf("%s() Flags:0x%x\n", __func__, sess->hcs_flags);
 
     /* Find port no */
@@ -357,13 +363,20 @@ int http_client_resolve(httpclient_sess *sess)
      */
 
     htdbgprintf("%s(): need dns to resolve.\n", __func__);
+    err_enum_t err = dns_gethostbyname((char *)sess->hcs_host, &ipaddr, httpc_dns_found, &ipaddr);
 
-    dns_gethostbyname((char *)sess->hcs_host, &ipaddr, httpc_dns_found, NULL);
-
-    while((g_httpc_dns_found == 0) && (count++ < 5))
+    if(err == ERR_OK)
     {
-        qurt_thread_sleep(1000);
+        g_httpc_dns_found  =1;
     }
+    else if(err == ERR_INPROGRESS)
+    {
+        while((g_httpc_dns_found == 0) && (count++ < 5))
+        {
+            qurt_thread_sleep(1000);
+        }
+    }
+
     if(g_httpc_dns_found == 1)
     {
 #if LWIP_IPV4 && LWIP_IPV6
@@ -548,6 +561,8 @@ httpclient_sess* http_client_newsess(
     session->hcs_buf_len = httpc_max_body_length;
     session->hcs_headerbuf_len = httpc_max_header_length;
     qurt_mutex_unlock(g_httpc_ctxt->lh);
+    
+    htdbgprintf("HTTPC: timeout%d\n",session->timeout);
 
     if ((session->hcs_buffer = malloc(session->hcs_buf_len)) == NULL)
     {
@@ -665,6 +680,7 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
 #elif LWIP_IPV6
 	family = AF_INET6;
 #endif
+
     /* Create a socket if it is not created already */
     if (sess->hcs_socket == INVALID_SOCKET)
     {
@@ -681,11 +697,19 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
     }
     sock = sess->hcs_socket;
     setsockopt(sess->hcs_socket, SOL_SOCKET, O_NONBLOCK, NULL, 0);
+#if 0
+    int rlt= fcntl(sock, F_GETFL, O_NONBLOCK);
+    if (rlt < 0) {
+        printf("sstest set non-blocking mode failed :%d\n",rlt);
+        close(sock);
+    }
+#endif
 
 #if LWIP_IPV4
     if (AF_INET == family)
     {
 #if LWIP_IPV6
+
         htdbgprintf("%s() Addr 0x%08x port %u\n", __func__, sess->hcs_addr.u_addr.ip4, sess->hcs_port);
 #else
 		htdbgprintf("%s() Addr 0x%08x port %u\n", __func__, sess->hcs_addr, sess->hcs_port);
@@ -701,6 +725,7 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         s_addr.sin_len = sizeof(struct sockaddr_in);
         to = (struct sockaddr *)&s_addr;
         tolen = sizeof(s_addr);
+        
 
     }
     else
@@ -739,7 +764,7 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         s_addr6.sin6_port = htons(sess->hcs_port);
         to = (struct sockaddr *)&s_addr6;
         tolen = sizeof(s_addr6);
-        //htdbgprintf("%s() %d IPv6 Addr:%s port %u\n", __func__, __LINE__, inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.a.addr6), temp,sizeof(temp)), sess->hcs_port);
+        //htdbgprintf("%s() %d IPv6 Addr:%s port %u\n", __func__, __LINE__, inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.u_addr.ip6)), sess->hcs_port);
     }
     else
 #endif
@@ -754,6 +779,25 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
     htdbgprintf("%s():%d Sending Connect req on index[%d]\n", __func__,__LINE__,sess->index);
 
     error = connect(sock, to, tolen);
+    
+#if 0
+    struct timeval timeout;
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 0;
+    
+    fd_set writefds;
+    FD_ZERO(&writefds);
+    FD_SET(sock, &writefds);
+
+    int result = select(sock + 1, NULL, &writefds, NULL, &timeout);
+    if (result > 0 && FD_ISSET(sock, &writefds)) {
+      printf("sstest conn succ\n");
+    } else {
+      printf("sstest conn fail\n");
+      close(sock);
+    }
+#endif
+    
     if(error)
     {
         htdbgprintf("t_connect failure Err:%d\n", error);
@@ -1573,7 +1617,7 @@ int http_client_sendpkt(httpclient_sess *sess, int32_t socket, uint8_t* buffer, 
 
 }
 
-int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const char *url, const char *chunk_data, int32_t chunk_size, uint8_t chunk_flag)
+int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const char *url, const char *chunk_data, int32_t chunk_size, uint8_t chunk_flag, int32_t total_size)
 {
     char *pktbuf;
     uint32_t pkt_len = 0;
@@ -1670,12 +1714,18 @@ int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const
                                 // "Accept: text/html, */*\r\n"
                                 // "Cache-control: no-cache\r\n"
                                 // "User-Agent: IOE Client\r\n"
-            if(chunk_flag & HTTPC_CHUNKED_MASK)
-            {
-                pkt_len += 52;      // for chunked encoding headers(with above fileds):
-                                    // "Expect: 100-continue\r\n"
-                                    // "Transfer-Encoding: chunked\r\n"
-            }
+        }
+        
+        if(chunk_flag & HTTPC_CHUNKED_MASK)
+        {
+            pkt_len += 52;      // for chunked encoding headers(with above fileds):
+                                // "Expect: 100-continue\r\n"
+                                // "Transfer-Encoding: chunked\r\n"
+        }
+
+        if (sess->hcs_command == HTTP_CLIENT_PUT_CMD)
+        {
+            pkt_len += 24;      // "Content-length: nnnnnn\r\n"
         }
     }
 
@@ -1741,11 +1791,6 @@ int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const
         }
         else
         {
-            if(chunk_flag & HTTPC_CHUNKED_MASK)
-            {
-                offset += snprintf(pktbuf + offset, pkt_len - offset, "Expect: 100-continue\r\n");
-                offset += snprintf(pktbuf + offset, pkt_len - offset, "Transfer-Encoding: chunked\r\n");
-            }
             if(sess->hcs_command == HTTP_CLIENT_POST_CMD)
             {
                 offset += snprintf(pktbuf + offset, pkt_len - offset, "Content-Type: text/plain\r\n");
@@ -1753,6 +1798,17 @@ int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const
             offset += snprintf(pktbuf + offset, pkt_len - offset, "Accept: text/html, */*\r\n");
             offset += snprintf(pktbuf + offset, pkt_len - offset, "Cache-control: no-cache\r\n");
             offset += snprintf(pktbuf + offset, pkt_len - offset, "User-Agent: IOE Client\r\n");
+        }
+        
+        if(chunk_flag & HTTPC_CHUNKED_MASK)
+        {
+            offset += snprintf(pktbuf + offset, pkt_len - offset, "Expect: 100-continue\r\n");
+            offset += snprintf(pktbuf + offset, pkt_len - offset, "Transfer-Encoding: chunked\r\n");
+        }
+
+        if (sess->hcs_command == HTTP_CLIENT_PUT_CMD)
+        {
+            offset += snprintf(pktbuf + offset, pkt_len - offset, "Content-length: %lu\r\n", total_size);
         }
 
         /* Connection header */
@@ -1764,17 +1820,31 @@ int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const
 
     if(chunk_flag & HTTPC_CHUNKED_MASK)
     {
+        
         if(chunk_size > 0)
         {
             offset += snprintf(pktbuf + offset, pkt_len - offset, "%lx\r\n", chunk_size);
-            memcpy(pktbuf + offset, chunk_data, chunk_size);
+            /* HTTP Body for POST/PUT/PATCH command */
+           
+            if (sess->hcs_bufoffset > 0 &&
+                (sess->hcs_command == HTTP_CLIENT_POST_CMD ||
+                 sess->hcs_command == HTTP_CLIENT_PUT_CMD ))
+            {
+                memcpy(pktbuf + offset, sess->hcs_buffer, sess->hcs_bufoffset);
+                offset += sess->hcs_bufoffset;
+            }
+            else
+            {
+                memcpy(pktbuf + offset, chunk_data, chunk_size);
+                offset += chunk_size;
+            }
+            
         }
         else
         {
             offset += snprintf(pktbuf + offset, pkt_len - offset, "%lx\r\n", chunk_size);
         }
-
-        offset += chunk_size;
+        
         offset += snprintf(pktbuf + offset, pkt_len - offset, "\r\n");
     }
     else

@@ -104,6 +104,12 @@ projects_common = [
     "//modules/qat",
 ]
 
+if (!CONFIG_WPS_LIB) {
+    projects_common+= [
+        "//modules/core/qcc_wifi/wps_stub",
+    ]
+}
+
 projects_wifi_core = [
     "//modules/wifi",
 ]

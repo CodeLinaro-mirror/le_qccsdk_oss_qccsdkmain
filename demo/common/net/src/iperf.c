@@ -68,7 +68,7 @@ void iperf_tcp_rx(void *arg);
 #else
 void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt);
 #endif
-void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur);
+void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur, bool is_iperf_done);
 void iperf_rx_show_result(void *arg);
 
 extern qbool_t get_device_connect_state(void);
@@ -484,7 +484,7 @@ static void iperf_tcp_CloseSession(bench_tcp_session_t *session, fd_set *rd_set)
     session->ready = 0;
     session->busySlot = 0;
 
-    iperf_result_print(&session->pktStats, 0, 0);
+    iperf_result_print(&session->pktStats, 0, 0, true);
 
     if (session->buffer)
     {
@@ -790,7 +790,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         IPERF_PRINTF("  -n = The number of buffers to transmit\n");
         IPERF_PRINTF("  -b = Set target bandwidth to Mbits/sec\n");
         IPERF_PRINTF("  -S = Set TOS for TCP\n");
-        // IPERF_PRINTF("  -V = IPV6\n");
+        IPERF_PRINTF("  -V = IPV6\n");
 
         return QAPI_ERR_INVALID_PARAM;
     }
@@ -1242,7 +1242,7 @@ RET_ERR:
 }
 
 #define RATE_KBYTES 1000
-void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur)
+void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur, bool is_iperf_done)
 {
     uint32_t throughput_Kbps = 0;
     uint32_t msInterval = 0;
@@ -1330,20 +1330,43 @@ void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur)
     }
     if (throughput_Kbps >= RATE_KBYTES)
     {
-        IPERF_PRINTF("[%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec \n",
+        if (is_iperf_done)
+        {
+            IPERF_PRINTF("### [%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec ###\n",
                      pCxtPara->iperf_stream_id,
                      sec_val1, sec_val2,
                      bytes, rem_bytes, transfer_unit,
                      throughput_Kbps / RATE_KBYTES, ((throughput_Kbps % RATE_KBYTES) / 10) + ((throughput_Kbps % 10 >= 5) ? 1 : 0),
                      bandwidth_unit);
+        }
+        else
+        {
+            IPERF_PRINTF("[%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec\n",
+                pCxtPara->iperf_stream_id,
+                sec_val1, sec_val2,
+                bytes, rem_bytes, transfer_unit,
+                throughput_Kbps / RATE_KBYTES, ((throughput_Kbps % RATE_KBYTES) / 10) + ((throughput_Kbps % 10 >= 5) ? 1 : 0),
+                bandwidth_unit);
+        }
     }
     else if (pCxtPara->bytes > 0 || throughput_Kbps > 0)
     {
-        IPERF_PRINTF("[%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec\n",
+        if (is_iperf_done)
+        {
+            IPERF_PRINTF("### [%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec ###\n",
                      pCxtPara->iperf_stream_id,
                      sec_val1, sec_val2,
                      bytes, rem_bytes, transfer_unit,
                      throughput_Kbps, 0, bandwidth_unit);
+        }
+        else
+        {
+            IPERF_PRINTF("[%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec\n",
+                pCxtPara->iperf_stream_id,
+                sec_val1, sec_val2,
+                bytes, rem_bytes, transfer_unit,
+                throughput_Kbps, 0, bandwidth_unit);
+        }
     }
 
     /* Clear for next time */
@@ -1351,7 +1374,7 @@ void iperf_result_print(STATS *pCxtPara, uint32_t prev, uint32_t cur)
     pCxtPara->iperf_time_sec += pCxtPara->iperf_display_interval;
 }
 
-void iperf_result_print2(STATS *pCxtPara, uint32_t msInterval, uint64_t totalbyts)
+void iperf_result_print2(STATS *pCxtPara, uint32_t msInterval, uint64_t totalbyts, bool is_iperf_done)
 {
     uint32_t throughput_Kbps = 0;
 
@@ -1407,19 +1430,41 @@ void iperf_result_print2(STATS *pCxtPara, uint32_t msInterval, uint64_t totalbyt
     }
     if (throughput_Kbps >= RATE_KBYTES)
     {
-        IPERF_PRINTF("[%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec\n",
-                     pCxtPara->iperf_stream_id,
-                     sec_val1, sec_val2,
-                     bytes, rem_bytes, transfer_unit,
-                     throughput_Kbps / RATE_KBYTES, ((throughput_Kbps % RATE_KBYTES) / 10) + ((throughput_Kbps % 10 >= 5) ? 1 : 0), bandwidth_unit);
+        if (is_iperf_done)
+        {
+            IPERF_PRINTF("### [%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec ###\n",
+                pCxtPara->iperf_stream_id,
+                sec_val1, sec_val2,
+                bytes, rem_bytes, transfer_unit,
+                throughput_Kbps / RATE_KBYTES, ((throughput_Kbps % RATE_KBYTES) / 10) + ((throughput_Kbps % 10 >= 5) ? 1 : 0), bandwidth_unit);
+        }
+        else
+        {
+            IPERF_PRINTF("[%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec\n",
+                pCxtPara->iperf_stream_id,
+                sec_val1, sec_val2,
+                bytes, rem_bytes, transfer_unit,
+                throughput_Kbps / RATE_KBYTES, ((throughput_Kbps % RATE_KBYTES) / 10) + ((throughput_Kbps % 10 >= 5) ? 1 : 0), bandwidth_unit);
+        }
     }
     else if (throughput_Kbps > 0)
     {
-        IPERF_PRINTF("[%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec\n",
-                     pCxtPara->iperf_stream_id,
-                     sec_val1, sec_val2,
-                     bytes, rem_bytes, transfer_unit,
-                     throughput_Kbps, 0, bandwidth_unit);
+        if (is_iperf_done)
+        {
+            IPERF_PRINTF("### [%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec ###\n",
+                pCxtPara->iperf_stream_id,
+                sec_val1, sec_val2,
+                bytes, rem_bytes, transfer_unit,
+                throughput_Kbps, 0, bandwidth_unit);
+        }
+        else
+        {
+            IPERF_PRINTF("[%3d] %2d.0-%2d.0 sec %3d.%02d %sBytes %d.%02d %sbits/sec\n",
+                pCxtPara->iperf_stream_id,
+                sec_val1, sec_val2,
+                bytes, rem_bytes, transfer_unit,
+                throughput_Kbps, 0, bandwidth_unit);
+        }
     }
 
     /* Clear for next time */
@@ -1522,7 +1567,7 @@ int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number) //,s
                 // IPERF_PRINTF("got from server: total:0x%xbytes, \n", total);
                 IPERF_PRINTF("got from server:  time %d.%d s\n", interval, interval2);
                 // IPERF_PRINTF("got from server: interval:%d, len2:%d, interval2:%d\n",interval,len2, interval2);
-                iperf_result_print2(&p_tCxt->pktStats, interval * 1000 + interval2, total);
+                iperf_result_print2(&p_tCxt->pktStats, interval * 1000 + interval2, total, true);
             }
             error = QAPI_OK;
             break;
@@ -1777,7 +1822,7 @@ static void iperf_client_send(void *arg)
                 else
                 {
                     IPERF_PRINTF("TX err:%d\n", errno);
-                    if(EAGAIN == errno)
+                    if(EAGAIN == errno || ENOMEM == errno)
                         break;
                     app_get_time(&p_tCxt->pktStats.last_time);
                     if(ERR_TIMEOUT == errno || ERR_OK == errno)
@@ -1820,7 +1865,7 @@ static void iperf_client_send(void *arg)
                 iperf_curr_time = now;
                 if (iperf_curr_time >= iperf_display_next && iperf_display_interval)
                 {
-                    iperf_result_print(&p_tCxt->pktStats, iperf_display_last, iperf_curr_time);
+                    iperf_result_print(&p_tCxt->pktStats, iperf_display_last, iperf_curr_time, false);
                     iperf_display_last = iperf_curr_time;
                     iperf_display_next = iperf_curr_time + iperf_display_interval * 1000;
                     iperf_udp_packets_counter = 0;
@@ -1903,7 +1948,7 @@ static void iperf_client_send(void *arg)
                         app_get_time(&iperf_curr_time);
                         if (iperf_curr_time >= iperf_display_next && iperf_display_interval)
                         {
-                            iperf_result_print(&p_tCxt->pktStats, iperf_display_last, iperf_curr_time);
+                            iperf_result_print(&p_tCxt->pktStats, iperf_display_last, iperf_curr_time, false);
                             iperf_display_last = iperf_curr_time;
                             iperf_display_next = iperf_curr_time + iperf_display_interval * 1000;
                             iperf_udp_packets_counter = 0;
@@ -1928,7 +1973,7 @@ static void iperf_client_send(void *arg)
                         */
                         if (iperf_curr_time >= iperf_display_next - 100 && iperf_display_interval)
                         {
-                            iperf_result_print(&p_tCxt->pktStats, iperf_display_last, iperf_curr_time);
+                            iperf_result_print(&p_tCxt->pktStats, iperf_display_last, iperf_curr_time, false);
                             iperf_display_last = iperf_curr_time;
                             iperf_display_next = iperf_curr_time + iperf_display_interval * 1000;
                             iperf_udp_packets_counter = 0;
@@ -1940,7 +1985,7 @@ static void iperf_client_send(void *arg)
         } while (!((is_test_done) || /*(send_bytes == (int)packet_size) ||*/ (NULL == p_tCxt->buffer))); /* send loop */
     }                                                                                                    /* while ( !is_test_done ) */
 
-    iperf_result_print(&p_tCxt->pktStats, 0, 0);
+    iperf_result_print(&p_tCxt->pktStats, 0, 0, true);
 
     /* Send endmark packet and wait for stats from server */
     // iperf_udp_tx_finish(p_tCxt, cur_packet_number,to,tolen);
@@ -2218,7 +2263,7 @@ void iperf_rx_show_result(void *arg)
         
         if (ppktStats) 
         {
-            iperf_result_print(ppktStats, iperf_last_time, iperf_curr_time);
+            iperf_result_print(ppktStats, iperf_last_time, iperf_curr_time, false);
         }
         else
         {
@@ -2419,11 +2464,15 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                 conn_sock = select(p_tCxt->sock_local + 1, &read_fds, NULL, NULL, &tv);
                 if (conn_sock == A_ERROR)
                 {
+                    app_get_time(&p_tCxt->pktStats.last_time);
                     goto ERROR_3; // socket no longer valid
                 }
 
                 if (family == AF_INET && errno == ENOTSOCK) // TODO
+                {
+                    app_get_time(&p_tCxt->pktStats.last_time);
                     goto ERROR_2;
+                }
             } while (conn_sock == 0);
 
             // check recv data
@@ -2482,7 +2531,7 @@ ERROR_2:
     if (is_test_done)
         iperf_udp_ack_finish(p_tCxt, from, fromlen);
 
-    iperf_result_print(&p_tCxt->pktStats, 0, 0);
+    iperf_result_print(&p_tCxt->pktStats, 0, 0, true);
 
     closesocket(p_tCxt->sock_local);
 
@@ -3013,7 +3062,10 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     do
     {
         if (iperf_rx_quit || (get_device_connect_state() == false))
+        {
+            app_get_time(&sess->pktStats.last_time);
             goto tcp_rx_QUIT;
+        }
 #if 1
         tv.tv_sec = 2;
         tv.tv_usec = 0;
@@ -3023,6 +3075,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         if (conn_sock < 0)
         {
             IPERF_PRINTF("select error\n");
+            app_get_time(&sess->pktStats.last_time);
             goto tcp_rx_QUIT;
         }
         else if (conn_sock == 0)
@@ -3033,6 +3086,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
             if ((curtime - iperf_select_start_time) / 1000 > 20)
             {
                 IPERF_PRINTF("select timeout %d,%s\n", errno, strerror(errno));
+                app_get_time(&sess->pktStats.last_time);
                 goto tcp_rx_QUIT;
             }
             continue;

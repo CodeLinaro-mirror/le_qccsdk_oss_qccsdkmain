@@ -33,14 +33,14 @@
 
 #define HTTPC_SELECT_INTERVAL_MS        10
 #define TICKS_PER_SEC                   configTICK_RATE_HZ
-#define HTTPC_TIMER_TIMEOUT             (5*TICKS_PER_SEC/10) /*500ms*/
+#define HTTPC_TIMER_TIMEOUT             (10*TICKS_PER_SEC/10) /*500ms*/
 #define HTTPCTICKS                      sys_now()    /* ticks since start */
 #define HTTPCLIENT_DEFAULT_CON_SUPPORT  2
 #define HTTPC_INVALID_HANDLE            (-1)
 
 #define HTTPCLIENT_MAX_BUFFER_SIZE      1750
 #define HTTPCLIENT_MIN_BUFFER_SIZE      512
-#define HTTPCLIENT_MAX_URL_LENGTH       128     //was 256
+#define HTTPCLIENT_MAX_URL_LENGTH       256     //was 256
 #define HTTPCLIENT_MAX_HOST_LENGTH      64
 #define HTTPCLIENT_DEFAULT_REMAIN_BUFFER_LENGTH 20 //was 1024
 
@@ -326,6 +326,6 @@ int http_client_certconfigure(httpclient_sess *sess, qapi_Ssl_Cert_t *crt);
 int http_client_free_sslcert(httpclient_sess *sess);
 int http_client_cb_eable_adding_header(httpclient_sess *sess, int32_t enable);
 int http_client_senddata(httpclient_sess *sess, char *buf, int length);
-int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const char *URL, const char *chunk_data, int32_t chunk_size, uint8_t chunk_flag);
+int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const char *URL, const char *chunk_data, int32_t chunk_size, uint8_t chunk_flag, int32_t total_size);
 
 #endif /* _HTTPD_H_ */

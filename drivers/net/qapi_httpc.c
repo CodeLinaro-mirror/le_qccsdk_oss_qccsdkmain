@@ -309,7 +309,7 @@ qapi_Status_t qapi_Net_HTTPc_Send_Data(qapi_Net_HTTPc_handle_t handle, const cha
 
 /****************************************************************************
  ***************************************************************************/
-qapi_Status_t qapi_Net_HTTPc_Send_Chunk(qapi_Net_HTTPc_handle_t handle, qapi_Net_HTTPc_Method_e cmd, const char *URL, const char *chunk, uint32_t chunk_size, uint8_t chunk_flag)
+qapi_Status_t qapi_Net_HTTPc_Send_Chunk(qapi_Net_HTTPc_handle_t handle, qapi_Net_HTTPc_Method_e cmd, const char *URL, const char *chunk, uint32_t chunk_size, uint8_t chunk_flag, int32_t total_size)
 {
     int err;
 
@@ -317,6 +317,6 @@ qapi_Status_t qapi_Net_HTTPc_Send_Chunk(qapi_Net_HTTPc_handle_t handle, qapi_Net
     {
         return QAPI_ERROR;
     }
-    err = http_client_send_chunk((httpclient_sess *)handle, cmd, URL, chunk, chunk_size, chunk_flag);
+    err = http_client_send_chunk((httpclient_sess *)handle, cmd, URL, chunk, chunk_size, chunk_flag, total_size);
     return httpc_convert_err_code(err);
 }

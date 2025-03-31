@@ -28,6 +28,9 @@
 #include "fdi.h"
 #include "wifi_fw_logger.h"
 #include "wifi_fw_ext_intr.h"
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+#include "err.h"
+#endif
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
  * ----------------------------------------------------------------------*/
@@ -264,7 +267,11 @@ void wifi_fw_module_init(void)
 #if defined(UNIT_TEST_SUPPORT) && defined(SUPPORT_RING_IF)
     apps_ringif_init();
 #endif
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+    err_init();
+#endif
 }
+
 
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 /* @brief This function tells the caller, of table init state

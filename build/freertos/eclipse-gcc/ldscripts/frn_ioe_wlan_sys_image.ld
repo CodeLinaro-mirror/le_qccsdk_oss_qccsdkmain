@@ -191,7 +191,7 @@ _estack = __stack; /* End of System Stack */
  * for the different modes.
  */
 
-__Main_Stack_Size = 3072 ;        /* 3 KB system stack */
+__Main_Stack_Size = 6144 ;        /* 6 KB system stack */
 
 
 PROVIDE ( _Main_Stack_Size = __Main_Stack_Size ) ;

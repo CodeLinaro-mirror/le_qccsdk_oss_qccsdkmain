@@ -17,5 +17,6 @@ typedef enum sbl_func_status
 }sbl_func_status_t;
 
 sbl_func_status_t sys_loader(void);
+void clear_dfu_table_hdr(void);
 
 #endif

@@ -26,6 +26,7 @@
 #include "ip.h"
 #include "dns.h"
 #include "priv/nd6_priv.h"
+#include "ip6_addr.h"
 
 /*-------------------------------------------------------------------------
  * Function Declarations
@@ -298,11 +299,13 @@ static void qat_ping_recv(int s, char *buffer, char *buf)
                 }else if(IP_IS_V6_VAL(from_addr)){
                     icmp_header = (icmpm_echo_hdr *)(buf + sizeof(struct ip6_hdr));
                 }
+
+                if((icmpm_2_icmp(icmp_header)->type != ICMP_ER) && (icmpm_2_icmp6(icmp_header)->type != ICMP6_TYPE_EREP)){
+                    continue;
+                }
+                
                 if((icmpm_2_icmp(icmp_header)->id == QAT_PING_ID) && (icmpm_2_icmp(icmp_header)->seqno == htons(qat_ping_seq_num))) 
                 {
-                    if((icmpm_2_icmp(icmp_header)->type != ICMP_ER) && (icmpm_2_icmp6(icmp_header)->type != ICMP6_TYPE_EREP)){
-                        continue;
-                    }
                     qat_ping_recv_count++;
                     memset((void*)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
                     snprintf(buffer, QAT_CMD_IP_BUFFER_LENGTH, "+CIPPING:%s,%u,%lu\r\n", ipaddr_ntoa(&from_addr), ntohs(icmpm_2_icmp(icmp_header)->seqno), (sys_now()-qat_ping_time));
@@ -2638,7 +2641,7 @@ static QAT_Command_Status_t Extend_Command_UdpServer(uint32_t Op_Type, uint32_t 
                     local_port = addr4->sin_port;
                     inet_ntop(AF_INET, &addr4->sin_addr, local_ip, sizeof(local_ip));
                     peer_port = g_listen_udp_clients[i].addr.v4_addr.sin_port;
-                    inet_ntop(AF_INET6, &g_listen_udp_clients[i].addr.v4_addr.sin_addr, peer_ip, sizeof(peer_ip));
+                    inet_ntop(AF_INET, &g_listen_udp_clients[i].addr.v4_addr.sin_addr, peer_ip, sizeof(peer_ip));
                 }
 
                 offset += snprintf(buf + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPUDPSERVER:");
@@ -2825,17 +2828,29 @@ static QAT_Command_Status_t Extend_Command_EnableV6(uint32_t Op_Type, uint32_t P
 
             if(value){
                 NETIF_FOREACH(netif) {
-                    for(int i = 0 ; i < LWIP_IPV6_NUM_ADDRESSES; i++){
-                        if (!ip6_addr_isany(netif_ip6_addr(netif, i)))
-                            netif_ip6_addr_set_state(netif, i, IP6_ADDR_VALID);
+                    if(strncmp(netif->name, "st", 2) == 0) {
+                        netif->ip6_autoconfig_enabled = 1;
+                        netif_create_ip6_linklocal_address(netif, 1);
+                        nd6_restart_netif(netif);
+                    }else if(strncmp(netif->name, "ap", 2) == 0){
+                        netif->ip6_autoconfig_enabled = 1;
+                        netif_create_ip6_linklocal_address(netif, 1);
+                        nd6_restart_netif(netif);                        
+                    }else if(strncmp(netif->name, "lo", 2) == 0){
+                        netif->ip6_addr_state[0] = IP6_ADDR_VALID;
                     }
                 }
                 v6_enable = 1;
             }else{
                 NETIF_FOREACH(netif) {
-                    for(int i = 0 ; i < LWIP_IPV6_NUM_ADDRESSES; i++){
-                        if(ip6_addr_isvalid(netif_ip6_addr_state(netif, i)))
+                    if((strncmp(netif->name, "st", 2) == 0) || (strncmp(netif->name, "ap", 2) == 0)) {
+                        netif->ip6_autoconfig_enabled = 0;
+                        for (int i = 0; i < LWIP_IPV6_NUM_ADDRESSES; ++i) {
+                            ip6_addr_set_zero(&netif->ip6_addr[i].u_addr.ip6);
                             netif_ip6_addr_set_state(netif, i, IP6_ADDR_INVALID);
+                        }
+                    }else if(strncmp(netif->name, "lo", 2) == 0){
+                        netif->ip6_addr_state[0] = IP6_ADDR_INVALID;
                     }
                 }
                 v6_enable = 0;

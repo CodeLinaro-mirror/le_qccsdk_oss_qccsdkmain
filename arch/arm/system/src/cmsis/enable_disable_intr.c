@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <ExceptionHandlers.h>
 #include "uart.h"
+#include "ferm_hkadc_drv.h"
+
 #define WRITE_REGISTER(reg, val) *((volatile unsigned long*)(reg)) = (val)
 #define READ_REGISTER(reg) *((volatile unsigned long*)(reg))
 
@@ -76,6 +78,23 @@ void __attribute__((section(".__sect_ps_txt"))) nt_global_irq_init(void)
 	nt_disable_irq();  // Disable all the interrupts
 	uint32_t int_num = READ_REGISTER(NT_NVIC_ICTR);//Configure the NVIC to support 64 interrupts
 	nt_set_priority(int_num);  // Setting the priority
+
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+	//
+	// Enable fault on divide-by-zero and unaligned access
+	//
+	SCB->CCR |= SCB_CCR_DIV_0_TRP_Msk | SCB_CCR_BFHFNMIGN_Msk;
+	
+	// TODO: Evaluate and enable Unaligned Access Fault bit (SCB_CCR_UNALIGN_TRP_Msk)
+	
+	//
+	// Enable usage fault, bus fault, and mem manage fault
+	//
+	SCB->SHCSR |= SCB_SHCSR_USGFAULTENA_Msk | SCB_SHCSR_BUSFAULTENA_Msk | SCB_SHCSR_MEMFAULTENA_Msk; // enable Usage-/Bus-/MPU Fault
+	
+	// TODO: Disable Context state stacking on exception entry with the FP extension
+	// FPU->FPCCR &= ~FPU_FPCCR_ASPEN_Msk;
+#endif
 }
 
 //function that clears the nth interrupt in the nvic

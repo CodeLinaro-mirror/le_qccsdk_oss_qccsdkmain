@@ -1,0 +1,11 @@
+import("//configs_decl.gni")
+wps_stub_inc = []
+config("_config") {
+    include_dirs = wps_stub_inc
+}
+wps_stub_src = [
+        "wps_stub.c",
+]
+source_set("wps_stub") {
+    sources = wps_stub_src
+}

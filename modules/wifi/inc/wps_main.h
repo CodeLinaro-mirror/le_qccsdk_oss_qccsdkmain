@@ -7,6 +7,10 @@
 #ifndef _WPS_MAIN_H_
 #define  _WPS_MAIN_H_
 
+#ifndef __weak
+#define __weak __attribute__((weak))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef __QAPI_FATAL_ERR_H__ 
 #define __QAPI_FATAL_ERR_H__
 
@@ -200,3 +204,80 @@ do                                                                       \
 
 #endif
 
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+#include "err.h"
+#include "errlog.h"
+#include "qapi_status.h"
+
+/*==================================================================================
+  FUNCTION         qapi_coredump_read
+==================================================================================*/
+/**
+ *
+ * @brief read the coredump info from rram.
+ *
+ * @param[out] coredump_buf    the buffer that stores the coredump info.
+ *
+ * @return
+ * QAPI_OK -- successful reconstruction of core dump structure
+ * Error code -- If there is an error.
+ **/
+qapi_Status_t qapi_coredump_read(coredump_type *coredump_buf);
+
+
+
+/*==================================================================================
+  FUNCTION         qapi_coredump_write
+==================================================================================*/
+/**
+ *
+   @brief write the coredump info from rram.
+
+   @param[out] coredump_buf --  the buffer that stores the coredump info
+
+   @return
+    QAPI_OK -- successfully write the core dump info into rram
+    Error code -- If there is an error.
+**/
+qapi_Status_t qapi_coredump_write(coredump_type *coredump_buf);
+
+
+
+/*==================================================================================
+  FUNCTION         qapi_set_ramdump_flag
+==================================================================================*/
+/**
+ *   
+ * @brief set the ramdump print flag, control the printed ram info after 
+ *        crash
+ *
+ * @param[in] qapi_set_ramdump_flag   if print all the ram info
+ *        0: specific ram info is not printed after crash
+ *        1: specific ram info is printed after crash
+ *
+ * @return
+ *       QAPI_OK -- successful set the ramdump print flag
+ *       Error code -- If there is an error.
+ **/
+qapi_Status_t qapi_set_ramdump_flag(int ramdump_print_flag);
+
+
+
+/*==================================================================================
+  FUNCTION         qapi_set_coredump_overwrite_flag
+==================================================================================*/
+/**
+ *     
+ * @brief set the overwrite flag, for sequential crash, choices can be only 
+ *        save the result of the first crash
+ *
+ * @param[in] qapi_set_ramdump_flag   if print all the ram info
+ *        ture: overwrite the coredump info
+ *        false: do not overwrite the coredump info
+ *
+ * @return
+ *       QAPI_OK -- successful set the overwrite flag
+ *       Error code -- If there is an error.
+**/
+qapi_Status_t qapi_set_coredump_overwrite_flag(int coredump_overwrite_flag);
+#endif

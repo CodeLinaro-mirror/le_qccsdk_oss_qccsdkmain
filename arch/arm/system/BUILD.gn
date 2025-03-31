@@ -8,6 +8,8 @@ sys_inc = [
     "include",
     "include/cmsis",
     "include/cortexm",
+    "include/cmsis/Device/Include",
+    "//modules/core/system/inc",
 ]
 
 system_src = [

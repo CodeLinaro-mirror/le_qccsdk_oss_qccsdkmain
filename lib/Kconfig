@@ -96,7 +96,9 @@ config 6G_BAND
 config LWIP_HEAP_POOL
     bool "enable LWIP_HEAP_POOL"
     default n
-
+config LWIP_MULTIPLE_STREAMS
+    bool "enable LWIP_MULTIPLE_STREAMS"
+    default n
 config FTM_MODE
     bool "enable FTM mode"
     default n

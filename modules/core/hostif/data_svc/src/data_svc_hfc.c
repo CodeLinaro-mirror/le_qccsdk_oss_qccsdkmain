@@ -21,7 +21,7 @@
 #include "nt_logger_api.h"
 
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
-#define QCSPI_HFC_THREAD_STACKSIZE          1024
+#define QCSPI_HFC_THREAD_STACKSIZE          2048
 #define QCSPI_HFC_THREAD_PRIO               6
 #define HFC_HEADER_SIZE                     sizeof(hfc_msg_t)
 
@@ -47,16 +47,31 @@ static qurt_pipe_t qcspi_hfc_msg_queue;
 */
 bool data_svc_get_hfc_data_buff(void* p_element, uint16_t len)
 {
+	uint8_t* buf = NULL;
+	struct pbuf* p_pbuf = NULL;
+	
     configASSERT(NULL != p_element);
     ring_element_t* p_elem = (ring_element_t *)p_element;
-    struct pbuf* p_pbuf = pbuf_alloc(PBUF_RAW, len, PBUF_RAM);
+
+    buf = nt_osal_allocate_memory(len);
+    if(buf == NULL)
+    {
+        return FALSE;
+    }
+	
+    p_pbuf = pbuf_alloc(PBUF_RAW, len, PBUF_REF);
     if(p_pbuf != NULL)
     {
+        p_pbuf->payload = buf;
         p_elem->p_buf=p_pbuf->payload;
         p_elem->p_buf_start=p_pbuf;
         p_elem->len=len;
         return TRUE;
     }
+	else
+	{	    
+		RINGIF_PRINT_LOG_ERR("data_svc_get_hfc_data_buff fail");
+	}
 
     return FALSE;	
 }
@@ -72,6 +87,7 @@ bool data_svc_get_hfc_data_buff(void* p_element, uint16_t len)
 {
     configASSERT(NULL != p_element);
     ring_element_t* p_elem = (ring_element_t *)p_element;
+    memset(p_elem, 0, sizeof(ring_element_t));
     uint32_t* buf = nt_osal_allocate_memory(len);
     if(buf != NULL)
     {
@@ -159,7 +175,7 @@ int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint32_t tim
     {
         return QAPI_ERR_INVALID_PARAM;
     }
-	
+
 	if (nt_osal_queue_msg_receive(qcspi_hfc_recv_queue, &msg, timeout) == NT_QUEUE_SUCCESS) 
 	{
 	    len = msg.len;
@@ -173,7 +189,11 @@ int32_t data_svc_hfc_recv_data_pkt(void* p_buff, uint16_t *buf_len, uint32_t tim
 		{
 		    *info = msg.id;
 		}
-		memcpy(p_buff, msg.data, len);
+#ifdef MEM_CPY_VIA_DXE
+        nt_dpm_memcpy(p_buff, msg.data, len);
+#else
+        memcpy(p_buff, msg.data, len);
+#endif
 		ret = QAPI_OK;
 		free(msg.buf);
 	}
@@ -236,11 +256,11 @@ int32_t data_svc_hfc_queue_send(ring_element_t *p_elem, hfc_msg_type_t type)
     {
         RINGIF_PRINT_LOG_ERR("hfc queue send fail", 0);
     }
-#elif defined(CONFIG_QCSPI_HFC_ATCMD_ENABLE)    
+#elif defined(CONFIG_QCSPI_HFC_ATCMD_ENABLE)
 	if(NT_QUEUE_FAIL == nt_osal_queue_send(qcspi_hfc_recv_queue, (void*)&msg, portMAX_DELAY))
 	{
 		RINGIF_PRINT_LOG_ERR("hfc queue send fail", 0);
-	}	
+	}
     //printf("data_svc_hfc_queue_send len %d\r\n", msg.len);
 #else
     (void)msg;
@@ -268,7 +288,7 @@ int hfc_rx_raw_ether(struct pbuf *p, struct netif *netif)
 	uint8_t *buf = NULL;
 
 	if (p->next != NULL || p->len>1600) {
-        //TODO for packets chain and payload is too big
+        //Packets chain and payload is too big
 		printf("[%s][%d]: buff size %d %d next 0x%x\n", __func__, __LINE__, PBUF_POOL_BUFSIZE, p->len, p->next);
         return 0;
 	}
@@ -288,19 +308,27 @@ int hfc_rx_raw_ether(struct pbuf *p, struct netif *netif)
 
 static int hfc_tx_raw_ethernet(uint8_t *buff, int len)
 {
+    int ret = 0;
 	struct netif *netif = netif_find("st1");
+	struct pbuf *pb = (struct pbuf*)buff;
 
 	if (netif) {
-		struct pbuf *pb = (struct pbuf*)buff;
 		if (pb) {	
 			pb->len = pb->tot_len = len;
-			netif->linkoutput(netif, pb);
-			pbuf_free(pb);
-		} else {
-			printf("[%s][%d]: pbuf_alloc failed\n", __func__, __LINE__);
- 		}
+			ret = netif->linkoutput(netif, pb);
+			if (ret != 0) {
+				RINGIF_PRINT_LOG_INFO("linkoutput err %d\n", ret);
+			}
+		}
 	} else {
-		printf("[%s][%d]: netif not found\n", __func__, __LINE__);
+		RINGIF_PRINT_LOG_ERR("[%s][%d]: netif not found\n", __func__, __LINE__);
+	}
+
+    if (pb) {
+		if (pb->payload) {
+			nt_osal_free_memory(pb->payload);
+		}
+		pbuf_free(pb);        
 	}
 	
 	return 0;

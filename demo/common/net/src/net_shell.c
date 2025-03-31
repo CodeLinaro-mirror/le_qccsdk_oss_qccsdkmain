@@ -466,15 +466,15 @@ static void net_show_info(struct netif *netif)
 #if LWIP_IPV6
                 if(ip_type == IPADDR_TYPE_V6){
                     if(ip6_addr_isglobal(ip_2_ip6(ip_addr))){
-                        strlcpy(addr_type, "Global-local",strlen("Global-local"));
+                        strlcpy(addr_type, "Global-local",strlen("Global-local") + 1);
                     } else if (ip6_addr_islinklocal(ip_2_ip6(ip_addr))){
-                        strlcpy(addr_type, "Link-local",strlen("Link-local"));
+                        strlcpy(addr_type, "Link-local",strlen("Link-local") + 1);
                     } else if (ip6_addr_issitelocal(ip_2_ip6(ip_addr))){
-                        strlcpy(addr_type, "Site-local",strlen("Site-local"));
+                        strlcpy(addr_type, "Site-local",strlen("Site-local") + 1);
                     } else if(ip6_addr_isuniquelocal(ip_2_ip6(ip_addr))){
-                        strlcpy(addr_type, "Unique-local",strlen("Unique-local"));
+                        strlcpy(addr_type, "Unique-local",strlen("Unique-local") + 1);
                     } else if(ip6_addr_isipv4mappedipv6(ip_2_ip6(ip_addr))){
-                        strlcpy(addr_type, "v4mapped-v6",strlen("v4mapped-v6"));
+                        strlcpy(addr_type, "v4mapped-v6",strlen("v4mapped-v6") + 1);
                     }
                     if(!ip_addr_isany_val(*ip_addr)){
                         addr = ipaddr_ntoa(ip_addr);
@@ -552,7 +552,7 @@ net_set_ip(struct netif *netif, ip_addr_t *ip, s8_t idx)
 #if LWIP_IPV6
     if(IP_IS_V6_VAL(*ip)) {
         netif_ip6_addr_set(netif, idx, (const ip6_addr_t*)ip_2_ip6(ip));
-        netif_ip6_addr_set_state(netif,idx,IP6_ADDR_VALID);
+        netif_ip6_addr_set_state(netif,idx,IP6_ADDR_TENTATIVE);
     }
 #endif
 #if LWIP_IPV4

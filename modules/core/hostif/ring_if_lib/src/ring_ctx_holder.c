@@ -273,7 +273,7 @@ void ringif_tickle_all_rings(bool b_from_isr)
 
     //RINGIF_PRINT_LOG_INFO("From ISR: ringif_tickle_all_rings\r\n", (uint32_t) b_from_isr, 0,0);
     ringif_stop_timer(b_from_isr);
-                        
+
     /* Handle A2F Ring updates */
     for(ring_id=0; ring_id < MAX_NUM_A2F_RINGS; ring_id++) {
         /* Skip inactive rings */

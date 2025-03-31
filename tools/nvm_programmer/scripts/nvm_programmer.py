@@ -13,13 +13,20 @@ import json
 import math
 import yaml
 
+PACK_ENABLE = os.getenv('PACK_ENABLE', 'False') == 'True'
 from gdb_framework.gdb_framework import GDB_Framework
 
 import socket
 from socket import SOCK_DGRAM
-FW_UPGRADE_SCRIPTS_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../fw_upgrade"))
-sys.path.append(FW_UPGRADE_SCRIPTS_PATH)
-from gen_download_table import Download_Table
+
+
+if PACK_ENABLE:
+    from fw_upgrade.gen_download_table import Download_Table
+else:
+    FW_UPGRADE_SCRIPTS_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../fw_upgrade"))
+    sys.path.append(FW_UPGRADE_SCRIPTS_PATH)
+    from gen_download_table import Download_Table
+
 import re
 import subprocess
 
@@ -109,7 +116,10 @@ class NVM_Programmer(GDB_Framework):
     #erase timeout
     ERASE_TIMEOUT = 300
 
-    DEFAULT_RAM_IMAGE = '../bin/FERMION_NVM_PROGRAMMER.elf'
+    if PACK_ENABLE:
+        DEFAULT_RAM_IMAGE = os.path.join(sys._MEIPASS, 'FERMION_NVM_PROGRAMMER.elf')
+    else:
+        DEFAULT_RAM_IMAGE = '../bin/FERMION_NVM_PROGRAMMER.elf'
 
     #READ_WRITE_PERMISSIONS
     READ_WRITE_PERMISSIONS_OFFSET_0 = 0x30

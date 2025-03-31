@@ -87,7 +87,7 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #ifdef NT_FN_IPV6
 #define LWIP_IPV6                       1
 #define LWIP_IPV6_FRAG                  0
-#define LWIP_IPV6_REASS                 0
+#define LWIP_IPV6_REASS                 1
 #if NT_FN_DHCP6
 #define LWIP_IPV6_DHCP6                 1
 #ifdef SUPPORT_RING_IF
@@ -139,7 +139,11 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #define MEM_ALIGNMENT                   4U
 #define TCP_MSS                         1460
 
+#if (CONFIG_LWIP_MULTIPLE_STREAMS)
+#define MEMP_NUM_PBUF                   128
+#else
 #define MEMP_NUM_PBUF                   64
+#endif
 
 #if defined LWIPERF_PERF_BUILD
 #define MEM_SIZE                        120000

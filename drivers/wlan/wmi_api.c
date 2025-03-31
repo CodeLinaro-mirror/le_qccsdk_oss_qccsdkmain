@@ -349,6 +349,10 @@ static void _wlan_fill_join_event (qapi_WLAN_Join_Comp_Evt_t *dst, const WMI_JOI
     } else {
         dst->evt_hdr.status = QAPI_WLAN_ERR_EPROTO;
     }
+
+    if(p_cxt->opmode == WHAL_M_STA)
+        memscpy(dst->passphrase, WMI_PASSPHRASE_LEN+1, src->passphrase, WMI_PASSPHRASE_LEN+1);
+
     memscpy(dst->bssid, __QAPI_WLAN_MAC_LEN, src->bssid, __QAPI_WLAN_MAC_LEN);
     dst->ssid_Length = src->ssid.ssid_len;
     memscpy(dst->ssid, dst->ssid_Length, src->ssid.ssid, dst->ssid_Length);
@@ -490,6 +494,17 @@ static void wmi_set_param_event(void *msg)
 	SET_PDEV_PARAM_RESULT *buffer = (SET_PDEV_PARAM_RESULT*)msg;
 
 	qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    if (p_cxt->wlan_set_param_block_mode) {
+        uint8_t num = 0;
+        while (buffer->param_id != p_cxt->param_id) {
+            vTaskDelay(10 / portTICK_PERIOD_MS);
+            num++;
+            if (num >= 100) {
+                err_printf("param id can not match\n");
+                break;
+            }
+        }
+    }
 	if (buffer->param_id == p_cxt->param_id && p_cxt->wlan_set_param_block_mode) {
 		if(buffer->status == WIFI_STATUS_SUCCESS) {
 			set_wlan_qapi_error(QAPI_OK);
@@ -636,6 +651,7 @@ static void wmi_set_mgmt_filter_event(void *msg)
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
 
+#ifdef CONFIG_WPS
 static void wmi_stop_scan_event(void *msg)
 {
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
@@ -669,6 +685,7 @@ static void wmi_wps_fail_event(void *msg)
 
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
+#endif
 
 static void wmi_chan_switch_event(void *msg)
 {
@@ -775,12 +792,15 @@ static void wmi_event_dispatch(event_t event_id, void *data)
             break;
 		case WMI_MGMT_FRAME_FILTER_EVTID:
 			wmi_set_mgmt_filter_event(data);
+            break;
+#ifdef CONFIG_WPS
 		case WMI_SCAN_STOP_EVTID:
 			wmi_stop_scan_event(data);
 			break;
 		case WMI_WPS_FAIL_EVTID:
 			wmi_wps_fail_event(data);
 			break;
+#endif
         default:
             break;
     }
