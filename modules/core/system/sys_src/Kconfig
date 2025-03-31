@@ -92,7 +92,7 @@ config DUMP_PREFIX
 
 config WIFI_FW_COREDUMP_SUPPORT
         bool "enable wifi firmware coredump support"
-        default y
+        default n
 
 config WIFI_FW_RAMDUMP_PRINT_FLAG
         int "when this flag is set, the whole ram info should be printed"

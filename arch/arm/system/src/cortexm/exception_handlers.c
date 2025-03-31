@@ -44,10 +44,11 @@
 // ----------------------------------------------------------------------------
 
 #define WDOG_INTR_PENDING_BITMASK 0x400000
-
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
 extern coredump_type * coredump;
 const char * g_file = NULL;
 uint32_t  g_line;
+#endif
 
 extern void
 __attribute__((noreturn,weak))
@@ -112,12 +113,14 @@ void assert_handler(const char *  file,const char* func, const uint32_t line)
 #endif
 }
 
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
 void __attribute__ ((section(".after_ram_vectors"),weak,used))
 Assert_Handler_C (ExceptionStackFrame* frame ,
                      uint32_t lr __attribute__((unused)))
 {
   coredump_fault_handler("Assertion Detected", g_line, g_file, 0, 0, 0, frame);
 }
+#endif
 
 void __attribute__ ((section(".after_ram_vectors"),weak))
 NMI_Handler (void)

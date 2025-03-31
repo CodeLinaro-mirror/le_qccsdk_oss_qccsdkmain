@@ -801,7 +801,6 @@ static void coredump_test(int coredump_test_index)
     int r = 0;
     volatile unsigned int *p;
     int (*pF)(void);
-    const unsigned short _UDF[4] = {0xDEAD, 0xDEAD, 0xDEAD, 0xDEAD};
     volatile unsigned int a;
     volatile unsigned int b;
 
@@ -811,7 +810,7 @@ static void coredump_test(int coredump_test_index)
         case 0:
             configASSERT(0);
             break;
-        /* Trigger an usage fault or hard fault by executing null pointer. */        
+        /* Trigger an usage fault or hard fault by executing null pointer. */
         case 1:
             pF = (int (*)(void))0x00000000;
             r = pF();
@@ -839,7 +838,7 @@ static void coredump_test(int coredump_test_index)
             r = pF();
             break;
         default:
-            printf("Test case index shoud be an integer less than 10\n");
+            printf("Test case index shoud be an integer less than 6\n");
         }
 }
 static void coredump_bmps_timer_cb(void)
@@ -853,7 +852,7 @@ static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_C
 {
     // Enable fault on unaligned access
 
-    if ( Parameter_Count != 3 ) {
+    if ( Parameter_Count != 1 ) {
         printf("Invalid number of arguments\r\n");
         printf("===================== unit test command =====================\n");
         printf("Usage: platform coredumptest <test case index: 0~5> <bmps_enable:1/0> [timeout in ms to trigger crash]\n");
@@ -870,22 +869,8 @@ static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_C
         return QAPI_ERR_INVALID_PARAM;
     }
 
-    if (Parameter_List[1].Integer_Value == 1)   /* bmps enable */
-    {
-        g_coredump_under_dtim_test_index = Parameter_List[0].Integer_Value;
-        bmps_timer = nt_create_timer(coredump_bmps_timer_cb, NULL, Parameter_List[2].Integer_Value, FALSE); // ms
-        if (!bmps_timer)
-            return QAPI_ERROR;
-        if (nt_start_timer(bmps_timer) != NT_TIMER_SUCCESS)
-            return QAPI_ERROR;
-        bmps_start = hres_timer_curr_time_us();
-        printf("BMPS timer started! curr: %u\n", bmps_start);
-        qapi_bmps_cfg(1, 0);
-    }
-    else
-    {
-        coredump_test(Parameter_List[0].Integer_Value);
-    }
+    coredump_test(Parameter_List[0].Integer_Value);
+
     return QAPI_OK;
 }
 
@@ -910,7 +895,7 @@ static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QA
 
     /* address: 0x36b000 + offset */
     //ret = qapi_rram_read(COREDUMP_PARTID, , (uint8_t *)&coredump_buf, sizeof(coredump_type));
-    ret = qapi_coredump_read(&coredump_buf);
+    ret = qapi_coredump_read(&coredump_buf, 1);
 
     if (ret == QAPI_OK)
     {
@@ -984,7 +969,7 @@ static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QA
         if (Parameter_List[0].Integer_Value == 0)
         {
             memset(&coredump_buf, 0, sizeof(coredump_type));
-            ret = qapi_coredump_write(&coredump_buf);
+            ret = qapi_rram_write(WIFI_FW_COREDUMP_PARTID, WIFI_FW_COREDUMP_ADDRESS_OFFSET, (uint8_t *)&coredump_buf, sizeof(coredump_type));
             if (ret == QAPI_OK)
             {
                 printf("coredumpinfo is cleared\n");
@@ -1005,40 +990,30 @@ static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QA
 static qapi_Status_t platform_demo_set_coredumpflag(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     /* check the number of arguments */
-    if ( Parameter_Count != 2 )
+    if ( Parameter_Count != 1 )
     {
         printf("Invalid number of arguments\r\n");
-        printf("Usage: platform coredumpflag <0/1: if print all the ram info> <0/1: if rram for coredump is overwrited>\n");
+        printf("Usage: platform coredumpflag <0|1: if print all the ram info>\n");
         return QAPI_ERR_INVALID_PARAM;
     }
 
     /* input value should be 0 or 1*/
-    if ((Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1) || ((Parameter_List[1].Integer_Value != 0 && Parameter_List[1].Integer_Value != 1)))
+    if (Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1)
     {
         printf("Invalid parameter, shoud be 0 or 1\n");
-        printf("Usage: platform coredumpflag <0/1: if print all the ram info> <0/1: if rram for coredump is overwrited>\n");
+        printf("Usage: platform coredumpflag <0|1: if print all the ram info>\n");
         return QAPI_ERR_INVALID_PARAM;
     }
 
     /* set ramdump print flag */
     if (Parameter_List[0].Integer_Value == 0)
     {
-        qapi_set_ramdump_print_flag(0);
+        qapi_set_ramdump_flag(0);
     }
     else
     {
-        qapi_set_ramdump_print_flag(1);
+        qapi_set_ramdump_flag(1);
     }
-
-    if (Parameter_List[1].Integer_Value == 0)
-    {
-        qapi_set_coredump_overwrite_flag(0);
-    }
-    else
-    {
-        qapi_set_coredump_overwrite_flag(1);
-    }
-
     return QAPI_OK;
 }
 #endif
@@ -1070,9 +1045,9 @@ const QAPI_Console_Command_t platform_shell_cmds[] =
 #endif    
     {platform_demo_check_boot_reason, "boot_reason", "\n", "check boot reason\n"},
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-    {platform_demo_coredumptest, "coredumptest", "<test case index: 0~5> <bmps_enable:1/0> [timeout in ms to trigger crash]\n", "unit test for coredump function\n"},
-    {platform_demo_get_coredumpinfo, "coredumpinfo", "<0/1>\n", "dump the coredump info\n"},
-    {platform_demo_set_coredumpflag, "coredumpflag", "<ramdump_flag> <overwrite_flag>\n", "flag indicating whether all the ram info should be printed and if the rram is overwrited\n"},
+    {platform_demo_coredumptest, "coredumptest", "<test case index: 0~5>\n", "unit test for coredump function\n"},
+    {platform_demo_get_coredumpinfo, "coredumpinfo", "<flag:0|1>\n", "dump the coredump info\n"},
+    {platform_demo_set_coredumpflag, "coredumpflag", "<flag:0|1>\n", "flag indicating if dump the whole ram info\n"},
 #endif
 };
 

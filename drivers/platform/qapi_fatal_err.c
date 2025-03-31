@@ -37,27 +37,48 @@ void qapi_err_fatal_internal
 
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
 /*===========================================================================
-   @brief read the coredump info from rram.
+  @brif Read M4 core RAM information from MISC0.
 
-   @param[out] coredump_buf    the buffer that stores the coredump info
+  @param[out]Pointer to structure, to get m4 core dump info read out. 
+  @param[in] flags  Control flags for core dump info retrieval. Currently unused.
 
-   @return
-    QAPI_OK -- successful reconstruction of core dump structure
-    Error code -- If there is an error.
+  @return
+  status QAPI_OK on successful reconstruction of core dump structure,otherwise 
+  appropriate error. 
 ===========================================================================*/
-qapi_Status_t qapi_coredump_read(coredump_type *coredump_buf)
+qapi_Status_t qapi_coredump_read(qapi_m4_coredump_type *m4_dump_info, int flags)
 {
-  if (NULL == coredump_buf)
+  if (NULL == m4_dump_info)
   {
     return QAPI_ERROR;
   }
 
   int32_t ret = 0;
   uint32_t coredump_addr_offset = 0;
+  uint32_t coredump_header_offset = 0;
+  misc0_header_t misc0_header;
   wifi_fw_coredump_header_t wifi_fw_coredump_header;
 
+  /* reader the misc0 header info from ram */
+  ret = qapi_rram_read(WIFI_FW_COREDUMP_PARTID, 0, (uint8_t *)&misc0_header, sizeof(misc0_header_t));
+
+  if (ret != QAPI_OK)
+  {
+    printf("read misc0 header info failed\n");
+    return QAPI_ERROR;
+  }
+
+  /* check the validation of magic number */
+  if (misc0_header.magic_num != MISC0_MAGIC_NUM)
+  {
+    printf("failed, invalid misc0 header\n");
+    return QAPI_ERROR;
+  }
+
+  coredump_header_offset = misc0_header.next_start_offset;
+
   /* read the header info from rram */
-  ret = qapi_rram_read(COREDUMP_PARTID, 0, (uint8_t *)&wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
+  ret = qapi_rram_read(WIFI_FW_COREDUMP_PARTID, coredump_header_offset, (uint8_t *)&wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
 
   if (ret != QAPI_OK)
   {
@@ -68,7 +89,7 @@ qapi_Status_t qapi_coredump_read(coredump_type *coredump_buf)
   coredump_addr_offset = wifi_fw_coredump_header.coredump_addr_offset;
 
   /* read coredump info from rram */
-  ret = qapi_rram_read(COREDUMP_PARTID, coredump_addr_offset, (uint8_t *)coredump_buf, sizeof(coredump_type));
+  ret = qapi_rram_read(WIFI_FW_COREDUMP_PARTID, coredump_addr_offset, (uint8_t *)m4_dump_info, sizeof(qapi_m4_coredump_type));
 
   if (ret != QAPI_OK)
   {
@@ -79,54 +100,12 @@ qapi_Status_t qapi_coredump_read(coredump_type *coredump_buf)
 }
 
 
-/*===========================================================================
-   @brief write the coredump info from rram.
-
-   @param[out] coredump_buf --  the buffer that stores the coredump info
-
-   @return
-    QAPI_OK -- successfully write the core dump info into rram
-    Error code -- If there is an error.
-===========================================================================*/
-qapi_Status_t qapi_coredump_write(coredump_type *coredump_buf)
-{
-  if (NULL == coredump_buf)
-  {
-    return QAPI_ERROR;
-  }
-
-  int32_t ret = 0;
-  uint32_t coredump_addr_offset = 0;
-  wifi_fw_coredump_header_t wifi_fw_coredump_header;
-
-  /* read the header info from rram */
-  ret = qapi_rram_read(COREDUMP_PARTID, 0, (uint8_t *)&wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
-
-  if (ret != QAPI_OK)
-  {
-    printf("read coredump header info failed\n");
-    return QAPI_ERROR;
-  }
-
-  coredump_addr_offset = wifi_fw_coredump_header.coredump_addr_offset;
-
-  /* read coredump info from rram */
-  ret = qapi_rram_write(COREDUMP_PARTID, coredump_addr_offset, (uint8_t *)coredump_buf, sizeof(coredump_type));
-
-  if (ret != QAPI_OK)
-  {
-    printf("write coredump info failed\n");
-    return QAPI_ERROR;
-  }
-  return QAPI_OK;
-}
-
 
 /*===========================================================================
    @brief set the ramdump print flag, control the printed ram info after 
     crash
 
-   @param[in] qapi_set_ramdump_flag   if print all the ram info
+   @param[in] ramdump_print_flag   if print all the ram info
     0: specific ram info is not printed after crash
     1: specific ram info is printed after crash
 
@@ -134,7 +113,7 @@ qapi_Status_t qapi_coredump_write(coredump_type *coredump_buf)
     QAPI_OK -- successful reconstruction of core dump structure
     Error code -- If there is an error.
 ===========================================================================*/
-qapi_Status_t qapi_set_ramdump_print_flag(int ramdump_print_flag)
+qapi_Status_t qapi_set_ramdump_flag(int ramdump_print_flag)
 {
   /* ramdump print flag is controled by both ramdump_print_flag 
    * and CONFIG_WIFI_FW_RAMDUMP_PRINT_FLAG */
@@ -155,57 +134,6 @@ qapi_Status_t qapi_set_ramdump_print_flag(int ramdump_print_flag)
     printf("set ramdump print flag 1, specific ram info should be printed\n");
   }
   
-  return QAPI_OK;
-}
-
-/*===========================================================================
-   @brief set the overwrite flag, for sequential crash, choices can be only 
-    save the crash info of the first crash
-
-   @param[in] qapi_set_ramdump_flag   if print all the ram info
-    ture: overwrite the coredump info
-    false: do not overwrite the coredump info
-
-   @return
-    QAPI_OK -- successful set the overwrite flag
-    Error code -- If there is an error.
-===========================================================================*/
-qapi_Status_t qapi_set_coredump_overwrite_flag(int coredump_overwrite_flag)
-{
-  int ret = 0;
-  wifi_fw_coredump_header_t wifi_fw_coredump_header;
-
-  /* read the coredump header from rram */
-  ret = qapi_rram_read(COREDUMP_PARTID, 0, (uint8_t *)&wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
-  if (ret != QAPI_OK)
-  {
-    printf("read coredump header info failed\n");
-    return QAPI_ERROR;
-  }
-
-  if (coredump_overwrite_flag == 0)
-  {
-    wifi_fw_coredump_header.magic_num = WIFi_FW_COREDUMP_MAGIC_NUMBER_0;
-    printf("set ramdump print flag 0, only record the next first coredump info\n");
-  }
-  else
-  {
-    printf("set ramdump print flag 1, coredump info will be updated when a new crash happens\n");
-    wifi_fw_coredump_header.magic_num = 0;
-  }
-  
-  /* write wifi_fw_coredump_header back to rram */
-  qapi_rram_write(COREDUMP_PARTID, 0, &wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
-
-  if (ret != QAPI_OK)
-  {
-    printf("write wifi fw coredump header failed\n");
-    return QAPI_ERROR;
-  }
-  else
-  {
-    printf("set coredump overwrite flag success\n");
-  }
   return QAPI_OK;
 }
 #endif
