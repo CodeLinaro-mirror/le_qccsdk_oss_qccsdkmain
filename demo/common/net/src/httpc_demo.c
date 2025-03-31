@@ -34,12 +34,12 @@
 #define MAX_PRINTF_LENGTH                   256
 
 #define REQUEST_TIMEOUT_MS                  5000    /* 5 sec */
-#define BODY_BUFFER_SIZE                    3010
+#define BODY_BUFFER_SIZE                    1010
 #define HEADER_BUFFER_SIZE                  300
 #define RX_BUFFER_SIZE                      512
 #define MAX_URL_LENGTH                      256
 #define MAX_HOST_LENGTH                     64
-#define MAX_CHUNK_SIZE                      3010  //should <= BODY_BUFFER_SIZE
+#define MAX_CHUNK_SIZE                      1000  //should <= BODY_BUFFER_SIZE
 #define HEX_BYTES_PER_LINE                  16
 
 static uint8_t hd = 0;
