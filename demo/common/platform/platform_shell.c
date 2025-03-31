@@ -142,11 +142,7 @@ static qapi_Status_t rram_read(uint32_t Parameter_Count, QAPI_Console_Parameter_
     }
     memset(buffer, 0, byte_cnt);
 
-	if(qapi_rram_read(partid, address, buffer, byte_cnt) == 0){
-		printf("Read data : %s\n", buffer);
-	}
-	else
-	{
+	if(qapi_rram_read(partid, address, buffer, byte_cnt) != 0){
 		printf("Read Failed");
         return QAPI_ERROR;
 	}
@@ -183,12 +179,9 @@ static qapi_Status_t rram_write(uint32_t Parameter_Count, QAPI_Console_Parameter
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
-	if(qapi_rram_write(partid, address, buffer, byte_cnt) == 0) {
-		printf("dxe rram Write Data : %s\n", buffer);
-	}
-	else
-	{
+	if(qapi_rram_write(partid, address, buffer, byte_cnt) != 0) {
 		printf("Write Failed");
+        return QAPI_ERROR;
 	}
 
     return QAPI_OK;
