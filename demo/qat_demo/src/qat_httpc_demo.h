@@ -20,6 +20,7 @@
 #define HTTP_STR_BUFFER_LENGTH					      256
 #define CMD_STR_BUFFER_LENGTH					      1024
 #define TIMEOUT_MS                                    10000  //10s
+#define MAX_TIMEOUT_MS                                1800000  //1800s
 #define QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS        15
 #define QAT_HTTPC_MAXIMUM_NUMBER_OF_KEY_VALUE         (QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS-2)
 #define QAT_HTTPC_CLIENT_INDEX                        1
@@ -116,7 +117,7 @@ qapi_Status_t at_httpc_getsize (char *url, int32_t timeout);
 qapi_Status_t at_httpc_get (char *url, int32_t timeout);
 qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data);
 qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data);
-qapi_Status_t at_httpc_prepare (char *url, int32_t timeout);
+//qapi_Status_t at_httpc_prepare (char *url, int32_t timeout);
 uint32_t splitKeyValuePairs(char *input, QAPI_Console_Parameter_t* Parameter_List);
 void gethostURL(const char *url, char*hostURL);
 qbool_t getpathURL(const char *url, char*pathURL);

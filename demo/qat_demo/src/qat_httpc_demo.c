@@ -106,7 +106,7 @@ static QAT_Command_Status_t Extend_Command_HttpGetSize(uint32_t Op_Type, uint32_
         if(Parameter_Count == 2)
         {
             timeout = Parameter_List[1].Integer_Value;
-            if(!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout>180000))
+            if(!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout>MAX_TIMEOUT_MS))
             {
                  snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid timeout value\r\n");
                  rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
@@ -181,7 +181,7 @@ static QAT_Command_Status_t Extend_Command_HttpGet(uint32_t Op_Type, uint32_t Pa
         if(Parameter_Count == 2)
         {
             timeout = Parameter_List[1].Integer_Value;
-            if(!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout>180000))
+            if(!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout>MAX_TIMEOUT_MS))
             {
                  snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid timeout value\r\n");
                  rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
@@ -1174,11 +1174,11 @@ qapi_Status_t at_httpc_disconn (int32_t client_num)
     char host[HTTP_HOST_STR_BUFFER_LENGTH];
 
     //Construct connect Command
-    //httpc disconn <client_num>
+    //httpc disconnect <client_num>
     uint32_t  Parameter_Count =0;
     QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
     Parameter_List[Parameter_Count].Integer_Is_Valid =false;
-    Parameter_List[Parameter_Count].String_Value ="disconn";
+    Parameter_List[Parameter_Count].String_Value ="disconnect";
     Parameter_Count++;
 
     Parameter_List[Parameter_Count].Integer_Is_Valid =true;
@@ -1208,7 +1208,7 @@ qapi_Status_t at_httpc_stop()
     return rlt;
 }
 
-
+#if 0
 qapi_Status_t at_httpc_prepare (char *url, int32_t timeout)
 {
     qapi_Status_t rlt = QAPI_OK;
@@ -1256,7 +1256,7 @@ endpiont:
     memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
     return rlt;
 }
-
+#endif
 qapi_Status_t at_httpc_setparameter(char *data_buf)
 {
     qapi_Status_t rlt = QAPI_OK;
@@ -2161,6 +2161,10 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPUT: handle client request fail\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
         }
+        
+        if(chunkdata){
+          free(chunkdata);
+        }
     }
 
 endpiont:
@@ -2432,6 +2436,10 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: handle client request fail\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
+        }
+        
+        if(chunkdata){
+            free(chunkdata);
         }
     }
     
@@ -2942,7 +2950,7 @@ void savedata(const char *data)
    //the length of send_buff is  g_https_cfg.data_len +1, more one bit for '\0'
    g_https_cfg.buff_offset += 
     snprintf((char*)(g_https_cfg.send_buff + g_https_cfg.buff_offset), g_https_cfg.data_len - g_https_cfg.buff_offset +1,
-            "%s", data)-1;
+            "%s", data);
 }
 
 void reset_temp_resource()
