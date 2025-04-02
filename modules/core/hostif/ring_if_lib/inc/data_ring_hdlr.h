@@ -29,6 +29,7 @@
 #define MAX_NUM_F2A_DATA_RING_ELEMS 32
 
 #define TOTAL_NUM_DATA_RING_ELEMS (MAX_NUM_A2F_DATA_RING_ELEMS + MAX_NUM_F2A_DATA_RING_ELEMS)
+#define TOTAL_NUM_DATA_RING_ELEMS_AT MAX_NUM_A2F_DATA_RING_ELEMS
 
 typedef ring_element_t a2f_data_ring_elem_t;
 typedef ring_element_t f2a_data_ring_elem_t;
