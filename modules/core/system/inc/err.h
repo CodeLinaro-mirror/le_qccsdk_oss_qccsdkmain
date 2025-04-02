@@ -54,10 +54,12 @@ extern const char err_generic_msg[];
 /* Type used for post-crash callbacks from error handler */
 typedef void (*err_cb_ptr)(void);
 
-#define COREDUMP_PARTID 5                                                              /* partition id                                 */
-#define COREDUMP_PARTITION_START_ADDRESS 0x36b000                                      /* coredump header start addr                   */
-#define COREDUMP_ADDRESS_OFFSET 256                                                    /* coredump info addr offset compared to header */
-#define COREDUMP_ADDR (COREDUMP_PARTITION_START_ADDRESS + COREDUMP_ADDRESS_OFFSET)     /* coredump info start addr                     */
+#define WIFI_FW_COREDUMP_PARTID 5                                                               /* partition id                          */
+#define WIFI_FW_MISC0_START_ADDR 0x36b000                                                       /* MISC0 start addr                      */
+#define WIFI_FW_COREDUMP_HEADER_OFFSET 64                                                       /* coredump header offset                */
+#define WIFI_FW_COREDUMP_HEADER_START_ADDRESS (WIFI_FW_MISC0_START_ADDR + WIFI_FW_COREDUMP_HEADER_OFFSET)      /* coredump header start addr             */
+#define WIFI_FW_COREDUMP_ADDRESS_OFFSET 256                                                    /* coredump info addr offset compared to header */
+#define WIFI_FW_COREDUMP_ADDR (WIFI_FW_MISC0_START_ADDR + WIFI_FW_COREDUMP_ADDRESS_OFFSET)        /* coredump info start addr                     */
 
 
 
