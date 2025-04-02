@@ -25,7 +25,7 @@
       <props id="20" id_name="NT_DEVCFG_BMPS_IDLE_TIMER_PERIOD_MS" min="5" max="20000" helptext="The interval of BMPS idle timer, which will take effect from second idle duration" type="0x00000002">2000</props>
 	  <props id="21" id_name="NT_DEVCFG_SUSPEND_FRAME_IF_WAKEUP_FRAME_RECEIVED " helptext="suspend frame if wakeup frame is received" type=" 0x00000002"> 1 </props>
       <props id="22" id_name="NT_DEVCFG_WUR_SOFT_DTIM_ENABLE" min="1" max="1" helptext="enable/disable wur software dtim" type="0x00000002"> 1 </props>
-      <props id="23" id_name="NT_DEVCFG_BASE_EARLY_RX_US" min="100" max="4000" helptext="Base early RX time for beacon reception" type="0x00000002"> 100 </props>
+      <props id="23" id_name="NT_DEVCFG_BASE_EARLY_RX_US" min="100" max="4000" helptext="Base early RX time for beacon reception" type="0x00000002"> 200 </props>
       <props id="24" id_name="NT_DEVCFG_BASE_BEACON_WAIT_TIME_US" min="10000" max="25000" helptext="Base beacon wait time for beacon reception in power save" type="0x00000002"> 20000 </props>
       <props id="25" id_name="NT_DEVCFG_BEACON_WAIT_INC_STEP_US" min="0" max="4000" helptext="Telescopic beacon wait increment step" type="0x00000002"> 1000 </props>
 	  <props id="26" id_name="NT_DEVCFG_EARLY_RX_STEP_US" min="0" max="10000" helptext="Telescopic early rx increment step" type="0x00000002"> 1500 </props>
