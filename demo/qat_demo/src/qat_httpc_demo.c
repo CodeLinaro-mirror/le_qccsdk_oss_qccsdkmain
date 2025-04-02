@@ -275,7 +275,7 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
                 {
                     if(FALSE == saveheaderfield(Parameter_List[2+i].String_Value))
                     {
-                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT: save headerfield fail\r\n");
+                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST: save headerfield fail\r\n");
                         rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                         goto rlt;
                     }
@@ -285,7 +285,7 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
             //malloc buffer
             if(!create_send_buffer(g_https_cfg.data_len))
             {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT: buffer malloc fail \r\n");
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST: buffer malloc fail \r\n");
                 rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                 goto rlt;
             }
@@ -974,25 +974,52 @@ static QAT_Command_Status_t Extend_Command_HttpClient(uint32_t Op_Type, uint32_t
                goto rlt;
             }   
          }
-        if(Parameter_Count >= 4)
-        {
-            data_buf = Parameter_List[3].String_Value;
-        }
 
-        if(Parameter_Count >4)
-        {
-           uint8_t headerfield_num = Parameter_Count - 4;
-           for(uint8_t i=0; i < headerfield_num; i++)
-           {
-                if(FALSE == saveheaderfield(Parameter_List[4+i].String_Value))
+         if(opt == QAT_HTTP_CLIENT_POST || opt == QAT_HTTP_CLIENT_PUT)
+         {
+            if(Parameter_Count >= 4)
+            {
+                data_buf = Parameter_List[3].String_Value;
+                
+                if(Parameter_Count >4)
                 {
-                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: save headerfield fail\r\n");
-                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-                    goto rlt;
+                   uint8_t headerfield_num = Parameter_Count - 4;
+                   for(uint8_t i=0; i < headerfield_num; i++)
+                   {
+                        if(FALSE == saveheaderfield(Parameter_List[4+i].String_Value))
+                        {
+                            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: save headerfield fail\r\n");
+                            rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                            goto rlt;
+                        }
+                   }
                 }
-           }
-        }
-        
+            }
+            else
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: Invalid Parameter Count\r\n");
+                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto rlt;
+            }
+            
+         }
+         else if(opt == QAT_HTTP_CLIENT_HEAD || opt == QAT_HTTP_CLIENT_GET)
+         {
+            if(Parameter_Count >=4)
+            {
+                uint8_t headerfield_num = Parameter_Count - 3;
+                for(uint8_t i=0; i < headerfield_num; i++)
+                {
+                     if(FALSE == saveheaderfield(Parameter_List[3+i].String_Value))
+                     {
+                         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: save headerfield fail\r\n");
+                         rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                         goto rlt;
+                     }
+                }
+            }
+         }
+         
         //g_https_cfg.content_type = content_type;
         if(!save_content_type(content_type))
         {
@@ -1320,6 +1347,8 @@ qapi_Status_t at_httpc_addheaderfield(/*uint8_t headfield_type,*/uint8_t index)
 
     Parameter_List[Parameter_Count].String_Value = g_https_cfg.header_field[index].value;
     Parameter_Count++;
+
+    printf("test set header name:%s, value:%s\n",g_https_cfg.header_field[index].name,g_https_cfg.header_field[index].value);
 
     rlt = httpc_command_handler(Parameter_Count,Parameter_List);
     if(rlt != QAPI_OK)
@@ -2754,6 +2783,8 @@ qbool_t saveheaderfield(const char *headerfield)
                 header_field->value[len -name_len] = '\0';
                 
                 g_https_cfg.header_field_num ++;
+
+                printf("test num:%d, name:%s,value:%s \n",g_https_cfg.header_field_num,header_field->name,header_field->value);
 
                 rlt= TRUE;
            }
