@@ -40,7 +40,7 @@ GENERAL DESCRIPTION
 
 
 extern void err_update_image_versioning_info (void);
-extern void jettison_core(void);
+extern void __patch__err_jettison_core_m4__jettison_core(void);
 extern void sys_m_init(void);
 //extern void sys_m_err_notify_peripherals(void);
 extern void sys_m_wait_peripherals(void);
@@ -149,6 +149,8 @@ void err_init (void * coredump_ptr)
 
   if (coredump_ptr == NULL)
     printf("coredump malloc failed\n");
+  else
+    memset(coredump_ptr, 0, sizeof(coredump_type));
 
   int ret = 0;
   coredump = coredump_ptr;
@@ -189,7 +191,7 @@ void err_init (void * coredump_ptr)
   g_wifi_fw_coredump_header.coredump_start_addr = WIFI_FW_COREDUMP_ADDR;
   
   /* coredump header is saved at the beginning of RAMDUMPMEM */
-  qapi_rram_write(WIFI_FW_COREDUMP_PARTID, WIFI_FW_COREDUMP_HEADER_OFFSET, &g_wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
+  qapi_rram_write(WIFI_FW_COREDUMP_PARTID, WIFI_FW_COREDUMP_HEADER_OFFSET, (uint8_t *)&g_wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
 
   if (ret != QAPI_OK)
   {
@@ -254,50 +256,50 @@ void coredump_info_print(coredump_type *coredump)
       "R2    %08X   R3    %08X\r\n"
       "R12   %08X   LR    %08X\r\n"
       "PC    %08X   PSR   %08X\r\n",
-      coredump->arch.regs.name.r0, coredump->arch.regs.name.r1,
-      coredump->arch.regs.name.r2, coredump->arch.regs.name.r3,
-      coredump->arch.regs.name.r12, coredump->arch.regs.name.lr,
+      coredump->arch.regs.name.regs[0], coredump->arch.regs.name.regs[1],
+      coredump->arch.regs.name.regs[2], coredump->arch.regs.name.regs[3],
+      coredump->arch.regs.name.regs[12], coredump->arch.regs.name.lr,
       coredump->arch.regs.name.pc, coredump->arch.regs.name.psr);
     printf( "ICSR  %08X   VTOR  %08X\r\n"
       "AIRCR %08X   SCR   %08X \r\n"
       "CCR   %08X\r\n" ,
-      coredump->arch.regs.name.icsr,coredump->arch.regs.name.vtor,
-      coredump->arch.regs.name.aircr, coredump->arch.regs.name.scr,
-      coredump->arch.regs.name.ccr);
+      coredump->err.config_regs.icsr,coredump->err.config_regs.vtor,
+      coredump->err.config_regs.aircr, coredump->err.config_regs.scr,
+      coredump->err.config_regs.ccr);
     printf( "SHPR1 %08x  SHPR2 %08x \r\n"
       "SHPR3 %08x\r\n",
-      coredump->arch.regs.name.shpr1, coredump->arch.regs.name.shpr2,
-      coredump->arch.regs.name.shpr3);
+      coredump->err.config_regs.shpr1, coredump->err.config_regs.shpr2,
+      coredump->err.config_regs.shpr3);
     printf( "SHCSR %08X   CFSR  %08X \r\n"
       "HFSR  %08X   DFSR  %08X \r\n"
       "MMFAR %08X\r\n",
-      coredump->arch.regs.name.shcsr, coredump->arch.regs.name.cfsr,
-      coredump->arch.regs.name.hfsr, coredump->arch.regs.name.dfsr,
-      coredump->arch.regs.name.mmfar);
+      coredump->err.config_regs.shcsr, coredump->err.config_regs.cfsr,
+      coredump->err.config_regs.hfsr, coredump->err.config_regs.dfsr,
+      coredump->err.config_regs.mmfar);
     printf( "BFAR  %08X   AFSR %08X \r\n"
       "PFR0  %08X   PFR1 %08X \r\n"
       "DFR   %08X\r\n",
-      coredump->arch.regs.name.bfar, coredump->arch.regs.name.afsr,
-      coredump->arch.regs.name.pfr0, coredump->arch.regs.name.pfr1,
-      coredump->arch.regs.name.dfr);
+      coredump->err.config_regs.bfar, coredump->err.config_regs.afsr,
+      coredump->err.config_regs.pfr0, coredump->err.config_regs.pfr1,
+      coredump->err.config_regs.dfr);
     printf( "ADR     %08X   MMFR[0] %08X \r\n"
       "MMFR[1] %08X   MMFR[2] %08X \r\n"
       "MMFR[3] %08X\r\n",
-      coredump->arch.regs.name.adr, coredump->arch.regs.name.mmfr[0],
-      coredump->arch.regs.name.mmfr[1], coredump->arch.regs.name.mmfr[2],
-      coredump->arch.regs.name.mmfr[3]);
+      coredump->err.config_regs.adr, coredump->err.config_regs.mmfr[0],
+      coredump->err.config_regs.mmfr[1], coredump->err.config_regs.mmfr[2],
+      coredump->err.config_regs.mmfr[3]);
     printf( "ISAR[0] %08X  ISAR[1] %08X \r\n"
       "ISAR[2] %08X  ISAR[3] %08X \r\n"
       "ISAR[4] %08X  CPACR   %08X\r\n",
-      coredump->arch.regs.name.isar[0], coredump->arch.regs.name.isar[1],
-      coredump->arch.regs.name.isar[2], coredump->arch.regs.name.isar[3],
-      coredump->arch.regs.name.isar[4], coredump->arch.regs.name.cpacr);
+      coredump->err.config_regs.isar[0], coredump->err.config_regs.isar[1],
+      coredump->err.config_regs.isar[2], coredump->err.config_regs.isar[3],
+      coredump->err.config_regs.isar[4], coredump->err.config_regs.cpacr);
     printf( "NVIC_ISPR0 %08X   NVIC_ISPR1 %08X   NVIC_ISPR2 %08X\r\n",
-      coredump->arch.regs.name.ispr[0], coredump->arch.regs.name.ispr[1],
-      coredump->arch.regs.name.ispr[2]);
+      coredump->err.config_regs.ispr[0], coredump->err.config_regs.ispr[1],
+      coredump->err.config_regs.ispr[2]);
     printf( "NVIC_ISER0 %08X   NVIC_ISER1 %08X   NVIC_ISER2 %08X\r\n",
-      coredump->arch.regs.name.iser[0], coredump->arch.regs.name.iser[1],
-      coredump->arch.regs.name.iser[2]);
+      coredump->err.config_regs.iser[0], coredump->err.config_regs.iser[1],
+      coredump->err.config_regs.iser[2]);
     printf( "============== coredump end ==============\r\n");
     printf( "\r\n");
   }
@@ -412,6 +414,60 @@ void err_fatal_handler (void)
     nt_system_sw_reset();
 } /* err_fatal_handler */
 
+unsigned int bswap_32(unsigned int x)
+{
+    return ((x & 0x000000ff) << 24) |
+           ((x & 0x0000ff00) << 8) |
+           ((x & 0x00ff0000) >> 8) |
+           ((x & 0xff000000) >> 24);
+}
+
+/*===========================================================================
+
+FUNCTION WIFI_FW_SAVE_COREDUMP_CORE_REGS
+DESCRIPTION
+  copy the reg info into related coredump area.
+
+  NOTE: There is no return from this function.
+============================================================================*/
+void wifi_fw_save_coredump_config_regs()
+{
+  coredump->err.config_regs.icsr = SCB->ICSR;
+  coredump->err.config_regs.vtor = SCB->VTOR;
+  coredump->err.config_regs.aircr = SCB->AIRCR;
+  coredump->err.config_regs.scr = SCB->SCR;
+  coredump->err.config_regs.ccr = SCB->CCR;
+  coredump->err.config_regs.shpr1 = SCB->SHP[3] | (SCB->SHP[2] << 8) | (SCB->SHP[1] << 16) | (SCB->SHP[0] << 24);
+  coredump->err.config_regs.shpr2 = SCB->SHP[7] | (SCB->SHP[6] << 8) | (SCB->SHP[5] << 16) | (SCB->SHP[4] << 24);
+  coredump->err.config_regs.shpr3 = SCB->SHP[11] | (SCB->SHP[10] << 8) | (SCB->SHP[9] << 16) | (SCB->SHP[8] << 24);
+  coredump->err.config_regs.shcsr = SCB->SHCSR;
+  coredump->err.config_regs.cfsr = SCB->CFSR;
+  coredump->err.config_regs.hfsr = SCB->HFSR;
+  coredump->err.config_regs.dfsr = SCB->DFSR;
+  coredump->err.config_regs.mmfar = SCB->MMFAR;
+  coredump->err.config_regs.bfar = SCB->BFAR;
+  coredump->err.config_regs.afsr = SCB->AFSR;
+  coredump->err.config_regs.pfr0 = SCB->PFR[0];
+  coredump->err.config_regs.pfr1 = SCB->PFR[1];
+  coredump->err.config_regs.dfr = SCB->DFR;
+  coredump->err.config_regs.adr = SCB->ADR;
+  coredump->err.config_regs.mmfr[0] = SCB->MMFR[0];
+  coredump->err.config_regs.mmfr[1] = SCB->MMFR[1];
+  coredump->err.config_regs.mmfr[2] = SCB->MMFR[2];
+  coredump->err.config_regs.mmfr[3] = SCB->MMFR[3];
+  coredump->err.config_regs.isar[0] = SCB->ISAR[0];
+  coredump->err.config_regs.isar[1] = SCB->ISAR[1];
+  coredump->err.config_regs.isar[2] = SCB->ISAR[2];
+  coredump->err.config_regs.isar[3] = SCB->ISAR[3];
+  coredump->err.config_regs.isar[4] = SCB->ISAR[4];
+  coredump->err.config_regs.cpacr = SCB->CPACR;
+  coredump->err.config_regs.ispr[0] = NVIC->ISPR[0];
+  coredump->err.config_regs.ispr[1] = NVIC->ISPR[1];
+  coredump->err.config_regs.ispr[2] = NVIC->ISPR[2];
+  coredump->err.config_regs.iser[0] = NVIC->ISER[0];
+  coredump->err.config_regs.iser[1] = NVIC->ISER[1];
+  coredump->err.config_regs.iser[2] = NVIC->ISER[2];
+}
 
 /*===========================================================================
 
@@ -453,6 +509,9 @@ void err_fatal_jettison_core (
   /* Kick Dog */
   nt_watchdog_bark_timer_reset();
 
+  /* save config regs */
+  wifi_fw_save_coredump_config_regs();
+
   /* Set type and version values */
   coredump->version = ERR_COREDUMP_VERSION;
   coredump->arch.type = ERR_ARCH_COREDUMP_TYPE;
@@ -490,79 +549,34 @@ void err_fatal_jettison_core (
   coredump->err.param[1]=param2;
   coredump->err.param[2]=param3;
 
+  uint32 ram_addr = 0;
+  uint32 ram_data = 0;
+
+  /* check g_ramdump_print_flag and print all the ram info */
+  static char raminfo_string[20] = {0};
+
+  if (g_ramdump_print_flag || CONFIG_WIFI_FW_RAMDUMP_PRINT_FLAG)
+  {
+    printf( "\r\n");
+    printf( "============== ramdump start ==============\r\n");
+    while(ram_addr < (uint32)0xA0000)
+    {
+      memset(raminfo_string, 0, strlen(raminfo_string));
+      ram_data = *(uint32 *)ram_addr;
+      snprintf(raminfo_string, 20, "%08x", bswap_32(ram_data));
+      UART_Send_direct(raminfo_string, strlen(raminfo_string));
+      ram_addr += 4;
+    }
+    printf( "\r\n");
+    printf( "============== ramdump end ==============\r\n");
+    printf( "\r\n");
+  }
+
   /* Call ERR_FATAL handler (no return) */
   err_fatal_handler();
 
 } /* err_fatal_jettison_core */
 
-/*===========================================================================
-
-FUNCTION WIFI_FW_SAVE_COREDUMP_CORE_REGS
-DESCRIPTION
-  copy the reg info into related coredump area.
-
-  NOTE: There is no return from this function.
-============================================================================*/
-void wifi_fw_save_coredump_core_regs(ExceptionStackFrame* frame)
-{
-  if (NULL != frame)
-  {
-    arch_coredump_field_type core_regs = {
-      .r0 = frame->r0,
-      .r1 = frame->r1,
-      .r2 = frame->r2,
-      .r3 = frame->r3,
-      .r12 = frame->r12,
-      .lr = frame->lr,
-      .pc = frame->pc,
-      .psr = frame->psr,
-      .icsr = SCB->ICSR,
-      .vtor = SCB->VTOR,
-      .aircr = SCB->AIRCR,
-      .scr = SCB->SCR,
-      .ccr = SCB->CCR,
-      .shpr1 = SCB->SHP[3] | (SCB->SHP[2] << 8) | (SCB->SHP[1] << 16) | (SCB->SHP[0] << 24),
-      .shpr2 = SCB->SHP[7] | (SCB->SHP[6] << 8) | (SCB->SHP[5] << 16) | (SCB->SHP[4] << 24),
-      .shpr3 = SCB->SHP[11] | (SCB->SHP[10] << 8) | (SCB->SHP[9] << 16) | (SCB->SHP[8] << 24),
-      .shcsr = SCB->SHCSR,
-      .cfsr = SCB->CFSR,
-      .hfsr = SCB->HFSR,
-      .dfsr = SCB->DFSR,
-      .mmfar = SCB->MMFAR,
-      .bfar = SCB->BFAR,
-      .afsr = SCB->AFSR,
-      .pfr0 = SCB->PFR[0],
-      .pfr1 = SCB->PFR[1],
-      .dfr = SCB->DFR,
-      .adr = SCB->ADR,
-      .mmfr[0] = SCB->MMFR[0],
-      .mmfr[1] = SCB->MMFR[1],
-      .mmfr[2] = SCB->MMFR[2],
-      .mmfr[3] = SCB->MMFR[3],
-      .isar[0] = SCB->ISAR[0],
-      .isar[1] = SCB->ISAR[1],
-      .isar[2] = SCB->ISAR[2],
-      .isar[3] = SCB->ISAR[3],
-      .isar[4] = SCB->ISAR[4],
-      .cpacr = SCB->CPACR,
-      .ispr[0] = NVIC->ISPR[0],
-      .ispr[1] = NVIC->ISPR[1],
-      .ispr[2] = NVIC->ISPR[2],
-      .iser[0] = NVIC->ISER[0],
-      .iser[1] = NVIC->ISER[1],
-      .iser[2] = NVIC->ISER[2],
-    };
-  memcpy(&coredump->arch.regs.name, &core_regs, sizeof(arch_coredump_field_type));
-  }
-}
-
-unsigned int bswap_32(unsigned int x)
-{
-    return ((x & 0x000000ff) << 24) |
-           ((x & 0x0000ff00) << 8) |
-           ((x & 0x00ff0000) >> 8) |
-           ((x & 0xff000000) >> 24);
-}
 
 /*=========================================================================
 
@@ -589,14 +603,9 @@ unsigned int line,       /* From __LINE__ */
 const char   *file_name, /* From __FILE__ */
 uint32 param1,
 uint32 param2,
-uint32 param3,
-ExceptionStackFrame* frame
+uint32 param3
 )
 {
-  /* check g_ramdump_print_flag and print all the ram info */
-  static char raminfo_string[20] = {0};
-  uint32 ram_addr = 0;
-  uint32 ram_data = 0;
   /* this flag is used to prevent the case where an assertion happens after the exception */
   static boolean err_fatal_reentrancy_flag;
   g_non_OS = 1;   /* set non OS flag */
@@ -608,28 +617,9 @@ ExceptionStackFrame* frame
   if (err_fatal_reentrancy_flag == FALSE)
   {
     err_fatal_reentrancy_flag = TRUE;
-    if (g_ramdump_print_flag || CONFIG_WIFI_FW_RAMDUMP_PRINT_FLAG)
-    {
-      printf( "\r\n");
-      printf( "============== ramdump start ==============\r\n");
-      while(ram_addr < (uint32)0xA0000)
-      {
-        memset(raminfo_string, 0, strlen(raminfo_string));
-        ram_data = *(uint32 *)ram_addr;
-        snprintf(raminfo_string, 20, "%08x", ram_data);
-        UART_Send_direct(raminfo_string, strlen(raminfo_string));
-        ram_addr += 4;
-      }
-      printf( "\r\n");
-      printf( "============== ramdump end ==============\r\n");
-      printf( "\r\n");
-    }
 
     /* Kick Dog */
     nt_watchdog_bark_timer_reset();
-
-    /* save regs */
-    wifi_fw_save_coredump_core_regs(frame);
 
     /* save core coredump info */
     err_fatal_jettison_core(err_msg, line, file_name, 0, 0, 0);

@@ -152,16 +152,22 @@ SIDE EFFECTS
 
 
 /* Prototypes register core dump function */
-extern void jettison_core( void );
+extern void __patch__err_jettison_core_m4__jettison_core(void);
 
 /* Prototypes stack registers core dump function for exceptions */
-extern void err_dump_regs_from_stack(void);
+extern void __patch__err_jettison_core_m4__err_dump_regs_from_stack(void);
 
-#define ERR_FATAL_EXCEPTION(file)                                          \
+#define ERR_FATAL_EXCEPTION(Msg, line, file)                                          \
+    do {                                                                       \
+      __patch__err_jettison_core_m4__err_dump_regs_from_stack();                       \
+      __patch__err_jettison_core_m4__jettison_core();                                  \
+      coredump_fault_handler (Msg, line, file, 0, 0, 0);                         \
+    } while (0);
+
+#define ERR_FATAL_ASSERTION(Msg, line, file)                                          \
     do {                                                                   \
-      err_dump_regs_from_stack();                                          \
-      jettison_core();                                                     \
-      err_fatal_jettison_core (NULL, 0, file, 0, 0, 0);                         \
+      __patch__err_jettison_core_m4__jettison_core();                                                     \
+      coredump_fault_handler (Msg, line, file, 0, 0, 0);                         \
     } while (0);
 
 typedef _PACKED_START struct

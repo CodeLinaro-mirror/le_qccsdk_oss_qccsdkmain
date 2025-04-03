@@ -46,8 +46,6 @@
 #define WDOG_INTR_PENDING_BITMASK 0x400000
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
 extern coredump_type * coredump;
-const char * g_file = NULL;
-uint32_t  g_line;
 #endif
 
 extern void
@@ -91,21 +89,7 @@ char g_assert_file_func_line[600];
 void assert_handler(const char *  file,const char* func, const uint32_t line)
 {
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-    g_line = line;
-    g_file = file;
-    asm volatile(
-    " tst lr,#4       \n"
-    " ite eq          \n"
-    " mrseq r0,msp    \n"
-    " mrsne r0,psp    \n"
-    " mov r1,lr       \n"
-    " ldr r2,=Assert_Handler_C \n"
-    " bx r2"
-
-    : /* Outputs */
-    : /* Inputs */
-    : /* Clobbers */
-);
+  ERR_FATAL_ASSERTION("Assertion Detected", line, file)
 #else
 	char *intr_str = g_assert_file_func_line;
 	snprintf(intr_str,600,"Assert @%s,ln %d in %s\r\n", func,line,file);
@@ -113,18 +97,12 @@ void assert_handler(const char *  file,const char* func, const uint32_t line)
 #endif
 }
 
-#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-void __attribute__ ((section(".after_ram_vectors"),weak,used))
-Assert_Handler_C (ExceptionStackFrame* frame ,
-                     uint32_t lr __attribute__((unused)))
-{
-  coredump_fault_handler("Assertion Detected", g_line, g_file, 0, 0, 0, frame);
-}
-#endif
-
 void __attribute__ ((section(".after_ram_vectors"),weak))
 NMI_Handler (void)
 {
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+  ERR_FATAL_EXCEPTION("WDOG Bark", __LINE__, __FILE__);
+#endif
 #if (FERMION_CHIP_VERSION == 2)
 		/*This is a software workaround for the AON WDT issue in 2.0, after a WDT bite,
 		the control goes to NMI handler, after entering reset vector. So in the
@@ -173,9 +151,6 @@ NMI_Handler (void)
 else
 #endif // PLATFORM_FERMION
     {
-#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-    coredump_fault_handler("WDOG Bark", __LINE__, __FILE__, 0, 0, 0, NULL);
-#endif
 #if defined(DEBUG)
           __DEBUG_BKPT();
 #endif
@@ -470,6 +445,9 @@ void __attribute__ ((section(".after_ram_vectors"),weak,used))
 HardFault_Handler_C (ExceptionStackFrame* frame ,
                      uint32_t lr __attribute__((unused)))
 {
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+  ERR_FATAL_EXCEPTION("Exception Detected: Hard Fault", __LINE__, __FILE__);
+#else
 	int str_len;
 
 #if defined(OS_USE_SEMIHOSTING) || defined(OS_USE_TRACE_SEMIHOSTING_STDOUT) || defined(OS_USE_TRACE_SEMIHOSTING_DEBUG)
@@ -639,9 +617,6 @@ HardFault_Handler_C (ExceptionStackFrame* frame ,
 	}
 	UART_Send_direct(interrupt_string , str_len);
 	//memset(interrupt_string,0,sizeof(interrupt_string));
-#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: Hard Fault", __LINE__, __FILE__, 0, 0, 0, frame);
-#endif
 
 #if defined(DEBUG)
    __DEBUG_BKPT();
@@ -649,6 +624,7 @@ HardFault_Handler_C (ExceptionStackFrame* frame ,
   while (1)
     {
     }
+#endif
 }
 
 #endif // defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
@@ -690,12 +666,11 @@ void __attribute__ ((section(".after_vectors"),weak,used))
 HardFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
                      uint32_t lr __attribute__((unused)))
 {
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+  ERR_FATAL_EXCEPTION("Exception Detected: Hard Fault", __LINE__, __FILE__);
+#else
   // There is no semihosting support for Cortex-M0, since on ARMv6-M
   // faults are fatal and it is not possible to return from the handler.
-
-#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: Hard Fault", __LINE__, __FILE__, 0, 0, 0, frame);
-#endif
 #if defined(TRACE)
   trace_printf ("[HardFault]\n");
   dumpExceptionStack (frame, lr);
@@ -707,6 +682,7 @@ HardFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
   while (1)
     {
     }
+#endif
 }
 
 #endif // defined(__ARM_ARCH_6M__)
@@ -717,6 +693,9 @@ HardFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
 void __attribute__ ((section(".after_ram_vectors"),weak))
 MemManage_Handler (void)
 {
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+  ERR_FATAL_EXCEPTION("Exception Detected: Memory Management Fault", __LINE__, __FILE__);
+#else
 	MemManage_Handler_C();
 #if defined(DEBUG)
   __DEBUG_BKPT();
@@ -724,6 +703,7 @@ MemManage_Handler (void)
   while (1)
     {
     }
+#endif
 }
 
 void __attribute__ ((section(".after_ram_vectors"),weak,used))
@@ -743,10 +723,6 @@ MemManage_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
 	snprintf((char *)interrupt_string, 200, "\r\nMMFAR  =  %08X\r\nBFAR  =  %08X\r\nCFSR  =  %08X",&mmfar,&bfar,cfsr);
 	UART_Send_direct(interrupt_string,sizeof(interrupt_string));
 	memset(interrupt_string,0,200);
-
-#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: Memory Management Fault", __LINE__, __FILE__, 0, 0, 0, frame);
-#endif
 }
 
 void __attribute__ ((section(".after_ram_vectors"),weak,naked))
@@ -771,6 +747,9 @@ void __attribute__ ((section(".after_ram_vectors"),weak,used))
 BusFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
                     uint32_t lr __attribute__((unused)))
 {
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+  ERR_FATAL_EXCEPTION("Exception Detected: Bus Fault", __LINE__, __FILE__);
+#endif
 #if defined(TRACE)
   uint32_t mmfar = SCB->MMFAR; // MemManage Fault Address
   uint32_t bfar = SCB->BFAR; // Bus Fault Address
@@ -779,10 +758,6 @@ BusFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
   trace_printf ("[BusFault]\n");
   dumpExceptionStack (frame, cfsr, mmfar, bfar, lr);
 #endif // defined(TRACE)
-
-#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: Bus Fault", __LINE__, __FILE__, 0, 0, 0, frame);
-#endif
 
 #if defined(DEBUG)
   __DEBUG_BKPT();
@@ -814,6 +789,9 @@ void __attribute__ ((section(".after_ram_vectors"),weak,used))
 UsageFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
                       uint32_t lr __attribute__((unused)))
 {
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+  ERR_FATAL_EXCEPTION("Exception Detected: Usage fault", __LINE__, __FILE__);
+#endif
 #if defined(TRACE)
   uint32_t mmfar = SCB->MMFAR; // MemManage Fault Address
   uint32_t bfar = SCB->BFAR; // Bus Fault Address
@@ -838,10 +816,6 @@ UsageFault_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
   dumpExceptionStack (frame, cfsr, mmfar, bfar, lr);
 #endif // defined(TRACE)
 
-#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: Usage fault", __LINE__, __FILE__, 0, 0, 0, frame);
-#endif
-
 #if defined(DEBUG)
   __DEBUG_BKPT();
 #endif
@@ -860,7 +834,7 @@ void __attribute__ ((section(".after_ram_vectors"),weak))
 DebugMon_Handler (void)
 {
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: DebugMon", __LINE__, __FILE__, 0, 0, 0, NULL);
+  ERR_FATAL_EXCEPTION("Exception Detected: DebugMon", __LINE__, __FILE__);
 #endif
 #if defined(DEBUG)
   __DEBUG_BKPT();
@@ -876,7 +850,7 @@ void __attribute__ ((section(".after_ram_vectors"),weak))
 PendSV_Handler (void)
 {
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  coredump_fault_handler("Exception Detected: PendSV", __LINE__, __FILE__, 0, 0, 0, NULL);
+  ERR_FATAL_EXCEPTION("Exception Detected: PendSV", __LINE__, __FILE__);
 #endif
 #if defined(DEBUG)
   __DEBUG_BKPT();
