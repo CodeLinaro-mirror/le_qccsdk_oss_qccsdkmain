@@ -30,45 +30,40 @@ typedef enum
   ARM_R1,
   ARM_R2,
   ARM_R3,
+  ARM_R4,
+  ARM_R5,
+  ARM_R6,
+  ARM_R7,
+  ARM_R8,
+  ARM_R9,
+  ARM_R10,
+  ARM_R11,
   ARM_R12,
+  ARM_SP,
   ARM_LR,
   ARM_PC,
+  ARM_PSP,
+  ARM_MSP,
   ARM_PSR,
-  ARM_ICSR,
-  ARM_VTOR,
-  ARM_AIRCR,
-  ARM_SCR,
-  ARM_CCR,
-  ARM_SHPR1,
-  ARM_SHPR2,
-  ARM_SHPR3,
-  ARM_SHCSR,
-  ARM_CFSR,
-  ARM_HFSR,
-  ARM_DFSR,
-  ARM_MMFAR,
-  ARM_BFAR,
-  ARM_AFSR,
-  ARM_PFR0,
-  ARM_PFR1,
-  ARM_DFR,
-  ARM_ADR,
-  ARM_MMFR0,
-  ARM_MMFR1,
-  ARM_MMFR2,
-  ARM_MMFR3,
-  ARM_ISAR0,
-  ARM_ISAR1,
-  ARM_ISAR2,
-  ARM_ISAR3,
-  ARM_ISAR4,
-  ARM_CPACR,
-  ARM_NVIC_ISPR0,
-  ARM_NVIC_ISPR1,
-  ARM_NVIC_ISPR2,
-  ARM_NVIC_ISER0,
-  ARM_NVIC_ICER1,
-  ARM_NVIC_ICER2,
+#ifdef ERR_CORTEXM0
+  ARM_APSR,
+  ARM_IPSR,
+  ARM_EPSR,
+#endif   
+  ARM_PRIMASK,
+#ifndef ERR_CORTEXM0
+  ARM_FAULTMASK,
+  ARM_BASEPRI,
+#endif
+  ARM_CONTROL,
+  ARM_EXCEPTION_R0,
+  ARM_EXCEPTION_R1,
+  ARM_EXCEPTION_R2,
+  ARM_EXCEPTION_R3,
+  ARM_EXCEPTION_R12,
+  ARM_EXCEPTION_LR,
+  ARM_EXCEPTION_PC,
+  ARM_EXCEPTION_XPSR,
   SIZEOF_ARCH_COREDUMP_REGISTERS
 } arch_coredump_register_type;
 
@@ -81,14 +76,42 @@ typedef struct
 
 typedef struct
 {
-  unsigned int r0;
-  unsigned int r1;
-  unsigned int r2;
-  unsigned int r3;
-  unsigned int r12;
+  unsigned int regs[13]; /* r0-r12 */
+  unsigned int sp;
   unsigned int lr;
   unsigned int pc;
+  unsigned int psp;
+  unsigned int msp;
   unsigned int psr;
+#ifndef ERR_CORTEXM0
+  unsigned int aspr;
+  unsigned int ipsr;
+  unsigned int epsr;
+#endif
+  unsigned int primask; 
+#ifndef ERR_CORTEXM0
+  unsigned int faultmask;
+  unsigned int basepri;  
+#endif
+  unsigned int control;
+  unsigned int exception_r0;
+  unsigned int exception_r1;
+  unsigned int exception_r2;
+  unsigned int exception_r3;
+  unsigned int exception_r12;
+  unsigned int exception_lr;
+  unsigned int exception_pc;
+  unsigned int exception_xpsr;
+} arch_coredump_field_type;
+
+union arch_coredump_union
+{
+  unsigned int                   array[SIZEOF_ARCH_COREDUMP_REGISTERS];
+  arch_coredump_field_type name;
+};
+
+typedef struct err_coredump_config_reg
+{
   unsigned int icsr;
   unsigned int vtor;
   unsigned int aircr;
@@ -113,13 +136,6 @@ typedef struct
   unsigned int cpacr;
   unsigned int ispr[3];
   unsigned int iser[3];
-} arch_coredump_field_type;
-
-union arch_coredump_union
-{
-  unsigned int                   array[SIZEOF_ARCH_COREDUMP_REGISTERS];
-  arch_coredump_field_type name;
-};
-
+} err_coredump_config_reg;
 
 #endif /* ERRLOG_ARMM_H */

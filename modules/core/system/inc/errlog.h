@@ -116,6 +116,7 @@ typedef struct
   char                          filename[ERR_LOG_MAX_FILE_LEN];
   char                          message[ERR_LOG_MAX_MSG_LEN];
   uint32                        param[ERR_LOG_NUM_PARAMS];
+  err_coredump_config_reg      config_regs;
   err_cb_ptr                    err_current_cb;
   const err_const_type *        compressed_ptr;
   boolean                       err_reentrancy;
