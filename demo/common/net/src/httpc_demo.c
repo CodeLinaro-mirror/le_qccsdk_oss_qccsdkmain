@@ -295,9 +295,9 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
             {
 #ifdef CONFIG_QAT_HTTPC_DEMO
                //HTTPC_PRINTF("HTTP Client Demo state %d\n", state);
-               if((0 == httpc_recvie_count) && ((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD)))
+               if((0 == httpc_recvie_count) && ((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD)||(at_httpc_method == QAT_HTTP_POST)))
                {
-                    snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "+HTTPCGET: data:");
+                    snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "+HTTPC: data:");
                     QAT_Response_Str(QAT_RC_QUIET, buffer);
                     memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
                }
@@ -324,7 +324,7 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
                         data[print_len] = '\0';
 
 #ifdef CONFIG_QAT_HTTPC_DEMO
-                        if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD))
+                        if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD)||(at_httpc_method == QAT_HTTP_POST))
                         {
                             snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "%s",data);
                             
@@ -346,7 +346,7 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
                         data[tmp_len] = '\0';
                         
 #ifdef CONFIG_QAT_HTTPC_DEMO
-                        if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD))
+                        if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD)||(at_httpc_method == QAT_HTTP_POST))
                         {
                             snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "%s",data);
                             QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
@@ -363,7 +363,7 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
                     data[temp->length] = '\0';
                     
 #ifdef CONFIG_QAT_HTTPC_DEMO
-                    if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD))
+                    if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD)||(at_httpc_method == QAT_HTTP_POST))
                     {
                         snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "%s",data);
                         QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
@@ -397,7 +397,7 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
                 
                 memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
            }
-           else if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD))
+           else if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD) ||(at_httpc_method == QAT_HTTP_POST))
            {
                 if((resp_code >= 200) && (resp_code < 300))
                 {
