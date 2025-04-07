@@ -42,6 +42,7 @@ system_src = [
     "sys_src/nt_cc_battery_driver.c",
     "sys_src/nt_sys_monitoring.c",
     "sys_src/ferm_hkadc_drv.c",
+    "sys_src/err_jettison_core_m4_patch.o",
 ]
 
 config("_config") {
