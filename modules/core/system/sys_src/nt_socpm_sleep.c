@@ -2139,7 +2139,7 @@ _socpm_get_sleep_slop_adjusted_sleep_time(uint64_t sleep_time_us)
         }
     }
 
-    return ((sleep_time_us > sleep_slop_offset_us)?(sleep_time_us - sleep_slop_offset_us ):0);
+    return ((sleep_time_us > sleep_slop_offset_us)?(sleep_time_us - sleep_slop_offset_us ):sleep_time_us);
 }
 
 static void
@@ -2437,7 +2437,9 @@ void nt_socpm_sleep_lst_reorder(
              (head_prev_sleep_time != _socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time)) &&
             (_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time > 0))
         {
-            nt_socpm_slp_tmr_set(_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time);
+            if(_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time/1000 <= 3000)
+                nt_socpm_slp_tmr_set(_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time);
+            
         }
     }
 }
