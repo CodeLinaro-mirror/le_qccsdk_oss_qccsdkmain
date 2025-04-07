@@ -134,6 +134,7 @@ void reset_resource();
 void reset_temp_resource();
 qbool_t save_content_type(uint8_t content_type);
 qbool_t is_succ_resp_code(int errorcode);
+int validate_url(const char *url);
 
 
 static QAT_Command_Status_t Extend_Command_HttpClient(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
