@@ -2118,7 +2118,7 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
             rlt == QAPI_ERR_NO_MEMORY;
             goto endpiont;
         }
-        //memset(chunkdata, 0, QAT_MAX_CHUNK_SIZE+1);
+
         uint16_t sendnum = (data_len+QAT_MAX_CHUNK_SIZE-1)/QAT_MAX_CHUNK_SIZE;
         char * senddata = data;
         uint16_t sendatalen = 0;
@@ -2141,7 +2141,7 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
             
 
             rlt = at_httpc_setbodydata(chunkdata, sendatalen);
-            //printf("post setbody\r\n");
+
             if(rlt == QAPI_OK)
             {
                 if(count == 0){
@@ -2171,6 +2171,13 @@ qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data)
 
             senddata += sendatalen;
             sys_msleep(QAT_CHUNK_INTERVAL);
+            if(at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED)
+            {
+                if(chunkdata){
+                  free(chunkdata);
+                 }
+                goto endpiont;
+            }
         }
 
         //send the chunk end flag
@@ -2394,7 +2401,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
             rlt == QAPI_ERR_NO_MEMORY;
             goto endpiont;
         }
-        //memset(chunkdata, 0, QAT_MAX_CHUNK_SIZE+1);
+
         uint16_t sendnum = (data_len+QAT_MAX_CHUNK_SIZE-1)/QAT_MAX_CHUNK_SIZE;
         char * senddata = data;
         uint16_t sendatalen = 0;
@@ -2446,6 +2453,13 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
 
             senddata += sendatalen;
             sys_msleep(QAT_CHUNK_INTERVAL);
+            if(at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED)
+            {
+                if(chunkdata){
+                  free(chunkdata);
+                 }
+                goto endpiont;
+            }
         }
 
         //send the chunk end flag

@@ -32,8 +32,8 @@
 #define HTTPS_DEFAULT_PORT                            443
 #define HTTP_DEFAULT_PORT                             80
 #define QAT_HTTPC_MAX_HEADER_FIELD                    10
-#define QAT_MAX_CHUNK_SIZE                            3000
-#define QAT_CHUNK_INTERVAL                            100  //ms
+#define QAT_MAX_CHUNK_SIZE                            1000
+#define QAT_CHUNK_INTERVAL                            10  //ms
 
 
 
