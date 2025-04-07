@@ -19,7 +19,7 @@
       <props id="14" id_name="NT_DEVCFG_BG_SCAN_DURATION" helptext="default-time-period-bg-scan_time period for bg scan" type="0x00000002"> 30 </props>
       <props id="15" id_name="NT_DEVCFG_BG_FULL_SCAN_FREQ" helptext="background full scan frequency" type="0x00000002"> 5 </props> 
 	  <props id="16" id_name="NT_DEVCFG_BG_SCAN_TRIGGER" min="1" max="4" helptext="background scan triger rssi(1)/rate(2)/periodic(3)/mixed(4)" type="0x00000002"> 3 </props>
-      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id="17" id_name="NT_DEVCFG_WPS_CHANNEL_DWELL_TIME" min="130" max="130" helptext="default WPS scan durartion" type="0x00000002"> 130 </props>
       <props id=" " id_name=" " helptext=" " type=" ">  </props>
       <props id=" " id_name=" " helptext=" " type=" ">  </props>
       <props id=" " id_name=" " helptext=" " type=" ">  </props>
