@@ -192,6 +192,13 @@ source_set("common") {
         ]
     }
 
+    if (CONFIG_HTTP_SERVER_DEMO) {    
+        include_dirs += ["//include/qapi", "net/src"]
+        sources += [
+            "net/src/httpd_demo.c",
+        ]
+    }
+
     if (CONFIG_RNG_TEST) {
         sources += ["platform/rng_shell.c"]
     }
