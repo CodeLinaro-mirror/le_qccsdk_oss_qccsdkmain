@@ -263,7 +263,7 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
 #if defined(FEATURE_STA_ECSA) || defined(FEATURE_AP_ECSA)
 	ecsa_active_with_blocking_traffic = is_ecsa_active_with_blocking_traffic();
 #endif
-
+	nt_dpm_sw_set_tx_status(TRUE);
 #ifdef SUPPORT_TWT_STA
     if ((pnDpA->ps_ctrl.dpm_sleep == 1) && (nt_twt_is_negotiated() == FALSE) && (ecsa_active_with_blocking_traffic == FALSE) && (ptsm_active == FALSE))		
 #else 

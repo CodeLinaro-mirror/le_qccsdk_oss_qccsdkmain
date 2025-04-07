@@ -688,7 +688,7 @@ bool drv_qspi_init(qspi_master_config_t *config)
 #ifndef CONFIG_NON_OS
     if( !hal_qspi_is_qspi_active()) {
 #endif
-        NT_LOG_PRINT(SYSTEM,ERR,"do qspi init...\n");
+        NT_LOG_PRINT(SYSTEM,INFO,"do qspi init...\n");
         hal_qspi_enable_qspi(enable, pads_option);
         hal_qspi_set_clock((uint8_t)config->clk_freq);
 

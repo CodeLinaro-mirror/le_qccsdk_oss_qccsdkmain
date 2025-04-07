@@ -799,7 +799,7 @@ static FLASH_STATUS drv_flash_info_init(uint32_t device_id)
     for (i = 0; i < total_flash_products; i++)
     {
         if (device_id == pflash_device_config[i].device_id) {
-            NT_LOG_PRINT(SYSTEM,ERR,"found device %x\n", device_id);
+            NT_LOG_PRINT(SYSTEM,INFO,"found device %x\n", device_id);
             break;
         }
     }
