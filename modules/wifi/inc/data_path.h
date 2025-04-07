@@ -571,6 +571,7 @@ enum {
 
 struct psdp {
 	uint8_t dpm_sleep;
+	uint8_t dpm_sw_pend;
 	void *ps_pbuf;
 	void (*cb_fn)(uint8_t);
 	void (*data_available_cb)(uint8_t);
@@ -968,5 +969,20 @@ typedef struct dbg_node_s {
 extern volatile dbg_node_t seqin[DEBUG_BARQ_SIZE];
 extern volatile dbg_node_t seqout[DEBUG_BARQ_SIZE];
 #endif
+
+NT_BOOL nt_dpm_is_tx_pending_wmm_queues(uint8_t wmi_dev_id);
+NT_BOOL nt_dpm_is_tx_pending_nonwmm_queues(uint8_t wmi_dev_id);
+
+/*
+ * @brief Check if Tx is busy.
+ * @param : none
+ * @return : True: when HW is busy in tx
+ *        : else return FALSE
+*/
+NT_BOOL nt_dpm_is_tx_busy(void);
+
+NT_BOOL nt_dpm_sw_is_tx_busy(void);
+
+void nt_dpm_sw_set_tx_status(NT_BOOL status);
 
 #endif /* DATA_PATH_H_ */

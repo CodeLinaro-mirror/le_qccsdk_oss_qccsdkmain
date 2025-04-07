@@ -8,7 +8,7 @@
       <props id="3" id_name="NT_DEVCFG_DTIM_COUNT" min="0" max="0" helptext="default-ap dtim count" type="0x00000002"> 0 </props>
       <props id="4" id_name="NT_DEVCFG_AP_DTIM_PERIOD" min="2" max="2" helptext="default-dtim period" type="0x00000002"> 2 </props>
       <props id="5" id_name="NT_DEVCFG_BMPS_ENABLE " min="0" max="1" helptext="Enable/Disable BMPS feature " type="0x00000002 "> 0 </props>
-	  <props id="6" id_name="NT_DEVCFG_INITITAL_BMPS_IDLE_PERIOD_MS" min="100" max="20000" helptext="Initial interval of bmps idle timer. config NT_DEVCFG_BMPS_IDLE_TIMER_PERIOD_MS to set idle time of follow on intervals" type="0x00000002 "> 2000 </props>
+	  <props id="6" id_name="NT_DEVCFG_INITITAL_BMPS_IDLE_PERIOD_MS" min="100" max="20000" helptext="Initial interval of bmps idle timer. config NT_DEVCFG_BMPS_IDLE_TIMER_PERIOD_MS to set idle time of follow on intervals" type="0x00000002 "> 100 </props>
       <props id="7" id_name="NT_DEVCFG_IMPS_ENABLE " min="0" max="1" helptext="Enable/Disable IMPS feature " type="0x00000002 "> 0 </props>
       <props id="8" id_name="NT_DEVCFG_FORCE_DTIM" min="0" max="0" helptext="Force DTIM value config from STA. If value greater than 0, It will replace the actual DTIM value." type="0x00000002"> 0 </props>
       <props id="9" id_name="NT_DEVCFG_IMPS_SLEEP_TIMER " min="30000" max="30000" helptext="default imps sleep time " type="0x00000002 "> 30000 </props>
@@ -22,7 +22,7 @@
       <props id="17" id_name="NT_DEVCFG_WUR_BEACON_OFFSET " min="20" max="20" helptext="set wur beacon offset " type="0x00000002 "> 20 </props>
       <props id="18" id_name="NT_DEVCFG_WAKEUP_FRAME_AT_DATA_AVAILABILITY " helptext="wakeup frame at data availablitiy " type=" 0x00000002"> 1 </props>
       <props id="19" id_name="NT_DEVCFG_SUSPEND_FRAME_AT_DATA_AVAILABILITY " helptext="suspend frame at data availablitiy " type=" 0x00000002"> 1 </props>
-      <props id="20" id_name="NT_DEVCFG_BMPS_IDLE_TIMER_PERIOD_MS" min="5" max="20000" helptext="The interval of BMPS idle timer, which will take effect from second idle duration" type="0x00000002">2000</props>
+      <props id="20" id_name="NT_DEVCFG_BMPS_IDLE_TIMER_PERIOD_MS" min="5" max="20000" helptext="The interval of BMPS idle timer, which will take effect from second idle duration" type="0x00000002">20</props>
 	  <props id="21" id_name="NT_DEVCFG_SUSPEND_FRAME_IF_WAKEUP_FRAME_RECEIVED " helptext="suspend frame if wakeup frame is received" type=" 0x00000002"> 1 </props>
       <props id="22" id_name="NT_DEVCFG_WUR_SOFT_DTIM_ENABLE" min="1" max="1" helptext="enable/disable wur software dtim" type="0x00000002"> 1 </props>
       <props id="23" id_name="NT_DEVCFG_BASE_EARLY_RX_US" min="100" max="4000" helptext="Base early RX time for beacon reception" type="0x00000002"> 200 </props>
