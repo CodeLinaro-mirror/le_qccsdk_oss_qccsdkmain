@@ -606,13 +606,11 @@ int http_client_freesess(httpclient_sess *sess)
 
     if ((error = http_client_sess_is_found(sess)) != HTTPC_OK)
         return error;
-
-    http_client_disconnect(sess);
-
+    
     qurt_mutex_lock(g_httpc_ctxt->lh);
+    http_client_disconnect(sess);
     g_httpc_ctxt->httpc_sess[sess->index] = 0;
-    qurt_mutex_unlock(g_httpc_ctxt->lh);
-
+    
     /* Free the session */
     if(sess->hcs_buffer)
         free(sess->hcs_buffer);
@@ -630,6 +628,7 @@ int http_client_freesess(httpclient_sess *sess)
     }
 
     free(sess);
+    qurt_mutex_unlock(g_httpc_ctxt->lh);
     return HTTPC_OK;
 }
 
