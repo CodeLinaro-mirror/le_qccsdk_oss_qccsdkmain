@@ -41,7 +41,17 @@ void app_init(void)
 
 #ifdef CONFIG_QAT_HTTPC_DEMO
     Initialize_QAT_HttpC_Demo();
+#endif
+
+#ifdef CONFIG_QAT_OTA_DEMO
+    Initialize_QAT_OTA_Demo();
+    
+#ifdef CONFIG_FWUP_DEMO
+    Initialize_FwUpgrade_Demo();
 #endif 
+
+#endif 
+
 
     UART_SEND_DIRECT("app_init over\r\n");
 }

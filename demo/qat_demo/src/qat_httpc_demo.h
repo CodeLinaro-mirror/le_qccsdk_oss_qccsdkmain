@@ -67,8 +67,6 @@ struct at_https_global_config {
     struct at_header_field header_field[QAT_HTTPC_MAX_HEADER_FIELD];
 };
 
-struct at_https_global_config g_https_cfg = {0};
-
 typedef enum {
 	QAT_HTTP = 1,
 	QAT_HTTPS

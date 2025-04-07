@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "qapi_firmware_upgrade.h"
+#include "qurt_internal.h"
 #include "fw_upgrade.h"
 #include "fw_upgrade_mem.h"
 #include "nt_sys_monitoring.h"
@@ -21,6 +22,13 @@
 /* Global Variables											                                              */
 /**********************************************************************************************************/
 static qapi_Fw_Upgrade_CB_t fw_upgrade_cb = NULL;
+
+/**********************************************************************************************************/
+/* External Functions																                      */
+/**********************************************************************************************************/
+#ifdef CONFIG_QAT_OTA_DEMO
+extern void qat_common_rst_timer_callback();
+#endif
 
 /**********************************************************************************************************/
 /* Internal Functions												                                      */
@@ -641,13 +649,23 @@ qapi_Status_t qapi_Fw_Upgrade_Cancel(void)
 qapi_Status_t qapi_Fw_Upgrade_Done(uint32_t result, uint32_t flags)
 {
     fw_upgrade_status_code_t ret = FW_UPGRADE_ERROR_E;
+#ifdef CONFIG_QAT_OTA_DEMO
+    TimerHandle_t rst_timer_handle;
+#endif
 
     ret = fw_upgrade_session_done(result);
 
     /* check reboot flag here */
-    if ((ret == FW_UPGRADE_OK_E) && ((flags & QAPI_FW_UPGRADE_FLAG_AUTO_REBOOT) != 0)) {
+    if ((ret == FW_UPGRADE_OK_E) && ((flags & QAPI_FW_UPGRADE_FLAG_AUTO_REBOOT) != 0)) {   
+#ifdef CONFIG_QAT_OTA_DEMO
+        //when using QAT demo, need some times to send response to SPI host
+        rst_timer_handle = nt_qurt_timer_create("rst_timer", 100, TRUE,
+			NULL, qat_common_rst_timer_callback);
+        qurt_timer_start(rst_timer_handle, 0);
+#else
         /* reboot system here ..... */
         nt_system_sw_reset();
+#endif
     }
 
     return FWUP_ErrorMap(ret);
