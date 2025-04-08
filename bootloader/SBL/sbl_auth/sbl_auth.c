@@ -127,7 +127,7 @@ uint32 sbl_image_auth
 
 uint32 sbl_compute_verify_hash(secboot_auth_image_info_t *image_info, boot_apps_shared_data_t *sbl_shared)
 {
-	uint i = 0;
+	uint32 i = 0;
 	uint32 sbl_ret = BL_ERR_NONE;
 	secboot_error_type	 sec_err = E_SECBOOT_FAILURE;
 	uint32_t phr_num;

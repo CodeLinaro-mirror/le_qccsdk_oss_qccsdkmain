@@ -9,6 +9,6 @@
 <fw_upgrade_config>
       <config FS1_sizeKB="64" FS2_sizeKB="64" RAMDUMP_sizeKB="64" USERDATA_sizeKB="64" RANK="1" FS1IMG="" FS2IMG="" location="flash"/>
       <flash image="FDT" file="../storage/firmware_desc_table/curr_age_fdt/frn_curr_age_default.bin" begin="0x208000" location="rram"/>
-      <flash image="FERMION_SBL" file="FERMION_SBL_HASHED.elf " begin="0x20a400" location="rram"/>
-      <flash image="FERMION_SBL" file="FERMION_SBL_HASHED.elf " begin="0x212400" location="rram"/>
+      <flash image="FERMION_SBL" file="FERMION_SBL_HASHED.elf" begin="0x20a400" location="rram"/>
+      <flash image="FERMION_SBL" file="FERMION_SBL_HASHED.elf" begin="0x212400" location="rram"/>
 </fw_upgrade_config>

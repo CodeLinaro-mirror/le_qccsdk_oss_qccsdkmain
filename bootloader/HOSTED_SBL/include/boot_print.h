@@ -5,6 +5,7 @@
 #ifndef __BOOT_PBL_PRINT_H__
 #define __BOOT_PBL_PRINT_H__
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include "boot_module_id.h"
 

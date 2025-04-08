@@ -820,22 +820,17 @@ class NVM_Programmer(GDB_Framework):
         print('********************************************************************************')
 
     def generate_download_table(self):
+        cmd = ["python", os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH, "gen_download_table.py")),
+                "--app", os.path.abspath(self.config['file']),
+                "--config", os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH,"download_config.xml"))]
         if self.config['all']:
-            cmd_string = "python " + '"' + os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH, "gen_download_table.py")) + '"' +\
-                " --app " + '"' + os.path.abspath(self.config['file']) + '"' +\
-                " --config " + '"' + os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH,"download_config.xml")) + '"' +\
-                " --all"
-        else:
-            cmd_string = "python " + '"' + os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH, "gen_download_table.py")) + '"' +\
-                " --app " + '"' + os.path.abspath(self.config['file']) + '"' +\
-                " --config " + '"' + os.path.abspath(os.path.join(FW_UPGRADE_SCRIPTS_PATH,"download_config.xml")) + '"'
+            cmd.append("--all")
         cur_dir = os.getcwd()
-        os.chdir(FW_UPGRADE_SCRIPTS_PATH)
         try:
-            subprocess.check_output(cmd_string)
-        except:
-            raise
-        os.chdir(cur_dir)
+            os.chdir(FW_UPGRADE_SCRIPTS_PATH)
+            subprocess.check_call(cmd)
+        finally:
+            os.chdir(cur_dir)
 
     def write_download_table(self, xml):
         table = []
