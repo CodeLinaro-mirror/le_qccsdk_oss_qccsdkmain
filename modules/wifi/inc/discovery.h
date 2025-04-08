@@ -38,7 +38,8 @@ typedef enum {
     SCAN_AP_ASSISTED               = 0x100000,
 	SCAN_ANY_PROFILE               = 0x200000,
     SCAN_DONOT_RETURN_TO_HOME_AFTERSCAN      = 0x400000,
-    SCAN_SPECIFIC_SSID             = 0x800000
+    SCAN_SPECIFIC_SSID             = 0x800000,
+    SCAN_LONG_DURATION             = 0x1000000
 } DC_SCAN_TYPE;
 
 typedef enum {
