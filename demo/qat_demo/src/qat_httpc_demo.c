@@ -3102,7 +3102,7 @@ qbool_t is_succ_resp_code(int errorcode)
 }
 
 int is_valid_char(char c) {
-    return isalnum(c) || c == '.' || c == '-' || c == '/';
+    return isalnum(c) || c == '.' || c == '-' || c == '/' || c == '_';
 }
 
 int validate_url(const char *url) 
@@ -3129,8 +3129,13 @@ int validate_url(const char *url)
         return 0;
     }
 
-        
+    // check hostname
+    if (strchr(host_start, '.') == NULL)
+    {
+            return 0;
+    }
 
+#if 0
     // check host
     const char *host_end = strchr(host_start, '/');
     if (!host_end) {
@@ -3150,6 +3155,7 @@ int validate_url(const char *url)
             return 0;
         }
     }
+#endif
 
     return 1;
 }
