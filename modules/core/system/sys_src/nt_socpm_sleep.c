@@ -2437,7 +2437,6 @@ void nt_socpm_sleep_lst_reorder(
              (head_prev_sleep_time != _socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time)) &&
             (_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time > 0))
         {
-            if(_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time/1000 <= 3000)
                 nt_socpm_slp_tmr_set(_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time);
             
         }
