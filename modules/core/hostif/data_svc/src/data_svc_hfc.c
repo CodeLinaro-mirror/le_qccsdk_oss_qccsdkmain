@@ -91,6 +91,7 @@ bool data_svc_get_hfc_data_buff(void* p_element, uint16_t len)
     uint32_t* buf = nt_osal_allocate_memory(len);
     if(buf != NULL)
     {
+        memset(buf, 0, len);
         p_elem->p_buf=buf;
         p_elem->p_buf_start=buf;
         p_elem->len=len;
@@ -236,6 +237,11 @@ int32_t data_svc_hfc_queue_send(ring_element_t *p_elem, hfc_msg_type_t type)
     if (NULL == p_elem->p_buf) 
     {
         return -1;
+    }
+
+    if (p_elem->len > 1400) {
+        RINGIF_PRINT_LOG_ERR("msg len = %d > 1400\r\n", msg.len);
+        A_ASSERT(0);
     }
 	
     msg.type = type;
@@ -464,7 +470,7 @@ void qcspi_hfc_init(void)
     } 
 
 #ifdef CONFIG_QCSPI_HFC_ATCMD_ENABLE
-	qcspi_hfc_recv_queue = nt_qurt_pipe_create(TOTAL_NUM_DATA_RING_ELEMS, sizeof(hfc_msg_t));
+	qcspi_hfc_recv_queue = nt_qurt_pipe_create(TOTAL_NUM_DATA_RING_ELEMS_AT, sizeof(hfc_msg_t));
 	if (qcspi_hfc_recv_queue == NULL)
     {
       RINGIF_PRINT_LOG_ERR("failed to create qcspi_hfc_recv_queue", 0);
