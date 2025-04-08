@@ -134,9 +134,9 @@ NMI_Handler (void)
 			count = NT_REG_RD(QWLAN_PMU_AON_WDOG_COUNT_REG);
 		}
 		//Disable AON-WDOG
-		control_reg = NT_REG_RD(QWLAN_PMU_AON_WDOG_CTL_REG);					   
-		control_reg &=	(uint32_t)(~( QWLAN_PMU_AON_WDOG_CTL_WDOG_ENABLE_MASK));
-		NT_REG_WR(QWLAN_PMU_AON_WDOG_CTL_REG,control_reg);
+		//control_reg = NT_REG_RD(QWLAN_PMU_AON_WDOG_CTL_REG);					   
+		//control_reg &=	(uint32_t)(~( QWLAN_PMU_AON_WDOG_CTL_WDOG_ENABLE_MASK));
+		//NT_REG_WR(QWLAN_PMU_AON_WDOG_CTL_REG,control_reg);
 
 		return;
 #else
