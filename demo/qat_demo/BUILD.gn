@@ -64,6 +64,15 @@ if (CONFIG_QAT_HTTPC_DEMO) {
     ]
 }
 
+if (CONFIG_QAT_OTA_DEMO) {
+    qat_inc += [
+        "//demo/common/ota/plugins/http",
+    ]
+    qat_src += [
+        "src/qat_ota_demo.c",
+    ]
+}
+
 not_needed("*", [ ])
 
 config("_config") {

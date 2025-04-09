@@ -23,6 +23,9 @@ config QAT_HTTP_SERVER_DEMO
 config QAT_HTTPC_DEMO
     bool "enable QAT HTTPC DEMO"
     default n
+config QAT_OTA_DEMO
+    bool "enable QAT OTA DEMO"
+    default n
 config QAT_CB_SIZE_MTU_MULTIPLIER
     int "Set the circular buffer size to be a multiple of the MTU."
     default 10

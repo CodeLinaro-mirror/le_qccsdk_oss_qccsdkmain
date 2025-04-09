@@ -50,7 +50,12 @@ fw_upgrade_context_t *fw_upgrade_sess_cxt  = NULL;
 fw_upgrade_image_hdr_t *fw_upgrade_image_hdr = NULL;  /* fw upgrade image header */
 uint8_t fw_upgrade_mutex_init = 0;
 qurt_mutex_t fw_upgrade_mutex;
-
+/**********************************************************************************************************/
+/* External Functions																                      */
+/**********************************************************************************************************/
+#ifdef CONFIG_QAT_OTA_DEMO
+extern void qat_common_rst_timer_callback();
+#endif
 /**********************************************************************************************************/
 /* Internal Functions																                      */
 /**********************************************************************************************************/
@@ -1637,7 +1642,9 @@ static int32_t fw_upgrade_session_finalize(int32_t ret)
     uint8_t status;
     fu_part_hdl_t hdl;
     fw_upgrade_status_code_t resp;
-
+#ifdef CONFIG_QAT_OTA_DEMO
+    TimerHandle_t rst_timer_handle;
+#endif
     /* get fw upgrade session context */
     fw_upgrade_cxt = fw_upgrade_get_context();
     if (fw_upgrade_cxt == NULL) {
@@ -1673,8 +1680,16 @@ static int32_t fw_upgrade_session_finalize(int32_t ret)
         //check AUTO_REBOOT flag
         if (fw_upgrade_cxt->flags & FW_UPGRADE_FLAG_AUTO_REBOOT) {
             fw_upgrade_session_fin();
-            //reboot system here
-            nt_system_sw_reset();
+#ifdef CONFIG_QAT_OTA_DEMO
+        //when using QAT demo, need some times to send response to SPI host
+        rst_timer_handle = nt_qurt_timer_create("rst_timer", 100, TRUE,
+			NULL, qat_common_rst_timer_callback);
+        qurt_timer_start(rst_timer_handle, 0);
+#else
+        //reboot system here
+        nt_system_sw_reset();
+#endif
+            
         }
     }
 

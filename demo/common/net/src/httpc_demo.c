@@ -17,6 +17,10 @@
 #include "qcom_http_client.h"
 #include "qat_api.h"
 
+#ifdef CONFIG_QAT_OTA_DEMO
+#include "ota_http.h"   
+#endif
+
 #ifdef CONFIG_HTTP_CLIENT_DEMO
 
 //#define HTTPC_DEMO_DEBUG
@@ -56,6 +60,10 @@ int at_rec_state = 0;
 uint16_t at_rec_error_code = 0;
 #endif
 
+#ifdef CONFIG_QAT_OTA_DEMO
+extern http_session_info_t *ota_http_sess;
+extern void http_client_cb_ota(void* arg, int32_t state, void* http_resp);
+#endif
 
 
 struct http_client_demo_s
@@ -803,8 +811,19 @@ qapi_Status_t httpc_command_connect(uint32_t Parameter_Count, QAPI_Console_Param
     httpc_max_body_length = (httpc_demo_max_body_len)?httpc_demo_max_body_len:HTTPC_DEMO_DEFAULT_MAX_BODY_LEN;
     httpc_max_header_length = (httpc_demo_max_header_len)?httpc_demo_max_header_len:HTTPC_DEMO_DEFAULT_MAX_HEADER_LEN;
 
-    arg->client = qapi_Net_HTTPc_New_sess(timeout,
+#ifdef CONFIG_QAT_OTA_DEMO
+    if(ota_http_sess->status == HTTP_OTA_STATUS_RUNNING)
+    {
+        arg->client = qapi_Net_HTTPc_New_sess(timeout,
+                    isHttps, http_client_cb_ota, (void *)arg, httpc_max_body_length, httpc_max_header_length);
+
+    }
+    else
+#endif      
+    {
+        arg->client = qapi_Net_HTTPc_New_sess(timeout,
             isHttps, http_client_cb_demo, (void *)arg, httpc_max_body_length, httpc_max_header_length);
+    }
 
     if (arg->client == NULL)
     {
@@ -1069,13 +1088,29 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
         }
     } /* for */
 
-    arg->client = qapi_Net_HTTPc_New_sess2(timeout_ms,
+#ifdef CONFIG_QAT_OTA_DEMO
+    if(ota_http_sess->status == HTTP_OTA_STATUS_RUNNING)
+    {
+        arg->client = qapi_Net_HTTPc_New_sess2(timeout_ms,
+                                           (uint32_t)secure_session,
+                                           http_client_cb_ota,
+                                           (void *)arg,
+                                           body_size,
+                                           header_size,
+                                           rxbuffer_size);
+    }
+
+    else
+#endif
+    {
+        arg->client = qapi_Net_HTTPc_New_sess2(timeout_ms,
                                            (uint32_t)secure_session,
                                            http_client_cb_demo,
                                            (void *)arg,
                                            body_size,
                                            header_size,
                                            rxbuffer_size);
+    }
 
     if (arg->client == NULL)
     {
