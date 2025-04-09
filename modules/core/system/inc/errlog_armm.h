@@ -45,11 +45,11 @@ typedef enum
   ARM_PSP,
   ARM_MSP,
   ARM_PSR,
-#ifdef ERR_CORTEXM0
+#ifndef ERR_CORTEXM0
   ARM_APSR,
   ARM_IPSR,
   ARM_EPSR,
-#endif   
+#endif  
   ARM_PRIMASK,
 #ifndef ERR_CORTEXM0
   ARM_FAULTMASK,

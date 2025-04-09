@@ -58,9 +58,11 @@ define coreregs
       set $r3=coredump->arch->regs->name->exception_r3
       set $r12=coredump->arch->regs->name->exception_r12
       set $lr=coredump->arch->regs->name->exception_lr
-      set $pc=coredump->arch->regs->name->exception_pc
-
+    
       set $exception_entry_lr=coredump->arch->regs->name->pc
+      set $exception_entry_pc=coredump->arch->regs->name->exception_pc
+      set $xpsr=coredump->arch->regs->name->exception_xpsr
+   
       if (($exception_entry_lr==0xFFFFFFF9) || ($exception_entry_lr==0xFFFFFFE9))
         set $sp=coredump->arch->regs->name->msp+20+0x20
       else
@@ -75,6 +77,7 @@ define coreregs
           end
         end
       end
+      set $pc=$exception_entry_pc
     else
       set $r0=coredump->arch->regs->name->regs[0]
       set $r1=coredump->arch->regs->name->regs[1]

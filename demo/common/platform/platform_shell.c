@@ -789,32 +789,15 @@ static qapi_Status_t platform_demo_check_boot_reason(uint32_t Parameter_Count, Q
 }
 
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+void coredump_test_sub_func_1(int test_case_idx)
 {
-    if ( Parameter_Count != 1 ) {
-        printf("Invalid number of arguments\r\n");
-        printf("===================== unit test command =====================\n");
-        printf("Usage: platform coredumptest <test case index: 0~5> <bmps_enable:1/0> [timeout in ms to trigger crash]\n");
-        printf("                              0: Trigger an assertion.\n");
-        printf("                              1: Trigger an usage fault or hard fault by executing at null pointer.\n");
-        printf("                              2: Trigger an usage fault or hard fault by dividing by zero.\n");
-        printf("                              3: Trigger a bus fault or hard fault by reading from a reserved address.\n");
-        printf("                              4: Trigger a bus fault or hard fault by writing to a reserved address.\n");
-        printf("                              5: Trigger a bus fault or hard fault by executing at a reserved address.\n");
-        return QAPI_ERR_INVALID_PARAM;
-    }
-    if (!Parameter_List[0].Integer_Is_Valid || Parameter_List[0].Integer_Value > 5) {
-        printf("Test case index shoud be an integer less than 6.\n");
-        return QAPI_ERR_INVALID_PARAM;
-    }
-
     int r = 0;
     volatile unsigned int *p;
     int (*pF)(void);
     volatile unsigned int a;
     volatile unsigned int b;
 
-    switch (Parameter_List[0].Integer_Value)
+    switch (test_case_idx)
     {
         /* Trigger an assertion */
         case 0:
@@ -850,6 +833,33 @@ static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_C
         default:
             printf("Test case index shoud be an integer less than 6\n");
         }
+}
+
+void coredump_test_sub_func_0(int test_case_idx)
+{
+    coredump_test_sub_func_1(test_case_idx);
+    return;
+}
+static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if ( Parameter_Count != 1 ) {
+        printf("Invalid number of arguments\r\n");
+        printf("===================== unit test command =====================\n");
+        printf("Usage: platform coredumptest <test case index: 0~5> <bmps_enable:1/0> [timeout in ms to trigger crash]\n");
+        printf("                              0: Trigger an assertion.\n");
+        printf("                              1: Trigger an usage fault or hard fault by executing at null pointer.\n");
+        printf("                              2: Trigger an usage fault or hard fault by dividing by zero.\n");
+        printf("                              3: Trigger a bus fault or hard fault by reading from a reserved address.\n");
+        printf("                              4: Trigger a bus fault or hard fault by writing to a reserved address.\n");
+        printf("                              5: Trigger a bus fault or hard fault by executing at a reserved address.\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    if (!Parameter_List[0].Integer_Is_Valid || Parameter_List[0].Integer_Value > 5) {
+        printf("Test case index shoud be an integer less than 6.\n");
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    coredump_test_sub_func_0(Parameter_List[0].Integer_Value);
 
     return QAPI_OK;
 }
@@ -894,52 +904,91 @@ static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QA
         printf( "image basic info = [%s]\r\n",coredump_buf.image.image_variant_string);
         printf( "iamge build info = [%s]\r\n",coredump_buf.image.qc_image_version_string);
         printf( "\r\n");
-        printf( "core reg info:\r\n"
-            "R0    %08X   R1    %08X\r\n"
-			"R2    %08X   R3    %08X\r\n"
-			"R12   %08X   LR    %08X\r\n"
-			"PC    %08X   PSR   %08X\r\n",
-			coredump_buf.arch.regs.name.regs[0], coredump_buf.arch.regs.name.regs[1],
-			coredump_buf.arch.regs.name.regs[2], coredump_buf.arch.regs.name.regs[3],
-			coredump_buf.arch.regs.name.regs[12], coredump_buf.arch.regs.name.lr,
-			coredump_buf.arch.regs.name.pc, coredump_buf.arch.regs.name.psr);
+        printf( "reg info:\r\n"
+            "R0      %08X  R1        %08X\r\n"
+            "R2      %08X  R3        %08X\r\n",
+            coredump_buf.arch.regs.name.regs[0], coredump_buf.arch.regs.name.regs[1],
+            coredump_buf.arch.regs.name.regs[2], coredump_buf.arch.regs.name.regs[3]);
+        
+        printf( "R4      %08X  R5        %08X\r\n"
+            "R6      %08X  R7        %08X\r\n"
+            "R8      %08X  R9        %08X\r\n",
+            coredump_buf.arch.regs.name.regs[4], coredump_buf.arch.regs.name.regs[5],
+            coredump_buf.arch.regs.name.regs[6], coredump_buf.arch.regs.name.regs[7],
+            coredump_buf.arch.regs.name.regs[8], coredump_buf.arch.regs.name.regs[9]);
+      
+        printf( "R10     %08X  R11       %08X\r\n"
+            "R12     %08X  sp        %08X\r\n"
+            "lr      %08X  pc        %08X\r\n",
+            coredump_buf.arch.regs.name.regs[10], coredump_buf.arch.regs.name.regs[11],
+            coredump_buf.arch.regs.name.regs[12], coredump_buf.arch.regs.name.sp,
+            coredump_buf.arch.regs.name.lr, coredump_buf.arch.regs.name.pc);
+
+        printf( "psp     %08X  msp       %08X\r\n"
+            "psr     %08X  aspr      %08X\r\n"
+            "ipsr    %08X  epsr      %08X\r\n",
+            coredump_buf.arch.regs.name.psp, coredump_buf.arch.regs.name.msp,
+            coredump_buf.arch.regs.name.psr, coredump_buf.arch.regs.name.aspr,
+            coredump_buf.arch.regs.name.ipsr, coredump_buf.arch.regs.name.epsr);
+      
+        printf( "primask %08X  faultmask %08X\r\n"
+            "basepri %08X  control   %08X\r\n"
+            "exception_r0    %08X   exception_r1   %08X\r\n",
+            coredump_buf.arch.regs.name.primask, coredump_buf.arch.regs.name.faultmask,
+            coredump_buf.arch.regs.name.basepri, coredump_buf.arch.regs.name.control,
+            coredump_buf.arch.regs.name.exception_r0, coredump_buf.arch.regs.name.exception_r1);
+
+        printf( "exception_r2    %08X   exception_r3   %08X\r\n"
+            "exception_r12   %08X   exception_lr   %08X\r\n"
+            "exception_pc    %08X   exception_xpsr %08X\r\n",
+            coredump_buf.arch.regs.name.exception_r2, coredump_buf.arch.regs.name.exception_r3,
+            coredump_buf.arch.regs.name.exception_r12, coredump_buf.arch.regs.name.exception_lr,
+            coredump_buf.arch.regs.name.exception_pc, coredump_buf.arch.regs.name.exception_xpsr);
+
         printf( "ICSR  %08X   VTOR  %08X\r\n"
             "AIRCR %08X   SCR   %08X \r\n"
             "CCR   %08X\r\n" ,
             coredump_buf.err.config_regs.icsr,coredump_buf.err.config_regs.vtor,
             coredump_buf.err.config_regs.aircr, coredump_buf.err.config_regs.scr,
             coredump_buf.err.config_regs.ccr);
+
         printf( "SHPR1 %08x  SHPR2 %08x \r\n"
             "SHPR3 %08x\r\n",
             coredump_buf.err.config_regs.shpr1, coredump_buf.err.config_regs.shpr2,
             coredump_buf.err.config_regs.shpr3);
+
         printf( "SHCSR %08X   CFSR  %08X \r\n"
             "HFSR  %08X   DFSR  %08X \r\n"
             "MMFAR %08X\r\n",
             coredump_buf.err.config_regs.shcsr, coredump_buf.err.config_regs.cfsr,
             coredump_buf.err.config_regs.hfsr, coredump_buf.err.config_regs.dfsr,
             coredump_buf.err.config_regs.mmfar);
+
         printf( "BFAR  %08X   AFSR %08X \r\n"
             "PFR0  %08X   PFR1 %08X \r\n"
             "DFR   %08X\r\n",
             coredump_buf.err.config_regs.bfar, coredump_buf.err.config_regs.afsr,
             coredump_buf.err.config_regs.pfr0, coredump_buf.err.config_regs.pfr1,
             coredump_buf.err.config_regs.dfr);
+
         printf( "ADR     %08X   MMFR[0] %08X \r\n"
             "MMFR[1] %08X   MMFR[2] %08X \r\n"
             "MMFR[3] %08X\r\n",
             coredump_buf.err.config_regs.adr, coredump_buf.err.config_regs.mmfr[0],
             coredump_buf.err.config_regs.mmfr[1], coredump_buf.err.config_regs.mmfr[2],
             coredump_buf.err.config_regs.mmfr[3]);
+
         printf( "ISAR[0] %08X  ISAR[1] %08X \r\n"
             "ISAR[2] %08X  ISAR[3] %08X \r\n"
             "ISAR[4] %08X  CPACR   %08X\r\n",
             coredump_buf.err.config_regs.isar[0], coredump_buf.err.config_regs.isar[1],
             coredump_buf.err.config_regs.isar[2], coredump_buf.err.config_regs.isar[3],
             coredump_buf.err.config_regs.isar[4], coredump_buf.err.config_regs.cpacr);
+
         printf( "NVIC_ISPR0 %08X   NVIC_ISPR1 %08X   NVIC_ISPR2 %08X\r\n",
             coredump_buf.err.config_regs.ispr[0], coredump_buf.err.config_regs.ispr[1],
             coredump_buf.err.config_regs.ispr[2]);
+
         printf( "NVIC_ISER0 %08X   NVIC_ISER1 %08X   NVIC_ISER2 %08X\r\n",
             coredump_buf.err.config_regs.iser[0], coredump_buf.err.config_regs.iser[1],
             coredump_buf.err.config_regs.iser[2]);
