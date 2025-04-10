@@ -104,6 +104,14 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 #define IPV6_FRAG_COPYHEADER            0
 #define LWIP_IPV6_DUP_DETECT_ATTEMPTS   0
 #define MEMP_NUM_ND6_QUEUE              3
+
+/*Enable RA for AP mode*/
+#define LWIP_IPV6_SEND_ROUTER_ADVERTISE 1
+
+#define LWIP_ND6_MAX_INITIAL_RA         3
+#define LWIP_ND6_INITIAL_RA_INTERVAL    2
+#define LWIP_ND6_NORMAL_RA_INTERVAL     10 /* @todo: 10 for quick connect, 600 for low affect */
+
 #endif /* NT_FN_IPV6 */
 
 /* Enable some protocols to test them */
