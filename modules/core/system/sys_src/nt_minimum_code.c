@@ -602,6 +602,7 @@ slp_switch:
              QWLAN_RXP_DEFAULT_HW_INSERT_DPU_PARAM_NE_BIT_MASK |
             (HAL_BMUWQ_DXE_RX_WQ1 << QWLAN_RXP_DEFAULT_HW_INSERT_DPU_PARAM_DPU_ROUTING_FLAG_OFFSET));
 
+            HAL_REG_WR(QWLAN_BMU_BTQM_PACKET_MEMORY_UNIT_SIZE_REG, 1);
             /*restoring saved context*/
             nt_socpm_ctxt_restore();
             // should never get here
