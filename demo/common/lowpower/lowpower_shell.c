@@ -117,7 +117,7 @@ static qapi_Status_t deepsleep(uint32_t Parameter_Count, QAPI_Console_Parameter_
         printf("Ext wakeup indefinite deepsleep supported");
         nt_socpm_en_indef_deep_sleep(TRUE);
     }
-    uint64_t slp_time = (uint64_t)(Parameter_List[1].Integer_Value*1000);
+    uint64_t slp_time = ((uint64_t)Parameter_List[1].Integer_Value*1000);
     qapi_pm_enable(1);
     return qapi_deepsleep_enter(Parameter_List[0].Integer_Value, slp_time);
 }
