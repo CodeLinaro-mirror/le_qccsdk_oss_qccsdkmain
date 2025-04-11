@@ -539,28 +539,28 @@ uint8_t ringif_a2f_process_pkts(uint8_t ring_id, _pfn_process pfn_process, _pfn_
         }
 
         p_elem = (p_ring_ctx->p_ring_base + idx * p_ring_ctx->ring_elem_size);
-        b_process_done = pfn_process(p_elem);
+        if ((p_elem->p_buf != NULL) && (p_elem->p_buf_start != NULL)) {
+            b_process_done = pfn_process(p_elem);
 
-        if(FALSE == b_process_done) {
-            break;
+            if(FALSE == b_process_done) {
+                break;
+            }
         }
         num_processed++;
 
-        while (FALSE == pfn_refill(p_elem)) {
-            RINGIF_PRINT_LOG_ERR("p_elem alloc fail");
+        if(TRUE == pfn_refill(p_elem)) {
+            num_refilled++;
+        } else {
             memset(p_elem, 0, sizeof(ring_element_t));
+            RINGIF_PRINT_LOG_ERR("elem malloc fail");
+            break;			
         }
-        num_refilled++;
-
         idx = (idx + 1) % p_ring_ctx->ring_num_elem;
-        /* Update read index to current value */
+		/* Update read index to current value */
         *p_ring_ctx->p_read_idx = idx;
-        //RINGIF_PRINT_LOG_ERR("Read:%d Wr:%d ElemSize:%d numElem:%d", idx, wr_idx, p_ring_ctx->ring_elem_size, p_ring_ctx->ring_num_elem);
     }
     
-    /* Update read index to current value */
-    //*p_ring_ctx->p_read_idx = idx;
-    
+	
     /* Start the timer if job is not complete */
     if((FALSE == b_process_done) || (num_refilled < num_processed)) {
 
