@@ -90,7 +90,8 @@ qapi_Net_HTTPc_New_sess2(
             void* arg,
             uint16_t httpc_Max_Body_Length,
             uint16_t httpc_Max_Header_Length,
-            uint16_t httpc_Rx_Buffer_Size)
+            uint16_t httpc_Rx_Buffer_Size,
+            uint16_t ip_prefer)
 {
     return (qapi_Net_HTTPc_handle_t)http_client_newsess(
             timeout,
@@ -99,7 +100,8 @@ qapi_Net_HTTPc_New_sess2(
             arg,
             httpc_Max_Body_Length,
             httpc_Max_Header_Length,
-            httpc_Rx_Buffer_Size);
+            httpc_Rx_Buffer_Size,
+            ip_prefer);
 }
 
 /****************************************************************************
@@ -120,7 +122,8 @@ qapi_Net_HTTPc_New_sess(
             arg,
             httpc_Max_Body_Length,
             httpc_Max_Header_Length,
-            HTTPCLIENT_MAX_BUFFER_SIZE);
+            HTTPCLIENT_MAX_BUFFER_SIZE,
+            DEFAULT_IP_PREFER);
 }
 
 /****************************************************************************

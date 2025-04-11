@@ -341,25 +341,11 @@ qapi_Status_t ota_httpc_conn(const char *url)
     Parameter_List[Parameter_Count].Integer_Is_Valid =true;
     if(isSecureSession(url))
     {
-        if(g_https_cfg.https_port_set)
-        {
-            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_port;
-        }
-        else
-        {
-            Parameter_List[Parameter_Count].Integer_Value = HTTPS_DEFAULT_PORT;
-        }
+        Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_port;
     }
     else
     {
-        if(g_https_cfg.http_port_set)
-        {
-            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.http_port;
-        }
-        else
-        {
-            Parameter_List[Parameter_Count].Integer_Value = HTTP_DEFAULT_PORT;
-        }
+        Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.http_port;
     }
     
     Parameter_Count++;
