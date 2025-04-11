@@ -35,6 +35,7 @@
 #include "safeAPI.h"
 #include "ssl_demo.h"
 #include "httpc_demo.h"
+#include "httpd_demo.h"
 
 #ifdef CONFIG_MQTT_CLIENT_DEMO
 #include "mqtt_client_demo.h"
@@ -1175,6 +1176,11 @@ const QAPI_Console_Command_t net_shell_cmds[] =
                                         "httpc [connect|disconnect|get|post|put|patch] <...>\n",
                                         "\nHTTP Client: Perform Hypertext Transport protocol client operations.\n"
                                         "Type command name to get more info on usage. For example \"httpc get\".\n"},
+#endif
+
+#ifdef CONFIG_HTTP_SERVER_DEMO
+    {httpd_command_handler,         "httpd",     "\n\nhttpd [enable|disable] [server_port]\n"
+                                    "\nHTTP SERVER: Perform Hypertext Transport protocol server operations.\n"},
 #endif
 
 #ifdef CONFIG_MQTT_CLIENT_DEMO

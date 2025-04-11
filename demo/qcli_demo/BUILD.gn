@@ -39,3 +39,4 @@ source_set("qcli_demo") {
         sources = qcli_demo_src
     }
 }
+
