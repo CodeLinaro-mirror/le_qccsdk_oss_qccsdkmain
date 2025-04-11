@@ -411,7 +411,7 @@ void err_fatal_handler (void)
       }
     }
     /* system reboot */
-    nt_system_sw_reset();
+    //nt_system_sw_reset();
 } /* err_fatal_handler */
 
 unsigned int bswap_32(unsigned int x)
@@ -626,7 +626,7 @@ uint32 param3
   }
   else
   {
-    nt_system_sw_reset();
+    //nt_system_sw_reset();
   }
 }
 
