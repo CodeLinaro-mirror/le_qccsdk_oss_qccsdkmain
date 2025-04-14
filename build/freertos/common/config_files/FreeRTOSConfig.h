@@ -91,6 +91,7 @@
 #define configUSE_POSIX_ERRNO                        1
 #define configUSE_STATS_FORMATTING_FUNCTIONS         1
 
+#define CONFIG_PROF
 #ifdef CONFIG_PROF
 #define	configGENERATE_RUN_TIME_STATS				 1
 #define configUSE_STATS_FORMATTING_FUNCTIONS         1
