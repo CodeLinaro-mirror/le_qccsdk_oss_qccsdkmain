@@ -165,6 +165,8 @@ qapi_Status_t qapi_Net_HTTPc_Stop(void);
  *
  * @param[in] httpc_Rx_Buffer_Size   Size in bytes of RX buffer for HTTP response.
  *                                   If size is less than 512, system will use 512.
+ * @param[in] ip_prefer   prefer to select an ip type, ipv4 or ipv6
+ *           
  * @return
  * On success, a non-NULL handle is returned; on error, NULL is returned.
  */
@@ -175,7 +177,8 @@ qapi_Net_HTTPc_handle_t qapi_Net_HTTPc_New_sess2(
         void*                   arg,
         uint16_t                httpc_Max_Body_Length,
         uint16_t                httpc_Max_Header_Length,
-        uint16_t                httpc_Rx_Buffer_Size);
+        uint16_t                httpc_Rx_Buffer_Size,
+        uint16_t                ip_prefer);
 
 /**
  * @brief Starts a new a HTTP client session.

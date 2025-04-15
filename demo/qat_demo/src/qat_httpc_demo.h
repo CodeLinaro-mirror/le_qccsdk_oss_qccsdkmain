@@ -31,6 +31,7 @@
 #define HTTP_URL_STR_BUFFER_LENGTH                    256
 #define HTTPS_DEFAULT_PORT                            443
 #define HTTP_DEFAULT_PORT                             80
+#define HTTPC_DEFAULT_IP_PREFER                       0   //0:ipv4, 1:ipv6
 #define QAT_HTTPC_MAX_HEADER_FIELD                    10
 #define QAT_MAX_CHUNK_SIZE                            1000
 #define QAT_CHUNK_INTERVAL                            10  //ms
@@ -53,9 +54,8 @@ struct at_https_global_config {
     char key_file[FILE_PATH_STR_BUFFER_LENGTH];
 
     uint32_t http_port;
-    qbool_t  http_port_set;
     uint32_t https_port;
-    qbool_t  https_port_set;
+    uint8_t httpc_ip_prefer;
     uint32_t url_size;
     char *url;
 
@@ -100,6 +100,18 @@ typedef enum {
 	QAT_CONTENT_TYPE_FORM_DATA,              // multipart/form-data
 	QAT_CONTENT_TYPE_TEXT_XML                // text/xml
 } qat_content_type;
+
+typedef enum {
+	QAT_NET_CFG_HTTP_PORT,
+	QAT_NET_CFG_HTTPS_PORT,            
+	QAT_NET_CFG_IP_PREFER,
+	QAT_NET_CFG_MAX
+} net_cfg_type;
+
+typedef enum{
+    IP_V4,
+    IP_V6
+}ip_type;
 
 
 /*-------------------------------------------------------------------------

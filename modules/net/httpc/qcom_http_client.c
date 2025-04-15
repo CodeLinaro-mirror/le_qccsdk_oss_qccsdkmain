@@ -316,54 +316,91 @@ int http_client_resolve(httpclient_sess *sess)
     ip_addr_t ipaddr = {0};
     uint16_t count = 0;
     g_httpc_dns_found = 0;
+    uint16_t ip_prefer = sess->ipprefer;
+    uint16_t ip_prefer_check_num = 0;
     htdbgprintf("%s() Flags:0x%x\n", __func__, sess->hcs_flags);
 
     /* Find port no */
     if (!sess->hcs_port) {
         sess->hcs_port = 80;
     }
-#if LWIP_IPV4
-    /* Check whether it is IPv4 address */
-#if LWIP_IPV6
-    if ((inet_pton(AF_INET, (char *)sess->hcs_host, (void *)&(sess->hcs_addr.u_addr.ip4))) == 1)
-#else
-	if ((inet_pton(AF_INET, (char *)sess->hcs_host, (void *)&(sess->hcs_addr))) == 1)
-#endif
-    {
-        /* Success */
-#if LWIP_IPV6
-        htdbgprintf("%s() IPv4 Addr: 0x%08x\n", __func__, sess->hcs_addr.u_addr.ip4);
-        sess->hcs_addr.type = AF_INET;
-#else
-		htdbgprintf("%s() IPv4 Addr: 0x%08x\n", __func__, sess->hcs_addr);
-#endif
-        return HTTPC_OK;
-    }
-#endif
 
-#if LWIP_IPV6
-    /* Check whether it is IPv6 address */
-#if LWIP_IPV4
-    if ((inet_pton(AF_INET6, (char *)sess->hcs_host, (void *)&(sess->hcs_addr.u_addr.ip6))) == 1)
-#else
-	if ((inet_pton(AF_INET6, (char *)sess->hcs_host, (void *)&(sess->hcs_addr))) == 1)
-#endif
+
+   while(1)
     {
-        //char temp[40];
-        /* Success */
-        //htdbgprintf("%s() IPv6 Addr:%s\n", __func__, inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.a.addr6), temp,sizeof(temp)));
+        if(ip_prefer == IP_V4)
+        {
+            htdbgprintf("test IPv4 check\n");
 #if LWIP_IPV4
-		sess->hcs_addr.type = AF_INET6;
+
+        /* Check whether it is IPv4 address */
+#if LWIP_IPV6
+            if ((inet_pton(AF_INET, (char *)sess->hcs_host, (void *)&(sess->hcs_addr.u_addr.ip4))) == 1)
+#else
+        	if ((inet_pton(AF_INET, (char *)sess->hcs_host, (void *)&(sess->hcs_addr))) == 1)
 #endif
-        return HTTPC_OK;
+            {
+                /* Success */
+#if LWIP_IPV6
+                htdbgprintf("%s() IPv4 Addr: 0x%08x\n", __func__, sess->hcs_addr.u_addr.ip4);
+                sess->hcs_addr.type = AF_INET;
+#else
+        		htdbgprintf("%s() IPv4 Addr: 0x%08x\n", __func__, sess->hcs_addr);
+#endif
+                return HTTPC_OK;
+            }
+#endif
+            ip_prefer =  IP_V6;
+            ip_prefer_check_num++;
+            if(ip_prefer_check_num == 2)
+                break;
+        }
+
+        if(ip_prefer == IP_V6)
+        {
+             htdbgprintf("test IPv6 check\n");
+#if LWIP_IPV6
+            /* Check whether it is IPv6 address */
+#if LWIP_IPV4
+            if ((inet_pton(AF_INET6, (char *)sess->hcs_host, (void *)&(sess->hcs_addr.u_addr.ip6))) == 1)
+#else
+        	if ((inet_pton(AF_INET6, (char *)sess->hcs_host, (void *)&(sess->hcs_addr))) == 1)
+#endif
+            {
+                char temp[46];
+                inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.u_addr.ip6), temp,sizeof(temp));
+                /* Success */
+                //htdbgprintf("%s() IPv6 Addr:%s\n", __func__, inet_ntop(AF_INET6, (void *)&(sess->hcs_addr.a.addr6), temp,sizeof(temp)));
+#if LWIP_IPV4
+                htdbgprintf("%s() IPv6 Addr:%s\n", __func__, temp);
+
+        		sess->hcs_addr.type = AF_INET6;
+#else
+        		htdbgprintf("%s() IPv6 Addr: 0x%08x\n", __func__, sess->hcs_addr);
+#endif
+                return HTTPC_OK;
+            }
+#endif
+           ip_prefer =  IP_V4;
+           ip_prefer_check_num++;
+           if(ip_prefer_check_num == 2)
+              break;
+        }
+        
     }
-#endif
     /* We will try to use IPV4 dns server if present
      * Only if IPv6 DNS server is alone there, use IPv6 DNS server
      */
 
     htdbgprintf("%s(): need dns to resolve.\n", __func__);
-    err_enum_t err = dns_gethostbyname((char *)sess->hcs_host, &ipaddr, httpc_dns_found, &ipaddr);
+    //err_enum_t err = dns_gethostbyname((char *)sess->hcs_host, &ipaddr, httpc_dns_found, &ipaddr);
+    u8_t dns_addrtype = LWIP_DNS_ADDRTYPE_DEFAULT;
+#if LWIP_IPV4 && LWIP_IPV6
+    if(sess->ipprefer == IP_V6)
+        dns_addrtype = LWIP_DNS_ADDRTYPE_IPV6_IPV4;
+#endif
+    htdbgprintf("test dns_addrtype:%d\n", dns_addrtype);
+    err_enum_t err = dns_gethostbyname_addrtype((char *)sess->hcs_host, &ipaddr, httpc_dns_found, &ipaddr, dns_addrtype);
 
     if(err == ERR_OK)
     {
@@ -526,7 +563,8 @@ httpclient_sess* http_client_newsess(
                     void*               arg,
                     uint16_t            httpc_max_body_length,
                     uint16_t            httpc_max_header_length,
-                    uint16_t            rxbufsize)
+                    uint16_t            rxbufsize,
+                    uint16_t            ip_prefer)
 {
     httpclient_sess* session = NULL;
     uint32 i;
@@ -560,9 +598,10 @@ httpclient_sess* http_client_newsess(
     session->cb_arg = arg;
     session->hcs_buf_len = httpc_max_body_length;
     session->hcs_headerbuf_len = httpc_max_header_length;
+    session->ipprefer = ip_prefer;
     qurt_mutex_unlock(g_httpc_ctxt->lh);
     
-    htdbgprintf("HTTPC: timeout%d\n",session->timeout);
+    htdbgprintf("HTTPC timeout:%d,ip prefer:%d\n",session->timeout,session->ipprefer);
 
     if ((session->hcs_buffer = malloc(session->hcs_buf_len)) == NULL)
     {
@@ -679,7 +718,7 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
 #elif LWIP_IPV6
 	family = AF_INET6;
 #endif
-
+     htdbgprintf("test family:%d\n",family);
     /* Create a socket if it is not created already */
     if (sess->hcs_socket == INVALID_SOCKET)
     {
@@ -696,13 +735,6 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
     }
     sock = sess->hcs_socket;
     setsockopt(sess->hcs_socket, SOL_SOCKET, O_NONBLOCK, NULL, 0);
-#if 0
-    int rlt= fcntl(sock, F_GETFL, O_NONBLOCK);
-    if (rlt < 0) {
-        printf("sstest set non-blocking mode failed :%d\n",rlt);
-        close(sock);
-    }
-#endif
 
 #if LWIP_IPV4
     if (AF_INET == family)
@@ -779,23 +811,6 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
 
     error = connect(sock, to, tolen);
     
-#if 0
-    struct timeval timeout;
-    timeout.tv_sec = 2;
-    timeout.tv_usec = 0;
-    
-    fd_set writefds;
-    FD_ZERO(&writefds);
-    FD_SET(sock, &writefds);
-
-    int result = select(sock + 1, NULL, &writefds, NULL, &timeout);
-    if (result > 0 && FD_ISSET(sock, &writefds)) {
-      printf("sstest conn succ\n");
-    } else {
-      printf("sstest conn fail\n");
-      close(sock);
-    }
-#endif
     
     if(error)
     {
@@ -1832,10 +1847,16 @@ int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const
                 memcpy(pktbuf + offset, sess->hcs_buffer, sess->hcs_bufoffset);
                 offset += sess->hcs_bufoffset;
             }
-            else
+            else if(chunk_data)
             {
                 memcpy(pktbuf + offset, chunk_data, chunk_size);
                 offset += chunk_size;
+            }
+            else
+            {
+                free(pktbuf);
+                htdbgprintf("%s %d invalid data\n", __func__, __LINE__);
+                return HTTPC_ERR_INVALID_PARAM;
             }
             
         }

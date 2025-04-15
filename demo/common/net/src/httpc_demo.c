@@ -933,6 +933,7 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
     int body_size = BODY_BUFFER_SIZE;
     int header_size = HEADER_BUFFER_SIZE;
     int rxbuffer_size = RX_BUFFER_SIZE;
+    uint16_t ip_prefer = DEFAULT_IP_PREFER;
     qbool_t secure_session = false;
     struct http_client_demo_s* arg = NULL;
 
@@ -1069,6 +1070,16 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                     rxbuffer_size = (Parameter_List[i].Integer_Value < RX_BUFFER_SIZE) ?
                                     RX_BUFFER_SIZE : Parameter_List[i].Integer_Value;
                     break;
+                 case 'v':   /* -v v4*/
+                    i++;
+                    if (!Parameter_List[i].Integer_Is_Valid|| Parameter_List[i].Integer_Value < IP_V4 ||Parameter_List[i].Integer_Value > IP_V6)
+                    {
+                        HTTPC_PRINTF("%s line %d: Invalid ip type: %s\n", __func__, __LINE__, Parameter_List[i].String_Value);
+                        return QAPI_ERROR;
+                    }
+                    
+                    ip_prefer = Parameter_List[i].Integer_Value;
+                    break;
 
                 default:
                     HTTPC_PRINTF("%s line %d: Unknown option: %s\n", __func__, __LINE__, Parameter_List[i].String_Value);
@@ -1097,7 +1108,8 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                                            (void *)arg,
                                            body_size,
                                            header_size,
-                                           rxbuffer_size);
+                                           rxbuffer_size,
+                                           ip_prefer);
     }
 
     else
@@ -1109,7 +1121,8 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                                            (void *)arg,
                                            body_size,
                                            header_size,
-                                           rxbuffer_size);
+                                           rxbuffer_size,
+                                           ip_prefer);
     }
 
     if (arg->client == NULL)

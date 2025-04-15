@@ -79,6 +79,13 @@
 #define  min(a,b)    (((a) <= (b)) ? (a) : (b))
 #endif
 
+#define DEFAULT_IP_PREFER     0  //IP_V4
+
+typedef enum{
+    IP_V4,
+    IP_V6
+}ip_type;
+
 typedef enum{
     CACHE_INVALID,
     CACHE_VALID,
@@ -237,6 +244,7 @@ typedef struct httpclient_sess_s {
                                                                  * "www.example.com:22" if hcs_host is a proxy
                                                                  */
     uint32_t            isHttps;
+    uint16_t            ipprefer;
     HTTPC_REQUEST_CMD_E hcs_command;
     SSLContext_t        *sslCtx;
     qapi_Ssl_Cert_t     *sslCert;
@@ -310,7 +318,8 @@ httpclient_sess* http_client_newsess(
         void* arg,
         uint16_t httpc_max_body_length,
         uint16_t httpc_max_header_length,
-        uint16_t rxbufsize);
+        uint16_t rxbufsize,
+        uint16_t ip_prefer);
 int http_client_freesess(httpclient_sess *sess);
 int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port);
 int http_client_disconnect(httpclient_sess *sess);
