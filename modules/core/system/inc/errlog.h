@@ -160,8 +160,7 @@ typedef struct tlv_s
 /* -----------------------------------------------------------------------
 **                  MISC0_HEADER
 ** ----------------------------------------------------------------------- */
-#define WIFi_FW_COREDUMP_MAGIC_NUMBER_0 0xA8BC41F7 // before first crash
-#define WIFi_FW_COREDUMP_MAGIC_NUMBER_1 0xA8BC41F8 // after first crash
+#define WIFi_FW_COREDUMP_MAGIC_NUMBER 0xA8BC41F7 // after first crash
 #define MISC0_MAGIC_NUM 0x98989898     // validation verification
 #define MISC0_VERSION 0x1
 #define MISC0_PARTITION_TOTAL_SIZE 0x1000; /* 4KB */

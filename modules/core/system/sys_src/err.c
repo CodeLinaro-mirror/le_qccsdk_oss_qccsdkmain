@@ -435,19 +435,16 @@ void err_fatal_handler (void)
     /* check if overwrite the coredump info */
     ret = nt_rram_read(WIFI_FW_COREDUMP_HEADER_START_ADDRESS, &wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
 
-    if (ret == 0 && (wifi_fw_coredump_header.magic_num != WIFi_FW_COREDUMP_MAGIC_NUMBER_1))
+    if (ret == 0 && (wifi_fw_coredump_header.magic_num != WIFi_FW_COREDUMP_MAGIC_NUMBER))
     {
       /* write the coredump into the rram */
       nt_rram_write(WIFI_FW_COREDUMP_ADDR, coredump, sizeof(coredump_type));
 
       /* if it is the first time of crash */
-      if (wifi_fw_coredump_header.magic_num == WIFi_FW_COREDUMP_MAGIC_NUMBER_0)
-      {
-        wifi_fw_coredump_header.magic_num = WIFi_FW_COREDUMP_MAGIC_NUMBER_1;
+      wifi_fw_coredump_header.magic_num = WIFi_FW_COREDUMP_MAGIC_NUMBER;
 
-        /* for next time, the coredump info will not be saved */
-        nt_rram_write(WIFI_FW_COREDUMP_HEADER_START_ADDRESS,  &wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
-      }
+      /* for next time, the coredump info will not be saved */
+      nt_rram_write(WIFI_FW_COREDUMP_HEADER_START_ADDRESS,  &wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
     }
     /* system reboot */
     nt_system_sw_reset();
