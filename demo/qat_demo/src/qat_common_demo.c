@@ -193,7 +193,7 @@ static QAT_Command_Status_t Extend_Command_DFU(uint32_t Op_Type, uint32_t Parame
 */
 static QAT_Command_Status_t Extend_Command_Info(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
-	heap_status hs;
+	heap_status hs={0};
 	qapi_Time_t tm;
 	char *buffer;
 	QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
@@ -224,7 +224,7 @@ static QAT_Command_Status_t Extend_Command_Info(uint32_t Op_Type, uint32_t Param
 		    return rc;
 	    }
 		
-		snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+INFO:%d,%d,%d,%d,%d,%d"
+		snprintf(buffer, VERSION_STR_BUFFER_LENGTH, "+INFO:%d,%d,%d,%d,%d,%d\r\n"
 		, pmu_ts_get_current_temperature(), tv_monitor_get_vbat_mV()
 		, hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes); 
 		
