@@ -311,11 +311,15 @@ static bool parse_eth_frame_in_whitelist(const uint8_t *frame, uint16_t frame_le
     uint16_t dst_port = ntohs(udp->dest);
 
     // whitelist for UDP
-
-    printf("type:0x%x\n",PP_HTONS(eth->type));
-    printf("UDP Source Port: %d\n", src_port);
-    printf("UDP Destination Port: %d\n", dst_port);
-    
+    for(uint16_t i =0;i<UDP_WHITELIST_LEN;i++)
+    {
+        if(udp_whitelist_arr[i] && dst_port == udp_whitelist_arr[i])
+        {
+            printf("type:0x%x\n",PP_HTONS(eth->type));
+            printf("UDP Source Port: %d\n", src_port);
+            printf("UDP Destination Port: %d\n", dst_port);
+        }
+    }
 
     return TRUE;
 }
@@ -369,8 +373,8 @@ bool wakeup_cb(uint16_t type, bool bm_cast,void* pbuf,uint16_t len)
     const struct ip_hdr *iphdr;
     const struct udp_hdr *udphdr;
 
-    printf("type:0x%x\n",type);
-    printf("bc_delta_time:%d, bc_after_bcn:%d, bcmc_len:%d \n",(uint32_t) bc_delta_time, (uint32_t) bc_after_bcn, (uint32_t)bcmc_len );
+    // printf("type:0x%x\n",type);
+    // printf("bc_delta_time:%d, bc_after_bcn:%d, bcmc_len:%d \n",(uint32_t) bc_delta_time, (uint32_t) bc_after_bcn, (uint32_t)bcmc_len );
     bc_after_bcn =0;
     bcmc_len =0;
     bc_delta_time =0;
@@ -395,7 +399,7 @@ bool wakeup_cb(uint16_t type, bool bm_cast,void* pbuf,uint16_t len)
 
 static qapi_Status_t bcmc_filter_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-    if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+    if(Parameter_Count != 2 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
@@ -403,7 +407,7 @@ static qapi_Status_t bcmc_filter_enable(uint32_t Parameter_Count, QAPI_Console_P
 
     if(Parameter_List[0].Integer_Value )
     {
-        qapi_bmps_bcmc_rx_filter_cb_register(wakeup_cb_bcmc_filter_dtim, wakeup_cb);
+        qapi_bmps_bcmc_rx_filter_cb_register(wakeup_cb_bcmc_filter_dtim, Parameter_List[1].Integer_Value ? wakeup_cb:NULL);
     }
     return QAPI_OK;
 }
@@ -529,7 +533,7 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
 #ifdef CONFIG_CPR_ENABLE
     {cpr_enable, "cpr_enable", "<1/0>", "Enable CPR for Power save (This qcli is only for debugging. CPR enabled for default)\n"},
 #endif //CONFIG_CPR_ENABLE
-    {bcmc_filter_enable, "bcmc_filter_enable", "<1|0>", "enable or disable the bcmc filter\n"},
+    {bcmc_filter_enable, "bcmc_filter_enable", "<1|0> <log enable:1|0>", "enable or disable the bcmc filter\n"},
     {bcmc_filter_list , "bcmc_filter_list", "\n\nUsage: bcmc_filter_list -a [1|0] -u [dst udp port] -q\n\n", "bcmc_filter_list"},
 };
 
