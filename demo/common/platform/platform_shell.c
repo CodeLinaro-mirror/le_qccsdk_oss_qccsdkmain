@@ -868,6 +868,8 @@ static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_C
 static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     coredump_type coredump_buf;
+    wifi_fw_coredump_header_t wifi_fw_coredump_header;
+
     int ret = 0;
 
     if ( Parameter_Count != 1 )
@@ -997,15 +999,29 @@ static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QA
 
         if (Parameter_List[0].Integer_Value == 0)
         {
+            /* clean coredump info, the next crash info will overwrite the RRAM */
+            ret = nt_rram_read(WIFI_FW_COREDUMP_HEADER_START_ADDRESS, &wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
+            if (ret == QAPI_OK && wifi_fw_coredump_header.magic_num == WIFi_FW_COREDUMP_MAGIC_NUMBER)
+            {
+                /* set magic_num to 0 */
+                wifi_fw_coredump_header.magic_num = 0;
+
+                /* for next time, the coredump info will not be saved */
+                nt_rram_write(WIFI_FW_COREDUMP_HEADER_START_ADDRESS,  &wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
+            }
+            else if (ret != QAPI_OK)
+            {
+                printf("fail to clean coredumpinfo\n");
+            }
             memset(&coredump_buf, 0, sizeof(coredump_type));
             ret = qapi_rram_write(WIFI_FW_COREDUMP_PARTID, WIFI_FW_COREDUMP_ADDRESS_OFFSET, (uint8_t *)&coredump_buf, sizeof(coredump_type));
             if (ret == QAPI_OK)
             {
-                printf("coredumpinfo is cleared\n");
+                printf("coredumpinfo is erased\n");
             }
             else
             {
-                printf("fail to clear coredumpinfo\n");
+                printf("fail to erase coredumpinfo\n");
             }
         }
     }
