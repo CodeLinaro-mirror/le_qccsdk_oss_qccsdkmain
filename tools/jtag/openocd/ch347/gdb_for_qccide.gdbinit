@@ -85,8 +85,13 @@ define coreregs
       set $r3=coredump->arch->regs->name->regs[3]
       set $r12=coredump->arch->regs->name->regs[12]
       set $lr=coredump->arch->regs->name->lr
-      set $pc=coredump->arch->regs->name->pc
       set $sp=coredump->arch->regs->name->sp+0x20
+
+      if (coredump->arch->regs->name->pc==0)
+        set $pc=coredump->arch->regs->name->lr
+      else
+        set $pc=coredump->arch->regs->name->pc
+      end
     end
   end
 end
