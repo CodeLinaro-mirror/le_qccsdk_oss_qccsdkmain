@@ -61,12 +61,12 @@ def apply_patches():
         subprocess.run(cmd.split())
     os.chdir(cur_dir)
 
-def build_matter(app_type):
+def build_matter(app_type, include_dir):
     example_root = os.path.join(matter_root, 'examples', app_type, 'fermion') 
     os.chdir(example_root)
-    cmd = "gn gen output"
+    cmd = "gn gen output --args='fermion_output=\"{}\"'".format(include_dir)
     logging.info(cmd)
-    subprocess.run(cmd.split())
+    os.system(cmd)
 
     if (app_type == 'lighting-app'):
         cmd = "ninja -C output libLight"
@@ -82,6 +82,7 @@ def build_matter(app_type):
 def main():
     set_log()
     app_type = sys.argv[1]
+    include_dir = sys.argv[2]
     if app_type not in ['lighting-app', 'light-switch-app']:
         logging.info("Supported demo: lighting-app, light-switch-app")
         sys.exit(-1)
@@ -94,7 +95,7 @@ def main():
     else:
         copy_matter_files(app_type)        
         apply_patches()
-        build_matter(app_type)
+        build_matter(app_type, include_dir)
 
 if __name__ == "__main__":
     main()
