@@ -220,7 +220,7 @@ def path_to_app(app_spec):
 
 def main():
     tool_description = \
-"""
+r"""
 Generate download table for nvm_programmer to program.
 Step 1: parse the config file download_config.xml. Users can change "config" of this file about
         the upgraded memory loayout, for exmaple the File system size, RAM DUMP region size, USER
