@@ -279,7 +279,6 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
 				p_cxt->connected = false;
 				info_printf("devId %d Disconnected MAC addr %02x:%02x:%02x:%02x:%02x:%02x \n",
 					p_cxt->active_device, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-                qapi_WLAN_Disconnect(deviceId);
 			} else {
 				info_printf("REF_STA Disconnected MAC addr %02x:%02x:%02x:%02x:%02x:%02x devId %d\r\n",
                      mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], p_cxt->active_device);
