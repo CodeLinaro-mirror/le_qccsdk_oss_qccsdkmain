@@ -8,6 +8,10 @@ import("${chip_root}/src/platform/device.gni")
 
 assert(chip_device_platform == "fermion")
 
+declare_args() {
+  fermion_output = ""
+}
+
 config("fermion_config"){
   include_dirs = [
     "${fermion_root}/build/freertos/common/config_files",
@@ -21,7 +25,7 @@ config("fermion_config"){
     "${fermion_root}/../comp/mbedtls/include",
     "${fermion_root}/../comp/lwip/src/include",
     "${fermion_root}/../comp/lwip/src/portable",
-    "${fermion_root}/output/qcc730v2_evb11_hostless/FERMION_MATTER_DEMO/DEBUG",
+    "${fermion_output}",
     "${fermion_root}/modules/fs",
     "${fermion_root}/lib/libc/include",
   ]
