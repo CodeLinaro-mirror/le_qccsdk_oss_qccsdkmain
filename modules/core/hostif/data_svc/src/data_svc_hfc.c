@@ -316,6 +316,8 @@ static int hfc_tx_raw_ethernet(uint8_t *buff, int len)
 {
     int ret = 0;
 	struct netif *netif = netif_find("st1");
+  if(netif == NULL)
+	  netif = netif_find("ap2");
 	struct pbuf *pb = (struct pbuf*)buff;
 
 	if (netif) {
