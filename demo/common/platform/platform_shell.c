@@ -26,6 +26,7 @@
 #endif
 #include "qapi_rram.h"
 #include "nt_hw.h"
+#include "nt_wdt_api.h"
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
 #include "err.h"
 #include "errlog.h"
@@ -35,6 +36,8 @@ extern unsigned int __rram_region_end_address;
 int g_coredump_under_dtim_test_index = 0;
 static uint32_t bmps_start;
 static nt_osal_timer_handle_t bmps_timer;
+extern uint32_t g_wdog_stop_feeding_flag;
+
 
 #define COREDUMP_TEST_INVALID_ADDRESS (__rram_region_end_address + 0x1000)
 #endif
@@ -319,7 +322,8 @@ qapi_Status_t platform_demo_free(uint32_t Parameter_Count, QAPI_Console_Paramete
 qapi_Status_t platform_demo_watchdog_reset(__attribute__((__unused__)) uint32_t parameters_count, __attribute__((__unused__)) QAPI_Console_Parameter_t * parameters)
 {
     //trigger watchdog rereset
-    QAPI_FATAL_ERR(0,0,0);
+    //QAPI_FATAL_ERR(0,0,0);
+    g_wdog_stop_feeding_flag = 1;
 	
     return QAPI_OK;
 }

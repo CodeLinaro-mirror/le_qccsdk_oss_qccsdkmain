@@ -81,6 +81,7 @@ extern GPIO_Config_t gpio_config;
 #ifdef CONFIG_BOARD_QCC730_QSPI_ENABLE
 #include "ferm_flash.h"
 #endif
+extern uint32_t g_wdog_stop_feeding_flag;
 
 // -------------------------------------------------------------------
 // local fns control
@@ -1194,8 +1195,10 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
 		_socpm_systick_on();
 		/* Re-enable interrupts */
 		NT_SOCPM_IRQ_ENABLE();
-		
-        nt_watchdog_bark_timer_reset();
+		if (g_wdog_stop_feeding_flag == 0)
+        {
+            nt_watchdog_bark_timer_reset();
+        }
 
     }
 #endif /* SUPPORT_SLEEP_DEBUG_UNIT_TEST_CMD */
@@ -1287,8 +1290,10 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
 
         /* This function performs sleep recipe as per the sleep mode specified */
         vPreSleepProcessing(_socpm_slp_mode);
-
-        nt_watchdog_timer_freeze();
+        if (g_wdog_stop_feeding_flag == 0)
+        {
+            nt_watchdog_timer_freeze();
+        }
 
         /* Save current context and call WFI */
         _socpm_ctxt_save();
@@ -1368,7 +1373,10 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         // GC:TODO
         NT_SOCPM_IRQ_ENABLE();
 
-        nt_watchdog_bark_timer_reset();
+        if (g_wdog_stop_feeding_flag == 0)
+        {
+            nt_watchdog_bark_timer_reset();
+        }
 
 #if 0
         NT_LOG_PRINT(DPM, ERR,"slp:%dms  slp:%dus aonTm:%dus\n\r",

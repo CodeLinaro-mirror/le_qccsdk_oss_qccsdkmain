@@ -29,6 +29,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #endif
 uint32_t bark_time;
 uint32_t bite_time;
+uint32_t g_wdog_stop_feeding_flag = 0;
 static void (*_wdt_callback_fnc_ptr)(void);
 #define WDOG_TIMER_NAME "wdog_timer"
 TimerHandle_t wdt_timer_handle;
@@ -354,9 +355,12 @@ void nt_watchdog_timer_call_back()
 #if NT_WATCH_DOG_DEBUG
     PAL_Console_Write(strlen(nt_wdog_sw_pet_str), nt_wdog_sw_pet_str);
 #endif
-	vPortEnterCritical();
-    nt_watchdog_bark_timer_reset();
-	vPortExitCritical();
+	if (g_wdog_stop_feeding_flag == 0)
+	{
+		vPortEnterCritical();
+    	nt_watchdog_bark_timer_reset();
+		vPortExitCritical();
+	}	
 }
 
 void nt_watchdog_timer_bark_call_back()
@@ -414,6 +418,7 @@ void nt_watchdog_timer_restart(void)
 }
 
 #else
+uint32_t g_wdog_stop_feeding_flag = 0;
 void nt_watchdog_timer_init(void)
 {
 }
