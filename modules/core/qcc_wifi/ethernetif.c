@@ -99,7 +99,7 @@ err_t nt_low_level_output(struct netif *netif, struct pbuf *p);
  *
  * @param none
  */
-static void
+ void
 nt_notify_top_down_wakeup_required()
 {
     /* Doing a Tops down wake up to process the packet while transitioning 
@@ -183,11 +183,11 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
 
 	(void)netif;/* Avoid compiler warning*/
 
-#ifdef SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP
-	nt_notify_top_down_wakeup_required();
-#endif /* SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP */
-    /* Wait till device is up */
-    nt_dpm_wait_till_device_wakeup();
+// #ifdef SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP
+// 	nt_notify_top_down_wakeup_required();
+// #endif /* SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP */
+//     /* Wait till device is up */
+    // nt_dpm_wait_till_device_wakeup();
 
 	if (p->tot_len > (NT_DPM_MAC_MTU_SIZE + sizeof(ethernet_header_t))) {
 		NT_LOG_DPM_ERR("packet total length greater than MTU size ", p->tot_len,0,0);
@@ -263,7 +263,6 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
 #if defined(FEATURE_STA_ECSA) || defined(FEATURE_AP_ECSA)
 	ecsa_active_with_blocking_traffic = is_ecsa_active_with_blocking_traffic();
 #endif
-	nt_dpm_sw_set_tx_status(TRUE);
 #ifdef SUPPORT_TWT_STA
     if ((pnDpA->ps_ctrl.dpm_sleep == 1) && (nt_twt_is_negotiated() == FALSE) && (ecsa_active_with_blocking_traffic == FALSE) && (ptsm_active == FALSE))		
 #else 
