@@ -183,11 +183,11 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
 
 	(void)netif;/* Avoid compiler warning*/
 
-// #ifdef SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP
-// 	nt_notify_top_down_wakeup_required();
-// #endif /* SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP */
-//     /* Wait till device is up */
-    // nt_dpm_wait_till_device_wakeup();
+#ifdef SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP
+	nt_notify_top_down_wakeup_required();
+#endif /* SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP */
+    /* Wait till device is up */
+    nt_dpm_wait_till_device_wakeup();
 
 	if (p->tot_len > (NT_DPM_MAC_MTU_SIZE + sizeof(ethernet_header_t))) {
 		NT_LOG_DPM_ERR("packet total length greater than MTU size ", p->tot_len,0,0);
