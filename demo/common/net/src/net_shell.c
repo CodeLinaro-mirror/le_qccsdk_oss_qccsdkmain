@@ -40,6 +40,7 @@
 #ifdef CONFIG_MQTT_CLIENT_DEMO
 #include "mqtt_client_demo.h"
 #endif
+#include "usd_demo.h"
 
 #ifdef CONFIG_SNTP_CLIENT_DEMO
 #include "lwip/apps/sntp.h"
@@ -1195,8 +1196,10 @@ const QAPI_Console_Command_t net_shell_cmds[] =
 							"sntpc [start|stop]\n" \
 							"sntpc setOpMode <0|1>\n" \
 							"sntpc setServer <IP addr|name> [id]",
-								"\nSNTP client start or stop, configure"}
+								"\nSNTP client start or stop, configure"},
 #endif
+    {usd_demo, "usd", "\n\nType \"usd\" to get more info on usage\n",
+									"\nUSD Client: Set up and configure USD Telemetry Transport client"},
 };
 
 const QAPI_Console_Command_Group_t net_shell_cmd_group = {NET_SHELL_GROUP_NAME, sizeof(net_shell_cmds) / sizeof(QAPI_Console_Command_t), net_shell_cmds};
