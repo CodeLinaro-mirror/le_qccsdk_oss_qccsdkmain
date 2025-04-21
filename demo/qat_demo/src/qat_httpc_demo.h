@@ -14,7 +14,7 @@
  * Parameters define
  *-----------------------------------------------------------------------*/
 #define HTTPC_COMMAND_LIST_SIZE                      (sizeof(QAT_HTTPC_Command_List) / sizeof(QAT_Command_t))
-
+#define QAT_ATCMD_BUF_LEN	                          1400
 #define VERSION_STR_BUFFER_LENGTH 					  256
 #define INFO_STR_BUFFER_LENGTH					      256
 #define HTTP_STR_BUFFER_LENGTH					      256
@@ -26,7 +26,8 @@
 #define QAT_HTTPC_CLIENT_INDEX                        1
 #define HTTP_HOST_STR_BUFFER_LENGTH					  50
 #define HTTP_BODY_BUFFER_SIZE                         10000
-#define HTTP_WAIT_RSP_TIME                            10   
+#define HTTP_WAIT_RSP_TIME                            100  //10s
+#define HTTP_WAIT_RSP_CYCLE_INTERVAL                  100  //ms
 #define FILE_PATH_STR_BUFFER_LENGTH                   32
 #define HTTP_URL_STR_BUFFER_LENGTH                    256
 #define HTTPS_DEFAULT_PORT                            443
@@ -56,6 +57,7 @@ struct at_https_global_config {
     uint32_t http_port;
     uint32_t https_port;
     uint8_t httpc_ip_prefer;
+    uint8_t is_pre_buffer;
     uint32_t url_size;
     char *url;
 
@@ -105,6 +107,8 @@ typedef enum {
 	QAT_NET_CFG_HTTP_PORT,
 	QAT_NET_CFG_HTTPS_PORT,            
 	QAT_NET_CFG_IP_PREFER,
+	QAT_NET_CFG_PRE_ACCLOCATE_SSL_BUFFER,
+	QAT_NET_CFG_CACHE_DATA,
 	QAT_NET_CFG_MAX
 } net_cfg_type;
 
@@ -112,6 +116,12 @@ typedef enum{
     IP_V4,
     IP_V6
 }ip_type;
+
+typedef enum {
+    QAT_SSL_PRE_BUFFER_INITIAL,
+    QAT_SSL_PRE_BUFFER_ALLOCATE,
+    QAT_SSL_PRE_BUFFER_RELEASE
+} qat_pre_buffer_type;
 
 
 /*-------------------------------------------------------------------------
@@ -122,6 +132,7 @@ static int at_arg_is_null(const char *arg);
 int at_arg_get_number(const char *arg, int *value);
 int at_arg_get_hexstr_number(const char *arg, uint32_t *value);
 int at_arg_get_string(const char *arg, char *string, int max);
+qapi_Status_t at_httpc_stop();
 qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf);
 qapi_Status_t at_httpc_getsize (char *url, int32_t timeout);
 qapi_Status_t at_httpc_get (char *url, int32_t timeout);

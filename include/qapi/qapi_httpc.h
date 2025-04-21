@@ -166,7 +166,9 @@ qapi_Status_t qapi_Net_HTTPc_Stop(void);
  * @param[in] httpc_Rx_Buffer_Size   Size in bytes of RX buffer for HTTP response.
  *                                   If size is less than 512, system will use 512.
  * @param[in] ip_prefer   prefer to select an ip type, ipv4 or ipv6
- *           
+ * 
+ * @param[in] ssl_Cfg   ssl_pre_buffer parameters.
+ *
  * @return
  * On success, a non-NULL handle is returned; on error, NULL is returned.
  */
@@ -178,7 +180,8 @@ qapi_Net_HTTPc_handle_t qapi_Net_HTTPc_New_sess2(
         uint16_t                httpc_Max_Body_Length,
         uint16_t                httpc_Max_Header_Length,
         uint16_t                httpc_Rx_Buffer_Size,
-        uint16_t                ip_prefer);
+        uint16_t                ip_prefer,
+        uint16_t                ssl_pre_buffer);
 
 /**
  * @brief Starts a new a HTTP client session.
@@ -430,6 +433,13 @@ qapi_Status_t qapi_Net_HTTPc_Send_Data(qapi_Net_HTTPc_handle_t handle, const cha
   * When all data is sent, 0 is returned; on error, non-zero is returned.
   */
 qapi_Status_t qapi_Net_HTTPc_Send_Chunk(qapi_Net_HTTPc_handle_t handle, qapi_Net_HTTPc_Method_e cmd, const char *URL, const char *chunk, uint32_t chunk_size, uint8_t chunk_flag, int32_t total_size);
+
+ /**
+  * @brief Rlease Pre-allocate buffer.
+  *
+  * @return On success, 0 is returned. On error, QAPI_NET_STATUS_HTTPC_xxx is returned.
+  */
+ qapi_Status_t qapi_Net_HTTPc_Rlease_Pre_allocate_buffer(void);
 
  /** @} */ /* end_addtogroup qapi_networking_httpc */
 
