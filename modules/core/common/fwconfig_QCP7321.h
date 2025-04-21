@@ -127,6 +127,7 @@
 #define	UART_DRV
 #endif
 
+#define CONFIG_QTIMER
 #ifdef CONFIG_QTIMER
 #define QTMR_SUPPORT
 #define	QTMR_DEMO
@@ -134,6 +135,9 @@
 #define	QTMR_HAL
 #endif
 
+#define CONFIG_PROF_SHELL 1
+
+#define CONFIG_PROF
 #ifdef CONFIG_PROF
 #define PROF_DEMO
 #ifdef PROF_DEMO
