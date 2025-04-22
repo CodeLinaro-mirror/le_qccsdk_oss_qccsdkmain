@@ -14,6 +14,7 @@
 #ifdef CONFIG_MGMT_FILTER_DEMO
 #include "mgmt_filter_demo.h"
 #endif
+
 #ifdef FERMION_SILICON
 extern uint32_t UART_Send_direct(char *txbuf,uint32_t buflen);
 #define UART_SEND_DIRECT(str)   UART_Send_direct((str),strlen(str))

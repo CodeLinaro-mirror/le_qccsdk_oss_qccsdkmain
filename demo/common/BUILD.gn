@@ -207,21 +207,6 @@ source_set("common") {
         include_dirs += ["//modules/net/mqtt_client"]
     }
 
-    include_dirs += ["../../../comp/wifi/core/wifi/mlm/include",
-        "../../../comp/wpa_supplicant_8/wpa_supplicant/src/utils",
-        "../../../comp/wpa_supplicant_8/wpa_supplicant/src/crypto/",
-        "../../../comp/wpa_supplicant_8/wpa_supplicant/src/port/supplicant_main",
-        "../../modules/core/common/",
-        "../../lib/misc/inc/",
-        "../../modules/hal/qcc730/qtmr/"]
-
-    sources += [
-        "net/src/usd_demo.c",
-        "net/src/nan_de.c",
-        "../../../comp/wpa_supplicant_8/wpa_supplicant/src/utils/eloop.c",
-        "../../../comp/wpa_supplicant_8/wpa_supplicant/src/utils/common.c",
-    ]
-
     if (CONFIG_SNTP_CLIENT) { 
         sources += ["//modules/net/sntp/sntp.c",]
     }
