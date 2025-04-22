@@ -1362,9 +1362,9 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         socpm_slp_clk_cal_postawake_activities();
 #endif /* SLEEP_CLK_CAL_IN_SLEEP_MODE */
 
-#ifdef SUPPORT_SW_NON_POLLED_RRI
-            nt_pm_sync_non_polled_rri_completion(gdevp);
-#endif /* SUPPORT_SW_NON_POLLED_RRI */
+// #ifdef SUPPORT_SW_NON_POLLED_RRI
+//             nt_pm_sync_non_polled_rri_completion(gdevp);
+// #endif /* SUPPORT_SW_NON_POLLED_RRI */
 
         // Reenable systick
         _socpm_systick_on();
