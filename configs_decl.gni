@@ -27,8 +27,8 @@ declare_args() {
     CONFIG_DEBUG_STATS = false
     CONFIG_DPM_STATS = false
     CONFIG_RA_DEBUG = false
-    CONFIG_QTIMER = true
-    CONFIG_PROF = true
+    CONFIG_QTIMER = false
+    CONFIG_PROF = false
     CONFIG_WPS = false
     CONFIG_P2P = false
     CONFIG_COEX_MCI = false
@@ -48,7 +48,7 @@ declare_args() {
     CONFIG_GPIO_SHELL = false
     CONFIG_UART_SHELL = false
     CONFIG_UART_QAPI = false
-    CONFIG_PROF_SHELL = true
+    CONFIG_PROF_SHELL = false
     CONFIG_WIFI_SHELL = false
     CONFIG_NET_SHELL = false
     CONFIG_NET = true
