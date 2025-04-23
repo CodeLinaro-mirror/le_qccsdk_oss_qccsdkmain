@@ -76,6 +76,10 @@ extern volatile debug_log_elem debugBuffer;
 extern volatile size_t debugBufferPos;
 extern volatile size_t g_SPI_host_read_pos;
 #endif // SUPPORT_FERMION_LOGGER
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE
+extern uint8_t get_active_device();
+extern int32_t wlan_get_mac_address(uint8_t , uint8_t* );
+#endif
 
 /*-------------------------------------------------------------------------
  * Static Function Definitions
@@ -89,6 +93,10 @@ extern volatile size_t g_SPI_host_read_pos;
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
 void wifi_fw_defaults_table_init(void)
 {
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE
+    uint32_t length = 6;
+	  uint8_t deviceId = 0;
+#endif
     /* Table that is to be exposed to Apps systems to be initialized here */
     memset(&g_fw_defaults_table, 0, sizeof(wifi_fw_defaults_t));
 
@@ -99,10 +107,15 @@ void wifi_fw_defaults_table_init(void)
     g_fw_defaults_table.wifi_fw_maj_ver = WIFI_FW_MAJOR_VER;
     g_fw_defaults_table.wifi_fw_min_ver = WIFI_FW_MINOR_VER;
 
+#ifdef CONFIG_QCSPI_HFC_ETH_ENABLE
+	  deviceId = get_active_device();
+    wlan_get_mac_address(deviceId, &g_fw_defaults_table.mac_addr[0]);
+#else
     nt_get_macid(&g_fw_defaults_table.mac_addr[0]);
 	/*get the mac address of wlan st1 device*/
     g_fw_defaults_table.mac_addr[IEEE80211_ADDR_LENGTH-1]+=1;
-	
+#endif
+    
     g_fw_defaults_table.reserved1 = 0;
 
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)

@@ -159,7 +159,15 @@ source_set("common") {
             "ota/plugins/tftp/ota_tftp.c",
         ]
     }
-
+    
+    if(CONFIG_QAT_OTA_DEMO){
+        include_dirs += [
+            "ota/plugins/http",
+        ]
+        sources += [
+            "ota/plugins/http/ota_http.c",
+        ]
+    }
     if (CONFIG_MPU_DEMO) {
         include_dirs += ["mpu"]
         sources += mpu_demo_src
@@ -181,6 +189,13 @@ source_set("common") {
         include_dirs += ["//include/qapi", "net/src"]
         sources += [
             "net/src/httpc_demo.c",
+        ]
+    }
+
+    if (CONFIG_HTTP_SERVER_DEMO) {    
+        include_dirs += ["//include/qapi", "net/src"]
+        sources += [
+            "net/src/httpd_demo.c",
         ]
     }
 

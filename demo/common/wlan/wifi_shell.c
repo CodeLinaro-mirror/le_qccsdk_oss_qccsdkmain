@@ -289,6 +289,7 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
         info_printf("assoc_id=%d\n", cxnInfo->assoc_id);
         info_printf("host_initiated=%d\n", cxnInfo->host_initiated);
 #ifdef CONFIG_QCSPI_HFC_ETH_ENABLE		
+        wifi_fw_defaults_table_init();
         qcspi_hfc_send_wlan_event(QAPI_WLAN_CONNECT_CB_E);
 #endif		
 		

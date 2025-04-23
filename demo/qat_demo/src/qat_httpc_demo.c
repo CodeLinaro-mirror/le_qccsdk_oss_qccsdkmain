@@ -19,6 +19,11 @@
 #include "qat_httpc_demo.h"
 #include "qapi_httpc.h"
 
+/*-------------------------------------------------------------------------
+ * Parameters define
+ *-----------------------------------------------------------------------*/
+
+struct at_https_global_config g_https_cfg = {0};
 
 /*-------------------------------------------------------------------------
  * Function Definitions
@@ -83,7 +88,7 @@ static QAT_Command_Status_t Extend_Command_HttpGetSize(uint32_t Op_Type, uint32_
       {
         if(Parameter_Count > 2 || Parameter_Count < 1)
         {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid Parameter Count %d\r\n", Parameter_Count);
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPGETSIZE: Invalid Parameter Count %d\r\n", Parameter_Count);
             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
             goto rlt;
         }
@@ -97,10 +102,19 @@ static QAT_Command_Status_t Extend_Command_HttpGetSize(uint32_t Op_Type, uint32_
             }
             else
             {
-                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "there is no valid url\r\n");
+                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPGETSIZE: there is no valid url\r\n");
                  rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                  goto rlt;
             }   
+        }
+        else
+        {
+            if(!validate_url(url))
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPGETSIZE: Invalid url\r\n");
+                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto rlt;
+            }
         }
  
         if(Parameter_Count == 2)
@@ -108,7 +122,7 @@ static QAT_Command_Status_t Extend_Command_HttpGetSize(uint32_t Op_Type, uint32_
             timeout = Parameter_List[1].Integer_Value;
             if(!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout>MAX_TIMEOUT_MS))
             {
-                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid timeout value\r\n");
+                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPGETSIZE: Invalid timeout value\r\n");
                  rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                  goto rlt;
             }
@@ -158,7 +172,7 @@ static QAT_Command_Status_t Extend_Command_HttpGet(uint32_t Op_Type, uint32_t Pa
 
         if(Parameter_Count > 2 || Parameter_Count < 1)
         {
-             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid Parameter Count %d\r\n", Parameter_Count);
+             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: Invalid Parameter Count %d\r\n", Parameter_Count);
              rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
              goto rlt;
         }
@@ -172,10 +186,19 @@ static QAT_Command_Status_t Extend_Command_HttpGet(uint32_t Op_Type, uint32_t Pa
              }
              else
              {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "there is no valid url\r\n");
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: there is no valid url\r\n");
                 rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                 goto rlt;
              }   
+        }
+        else
+        {
+            if(!validate_url(url))
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: Invalid url\r\n");
+                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto rlt;
+            }
         }
 
         if(Parameter_Count == 2)
@@ -183,7 +206,7 @@ static QAT_Command_Status_t Extend_Command_HttpGet(uint32_t Op_Type, uint32_t Pa
             timeout = Parameter_List[1].Integer_Value;
             if(!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout>MAX_TIMEOUT_MS))
             {
-                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid timeout value\r\n");
+                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: Invalid timeout value\r\n");
                  rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                  goto rlt;
             }
@@ -226,6 +249,14 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
             if(Parameter_Count < 2)
             {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST:Invalid Parameter Count %d\r\n", Parameter_Count);
+                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto rlt;
+            }
+
+
+            if(!validate_url(Parameter_List[0].String_Value))
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST: Invalid url\r\n");
                 rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                 goto rlt;
             }
@@ -375,6 +406,14 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT:Invalid Parameter Count %d\r\n", Parameter_Count);
             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
             goto rlt;
+         }
+
+         
+         if(!validate_url(Parameter_List[0].String_Value))
+         {
+             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT: Invalid url\r\n");
+             rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+             goto rlt;
          }
          
          if(FALSE == saveUrl(Parameter_List[0].String_Value))
@@ -543,11 +582,14 @@ static QAT_Command_Status_t Extend_Command_HttpUrlCfg(uint32_t Op_Type, uint32_t
                 rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                 goto rlt;
             }
-            if (len == 0) {
-                 free(g_https_cfg.url);
-                 g_https_cfg.url_size = 0;
-                 g_https_cfg.url = NULL;
-                 
+            
+            if (len == 0) 
+            {
+                if (g_https_cfg.url != NULL) {
+                    free(g_https_cfg.url);
+                    g_https_cfg.url_size = 0;
+                    g_https_cfg.url = NULL;
+                }
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPURLCFG: delete url successfully \r\n");
                 rc = QAT_Response_Str(QAT_RC_OK, buffer);
                 goto rlt;
@@ -607,7 +649,23 @@ static QAT_Command_Status_t Extend_Command_HttpUrlCfg(uint32_t Op_Type, uint32_t
             }
             else
             {
-                rc = QAT_Response_Str(QAT_RC_OK, NULL);
+               //validate the URL
+               if(validate_url(g_https_cfg.url))
+               {
+                    rc = QAT_Response_Str(QAT_RC_OK, NULL);
+               }
+               else
+               {
+                    if (g_https_cfg.url != NULL) {
+                        free(g_https_cfg.url);
+                        g_https_cfg.url_size = 0;
+                        g_https_cfg.url = NULL;
+                    }
+                    
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPURLCFG: invalid url \r\n");
+                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+               }
+               
                 QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E,NULL);
                 reset_temp_resource();
             }
@@ -816,13 +874,14 @@ static QAT_Command_Status_t Extend_Command_HttpNetCfg(uint32_t Op_Type, uint32_t
    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
    qapi_Status_t result = QAPI_OK;
    qbool_t  isIntegerValid = false;
+   qbool_t  ip_prefer_set = false;
    char buffer[HTTP_STR_BUFFER_LENGTH];
 
    switch (Op_Type)
    {
       case QAT_OP_EXEC:		     /* AT+WRTMEM */
       {	
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG=<type>,<port>\r\n");
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG=<netcfg_type>,[<port>],[<ip_prefer>]\r\n");
         rc = QAT_Response_Str(QAT_RC_OK, buffer);
         break;
       }
@@ -830,53 +889,63 @@ static QAT_Command_Status_t Extend_Command_HttpNetCfg(uint32_t Op_Type, uint32_t
       case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
       {
 
-        if(Parameter_Count !=2)
+        if(Parameter_Count != 2)
         {
-           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid Parameter Count %d\r\n", Parameter_Count);
+           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid Parameter Count %d\r\n", Parameter_Count);
            rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
            goto rlt;
         }
         
-        int type = Parameter_List[0].Integer_Value;
-        isIntegerValid = Parameter_List[0].Integer_Is_Valid;
-
-        if(!isIntegerValid||(type>2 ||type<1) )
+        int netcfg_type = Parameter_List[0].Integer_Value;
+        if(!Parameter_List[0].Integer_Is_Valid
+            || netcfg_type < QAT_NET_CFG_HTTP_PORT 
+            || netcfg_type >= QAT_NET_CFG_MAX)
         {
-           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid type value\r\n");
+           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid netcfg type value\r\n");
            rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
            goto rlt;
         }
 
-        int port = Parameter_List[1].Integer_Value;
-        isIntegerValid = Parameter_List[1].Integer_Is_Valid;
-        
-        if(!isIntegerValid)
+        switch (netcfg_type)
         {
-           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "Invalid port value\r\n");
-           rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-           goto rlt;
+          case QAT_NET_CFG_HTTP_PORT:
+          { 
+            if(!Parameter_List[1].Integer_Is_Valid)
+            {
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid port value\r\n");
+               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+               goto rlt;
+            }
+            g_https_cfg.http_port = Parameter_List[1].Integer_Value;
+
+            break;
+          }
+          case QAT_NET_CFG_HTTPS_PORT:
+          { 
+            if(!Parameter_List[1].Integer_Is_Valid)
+            {
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid port value\r\n");
+               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+               goto rlt;
+            }
+            g_https_cfg.https_port = Parameter_List[1].Integer_Value;
+            break;
+          }
+          case QAT_NET_CFG_IP_PREFER:
+          { 
+            if(!Parameter_List[1].Integer_Is_Valid)
+            {
+               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid prefer IP value\r\n");
+               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+               goto rlt;
+            }
+            g_https_cfg.httpc_ip_prefer = Parameter_List[1].Integer_Value;
+            break;
+          }
+          default:
+           ;
         }
 
-        if(type == QAT_HTTP)
-        {
-            g_https_cfg.http_port = port;
-            g_https_cfg.http_port_set = TRUE;
-
-            //0 is reserved
-            if(port == 0)
-               g_https_cfg.http_port_set = FALSE; 
-
-        }
-        else if(type == QAT_HTTPS)
-        {
-            g_https_cfg.https_port = port;
-            g_https_cfg.https_port_set = TRUE;
-
-            //0 is reserved
-            if(port == 0)
-               g_https_cfg.https_port_set = FALSE;
-        }
-        
         QAT_Response_Str(QAT_RC_OK, NULL);
         
         break;
@@ -884,8 +953,8 @@ static QAT_Command_Status_t Extend_Command_HttpNetCfg(uint32_t Op_Type, uint32_t
 
       case QAT_OP_QUERY:
       {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH,"+HTTPNETCFG:http port:%d, https port:%d\r\n", 
-        g_https_cfg.http_port, g_https_cfg.https_port);
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH,"+HTTPNETCFG:http port:%d, https port:%d, ip prefer:%d\r\n", 
+        g_https_cfg.http_port,g_https_cfg.https_port,g_https_cfg.httpc_ip_prefer);
 
         rc = QAT_Response_Str(QAT_RC_OK, buffer);
         break;
@@ -974,6 +1043,15 @@ static QAT_Command_Status_t Extend_Command_HttpClient(uint32_t Op_Type, uint32_t
                goto rlt;
             }   
          }
+         else
+         {
+            if(!validate_url(url))
+            {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPC: invalid url\r\n");
+                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto rlt;
+            }
+         }
 
          if(opt == QAT_HTTP_CLIENT_POST || opt == QAT_HTTP_CLIENT_PUT)
          {
@@ -1051,6 +1129,10 @@ void Initialize_QAT_HttpC_Demo (void)
    {
       printf("Failed to register HTTPC command group.\n");
    }
+
+    g_https_cfg.http_port = HTTP_DEFAULT_PORT;
+    g_https_cfg.https_port = HTTPS_DEFAULT_PORT;
+    g_https_cfg.httpc_ip_prefer = HTTPC_DEFAULT_IP_PREFER;
 }
 
 qapi_Status_t at_httpc_start ()
@@ -1084,6 +1166,12 @@ qapi_Status_t at_httpc_new_session (char *url,int32_t timeout)
     Parameter_Count++;
     Parameter_List[Parameter_Count].Integer_Is_Valid =true;
     Parameter_List[Parameter_Count].Integer_Value = timeout;
+    Parameter_Count++;
+
+    Parameter_List[Parameter_Count].String_Value = "-v";
+    Parameter_Count++;
+    Parameter_List[Parameter_Count].Integer_Is_Valid =true;
+    Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.httpc_ip_prefer;
     Parameter_Count++;
 
     if(isSecureSession(url))
@@ -1167,25 +1255,11 @@ qapi_Status_t at_httpc_conn(char *url)
     Parameter_List[Parameter_Count].Integer_Is_Valid =true;
     if(isSecureSession(url))
     {
-        if(g_https_cfg.https_port_set)
-        {
-            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_port;
-        }
-        else
-        {
-            Parameter_List[Parameter_Count].Integer_Value = HTTPS_DEFAULT_PORT;
-        }
+        Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_port;
     }
     else
     {
-        if(g_https_cfg.http_port_set)
-        {
-            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.http_port;
-        }
-        else
-        {
-            Parameter_List[Parameter_Count].Integer_Value = HTTP_DEFAULT_PORT;
-        }
+        Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.http_port;
     }
     
     Parameter_Count++;
@@ -1347,8 +1421,6 @@ qapi_Status_t at_httpc_addheaderfield(/*uint8_t headfield_type,*/uint8_t index)
 
     Parameter_List[Parameter_Count].String_Value = g_https_cfg.header_field[index].value;
     Parameter_Count++;
-
-    printf("test set header name:%s, value:%s\n",g_https_cfg.header_field[index].name,g_https_cfg.header_field[index].value);
 
     rlt = httpc_command_handler(Parameter_Count,Parameter_List);
     if(rlt != QAPI_OK)
@@ -2421,10 +2493,8 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
                 memcpy(chunkdata, senddata, sendatalen);
                 chunkdata[QAT_MAX_CHUNK_SIZE] = '\0';
             }
-            
 
             rlt = at_httpc_setbodydata(chunkdata, sendatalen);
-            //printf("post setbody\r\n");
             if(rlt == QAPI_OK)
             {
                 if(count == 0){
@@ -2784,8 +2854,6 @@ qbool_t saveheaderfield(const char *headerfield)
                 
                 g_https_cfg.header_field_num ++;
 
-                printf("test num:%d, name:%s,value:%s \n",g_https_cfg.header_field_num,header_field->name,header_field->value);
-
                 rlt= TRUE;
            }
     	} 
@@ -3038,6 +3106,66 @@ qbool_t is_succ_resp_code(int errorcode)
     }
     return FALSE;
 }
+
+int is_valid_char(char c) {
+    return isalnum(c) || c == '.' || c == '-' || c == '/' || c == '_';
+}
+
+int validate_url(const char *url) 
+{
+    const char *http_start = "http://";
+    size_t http_start_len = strlen(http_start);
+
+    const char *https_start = "https://";
+    size_t https_start_len = strlen(https_start);
+
+    const char *host_start = NULL;
+
+    // check the start chars
+    if(strncmp(url, https_start, https_start_len)== 0)
+    {
+        host_start = url + https_start_len;
+    }
+    else if (strncmp(url, http_start, http_start_len)== 0)
+    {
+        host_start = url + http_start_len;
+    }
+    else
+    {
+        return 0;
+    }
+
+    // check hostname
+    if (strchr(host_start, '.') == NULL)
+    {
+            return 0;
+    }
+
+#if 0
+    // check host
+    const char *host_end = strchr(host_start, '/');
+    if (!host_end) {
+        host_end = url + strlen(url);
+    }
+
+    // check the chars of host
+    for (const char *p = host_start; p < host_end; ++p) {
+        if (!is_valid_char(*p)) {
+            return 0;
+        }
+    }
+
+    // check the chars of path
+    for (const char *p = host_end; *p != '\0'; ++p) {
+        if (!is_valid_char(*p)) {
+            return 0;
+        }
+    }
+#endif
+
+    return 1;
+}
+
 
 #if 0
 void reset_resource()

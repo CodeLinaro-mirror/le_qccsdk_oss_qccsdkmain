@@ -35,6 +35,10 @@ config("_config") {
     if (CONFIG_HTTP_CLIENT) {
         include_dirs += ["//modules/net/httpc"]
     }
+
+    if (CONFIG_HTTP_SERVER) {
+        include_dirs += ["//modules/net/httpd"]
+    }
 }
 
 source_set("drivers") {
@@ -88,6 +92,12 @@ source_set("drivers") {
         sources += [
             "net/qapi_httpc.c",
             "//modules/net/httpc/qcom_http_client.c",
+        ]
+    }
+
+    if (CONFIG_HTTP_SERVER) { 
+        sources += [
+            "net/qapi_httpsvr.c",
         ]
     }
     

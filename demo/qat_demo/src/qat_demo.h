@@ -20,4 +20,6 @@ void Initialize_QAT_Http_Server_Demo (void);
 
 void Initialize_QAT_HttpC_Demo(void);
 
+void Initialize_QAT_OTA_Demo(void);
+
 #endif /* QAT_DEMO_H */

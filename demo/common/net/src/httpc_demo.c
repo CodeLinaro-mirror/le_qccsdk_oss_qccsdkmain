@@ -17,6 +17,10 @@
 #include "qcom_http_client.h"
 #include "qat_api.h"
 
+#ifdef CONFIG_QAT_OTA_DEMO
+#include "ota_http.h"   
+#endif
+
 #ifdef CONFIG_HTTP_CLIENT_DEMO
 
 //#define HTTPC_DEMO_DEBUG
@@ -56,6 +60,10 @@ int at_rec_state = 0;
 uint16_t at_rec_error_code = 0;
 #endif
 
+#ifdef CONFIG_QAT_OTA_DEMO
+extern http_session_info_t *ota_http_sess;
+extern void http_client_cb_ota(void* arg, int32_t state, void* http_resp);
+#endif
 
 
 struct http_client_demo_s
@@ -803,8 +811,19 @@ qapi_Status_t httpc_command_connect(uint32_t Parameter_Count, QAPI_Console_Param
     httpc_max_body_length = (httpc_demo_max_body_len)?httpc_demo_max_body_len:HTTPC_DEMO_DEFAULT_MAX_BODY_LEN;
     httpc_max_header_length = (httpc_demo_max_header_len)?httpc_demo_max_header_len:HTTPC_DEMO_DEFAULT_MAX_HEADER_LEN;
 
-    arg->client = qapi_Net_HTTPc_New_sess(timeout,
+#ifdef CONFIG_QAT_OTA_DEMO
+    if(ota_http_sess->status == HTTP_OTA_STATUS_RUNNING)
+    {
+        arg->client = qapi_Net_HTTPc_New_sess(timeout,
+                    isHttps, http_client_cb_ota, (void *)arg, httpc_max_body_length, httpc_max_header_length);
+
+    }
+    else
+#endif      
+    {
+        arg->client = qapi_Net_HTTPc_New_sess(timeout,
             isHttps, http_client_cb_demo, (void *)arg, httpc_max_body_length, httpc_max_header_length);
+    }
 
     if (arg->client == NULL)
     {
@@ -914,6 +933,7 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
     int body_size = BODY_BUFFER_SIZE;
     int header_size = HEADER_BUFFER_SIZE;
     int rxbuffer_size = RX_BUFFER_SIZE;
+    uint16_t ip_prefer = DEFAULT_IP_PREFER;
     qbool_t secure_session = false;
     struct http_client_demo_s* arg = NULL;
 
@@ -1050,6 +1070,16 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                     rxbuffer_size = (Parameter_List[i].Integer_Value < RX_BUFFER_SIZE) ?
                                     RX_BUFFER_SIZE : Parameter_List[i].Integer_Value;
                     break;
+                 case 'v':   /* -v v4*/
+                    i++;
+                    if (!Parameter_List[i].Integer_Is_Valid|| Parameter_List[i].Integer_Value < IP_V4 ||Parameter_List[i].Integer_Value > IP_V6)
+                    {
+                        HTTPC_PRINTF("%s line %d: Invalid ip type: %s\n", __func__, __LINE__, Parameter_List[i].String_Value);
+                        return QAPI_ERROR;
+                    }
+                    
+                    ip_prefer = Parameter_List[i].Integer_Value;
+                    break;
 
                 default:
                     HTTPC_PRINTF("%s line %d: Unknown option: %s\n", __func__, __LINE__, Parameter_List[i].String_Value);
@@ -1069,13 +1099,31 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
         }
     } /* for */
 
-    arg->client = qapi_Net_HTTPc_New_sess2(timeout_ms,
+#ifdef CONFIG_QAT_OTA_DEMO
+    if(ota_http_sess->status == HTTP_OTA_STATUS_RUNNING)
+    {
+        arg->client = qapi_Net_HTTPc_New_sess2(timeout_ms,
+                                           (uint32_t)secure_session,
+                                           http_client_cb_ota,
+                                           (void *)arg,
+                                           body_size,
+                                           header_size,
+                                           rxbuffer_size,
+                                           ip_prefer);
+    }
+
+    else
+#endif
+    {
+        arg->client = qapi_Net_HTTPc_New_sess2(timeout_ms,
                                            (uint32_t)secure_session,
                                            http_client_cb_demo,
                                            (void *)arg,
                                            body_size,
                                            header_size,
-                                           rxbuffer_size);
+                                           rxbuffer_size,
+                                           ip_prefer);
+    }
 
     if (arg->client == NULL)
     {

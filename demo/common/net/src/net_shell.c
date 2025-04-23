@@ -35,6 +35,7 @@
 #include "safeAPI.h"
 #include "ssl_demo.h"
 #include "httpc_demo.h"
+#include "httpd_demo.h"
 
 #ifdef CONFIG_MQTT_CLIENT_DEMO
 #include "mqtt_client_demo.h"
@@ -568,6 +569,116 @@ net_set_ip(struct netif *netif, ip_addr_t *ip, s8_t idx)
     return QAPI_OK;
 }
 
+#if LWIP_IPV6
+static int is_valid_prefix(const char *str);
+/**
+ *Set or config prefix of IPv6 address for  the AP interface
+ */
+static qapi_Status_t prefix_set(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+  ip6_addr_t ip6_addr;
+  struct netif* netif = NULL;
+  uint8_t parts[8];
+  char str[8][6];
+  char buf[40];
+  char *ptr = NULL;
+  int i;
+
+  netif = get_netif_by_device(AP_DEVICE);
+  if(NULL == netif)
+    info_printf("prefix_set can only be run under AP role");
+
+  switch(Parameter_Count) {
+    case 0:
+      //show the prefix
+      parts[0] = (netif->ip6_addr[1].u_addr.ip6.addr[0]) & 0xFF;
+      parts[1] = (netif->ip6_addr[1].u_addr.ip6.addr[0] >> 8) & 0xFF;
+      parts[2] = (netif->ip6_addr[1].u_addr.ip6.addr[0] >> 16) & 0xFF;
+      parts[3] = (netif->ip6_addr[1].u_addr.ip6.addr[0] >> 24) & 0xFF;
+
+      parts[4] = (netif->ip6_addr[1].u_addr.ip6.addr[1]) & 0xFF;
+      parts[5] = (netif->ip6_addr[1].u_addr.ip6.addr[1] >> 8) & 0xFF;
+      parts[6] = (netif->ip6_addr[1].u_addr.ip6.addr[1] >> 16) & 0xFF;
+      parts[7] = (netif->ip6_addr[1].u_addr.ip6.addr[1] >> 24) & 0xFF;
+
+      for(i=0; i < 8; i++) {
+        snprintf(str[i], sizeof(str[i]), "%02x", parts[i]);
+      }        
+
+      snprintf(buf, sizeof(buf), "%s%s:%s%s:%s%s:%s%s\r\n", str[0], str[1], str[2], str[3],  str[4], str[5], str[6], str[7]);
+      info_printf("Prefix is: %s\r\n", buf);
+
+      break;
+    case 1:
+      //check valid prefix
+      ptr = Parameter_List[0].String_Value;
+      if (!is_valid_prefix(ptr)) {
+        info_printf("Prefix format error\r\n");
+        break;
+      }
+      memset(buf, 0, sizeof(buf));
+      strlcpy(buf, ptr, sizeof(buf));
+      strlcat(buf, "::1", sizeof(buf));
+      if(ip6addr_aton(buf, &ip6_addr) == 0 ) {
+        info_printf("Prefix format error\r\n");
+        break;
+      } else {
+        //check global or not
+        if(ip6_addr_isglobal(&ip6_addr)) {
+          netif_ip6_addr_set(netif, 1, &ip6_addr);
+          netif->ip6_autoconfig_enabled = 1;
+          netif_ip6_addr_set_state(netif, 1, IP6_ADDR_TENTATIVE);
+          break;
+        } else {
+          info_printf("Prefix format error\r\n");
+          break;
+        }
+      }
+      break;
+    default:
+      info_printf("Wrong params\r\n");
+  }
+}
+
+static int is_valid_prefix(const char *str) {
+  if (strlen(str) > 19) {
+    return 0;
+  }
+
+  int colon_count = 0;
+  int is_valid = 1;
+  int last_colon_pos = -1;
+
+  if( str[0] == ':' || str[strlen(str) -1] == ':') {
+    return 0;
+  }
+
+  for (int i = 0; str[i] != '\0'; i++) {
+    char c = str[i];
+    if (c == ':') {
+      colon_count++;
+      if (last_colon_pos == i-1) {
+        is_valid = 0;
+        break;
+      }
+      last_colon_pos = i;
+
+    } else {
+      if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+        is_valid  = 0;
+        break;
+      }
+    }
+  }
+
+  if (colon_count != 3) {
+    return 0;
+  }
+
+  return is_valid;
+}
+#endif /* LWIP_IPV6 */
+
 /**
  * Display IP address for network interface.
  */
@@ -1041,6 +1152,12 @@ const QAPI_Console_Command_t net_shell_cmds[] =
                                     "\niperf test"},
     {iperf_quit,         "iperf_quit",     "\n\nUsage: iperf quit\n",
                                     "\nquit iperf"}, 
+#if LWIP_IPV6
+    {prefix_set,         "prefix_set",     "\n\nprefixset [prefix]\n",
+                                    "\nSet prefix to AP interface or show the current prefix of AP interface\n",
+                                    "\nTo show the current prefix: prefix_set\n",
+                                    "\nTo set the prefix: prefix_set 2001:db8:0:0\n"},
+#endif 
     {prefix_v6,         "prefix",     "\n\nprefix <interface> [(<ipv6addr> <prefixlen> <prefix_lifetime> <valid_lifetime>)]\n",
                                     "\nSend prefix to network hosts in IPv6 network"},
 #ifdef CONFIG_NET_SSL_DEMO
@@ -1059,6 +1176,11 @@ const QAPI_Console_Command_t net_shell_cmds[] =
                                         "httpc [connect|disconnect|get|post|put|patch] <...>\n",
                                         "\nHTTP Client: Perform Hypertext Transport protocol client operations.\n"
                                         "Type command name to get more info on usage. For example \"httpc get\".\n"},
+#endif
+
+#ifdef CONFIG_HTTP_SERVER_DEMO
+    {httpd_command_handler,         "httpd",     "\n\nhttpd [enable|disable] [server_port]\n"
+                                    "\nHTTP SERVER: Perform Hypertext Transport protocol server operations.\n"},
 #endif
 
 #ifdef CONFIG_MQTT_CLIENT_DEMO

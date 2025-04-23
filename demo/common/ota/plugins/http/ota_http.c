@@ -1,0 +1,640 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include "qapi_types.h"
+#include "qapi_status.h"
+//#include "qapi_httpc.h"
+#include "qapi_console.h"
+#include "nt_timer.h"
+
+//#include "qurt_internal.h"
+//#include "qurt_mutex.h"
+//#include "qurt_signal.h"
+#include "sockets.h"
+#include "timer.h"
+#include "qapi_firmware_upgrade.h"
+#include "safeAPI.h"
+
+#include "qat_api.h"
+#include "qat_httpc_demo.h"
+
+#include "httpc_demo.h"
+#include "ota_http.h"
+
+
+/**********************************************************************************************************/
+/* Preprocessor Definitions and Constants											                      */
+/**********************************************************************************************************/
+struct ota_http_client_demo_s
+{
+	qapi_Net_HTTPc_handle_t client;
+	uint32_t num;
+	uint32_t total_len;
+    qapi_Ssl_Config_t *sslCfg;
+    qapi_Ssl_Cert_t *sslCert;
+} ota_http_client_demo[HTTPC_OTA_DEMO_MAX_NUM];
+
+#ifndef MIN
+#define MIN(a, b)   (((a) < (b)) ? (a) : (b))
+#endif
+
+#define UNUSED(x)   (void)(x)
+
+#define OTA_HTTPC_PRINTF(...)                   printf( __VA_ARGS__)
+
+/**********************************************************************************************************/
+/* Type Declarations																                      */
+/**********************************************************************************************************/
+
+/**********************************************************************************************************/
+/* Globals variables															                                  */
+/**********************************************************************************************************/
+http_session_info_t *ota_http_sess;
+
+/**********************************************************************************************************/
+/* External variables																                      */
+/**********************************************************************************************************/
+
+extern struct at_https_global_config g_https_cfg;
+
+/**********************************************************************************************************/
+/* External Functions																                      */
+/**********************************************************************************************************/
+
+extern qbool_t getpathURL(const char *url, char*pathURL);
+
+/**********************************************************************************************************/
+/* Internal Functions																                      */
+/**********************************************************************************************************/
+qapi_Status_t ota_httpc_get();
+static void ota_http_fin();
+qapi_Status_t ota_httpc_conn(const char *url);
+
+// Function to free the memory of the queue
+void ota_http_free_rcv_queue(HTTP_Queue_t* queue) {
+    HTTP_Queue_Node_t* current = queue->front;
+    HTTP_Queue_Node_t* next;
+    while (current != NULL) {
+        next = current->next;
+        free(current->buffer);
+        free(current);
+        current = next;
+    }
+    free(queue);
+}
+
+static void ota_http_fin()
+{
+    if (ota_http_sess != NULL) {
+        if (ota_http_sess->mutex != 0) {
+            qurt_mutex_delete(&ota_http_sess->mutex);
+        }
+
+        if (ota_http_sess->task_handle != NULL) {
+            nt_osal_thread_delete(ota_http_sess->task_handle);
+        }
+
+        if (ota_http_sess->url != NULL) {
+            free(ota_http_sess->task_handle);
+            ota_http_sess->url = NULL;
+        }
+        
+        nt_delete_timer(ota_http_sess->http_timer);
+        ota_http_sess->http_timer = NULL;
+        
+        ota_http_free_rcv_queue(ota_http_sess->http_rx_queue);
+        
+        free(ota_http_sess);
+        ota_http_sess = NULL;
+    }
+}
+
+/**********************************************************************************************************/
+/*      															                                      */
+/**********************************************************************************************************/
+/*
+ * OTA TFTP plugin receive data
+ *    buffer:    received data buffer
+ *   buf_len:    received data buffer size in bytes
+ *  ret_size:    data size in buffer after receiving done
+ */
+void _ota_http_timeout_signal_set(void)
+{
+    qurt_signal_set(&ota_http_sess->signal, HTTP_RX_TIMEOUT_SIG_MASK);
+}
+qapi_Status_t plugin_http_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t *ret_size, void *init_param)
+{
+    uint8_t *receive_buf = buffer;
+    qapi_Status_t ret;
+    HTTP_Queue_Node_t *temp = NULL;
+    uint32_t signal;
+
+    UNUSED(init_param);
+
+    if (buffer == NULL || buf_len == 0) {
+        return QAPI_FW_UPGRADE_ERR_INVALID_PARAM;
+    }
+
+    if (ota_http_sess == NULL || ota_http_sess->status == HTTP_OTA_STATUS_NOT_STARTED) {
+        return QAPI_FW_UPGRADE_ERR_HTTP_SESSION_NOT_START;
+    }
+
+    if (ota_http_sess->error_code != 0) {
+        return ((qapi_Status_t)ota_http_sess->error_code);
+    }
+
+    if (ret_size != NULL) {
+        *ret_size = 0;
+    }
+
+    if(ota_http_sess->getting_started == 0)
+    {
+        ret = ota_httpc_get();
+        if(ret != QAPI_OK)
+        {
+            return ret;
+        }
+        ota_http_sess->getting_started = 1;
+    }
+    
+    if (ota_http_sess->status == HTTP_OTA_STATUS_RUNNING) {
+        
+        if (ota_http_sess->http_rx_queue->front == NULL) 
+        {
+            //Queue is empty, waitting data...
+            if(nt_start_timer(ota_http_sess->http_timer) != NT_TIMER_SUCCESS)
+            {
+                return QAPI_FW_UPGRADE_ERR_HTTP_TIMEOUT_TIMER_FAILED;
+            }
+            
+            signal = qurt_signal_wait(&ota_http_sess->signal, HTTP_RX_ALL_SIG_MASK, QURT_SIGNAL_ATTR_CLEAR_MASK);
+            
+            if(signal & HTTP_RX_BUF_READY_SIG_MASK)
+            {
+                ;
+            }
+            else if(signal & HTTP_RX_TIMEOUT_SIG_MASK)
+            {
+                return QAPI_FW_UPGRADE_ERR_HTTP_RX_QUEUE_EMPTY;
+            } 
+        }
+        
+        if(nt_stop_timer(ota_http_sess->http_timer) != NT_TIMER_SUCCESS)
+        {
+            return QAPI_FW_UPGRADE_ERR_HTTP_TIMEOUT_TIMER_FAILED;
+        }
+        
+        qurt_mutex_lock(&ota_http_sess->mutex);
+        temp = ota_http_sess->http_rx_queue->front;
+
+        *ret_size = temp->buffer_len;
+        memscpy(buffer, temp->buffer_len, temp->buffer, temp->buffer_len);
+        
+        ota_http_sess->http_rx_queue->front =  ota_http_sess->http_rx_queue->front->next;
+
+        if(ota_http_sess->http_rx_queue->front == NULL)
+        {
+            ota_http_sess->http_rx_queue->rear = NULL; 
+        }
+        free(temp->buffer);
+        free(temp);
+        qurt_mutex_unlock(&ota_http_sess->mutex);
+    }
+
+    return QAPI_OK;
+}
+
+void http_client_cb_ota(void* arg, int32_t state, void* http_resp)
+{
+    (void) arg;
+    qapi_Net_HTTPc_Response_t* temp = (qapi_Net_HTTPc_Response_t *)http_resp;
+    struct ota_http_client_demo_s* hc = (struct ota_http_client_demo_s *)arg;
+    uint32_t* ptotal_len = NULL;
+    uint32_t tmp_len;
+    uint32_t contentlength=0;
+    
+    if (arg)
+    {
+        ptotal_len = &hc->total_len;
+    }
+    else
+    {
+        OTA_HTTPC_PRINTF("HTTP Client Demo arg error %d\n", state);
+        return;
+    }
+
+    if (state >= QAPI_NET_HTTPC_RX_FINISHED)
+    {
+        int32_t resp_code = temp->resp_Code;
+
+        if (temp->length && temp->data)
+        {
+            HTTP_Queue_Node_t *node = NULL;
+            node = (HTTP_Queue_Node_t *)malloc(sizeof(HTTP_Queue_Node_t));
+
+            if (node == NULL)
+            {
+                OTA_HTTPC_PRINTF("HTTP Client Demo malloc node error %d\n", state);
+                return;
+            }
+
+            node->buffer = NULL;
+            node->buffer = malloc(temp->length);
+
+            if (node->buffer == NULL)
+            {
+                OTA_HTTPC_PRINTF("HTTP Client Demo malloc buffer error %d\n", state);
+                free(node); // Free the node to avoid memory leak
+                return;
+            }
+            
+            memcpy(node->buffer, temp->data, temp->length);
+            
+            node->buffer_len = temp->length;
+
+            qurt_mutex_lock(&ota_http_sess->mutex);
+
+            if(ota_http_sess->http_rx_queue->rear == NULL)
+            {
+                ota_http_sess->http_rx_queue->front = ota_http_sess->http_rx_queue->rear = node;
+            }
+            else
+            {
+                ota_http_sess->http_rx_queue->rear->next = node;
+                ota_http_sess->http_rx_queue->rear = node;
+            }
+
+            qurt_mutex_unlock(&ota_http_sess->mutex);
+            qurt_signal_set(&ota_http_sess->signal, HTTP_RX_BUF_READY_SIG_MASK);
+
+            *ptotal_len += temp->length;
+            contentlength = temp->contentlength;
+        }
+
+        if (state == QAPI_NET_HTTPC_RX_TUNNEL_ESTABLISHED)
+        {
+            OTA_HTTPC_PRINTF("#### TUNNEL ESTABLISHED: received %d bytes ####\n", *ptotal_len);
+            *ptotal_len = 0;
+        }
+        else
+        if (state == QAPI_NET_HTTPC_RX_DATA_FROM_TUNNEL)
+        {
+            OTA_HTTPC_PRINTF("#### Received %d bytes from TUNNEL ####\n", *ptotal_len);
+            *ptotal_len = 0;
+        }
+        else
+        if (state == QAPI_NET_HTTPC_RX_TUNNEL_CLOSED)
+        {
+            OTA_HTTPC_PRINTF("!!!! TUNNEL CLOSED !!!!\n");
+            *ptotal_len = 0;
+        }
+        else
+        if (state == QAPI_NET_HTTPC_RX_CHUNK_CONTINUE)
+        {
+            OTA_HTTPC_PRINTF("!!!! CONTINUE RECV !!!!\n");
+            *ptotal_len = 0;
+        }
+    }
+    else
+    {
+        if(QAPI_NET_HTTPC_RX_ERROR_SERVER_CLOSED == state)
+            OTA_HTTPC_PRINTF("HTTP Client server closed on client[%d].\n", hc->num);
+        else
+            OTA_HTTPC_PRINTF("HTTP Client Receive error: %d\nPlease input 'httpc disconnect %d'\n", state, hc->num);
+        *ptotal_len = 0;
+    }
+}
+
+qapi_Status_t ota_httpc_conn(const char *url)
+{
+    qapi_Status_t rlt = QAPI_OK;
+    char host[HTTP_HOST_STR_BUFFER_LENGTH];
+    
+    //reset flag at_httpc_stop
+    //at_rec_state = QAPI_NET_HTTPC_RX_MORE_DATA;
+    
+    //Construct connect Command
+    //httpc conn <client_num> <origin_server or proxy> [<port>]
+    uint32_t  Parameter_Count =0;
+    QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
+    Parameter_List[Parameter_Count].Integer_Is_Valid =false;
+    Parameter_List[Parameter_Count].String_Value ="conn";
+    Parameter_Count++;
+
+    Parameter_List[Parameter_Count].Integer_Is_Valid =true;
+    Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
+    Parameter_Count++;
+
+    gethostURL(url,host);
+    Parameter_List[Parameter_Count].Integer_Is_Valid =false;
+    Parameter_List[Parameter_Count].String_Value = host;
+    Parameter_Count++;
+    printf("conn host:%s\r\n",host);
+
+    
+    Parameter_List[Parameter_Count].Integer_Is_Valid =true;
+    if(isSecureSession(url))
+    {
+        Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_port;
+    }
+    else
+    {
+        Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.http_port;
+    }
+    
+    Parameter_Count++;
+    
+    rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+
+    return rlt;
+}
+
+qapi_Status_t ota_httpc_stop()
+{
+    qapi_Status_t rlt = QAPI_OK;
+
+    //Construct start Command
+    //httpc stop
+    uint32_t  Parameter_Count =1;
+    QAPI_Console_Parameter_t Parameter_List[Parameter_Count];
+    Parameter_List[0].Integer_Is_Valid =false;
+    Parameter_List[0].String_Value ="stop";
+    rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+    
+    return rlt;
+}
+
+qapi_Status_t ota_httpc_start()
+{
+    qapi_Status_t rlt = QAPI_OK;
+
+    //Construct start Command
+    //httpc start
+    uint32_t  Parameter_Count =1;
+    QAPI_Console_Parameter_t Parameter_List[Parameter_Count];
+    Parameter_List[0].Integer_Is_Valid =false;
+    Parameter_List[0].String_Value ="start";
+    rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+
+    return rlt;
+}
+
+qapi_Status_t ota_httpc_get()
+{
+    qapi_Status_t rlt = QAPI_OK;
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH] = {0};
+    uint32_t  Parameter_Count =0;
+    QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
+    
+    Parameter_List[0].Integer_Is_Valid =false;
+    Parameter_List[0].String_Value = "get";
+    Parameter_Count++;
+
+    Parameter_List[Parameter_Count].Integer_Is_Valid = true;
+    Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
+    Parameter_Count++;
+
+    if(!getpathURL(ota_http_sess->url,path_url))
+    {
+        rlt = QAPI_FW_UPGRADE_ERR_HTTP_URL_FORMAT;
+        return rlt;
+    }
+    
+    Parameter_List[Parameter_Count].Integer_Is_Valid =false;
+    Parameter_List[Parameter_Count].String_Value = path_url;
+    Parameter_Count++;
+    
+    rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+    if(rlt != QAPI_OK)
+    {
+        rlt = QAPI_FW_UPGRADE_ERR_HTTP_GET;
+        return rlt;
+    }
+    return rlt;
+}
+
+qapi_Status_t ota_httpc_new_session (const char *url,int32_t timeout)
+{
+    qapi_Status_t rlt = QAPI_OK;
+
+    //Construct new session Command
+    //httpc new [-t <timeout_ms> -b <body_buffer_size> -h <header_buffer_size> -r <rx_buffer_size> -s -c <calist>]
+    uint32_t  Parameter_Count =0;
+    QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
+    Parameter_List[Parameter_Count].Integer_Is_Valid =false;
+    Parameter_List[Parameter_Count].String_Value ="new";
+    Parameter_Count++;
+ 
+    Parameter_List[Parameter_Count].String_Value = "-t";
+    Parameter_Count++;
+    Parameter_List[Parameter_Count].Integer_Is_Valid =true;
+    Parameter_List[Parameter_Count].Integer_Value = timeout;
+    Parameter_Count++;
+
+    if(isSecureSession(url))
+    {
+        int scheme = g_https_cfg.https_auth_type;
+        if (scheme == AT_HTTPS_NOT_AUTH) {
+           //nothing to do
+        } else if (scheme == AT_HTTPS_SERVER_AUTH) {
+    
+           Parameter_List[Parameter_Count].String_Value ="-s";
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value ="-a";
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value = g_https_cfg.ca_file;
+           Parameter_Count++;
+    
+        } else if (scheme == AT_HTTPS_CLIENT_AUTH) {
+            
+           Parameter_List[Parameter_Count].String_Value ="-s";
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value ="-c";
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value = g_https_cfg.cert_file;
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value ="-k";
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value = g_https_cfg.key_file;
+           Parameter_Count++;
+           
+        } else if (scheme == AT_HTTPS_BOTH_AUTH) {
+            
+           Parameter_List[Parameter_Count].String_Value ="-s";
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value ="-c";
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value = g_https_cfg.cert_file;
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value ="-k";
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value = g_https_cfg.key_file;
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value ="-a";
+           Parameter_Count++;
+           Parameter_List[Parameter_Count].String_Value = g_https_cfg.ca_file;
+           Parameter_Count++;
+        }
+    }
+    
+    rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+
+   return rlt;
+}
+
+/*
+ * OTA TFTP plugin Init
+ * interface_name:    interface name, such as wlan1
+ *            url:    parameters, format: <server>/<url>
+ *      int param:    optional init parameters
+ */
+qapi_Status_t plugin_http_init(const char* interface_name, const char *url, void *init_param)
+{
+    qapi_Status_t ret;
+    char path_url[HTTP_URL_STR_BUFFER_LENGTH] = {0};
+    uint32_t  Parameter_Count =0;
+    QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
+    
+    UNUSED(interface_name);
+    UNUSED(init_param);
+    
+    if (ota_http_sess != NULL) {
+        return QAPI_FW_UPGRADE_ERR_HTTP_SESSION_ALREADY_START;
+    }
+
+    ota_http_sess = malloc(sizeof(http_session_info_t));
+    if (ota_http_sess == NULL) {
+        return QAPI_FW_UPGRADE_ERR_HTTP_NO_MEMORY;
+    }
+
+    memset(ota_http_sess, 0, sizeof(http_session_info_t));
+
+    ota_http_sess->url = malloc(strlen(url)+1);
+    if (ota_http_sess->url == NULL) {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_NO_MEMORY;
+        goto http_init_end;
+    }
+    
+    memset(ota_http_sess->url, 0, strlen(url)+1);
+    memcpy(ota_http_sess->url, url, strlen(url)+1);
+
+    ota_http_sess->http_rx_queue = malloc(sizeof(HTTP_Queue_t));
+    if (ota_http_sess->http_rx_queue == NULL) {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_NO_MEMORY;
+        goto http_init_end;
+    }
+    ota_http_sess->http_rx_queue->front = ota_http_sess->http_rx_queue->rear = NULL;
+
+    ota_http_sess->status = HTTP_OTA_STATUS_RUNNING;
+    ota_http_sess->getting_started = 0;
+    
+    ret = ota_httpc_stop();
+    if (ret)
+    {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_STOP_FAIL;
+        goto http_init_end;
+    }
+    
+    ret = ota_httpc_start();
+    if (ret)
+    {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_START_FAIL;
+        goto http_init_end;
+    }
+    
+    //httpc new session
+    ret = ota_httpc_new_session(url,HTTP_TIMEOUT);
+    if(ret)
+    {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_START_NEW_SESS_FAIL;
+        goto http_init_end;
+    }
+    
+    //httpc connect
+    ret = ota_httpc_conn(url);
+    if(ret)
+    {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_CONNECT_FAIL;
+        goto http_init_end;
+    }
+    
+    ota_http_sess->http_timer = NULL;
+    ota_http_sess->http_timer = nt_create_timer(_ota_http_timeout_signal_set,NULL,HTTP_TIMEOUT,FALSE);
+    if(!(ota_http_sess->http_timer))
+    {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_NO_MEMORY;
+        goto http_init_end;
+    }
+    
+    qurt_mutex_create(&ota_http_sess->mutex);
+    qurt_signal_create(&ota_http_sess->signal);
+
+    
+    /*
+    Parameter_List[0].Integer_Is_Valid =false;
+    Parameter_List[0].String_Value = "get";
+    Parameter_Count++;
+
+    Parameter_List[Parameter_Count].Integer_Is_Valid = true;
+    Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
+    Parameter_Count++;
+
+    if(!getpathURL(url,path_url))
+    {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_URL_FORMAT;
+        ota_http_sess->status = HTTP_OTA_STATUS_NOT_STARTED;
+        goto http_init_end;
+    }
+
+    
+    Parameter_List[Parameter_Count].Integer_Is_Valid =false;
+    Parameter_List[Parameter_Count].String_Value = path_url;
+    Parameter_Count++;
+
+    //Parameter_List[Parameter_Count].Integer_Is_Valid =true;
+    //Parameter_List[Parameter_Count].Integer_Value = QAT_HTTP_GET;
+    //Parameter_Count++;
+
+    ret = httpc_command_handler(Parameter_Count,Parameter_List);
+    if(ret != QAPI_OK)
+    {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_GET;
+        ota_http_sess->status = HTTP_OTA_STATUS_NOT_STARTED;
+        goto http_init_end;
+    }
+    */
+    return QAPI_OK;
+http_init_end:
+    ota_http_fin();
+    return ret;
+}
+
+qapi_Status_t plugin_http_fin(void)
+{
+    ota_httpc_stop();
+    ota_http_fin();
+    
+    return QAPI_OK;
+}
+
+qapi_Status_t plugin_http_abort(void)
+{
+    plugin_http_fin();
+    return QAPI_OK;
+}
+
+/* HTTP doesn't support resume. */
+qapi_Status_t plugin_http_resume(const char* interface_name, const char *url, uint32_t offset)
+{
+    UNUSED(interface_name);
+    UNUSED(url);
+    UNUSED(offset);
+    return QAPI_OK;
+}
+

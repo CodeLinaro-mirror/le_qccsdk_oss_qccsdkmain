@@ -39,13 +39,13 @@ if (CONFIG_MATTER_ENABLE) {
   if (CONFIG_GENERATE_MATTER_LIB) {
     print("Generating Matter lib...")
     if (CONFIG_MATTER_LIGHTING_DEMO) {
-      result = exec_script("//tools/matter/gn_matter.py", ["lighting-app"], "list lines")  
+      result = exec_script("//tools/matter/gn_matter.py", ["lighting-app", rebase_path("${root_build_dir}")], "list lines")
       foreach(item, result) {
         print(item)
       }
     }
     else if (CONFIG_MATTER_SWITCH_DEMO) {
-      result = exec_script("//tools/matter/gn_matter.py", ["light-switch-app"], "list lines")  
+      result = exec_script("//tools/matter/gn_matter.py", ["light-switch-app", rebase_path("${root_build_dir}")], "list lines")
       foreach(item, result) {
         print(item)
       }
