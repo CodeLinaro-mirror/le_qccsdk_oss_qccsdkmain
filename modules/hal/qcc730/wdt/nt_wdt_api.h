@@ -41,7 +41,7 @@ void nt_wdog_callback_reg (void (*ptr)(void));
 void nt_wdog_bark_bite_time_status(void);
 #if (NT_CHIP_VERSION==2) || defined (PLATFORM_FERMION)
 uint8_t warm_boot_by_aon_wdog_retention_cMem_banks(uint8_t bank);
-//WIFIReturnCode_t _nt_wdt_init (void*);
+WIFIReturnCode_t _nt_wdt_init (void*);
 #endif //(NT_CHIP_VERSION==2) || defined (PLATFORM_FERMION)
 
 
