@@ -51,6 +51,7 @@
 
 #include "qapi_status.h"
 #include "qcom_http_client.h"
+#include "qapi_heap_status.h"
 
 #ifdef HTTPC_DEBUG
 #pragma push
@@ -62,7 +63,11 @@
 TaskHandle_t th_httpc = NULL;
 void http_client_task(void *pvParameters);
 uint8_t g_httpc_task_priority = 6;
+#ifdef CONFIG_QAT_HTTPC_DEMO
+uint16_t g_httpc_task_stack_size = 1024;
+#else
 uint16_t g_httpc_task_stack_size = 1024*2;
+#endif
 uint32_t httpc_max_num_con = HTTPCLIENT_DEFAULT_CON_SUPPORT;
 gbl_httpc_ctxt_t *g_httpc_ctxt = NULL;
 uint8_t httpc_thread_started = FALSE;
@@ -330,7 +335,7 @@ int http_client_resolve(httpclient_sess *sess)
     {
         if(ip_prefer == IP_V4)
         {
-            htdbgprintf("test IPv4 check\n");
+            htdbgprintf("IPv4 check\n");
 #if LWIP_IPV4
 
         /* Check whether it is IPv4 address */
@@ -358,7 +363,7 @@ int http_client_resolve(httpclient_sess *sess)
 
         if(ip_prefer == IP_V6)
         {
-             htdbgprintf("test IPv6 check\n");
+             htdbgprintf("IPv6 check\n");
 #if LWIP_IPV6
             /* Check whether it is IPv6 address */
 #if LWIP_IPV4
@@ -399,7 +404,7 @@ int http_client_resolve(httpclient_sess *sess)
     if(sess->ipprefer == IP_V6)
         dns_addrtype = LWIP_DNS_ADDRTYPE_IPV6_IPV4;
 #endif
-    htdbgprintf("test dns_addrtype:%d\n", dns_addrtype);
+    htdbgprintf("dns_addrtype:%d\n", dns_addrtype);
     err_enum_t err = dns_gethostbyname_addrtype((char *)sess->hcs_host, &ipaddr, httpc_dns_found, &ipaddr, dns_addrtype);
 
     if(err == ERR_OK)
@@ -458,20 +463,26 @@ int http_client_start(void)
         uint8_t client_list_size = 0;
         if ((g_httpc_ctxt = malloc(sizeof(gbl_httpc_ctxt_t))) == NULL)
         {
+            htdbgprintf("HTTPC malloc gbl_httpc_ctxt_t fail\n");
             goto ERROR;
         }
         memset(g_httpc_ctxt, 0, sizeof(gbl_httpc_ctxt_t));
         /* Create a lock */
         if ((g_httpc_ctxt->lh = malloc(sizeof(qurt_mutex_t))) == NULL)
         {
+            htdbgprintf("HTTPC malloc qurt_mutex_t fail\n");
             goto ERROR;
         }
         if ((qurt_mutex_create(g_httpc_ctxt->lh)) != QURT_EOK)
+        {
+            htdbgprintf("HTTPC qurt_mutex_create fail\n");
             goto ERROR;
+        }
 
         client_list_size = sizeof(uint32_t) * (httpc_max_num_con);
         if ((g_httpc_ctxt->httpc_sess = malloc(client_list_size)) == NULL)
         {
+            htdbgprintf("HTTPC malloc client_list_size fail\n");
             goto ERROR;
         }
         memset(g_httpc_ctxt->httpc_sess, 0, client_list_size);
@@ -484,6 +495,7 @@ int http_client_start(void)
         {
             if( pdPASS != nt_qurt_thread_create(http_client_task, "httpc", g_httpc_task_stack_size, NULL, g_httpc_task_priority, &th_httpc))
             {
+                htdbgprintf("HTTPC thread create fail\n");
                 goto ERROR;
             }
         }
@@ -547,6 +559,36 @@ int http_client_stop(void)
     return (HTTPC_OK);
 }
 
+/* FUNCTION: http_client_release_pre_allcoate_buffer()
+ *
+ * release pre_allcoate buffer used for SSL
+ * assignment inputs
+ *
+ * PARAMS:void
+ *
+ * RETURNS: OK or ERROR code
+ */
+int http_client_release_pre_allcoate_buffer()
+{
+    htdbgprintf("release SSL buffer,in_buf len:%d, out_buf len:%d\n",pre_ssl_in_buffer_len,pre_ssl_out_buffer_len);
+    pre_allocte_big_memory = 0;
+    if(pre_ssl_in_buffer){
+    memset(pre_ssl_in_buffer,0,pre_ssl_in_buffer_len);
+    //free(pre_ssl_in_buffer);
+    mbedtls_zeroize_and_free(pre_ssl_in_buffer, pre_ssl_in_buffer_len);
+    }
+    pre_ssl_in_buffer = NULL;
+    pre_ssl_in_buffer_len =0;
+
+    if(pre_ssl_out_buffer){
+    memset(pre_ssl_out_buffer,0,pre_ssl_out_buffer_len);
+    //free(pre_ssl_out_buffer);
+    mbedtls_zeroize_and_free(pre_ssl_out_buffer, pre_ssl_out_buffer_len);
+    }
+    pre_ssl_out_buffer = NULL;
+    pre_ssl_out_buffer_len=0;
+}
+
 /* FUNCTION: http_client_newsess()
  *
  * new a session and mark in httpc_sess array
@@ -564,7 +606,8 @@ httpclient_sess* http_client_newsess(
                     uint16_t            httpc_max_body_length,
                     uint16_t            httpc_max_header_length,
                     uint16_t            rxbufsize,
-                    uint16_t            ip_prefer)
+                    uint16_t            ip_prefer,
+                    uint16_t            ssl_pre_buffer)
 {
     httpclient_sess* session = NULL;
     uint32 i;
@@ -586,6 +629,7 @@ httpclient_sess* http_client_newsess(
 
     if ((session = malloc(sizeof(httpclient_sess))) == NULL) {
         qurt_mutex_unlock(g_httpc_ctxt->lh);
+        htdbgprintf("HTTPC malloc httpclient_sess fail\n");
         return NULL;
     }
     memset(session, 0, sizeof(httpclient_sess));
@@ -593,6 +637,7 @@ httpclient_sess* http_client_newsess(
     session->index = i;
     session->hcs_socket = INVALID_SOCKET;
     session->isHttps = isHttps;
+    session->is_pre_alccote_ssl_buffer = ssl_pre_buffer;
     session->timeout = timeout;
     session->http_client_cb = callback;
     session->cb_arg = arg;
@@ -601,14 +646,16 @@ httpclient_sess* http_client_newsess(
     session->ipprefer = ip_prefer;
     qurt_mutex_unlock(g_httpc_ctxt->lh);
     
-    htdbgprintf("HTTPC timeout:%d,ip prefer:%d\n",session->timeout,session->ipprefer);
+    htdbgprintf("HTTPC timeout:%d,ip prefer:%d,is_pre_buffer:%d\n",session->timeout,session->ipprefer,ssl_pre_buffer);
 
     if ((session->hcs_buffer = malloc(session->hcs_buf_len)) == NULL)
     {
+        htdbgprintf("HTTPC malloc hcs_buffer fail\n");
         goto ERROR;
     }
     if ((session->hcs_headerbuffer = malloc(session->hcs_headerbuf_len)) == NULL)
     {
+        htdbgprintf("HTTPC malloc hcs_headerbuffer fail\n");
         goto ERROR;
     }
 
@@ -616,6 +663,7 @@ httpclient_sess* http_client_newsess(
     session->hcs_rxbuf_len = rxbufsize;
     if ((session->hcs_rxbuffer = malloc(session->hcs_rxbuf_len)) == NULL)
     {
+        htdbgprintf("HTTPC malloc hcs_rxbuffer fail\n");
         goto ERROR;
     }
 
@@ -718,7 +766,7 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
 #elif LWIP_IPV6
 	family = AF_INET6;
 #endif
-     htdbgprintf("test family:%d\n",family);
+     htdbgprintf("family:%d\n",family);
     /* Create a socket if it is not created already */
     if (sess->hcs_socket == INVALID_SOCKET)
     {
@@ -818,9 +866,33 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
         error = HTTPC_ERR_CONN;
         goto ERROR;
     }
+#if 0
+    //test begin
+    heap_status hs={0};
+    if(qapi_Heap_Status(&hs) != QAPI_OK)
+    {
+        printf("test ask qapi_Heap_Status fail.\n");
+    }
+    else{
+        printf("test before ssl heap INFO:%d,%d,%d,%d \n",hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes);
+    }
+    //test end
+#endif
 
     if (sess->isHttps)
         error = http_client_sslconnect(sess);
+
+#if 0
+    //test begin
+    if(qapi_Heap_Status(&hs) != QAPI_OK)
+    {
+        printf("test ask qapi_Heap_Status fail.\n");
+    }
+    else{
+        printf("test after ssl heap INFO:%d,%d,%d,%d \n",hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes);
+    }
+    //test end
+#endif
     if (error != HTTPC_OK)
     {
         htdbgprintf("SSL connect failed\n");
@@ -1251,7 +1323,8 @@ static void sslContextFree( SSLContext_t * pSslContext )
 {
     configASSERT( pSslContext != NULL );
 
-    mbedtls_ssl_free( &( pSslContext->context ) );
+    //mbedtls_ssl_free( &( pSslContext->context ) );
+    mbedtls_ssl_free_pre_allocate( &( pSslContext->context ) );
     mbedtls_x509_crt_free( &( pSslContext->rootCa ) );
     mbedtls_x509_crt_free( &( pSslContext->clientCert ) );
     mbedtls_pk_free( &( pSslContext->privKey ) );
@@ -1357,8 +1430,19 @@ static int sslSetup( SSLContext_t * pSslContext )
 static int sslHandshake( httpclient_sess *sess, SSLContext_t * pSslContext )
 {
     int32_t mbedtlsError = -1;
-
-    mbedtlsError = mbedtls_ssl_setup( &( pSslContext->context ), &(pSslContext->config) );
+    mbedtlsError = mbedtls_ssl_setup_pre_allocate( &( pSslContext->context ), &(pSslContext->config) );
+#if 0
+    //test begin
+    heap_status hs={0};
+    if(qapi_Heap_Status(&hs) != QAPI_OK)
+    {
+        printf("test ask qapi_Heap_Status fail.\n");
+    }
+    else{
+        printf("test heap INFO:%d,%d,%d,%d \n",hs.total_Bytes, hs.total_Bytes-hs.free_Bytes, hs.free_Bytes, hs.min_ever_free_bytes);
+    }
+    //test end
+#endif
     if(mbedtlsError != 0)
     {
         htdbgprintf("%s:%d: mbedtls_ssl_setup fail.\n", __func__, __LINE__);
@@ -1445,6 +1529,8 @@ int http_client_sslconnect(httpclient_sess *sess)
         htdbgprintf("http_client_sslconnect fail, ssl setup fail.\n");
         return -1;
     }
+    //set pre-allocte flag
+    pre_allocte_big_memory = sess->is_pre_alccote_ssl_buffer;
 
     ret = sslHandshake(sess, sess->sslCtx);
     if(ret != 0)
@@ -1470,7 +1556,7 @@ int http_client_sslconnect(httpclient_sess *sess)
 
 int http_client_sslconfigure(httpclient_sess *sess, qapi_Ssl_Config_t *cfg)
 {
-    htdbgprintf("http_client_sslconfigure.\n");
+    htdbgprintf("http_client_sslconfigure\n");
     if (http_client_sess_is_found(sess) != HTTPC_OK || cfg == NULL)
     {
         return HTTPC_ERROR;

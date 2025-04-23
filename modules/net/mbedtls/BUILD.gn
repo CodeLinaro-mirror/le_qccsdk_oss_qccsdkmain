@@ -130,6 +130,12 @@ if(CONFIG_MBEDTLS_SHA_ALT) {
     ]
 }
 
+if(CONFIG_HTTP_CLIENT) {
+    mbedtls_src += [
+        "../../../../comp/mbedtls/port/ssl_tls_alt.c",
+    ]
+}
+
 config("_config") {
     include_dirs = mbedtls_inc
 }

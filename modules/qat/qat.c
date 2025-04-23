@@ -49,6 +49,7 @@ qurt_signal_t  qat_task_start;
 nt_osal_task_handle_t  qat_tx_task_hdl = NULL;
 nt_osal_task_handle_t  qat_rx_task_hdl = NULL;
 
+
 /*-------------------------------------------------------------------------
  * Type Declarations
  *-----------------------------------------------------------------------*/
@@ -1154,9 +1155,10 @@ static void QAT_TxTasks(void *arg)
 		Next = HTC_Context.Tx_Queue;
 		
 		while(Next){
-
+            
 			  while(Next->Len > offset)
 			  {
+			    qurt_thread_sleep(1);
 				chunkSize = (Next->Len - offset > QAT_OUTPUT_MAX_LENGTH)? QAT_OUTPUT_MAX_LENGTH:(Next->Len - offset); 
 				QAT_Output(chunkSize, (char*)(Next->Buffer+offset));
 				offset += chunkSize;
@@ -1217,7 +1219,7 @@ qbool_t QAT_RxTask_Start()
     qbool_t Ret_Val = true;
 	uint32_t ret_val;
 
-    ret_val =  (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 9216, NULL, 6, &qat_rx_task_hdl);
+    ret_val =  (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 4096, NULL, 6, &qat_rx_task_hdl);
     if(ret_val != pdPASS)
     {
    	 printf("QAT: task creation failed out of memory\r\n");
