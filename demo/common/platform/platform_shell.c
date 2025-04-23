@@ -878,7 +878,7 @@ static qapi_Status_t platform_demo_get_coredumpinfo(uint32_t Parameter_Count, QA
         printf("Usage: platform coredumpinfo <0: get and clear coredumpinfo; 1: get but not clear coredumpinfo>\n");
         return QAPI_ERR_INVALID_PARAM;
     }
-    if ((Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1))
+    if (!Parameter_List[0].Integer_Is_Valid || (Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1))
     {
         printf("Invalid parameter, shoud be 0 or 1\n");
         printf("Usage: platform coredumpinfo <0: get and clear coredumpinfo; 1: get but not clear coredumpinfo>\n");
@@ -1043,7 +1043,7 @@ static qapi_Status_t platform_demo_set_coredumpflag(uint32_t Parameter_Count, QA
     }
 
     /* input value should be 0 or 1*/
-    if (Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1)
+    if (!Parameter_List[0].Integer_Is_Valid || (Parameter_List[0].Integer_Value != 0 && Parameter_List[0].Integer_Value != 1))
     {
         printf("Invalid parameter, shoud be 0 or 1\n");
         printf("Usage: platform coredumpflag <0|1: if print all the ram info>\n");
