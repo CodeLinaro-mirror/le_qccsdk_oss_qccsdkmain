@@ -126,11 +126,26 @@ int at_get_wifi_cfg(char *ssid, char *password)
 
 static int at_web_url_decode(char *src, int src_len, char *des, int des_len)
 {
-    int len = MIN(src_len, des_len);
+    int i = 0;
+	int len = MIN(src_len, des_len);
 
     memset(des, 0, des_len);
-    memcpy(des, src, len);
-
+	for(i=0; i<len; i++) {
+        if ((src[i] == '%') && isxdigit(src[i+1]) && isxdigit(src[i+2])) {
+            //convert two hex digits to a character
+            char hex[3] = {src[i+1], src[i+2], '\0'};
+			*des = (char)strtol(hex, NULL, 16);
+			i+=2;
+			des++;
+		} else if (src[i] == '+') {
+            *des = ' ';
+			des++;
+		} else {
+            *des= src[i];
+			des++;
+		}
+	}
+ 
     return len;
 }
 
