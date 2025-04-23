@@ -447,7 +447,7 @@ void err_fatal_handler (void)
       nt_rram_write(WIFI_FW_COREDUMP_HEADER_START_ADDRESS,  &wifi_fw_coredump_header, sizeof(wifi_fw_coredump_header_t));
     }
     /* system reboot */
-    //nt_system_sw_reset();
+    nt_system_sw_reset();
 } /* err_fatal_handler */
 
 unsigned int bswap_32(unsigned int x)
@@ -662,7 +662,7 @@ uint32 param3
   }
   else
   {
-    //nt_system_sw_reset();
+    nt_system_sw_reset();
   }
 }
 
