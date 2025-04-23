@@ -47,7 +47,7 @@ define coreregs
     set $r10=coredump->arch->regs->name->regs[10]
     set $r11=coredump->arch->regs->name->regs[11]
 
-    if (coredump->arch->regs->name->exception_pc != 0)
+    if (coredump->arch->regs->name->exception_lr != 0)
       set $r0=coredump->arch->regs->name->exception_r0
       set $r1=coredump->arch->regs->name->exception_r1
       set $r2=coredump->arch->regs->name->exception_r2
@@ -83,7 +83,7 @@ define coreregs
       set $lr=coredump->arch->regs->name->lr
       set $sp=coredump->arch->regs->name->sp+0x20
 
-      if (coredump->arch->regs->name->pc==0)
+      if ((unsigned int)coredump->arch->regs->name->pc < 1024)
         set $pc=coredump->arch->regs->name->lr
       else
         set $pc=coredump->arch->regs->name->pc

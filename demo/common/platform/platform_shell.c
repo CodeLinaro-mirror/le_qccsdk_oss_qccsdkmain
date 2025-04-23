@@ -32,9 +32,6 @@
 #include "qapi_lowpower.h"
 
 extern unsigned int __rram_region_end_address;
-int g_coredump_under_dtim_test_index = 0;
-static uint32_t bmps_start;
-static nt_osal_timer_handle_t bmps_timer;
 
 #define COREDUMP_TEST_INVALID_ADDRESS (__rram_region_end_address + 0x1000)
 #endif
@@ -783,9 +780,14 @@ void coredump_test_sub_func_1(int test_case_idx)
             pF = (int (*)(void))COREDUMP_TEST_INVALID_ADDRESS;
             r = pF();
             break;
+        /* Trigger a memory management fault or hard fault by writing to a protected address */
+        case 6:
+            p = (unsigned int *)0x2;
+            *p = 0x00BADA55;
+            break;
         default:
-            printf("Test case index shoud be an integer less than 6\n");
-    }
+            printf("Test case index shoud be an integer less than 7\n");
+        }
 }
 
 void coredump_test_sub_func_0(int test_case_idx)
@@ -799,20 +801,18 @@ static qapi_Status_t platform_demo_coredumptest(uint32_t Parameter_Count, QAPI_C
         printf("Invalid number of arguments\r\n");
         printf("===================== unit test command =====================\n");
         printf(
-            "Usage: platform coredumptest <test case index: 0~5> <bmps_enable:1/0> [timeout in ms to trigger crash]\n");
+            "Usage: platform coredumptest <test case index: 0~5>\n");
         printf("                              0: Trigger an assertion.\n");
         printf("                              1: Trigger an usage fault or hard fault by executing at null pointer.\n");
         printf("                              2: Trigger an usage fault or hard fault by dividing by zero.\n");
-        printf(
-            "                              3: Trigger a bus fault or hard fault by reading from a reserved address.\n");
-        printf(
-            "                              4: Trigger a bus fault or hard fault by writing to a reserved address.\n");
-        printf(
-            "                              5: Trigger a bus fault or hard fault by executing at a reserved address.\n");
+        printf("                              3: Trigger a bus fault or hard fault by reading from a reserved address.\n");
+        printf("                              4: Trigger a bus fault or hard fault by writing to a reserved address.\n");
+        printf("                              5: Trigger a bus fault or hard fault by executing at a reserved address.\n");
+        printf("                              6: Trigger a memory management fault or hard fault by writing to a protected address.\n");
         return QAPI_ERR_INVALID_PARAM;
     }
-    if (!Parameter_List[0].Integer_Is_Valid || Parameter_List[0].Integer_Value > 5) {
-        printf("Test case index shoud be an integer less than 6.\n");
+    if (!Parameter_List[0].Integer_Is_Valid || Parameter_List[0].Integer_Value > 6) {
+        printf("Test case index shoud be an integer less than 7.\n");
         return QAPI_ERR_INVALID_PARAM;
     }
 
@@ -1042,7 +1042,7 @@ const QAPI_Console_Command_t platform_shell_cmds[] = {
 #endif
     {platform_demo_check_boot_reason, "boot_reason", "\n", "check boot reason\n"},
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-    {platform_demo_coredumptest, "coredumptest", "<test case index: 0~5>\n", "unit test for coredump function\n"},
+    {platform_demo_coredumptest, "coredumptest", "<test case index: 0~6>\n", "unit test for coredump function\n"},
     {platform_demo_get_coredumpinfo, "coredumpinfo", "<flag:0|1>\n", "dump the coredump info\n"},
     {platform_demo_set_coredumpflag, "coredumpflag", "<flag:0|1>\n", "flag indicating if dump the whole ram info\n"},
 #endif
