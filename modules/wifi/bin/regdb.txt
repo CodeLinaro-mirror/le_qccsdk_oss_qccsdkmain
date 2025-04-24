@@ -2870,7 +2870,7 @@ uint8	REGULATORY_DB_SECTION.regDbAllCountries[204].max_bw_6g	 0
 uint8	REGULATORY_DB_SECTION.regDbAllCountries[204].phymode_bitmap	 0 
 uint8	REGULATORY_DB_SECTION.regDbAllCountries[204].pad	 0 
 uint16	REGULATORY_DB_SECTION.regDbAllCountries[205].country_code	 392 
-uint16	REGULATORY_DB_SECTION.regDbAllCountries[205].reg_dmn_pair_id	 225 
+uint16	REGULATORY_DB_SECTION.regDbAllCountries[205].reg_dmn_pair_id	 45 
 uint8	REGULATORY_DB_SECTION.regDbAllCountries[205].super_dmn_6g_id	 17 
 uint8	REGULATORY_DB_SECTION.regDbAllCountries[205].alpha2[0]	 74 
 uint8	REGULATORY_DB_SECTION.regDbAllCountries[205].alpha2[1]	 80 
@@ -3641,9 +3641,9 @@ uint8	REGULATORY_DB_SECTION.regDbRegDmnPairs[92].dmn_id_2g	 0
 uint16	REGULATORY_DB_SECTION.regDbRegDmnPairs[93].reg_dmn_pair_id	 119 
 uint8	REGULATORY_DB_SECTION.regDbRegDmnPairs[93].dmn_id_5g	 63 
 uint8	REGULATORY_DB_SECTION.regDbRegDmnPairs[93].dmn_id_2g	 5 
-uint16	REGULATORY_DB_SECTION.regDbRegDmnPairs[94].reg_dmn_pair_id	 0 
-uint8	REGULATORY_DB_SECTION.regDbRegDmnPairs[94].dmn_id_5g	 255 
-uint8	REGULATORY_DB_SECTION.regDbRegDmnPairs[94].dmn_id_2g	 255 
+uint16	REGULATORY_DB_SECTION.regDbRegDmnPairs[94].reg_dmn_pair_id	 45 
+uint8	REGULATORY_DB_SECTION.regDbRegDmnPairs[94].dmn_id_5g	 49 
+uint8	REGULATORY_DB_SECTION.regDbRegDmnPairs[94].dmn_id_2g	 3 
 uint16	REGULATORY_DB_SECTION.regDbRegDmnPairs[95].reg_dmn_pair_id	 0 
 uint8	REGULATORY_DB_SECTION.regDbRegDmnPairs[95].dmn_id_5g	 255 
 uint8	REGULATORY_DB_SECTION.regDbRegDmnPairs[95].dmn_id_2g	 255 
