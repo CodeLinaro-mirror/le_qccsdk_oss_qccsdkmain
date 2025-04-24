@@ -14,6 +14,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "nt_wdt_api.h"
 #include "ferm_prof.h"
 #include "nt_timer.h"
+#include "wifi_fw_pwr_cb_infra.h"
 #if (NT_CHIP_VERSION==2) || defined (PLATFORM_FERMION)
 #include "uart.h"
 #endif //(NT_CHIP_VERSION==2) || defined (PLATFORM_FERMION)
@@ -366,6 +367,19 @@ void nt_watchdog_timer_bark_call_back()
 #endif
 }
 
+void nt_watchdog_timer_power_state_change_cb(uint8_t evt, void *p_args)
+{
+	(void)p_args;
+
+	if (evt == PWR_EVT_WMAC_PRE_SLEEP) {
+        nt_watchdog_timer_freeze();
+    }
+
+	if ((evt == PWR_EVT_WMAC_POST_AWAKE) || (evt == PWR_EVT_WMAC_SLEEP_ABORT)) {
+        nt_watchdog_bark_timer_reset();
+    }
+}
+
 void nt_watchdog_timer_init(void)
 {
     #if (CONFIG_WATCH_DOG_BARK_TIME >= CONFIG_WATCH_DOG_BITE_TIME) || \
@@ -386,6 +400,8 @@ void nt_watchdog_timer_init(void)
 
 	//nt_watchdog_freeze_timer();
 	nt_watchdog_init(bite_time, bark_time);
+	fpci_evt_cb_reg((ps_evt_cb_t)&nt_watchdog_timer_power_state_change_cb, 
+        PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, 10, NULL);
 	nt_wdog_callback_reg (&nt_watchdog_timer_bark_call_back);
 	nt_watchdog_unfreeze_timer();
 
