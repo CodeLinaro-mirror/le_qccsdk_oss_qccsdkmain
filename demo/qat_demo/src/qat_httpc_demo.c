@@ -950,7 +950,7 @@ static QAT_Command_Status_t Extend_Command_HttpNetCfg(uint32_t Op_Type, uint32_t
    {
       case QAT_OP_EXEC:		     /* AT+WRTMEM */
       {	
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG=<netcfg_type>,[<port>],[<ip_prefer>],[<pre_allocate_ssl_buf>]\r\n");
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG=<netcfg_type>,<value>\r\n");
         rc = QAT_Response_Str(QAT_RC_OK, buffer);
         break;
       }
@@ -1414,20 +1414,7 @@ qapi_Status_t at_httpc_stop()
     Parameter_List[Parameter_Count].String_Value ="stop";
     Parameter_Count++;
 
-    if(g_https_cfg.is_pre_buffer == QAT_SSL_PRE_BUFFER_RELEASE)
-    {
-        Parameter_List[Parameter_Count].Integer_Is_Valid =true;
-        Parameter_List[Parameter_Count].Integer_Value = 1;
-        Parameter_Count++;
-    }
-
     rlt = httpc_command_handler(Parameter_Count,Parameter_List);
-
-    if((rlt==QAPI_OK) && (g_https_cfg.is_pre_buffer == QAT_SSL_PRE_BUFFER_RELEASE))
-    {
-        g_https_cfg.is_pre_buffer = QAT_SSL_PRE_BUFFER_INITIAL;
-    }
-    
     at_httpc_method = 0;
     
     return rlt;
