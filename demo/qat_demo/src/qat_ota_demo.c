@@ -99,28 +99,28 @@ void qat_fw_upgrade_callback(int32_t state, int32_t status)
 
     if(status != 0)
     {  
-        offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_FAILED:%d,%d", state, status);
+        offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_ERROR:%d,%d", state, status);
         rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
         return;
     }
     
     if(state == FW_UPGRADE_STATE_NOT_START_E)
     {
-        offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_INIT: OTA Start");
+        offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_START: OTA started, please wait");
     }
     else if(state == FW_UPGRADE_STATE_CONNECT_SERVER_E)
     {
-        offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_INIT: Connecting to Server");
+        //offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_INIT: Connecting to Server");
     }
     else if((state == FW_UPGRADE_STATE_RECEIVE_DATA_E) || (state == FW_UPGRADE_STATE_PROCESS_CONFIG_FILE_E)|| (state == FW_UPGRADE_STATE_PROCESS_IMAGE_E))
     {
         if(qat_upgrade_params->process_state_cnt == 0)
         {
-            offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_RUN: Firmware downloading, please wait...");
+            //offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_RUN: Firmware downloading, please wait...");
         }
         else if(qat_upgrade_params->process_state_cnt % 20 == 0)
         {
-           offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, ".");
+           //offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, ".");
         }
         qat_upgrade_params->process_state_cnt++;
     }
@@ -173,10 +173,10 @@ static void qat_fw_upgrade_HTTP_upgrade_task(void __attribute__((__unused__))*pv
     resp_code = qapi_Fw_Upgrade(qat_upgrade_params->interface_name, &plugin, qat_upgrade_params->url, qat_upgrade_params->cfg_file, qat_upgrade_params->flags, qat_fw_upgrade_callback, NULL);
     
     if (QAPI_OK != resp_code) {
-        offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_FAILED: Firmware Upgrade Image Download Failed ERR:%d\r\n",resp_code);
+        offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_ERROR: Firmware Upgrade Image Download Failed ERR:%d\r\n",resp_code);
         
         if (resp_code == QAPI_FW_UPGRADE_ERR_TRIAL_IS_RUNNING) {
-            offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_FAILED: Trial Partition is running, need reboot to do Firmware Upgrade.\r\n");
+            offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_ERROR: Trial Partition is running, need reboot to do Firmware Upgrade.\r\n");
         }
     } else {
         offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_FIN: Firmware Upgrade Image Download Completed successfully\r\n");
