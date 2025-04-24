@@ -18,7 +18,7 @@
 #include "qapi_status.h"
 #include "wlan_drv.h"
 #include "wmi_api.h"
-
+#include "wifi_fw_pwr_cb_infra.h"
 
 //Sleep modes types
 typedef enum qapi_sleep_types {
@@ -135,3 +135,22 @@ qapi_Status_t  qapi_bmps_rx_filter_enable(uint8_t enable);
 */
 qapi_Status_t qapi_bmps_bcmc_rx_filter_cb_register(qapi_bmps_rx_filter_cb bmps_cb, qapi_bmps_rx_filter_cb net_cb);
 
+/**
+   @brief Register the callback function for bmps for pre-sleep/post-awake.
+
+   @param[in] cb  callback function used for calling when bmps pre-sleep/post-awake.
+   @param[in] flag  flag to register/deregister
+
+   @return
+   - QAPI_OK                             --  BMPS  register callback successfully.
+*/
+qapi_Status_t qapi_bmps_sleep_wakeup_cb(ps_evt_cb_t cb, uint8_t flag);
+
+/**
+   @brief obtain exit reason of bmps
+
+   @param[in] *reason  Pointer of exit reason to obtain
+   @return
+   - QAPI_OK                             --   valid pointer.
+*/
+qapi_Status_t qapi_bmps_get_exit_reason(uint8_t *reason);
