@@ -13,12 +13,12 @@
 #include "nt_hw_support.h"
 #include "nt_socpm_sleep.h"
 #include "wlan_drv.h"
+#include "wlan_power.h"
 #include "wmi_api.h"
 #include "lowpower_internal.h"
 #include "ethernet.h"
 #include "ip4.h"
 #include "udp.h"
-
 
 #define TEST_SLP_TYPE_MCU       1
 #define TEST_SLP_TYPE_LIGHT     2
@@ -42,6 +42,9 @@ uint32_t udp_whitelist_arr[UDP_WHITELIST_LEN]={7777,0,0,0};
 
 static uint32_t bmps_start;
 static nt_osal_timer_handle_t bmps_timer;
+
+static uint32_t bmps_cb_exit_start;
+static nt_osal_timer_handle_t bmps_cb_exit_timer;
 
 extern lpr_wmi_t g_lowpower_wmi;
 
@@ -147,6 +150,21 @@ static void bmps_timer_cb(void)
     bmps_timer = NULL;
 }
 
+static void bmps_callback_exit_timer_cb(void)
+{
+    WMI_BMPS_ENABLE *pdata = (WMI_BMPS_ENABLE *)&g_lowpower_wmi;
+    uint32_t now = hres_timer_curr_time_us();
+    uint32_t delta = now - bmps_cb_exit_start;
+
+    printf("BMPS callback exit timer expired. curr: %u, delta: %u\n", now, delta);
+    
+    memset(pdata, 0, sizeof(*pdata));
+    pdata->enable = 0;
+    
+    qapi_bmps_cfg(pdata->enable, 0);
+    nt_delete_timer(bmps_cb_exit_timer);
+    bmps_cb_exit_timer = NULL;
+}
 static qapi_Status_t bmps_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     if((Parameter_Count != 1 && Parameter_Count != 2) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
@@ -410,6 +428,49 @@ static qapi_Status_t bcmc_filter_enable(uint32_t Parameter_Count, QAPI_Console_P
     return QAPI_OK;
 }
 
+ void bmps_sleep_wake_cb(uint8_t evt, void *p_args)
+ {
+     (void)p_args;
+     uint8_t reason = 0;
+
+     if (evt == PWR_EVT_WMAC_PRE_SLEEP) {
+         printf("Enter PS mode!\r\n");
+     }
+ 
+     if (evt == PWR_EVT_WMAC_POST_AWAKE) {
+        printf("Exit PS mode!\r\n");
+
+        /* Exit BMPS only when waken up by interrupt*/
+        qapi_bmps_get_exit_reason(&reason);
+        if(reason == EXIT_REASON_EXT_INT)
+        {
+            bmps_cb_exit_timer = nt_create_timer(bmps_callback_exit_timer_cb, NULL, 2, FALSE); // ms
+            if (!bmps_cb_exit_timer)
+            {
+                printf("BMPS timer create failed!\r\n");
+                return;
+            }
+            if (nt_start_timer(bmps_cb_exit_timer) != NT_TIMER_SUCCESS)
+            {
+                printf("BMPS timer start failed!\r\n");
+                return;
+            }
+            bmps_cb_exit_start = hres_timer_curr_time_us();
+        }
+     }
+ }
+
+static qapi_Status_t bmps_cb_register(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if((Parameter_Count != 1 && Parameter_Count != 2) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    qapi_bmps_sleep_wakeup_cb((ps_evt_cb_t)&bmps_sleep_wake_cb, Parameter_List[0].Integer_Value);
+
+    return QAPI_OK;
+}
+
 static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     unsigned int index = 0;
@@ -533,6 +594,7 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
 #endif //CONFIG_CPR_ENABLE
     {bcmc_filter_enable, "bcmc_filter_enable", "<1|0> <log enable:1|0>", "enable or disable the bcmc filter\n"},
     {bcmc_filter_list , "bcmc_filter_list", "\n\nUsage: bcmc_filter_list -a [1|0] -u [dst udp port] -q\n\n", "bcmc_filter_list"},
+    {bmps_cb_register , "bmps_cb_regiser", "<1|0>", "register|deregister callback function when pre-sleep/post-awake\n"},
 };
 
 const QAPI_Console_Command_Group_t lowpower_shell_cmd_group = {"lowpower", sizeof(lowpower_shell_cmds) / sizeof(QAPI_Console_Command_t), lowpower_shell_cmds};
