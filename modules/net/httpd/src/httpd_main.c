@@ -378,20 +378,7 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
     int fd = 0;
     int ret = 0;
 
-    if ((fd=socket(AF_INET, SOCK_STREAM, 0))>=0)
-    {
-        /* is valid IPV4 */
-        struct sockaddr_in serv_addr = {
-            .sin_family = PF_INET,
-            .sin_addr   = {
-                .s_addr = htonl(INADDR_ANY)
-            },
-            .sin_port   = htons(hd->config.server_port)
-        };
-        ret = bind(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-    }
-
-    else if ((fd=socket(AF_INET6, SOCK_STREAM, 0)) >= 0)
+    if ((fd=socket(AF_INET6, SOCK_STREAM, 0)) >= 0)
     {
         /* is valid IPV6 */
         struct in6_addr inaddr_any = IN6ADDR_ANY_INIT;
@@ -402,6 +389,23 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
         };
         ret = bind(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     }
+
+
+#if 0
+    if ((fd=socket(AF_INET, SOCK_STREAM, 0))>=0)
+    {
+        /* is valid IPV4 */
+        printf("ipv4\r\n");
+        struct sockaddr_in serv_addr = {
+            .sin_family = PF_INET,
+            .sin_addr   = {
+                .s_addr = htonl(INADDR_ANY)
+            },
+            .sin_port   = htons(hd->config.server_port)
+        };
+        ret = bind(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    }
+#endif
 
     else {
         ESP_LOGE(TAG, LOG_FMT("error in socket (%d)"), errno);
