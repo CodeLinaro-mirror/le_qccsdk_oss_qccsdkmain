@@ -45,6 +45,8 @@ static nt_osal_timer_handle_t bmps_timer;
 
 extern lpr_wmi_t g_lowpower_wmi;
 
+
+bool wakeup_cb_bcmc_filter_dtim(uint16_t type, bool bm_cast,void* wifi_frame,uint16_t len);
 void test_sleep_cb()
 {
 	HAL_REG_WR(QWLAN_PMU_CFG_WIFI_SS_STATE_REG, NT_PMU_CFG_WIFI_SLEEP_OFFSET);
@@ -167,6 +169,9 @@ static qapi_Status_t bmps_enable(uint32_t Parameter_Count, QAPI_Console_Paramete
         bmps_start = hres_timer_curr_time_us();
         printf("BMPS timer started! curr: %u\n", bmps_start);
     }
+    qapi_bmps_rx_filter_enable(true);
+    qapi_bmps_bcmc_rx_filter_cb_register(wakeup_cb_bcmc_filter_dtim,NULL);
+
     return qapi_bmps_cfg(Parameter_List[0].Integer_Value ? 1 : 0, 0);
 }
 

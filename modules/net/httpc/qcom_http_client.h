@@ -19,6 +19,7 @@
 #include "mbedtls/debug.h"
 //#include "mbedtls/certs.h"
 #include "mbedtls/platform.h"
+#include "ssl_tls_alt.h"
 
 #include "qapi_httpc.h"
 
@@ -80,6 +81,8 @@
 #endif
 
 #define DEFAULT_IP_PREFER     0  //IP_V4
+#define DEFAULT_PRE_ALLOCATE_BUFFER     0  //0: don't PRE ALLOCATE, 1:PRE ALLOCATE
+
 
 typedef enum{
     IP_V4,
@@ -244,6 +247,7 @@ typedef struct httpclient_sess_s {
                                                                  * "www.example.com:22" if hcs_host is a proxy
                                                                  */
     uint32_t            isHttps;
+    uint16_t            is_pre_alccote_ssl_buffer;   /* 0: don't pre allocte; 1:pre allocte, default: 0 */
     uint16_t            ipprefer;
     HTTPC_REQUEST_CMD_E hcs_command;
     SSLContext_t        *sslCtx;
@@ -319,7 +323,8 @@ httpclient_sess* http_client_newsess(
         uint16_t httpc_max_body_length,
         uint16_t httpc_max_header_length,
         uint16_t rxbufsize,
-        uint16_t ip_prefer);
+        uint16_t ip_prefer,
+        uint16_t ssl_pre_buffer);
 int http_client_freesess(httpclient_sess *sess);
 int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port);
 int http_client_disconnect(httpclient_sess *sess);
@@ -336,5 +341,6 @@ int http_client_free_sslcert(httpclient_sess *sess);
 int http_client_cb_eable_adding_header(httpclient_sess *sess, int32_t enable);
 int http_client_senddata(httpclient_sess *sess, char *buf, int length);
 int http_client_send_chunk(httpclient_sess *sess, HTTPC_REQUEST_CMD_E cmd, const char *URL, const char *chunk_data, int32_t chunk_size, uint8_t chunk_flag, int32_t total_size);
+int http_client_release_pre_allcoate_buffer();
 
 #endif /* _HTTPD_H_ */

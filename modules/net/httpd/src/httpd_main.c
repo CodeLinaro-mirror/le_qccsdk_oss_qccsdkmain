@@ -378,10 +378,9 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
     int fd = 0;
     int ret = 0;
 
-    if (socket(AF_INET, SOCK_STREAM, 0))
+    if ((fd=socket(AF_INET, SOCK_STREAM, 0))>=0)
     {
         /* is valid IPV4 */
-        fd = socket(PF_INET, SOCK_STREAM, 0);
         struct sockaddr_in serv_addr = {
             .sin_family = PF_INET,
             .sin_addr   = {
@@ -392,10 +391,9 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
         ret = bind(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     }
 
-    else if (socket(AF_INET6, SOCK_STREAM, 0))
+    else if ((fd=socket(AF_INET6, SOCK_STREAM, 0)) >= 0)
     {
         /* is valid IPV6 */
-        fd = socket(PF_INET6, SOCK_STREAM, 0);
         struct in6_addr inaddr_any = IN6ADDR_ANY_INIT;
         struct sockaddr_in6 serv_addr = {
             .sin6_family  = PF_INET6,

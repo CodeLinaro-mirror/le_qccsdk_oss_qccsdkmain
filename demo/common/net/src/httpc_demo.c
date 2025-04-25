@@ -934,6 +934,7 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
     int header_size = HEADER_BUFFER_SIZE;
     int rxbuffer_size = RX_BUFFER_SIZE;
     uint16_t ip_prefer = DEFAULT_IP_PREFER;
+    uint16_t pre_alloc_ssl_buffer = DEFAULT_PRE_ALLOCATE_BUFFER;
     qbool_t secure_session = false;
     struct http_client_demo_s* arg = NULL;
 
@@ -1080,6 +1081,15 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                     
                     ip_prefer = Parameter_List[i].Integer_Value;
                     break;
+                 case 'p':   /* -p pre allocate buffer */
+                    i++;
+                    if (!Parameter_List[i].Integer_Is_Valid)
+                    {
+                        HTTPC_PRINTF("%s line %d: Invalid value of pre allocate buffer: %s\n", __func__, __LINE__, Parameter_List[i].String_Value);
+                        return QAPI_ERROR;
+                    }
+                    pre_alloc_ssl_buffer = Parameter_List[i].Integer_Value;
+                    break;
 
                 default:
                     HTTPC_PRINTF("%s line %d: Unknown option: %s\n", __func__, __LINE__, Parameter_List[i].String_Value);
@@ -1109,7 +1119,8 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                                            body_size,
                                            header_size,
                                            rxbuffer_size,
-                                           ip_prefer);
+                                           ip_prefer,
+                                           pre_alloc_ssl_buffer);
     }
 
     else
@@ -1122,7 +1133,8 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                                            body_size,
                                            header_size,
                                            rxbuffer_size,
-                                           ip_prefer);
+                                           ip_prefer,
+                                           pre_alloc_ssl_buffer);
     }
 
     if (arg->client == NULL)

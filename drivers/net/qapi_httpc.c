@@ -91,7 +91,8 @@ qapi_Net_HTTPc_New_sess2(
             uint16_t httpc_Max_Body_Length,
             uint16_t httpc_Max_Header_Length,
             uint16_t httpc_Rx_Buffer_Size,
-            uint16_t ip_prefer)
+            uint16_t ip_prefer,
+            uint16_t ssl_pre_buffer)
 {
     return (qapi_Net_HTTPc_handle_t)http_client_newsess(
             timeout,
@@ -101,7 +102,8 @@ qapi_Net_HTTPc_New_sess2(
             httpc_Max_Body_Length,
             httpc_Max_Header_Length,
             httpc_Rx_Buffer_Size,
-            ip_prefer);
+            ip_prefer,
+            ssl_pre_buffer);
 }
 
 /****************************************************************************
@@ -123,7 +125,8 @@ qapi_Net_HTTPc_New_sess(
             httpc_Max_Body_Length,
             httpc_Max_Header_Length,
             HTTPCLIENT_MAX_BUFFER_SIZE,
-            DEFAULT_IP_PREFER);
+            DEFAULT_IP_PREFER,
+            DEFAULT_PRE_ALLOCATE_BUFFER);
 }
 
 /****************************************************************************
@@ -323,3 +326,14 @@ qapi_Status_t qapi_Net_HTTPc_Send_Chunk(qapi_Net_HTTPc_handle_t handle, qapi_Net
     err = http_client_send_chunk((httpclient_sess *)handle, cmd, URL, chunk, chunk_size, chunk_flag, total_size);
     return httpc_convert_err_code(err);
 }
+
+/****************************************************************************
+ ***************************************************************************/
+qapi_Status_t qapi_Net_HTTPc_Rlease_Pre_allocate_buffer(void)
+{
+    int err;
+
+    err = http_client_release_pre_allcoate_buffer();
+    return httpc_convert_err_code(err);
+}
+

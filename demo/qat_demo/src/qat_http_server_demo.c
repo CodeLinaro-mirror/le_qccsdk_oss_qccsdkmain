@@ -61,7 +61,8 @@ QAT_Command_Status_t Extend_Command_WEBSERVER(uint32_t Op_Type, uint32_t Paramet
 	char *buffer = NULL;
 	QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
 	uint8_t enable = 0;
-	uint32_t port = 0;
+	uint32_t port = 80;
+	int ret = 0;
 	
 	switch (Op_Type)
 	{
@@ -88,6 +89,7 @@ QAT_Command_Status_t Extend_Command_WEBSERVER(uint32_t Op_Type, uint32_t Paramet
  		 if(!Parameter_List 
 		 	|| (Parameter_Count > 2 )
 		 	|| (Parameter_Count == 1 && !Parameter_List[0].Integer_Is_Valid)
+		 	|| (Parameter_Count == 1 && (Parameter_List[0].Integer_Value == 1))
 		 	|| (Parameter_Count == 2 && (!Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid))) 
 		 {
 
@@ -99,14 +101,22 @@ QAT_Command_Status_t Extend_Command_WEBSERVER(uint32_t Op_Type, uint32_t Paramet
 		 port = Parameter_List[1].Integer_Value;
 		 if (enable)
 		 {
-	 	     at_web_start(port);	
-	 		 rc = QAT_Response_Str(QAT_RC_OK, NULL);
+	 	     ret = at_web_start(port);	
 		 }
 		 else
 		 {
-			 at_web_stop();			 
-	 		 rc = QAT_Response_Str(QAT_RC_OK, NULL);
+			 ret = at_web_stop();			 
 		 }
+
+		 if (ret == 0)
+		 {
+	 		 rc = QAT_Response_Str(QAT_RC_OK, NULL);		     
+		 }
+		 else
+		 {
+	 		 rc = QAT_Response_Str(QAT_RC_ERROR, NULL);		     		     
+		 }
+		 
          break;
        }	   
  	   default:

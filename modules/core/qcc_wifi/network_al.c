@@ -837,7 +837,7 @@ static void nt_dpm_netif_dhcp_hdlr(struct netif* p_netif)
 #endif
 
         //check for ipv4 link local address
-#if LWIP_AUTOIP
+#if 0
         if (netif_autoip_data(p_netif) != NULL)
         {
             uint8_t netif_id;
