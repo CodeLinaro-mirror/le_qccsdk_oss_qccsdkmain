@@ -12,7 +12,7 @@
 #include "nt_imps.h"
 #include "lowpower_internal.h"
 #include "wlan_power.h"
-
+#include "wifi_fw_pwr_cb_infra.h"
 
 lpr_wmi_t g_lowpower_wmi;
 extern ppm_common_t g_ppm_common_struct;
@@ -199,3 +199,28 @@ qapi_Status_t qapi_bmps_bcmc_rx_filter_cb_register(qapi_bmps_rx_filter_cb bmps_c
    return QAPI_OK;
 }
 
+qapi_Status_t qapi_bmps_sleep_wakeup_cb(ps_evt_cb_t cb, uint8_t flag)
+{
+    if(flag)
+    {
+        fpci_evt_cb_reg(cb, PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, 1, NULL);
+    }
+    else 
+    {
+        fpci_evt_cb_dereg(cb, PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT);
+    }
+    return QAPI_OK;
+}
+
+qapi_Status_t qapi_bmps_get_exit_reason(uint8_t *reason)
+{
+    PM_STRUCT *pPmStruct;
+    pPmStruct = (PM_STRUCT *) gdevp->pPmStruct;
+
+    if(reason != NULL)
+    {
+        *reason = PM_GET_SLEEP_EXIT_REASON(pPmStruct);
+        return QAPI_OK;
+    }
+    return QAPI_ERR_INVALID_PARAM;
+}
