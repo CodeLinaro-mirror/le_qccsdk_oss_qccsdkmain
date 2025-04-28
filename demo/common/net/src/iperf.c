@@ -1565,9 +1565,9 @@ int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number) //,s
                 total = len1;
                 total = (uint64_t)(total << 32) + len2;
                 // IPERF_PRINTF("got from server: total:0x%xbytes, \n", total);
-                IPERF_PRINTF("got from server:  time %d.%d s\n", interval, interval2);
+                //IPERF_PRINTF("got from server:  time %d.%d s\n", interval, interval2);
                 // IPERF_PRINTF("got from server: interval:%d, len2:%d, interval2:%d\n",interval,len2, interval2);
-                iperf_result_print2(&p_tCxt->pktStats, interval * 1000 + interval2, total, true);
+                //iperf_result_print2(&p_tCxt->pktStats, interval * 1000 + interval2, total, true);
             }
             error = QAPI_OK;
             break;
