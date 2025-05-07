@@ -31,6 +31,8 @@
 
 #define LLC_SNAP_HEADER_LEN 8
 
+#define LOWPOWER_CB_SIGNAL 0x1
+
 void nt_dpm_stop_network_stack();
 
 int32_t test_sleep_list_no = -1;
@@ -45,6 +47,8 @@ static nt_osal_timer_handle_t bmps_timer;
 
 static uint32_t bmps_cb_exit_start;
 static nt_osal_timer_handle_t bmps_cb_exit_timer;
+qurt_signal_t  bmps_lowpower_cb_exit_task_signal;
+uint8_t bmps_cb_uc_bc_wakeup = 0;
 
 extern lpr_wmi_t g_lowpower_wmi;
 
@@ -435,17 +439,44 @@ static qapi_Status_t bcmc_filter_enable(uint32_t Parameter_Count, QAPI_Console_P
     return QAPI_OK;
 }
 
+void bmps_lowpower_cb_exit_task(void __attribute__((__unused__))*pvParameters)
+{
+    WMI_BMPS_ENABLE *pdata = (WMI_BMPS_ENABLE *)&g_lowpower_wmi;
+    while(1)
+    {
+        qurt_signal_wait(&bmps_lowpower_cb_exit_task_signal, LOWPOWER_CB_SIGNAL, QURT_SIGNAL_ATTR_CLEAR_MASK);
+
+        uint32_t start_time = HAL_REG_RD(QWLAN_MTU_MTU_GLOBAL_TIMER_REG);
+        uint32_t delta_time = 0;
+
+        while(delta_time < 50000)
+        {
+            nt_socpm_nop_delay(1000); // short wait before another check
+            delta_time = HAL_REG_RD(QWLAN_MTU_MTU_GLOBAL_TIMER_REG) - start_time;
+        }
+        
+        memset(pdata, 0, sizeof(*pdata));
+        pdata->enable = 0;
+
+        qapi_bmps_cfg(pdata->enable, 0);
+        
+        bmps_cb_uc_bc_wakeup = 0;
+        //printf("test_task end\r\n");
+    }
+    
+}
+
  void bmps_sleep_wake_cb(uint8_t evt, void *p_args)
  {
      (void)p_args;
      uint8_t reason = 0;
 
      if (evt == PWR_EVT_WMAC_PRE_SLEEP) {
-         printf("Enter PS mode!\r\n");
+         //printf("Enter PS mode!\r\n");
      }
  
      if (evt == PWR_EVT_WMAC_POST_AWAKE) {
-        printf("Exit PS mode!\r\n");
+        //printf("Exit PS mode!\r\n");
 
         /* Exit BMPS only when waken up by interrupt*/
         qapi_bmps_get_exit_reason(&reason);
@@ -464,16 +495,39 @@ static qapi_Status_t bcmc_filter_enable(uint32_t Parameter_Count, QAPI_Console_P
             }
             bmps_cb_exit_start = hres_timer_curr_time_us();
         }
+        else if(bmps_cb_uc_bc_wakeup && (reason == EXIT_REASON_TIM_UC || reason == EXIT_REASON_TIM_BC))
+        {
+            qurt_signal_set(&bmps_lowpower_cb_exit_task_signal, LOWPOWER_CB_SIGNAL);
+        }
      }
  }
 
 static qapi_Status_t bmps_cb_register(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
+    static uint8_t cb_registered = 0;
+
     if((Parameter_Count != 1 && Parameter_Count != 2) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
-    qapi_bmps_sleep_wakeup_cb((ps_evt_cb_t)&bmps_sleep_wake_cb, Parameter_List[0].Integer_Value);
+    bmps_cb_uc_bc_wakeup = 0;
+
+    if(Parameter_List[1].Integer_Is_Valid )
+    {
+        bmps_cb_uc_bc_wakeup = Parameter_List[1].Integer_Value;
+    }
+
+    if(cb_registered == 0)
+    {
+        qurt_signal_create(&bmps_lowpower_cb_exit_task_signal);
+
+        nt_qurt_thread_create(bmps_lowpower_cb_exit_task, "bmps_lowpower_cb_exit_task", 300, NULL, 6, NULL);
+
+        qapi_bmps_sleep_wakeup_cb((ps_evt_cb_t)&bmps_sleep_wake_cb, Parameter_List[0].Integer_Value);
+
+        cb_registered = 1;
+    }
+    
 
     return QAPI_OK;
 }
