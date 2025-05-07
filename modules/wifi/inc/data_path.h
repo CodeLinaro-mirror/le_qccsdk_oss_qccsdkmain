@@ -972,6 +972,7 @@ extern volatile dbg_node_t seqout[DEBUG_BARQ_SIZE];
 
 NT_BOOL nt_dpm_is_tx_pending_wmm_queues(uint8_t wmi_dev_id);
 NT_BOOL nt_dpm_is_tx_pending_nonwmm_queues(uint8_t wmi_dev_id);
+NT_BOOL nt_dpm_is_tx_pending_in_tx_buffers_or_queues(uint8_t wmi_dev_id);
 
 /*
  * @brief Check if Tx is busy.

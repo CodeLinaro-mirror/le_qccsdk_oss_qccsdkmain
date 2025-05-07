@@ -29,6 +29,7 @@
 #endif /* FEATURE_PERIODIC_WAKE_SLEEP */
 #include "wlan_qpower.h"
 #include "hal_int_powersave.h"
+#include "halphy_api.h"
 
 /**********************************************************
  *      Power management module internal defintion file   *
@@ -301,6 +302,13 @@ typedef struct {
     uint64_t bmps_last_tsf;     /* Last TSF used in sleep time computation */
     uint64_t bmps_slp_us;       /* Last sleep time computed */
 #endif /* WLAN_BMPS_TBTT_DEBUG */
+    bool bmps_entry_in_progress;    /* Reflects whether device is in the process of entering BMPS */
+#ifdef BMPS_ENTRY_ABORT_ON_ACTIVITY_POST_ITO
+    uint32_t final_ito_slot_rx_count;   /* RX data count at final BMPS ITO slot */
+    uint32_t final_ito_slot_tx_count;   /* TX data count at final BMPS ITO slot */
+    uint32_t post_dpm_stop_rx_count;    /* RX data count after DPM stop on BMPS entry */
+    uint32_t post_dpm_stop_tx_count;    /* TX data count after DPM stop on BMPS entry */
+#endif /* BMPS_ENTRY_ABORT_ON_ACTIVITY_POST_ITO */
 } bmps_struct_t;
 
 /* PM Dev structure*/
@@ -804,6 +812,14 @@ uint64_t twt_compute_s2w_compensation_time(PM_STRUCT *pPmStruct, sleep_mode mode
  */
 uint64_t ptsm_compute_s2w_compensation_time(PM_STRUCT *pPmStruct, sleep_mode mode);
 #endif /* FEATURE_PERIODIC_WAKE_SLEEP */
+
+/*
+ * @brief  Perform necessary halphy restoration on exit form powersave
+ * @param  : dev -> device structure pointer
+ * @param  : profile -> calibration profile to restore
+ * @return : None
+ */
+void nt_wpm_wakeup_channel_restore(devh_t *dev, halphy_cal_profile_t profile);
 
 #endif // _WLAN_POWER_H_
 
