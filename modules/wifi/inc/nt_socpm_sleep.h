@@ -237,6 +237,10 @@ typedef struct {
     bool in_warm_boot;
 #ifdef NT_SOCPM_SW_MTUSR
     nt_mtusr_time_save_t mtusr_time_data;
+#ifdef SUPPORT_BMU_ERROR_RECOVERY
+    /* MTU time data storage for BMU error recovery sequence */
+    nt_mtusr_time_save_t bmu_recovery_mtusr_time_data;
+#endif /* SUPPORT_BMU_ERROR_RECOVERY */
 #endif //NT_SOCPM_SW_MTUSR
     uint32_t unapplied_err_us;
     uint32_t systick_off_time_us;
@@ -618,6 +622,22 @@ void nt_socpm_mtusr_save_mtu_time(void);
  *  @return : None
  */
 void nt_socpm_mtusr_save_aon_prog_timestamp(void);
+
+#ifdef SUPPORT_BMU_ERROR_RECOVERY
+/*
+ *  @brief : Minimal version to save MTU time data before WiFi sleep for BMU recovery sequence
+ *  @param : None
+ *  @return : None
+ */
+void nt_socpm_mtusr_save_mtu_time_on_bmu_recovery(void);
+
+/*
+ *  @brief : Minimal version of MTU time restoration for BMU recovery sequence
+ *  @param : None
+ *  @return : None
+ */
+void nt_socpm_mtusr_restore_mtu_time_on_bmu_recovery(void);
+#endif /* SUPPORT_BMU_ERROR_RECOVERY */
 #endif //  NT_SOCPM_SW_MTUSR
 
 /*

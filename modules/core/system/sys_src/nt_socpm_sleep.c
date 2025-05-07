@@ -4428,6 +4428,105 @@ void nt_socpm_mtusr_save_aon_prog_timestamp(
 
 }
 
+#ifdef SUPPORT_BMU_ERROR_RECOVERY
+/*
+ *  @brief : Minimal version to save MTU time data before WiFi sleep for BMU recovery sequence
+ *  @param : None
+ *  @return : None
+ */
+void __attribute__((section(".__sect_ps_txt")))
+nt_socpm_mtusr_save_mtu_time_on_bmu_recovery(
+    void)
+{
+    // Save key MTU timer registers
+    g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_glob_tmr = NT_REG_RD(QWLAN_MTU_MTU_GLOBAL_TIMER_REG);
+    g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_tsf_us =
+        NT_REG_RD(QWLAN_MTU_TSF_TIMER_LO_REG) | (((uint64_t)NT_REG_RD(QWLAN_MTU_TSF_TIMER_HI_REG)) << 32);
+#ifdef SUPPORT_TWO_STA_CONC
+    g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_tsf2_us =
+        NT_REG_RD(QWLAN_MTU_BSS2_CLIENT_TSF_TIMER_LO_REG) | 
+        (((uint64_t)NT_REG_RD(QWLAN_MTU_BSS2_CLIENT_TSF_TIMER_HI_REG)) << 32);
+#endif /* SUPPORT_TWO_STA_CONC */
+    g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_tbtt =
+        NT_REG_RD(QWLAN_MTU_TBTT_L_REG) | (((uint64_t)NT_REG_RD(QWLAN_MTU_TBTT_H_REG)) << 32);
+    g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_bcn_bssid_intv = NT_REG_RD(QWLAN_MTU_BCN_BSSID_INTV_REG);
+    nt_socpm_get_mtusr_timestamp(&(g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_timestamp));
+}
+
+/*
+ *  @brief : Minimal version of MTU time restoration for BMU recovery sequence
+ *  @param : None
+ *  @return : None
+ */
+void __attribute__((section(".__sect_ps_txt")))
+nt_socpm_mtusr_restore_mtu_time_on_bmu_recovery(
+    void)
+{
+    nt_mtusr_timestamp_t restore_timestamp;
+    uint64_t delta_time;
+    bool add_delta;
+
+    /* The usual MTUSR logic used in case of powersave involves taking timestamps at the time
+     * of AON timer programming and MTU data save. The time difference in between these two
+     * timestamps is used in conjunction with the AON timer value at the time of restoration
+     * to determine the time to be restored. This helps to overcome the inherent inaccuracy
+     * in QTimer correction with AON timer ticks across sleeps.
+     * In contrast, the BMU recovery sequence does not require any AON timer programming/real
+     * SOC sleep. So, the delta between the save timestamp and timestamp during restore is used
+     * directly to determine the time that is to be restored.
+     */
+    nt_socpm_get_mtusr_timestamp(&restore_timestamp);
+
+    
+    add_delta = nt_socpm_get_mtusr_timestamp_delta(&(g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_timestamp),
+                                                &restore_timestamp,
+                                                &delta_time);
+
+    uint64_t tsf = g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_tsf_us;
+#ifdef SUPPORT_TWO_STA_CONC
+    uint64_t tsf2 = g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_tsf2_us;
+#endif /* SUPPORT_TWO_STA_CONC */
+    uint32_t mtu_tmr = g_socpm_struct.bmu_recovery_mtusr_time_data.mtu_glob_tmr;
+    if (add_delta)
+    {
+        tsf += delta_time;
+#ifdef SUPPORT_TWO_STA_CONC
+        tsf2 += delta_time;
+#endif /* SUPPORT_TWO_STA_CONC */
+        mtu_tmr += (uint32_t)delta_time;
+    }
+    else
+    {
+        tsf -= delta_time;
+#ifdef SUPPORT_TWO_STA_CONC
+        tsf2 -= delta_time;
+#endif /* SUPPORT_TWO_STA_CONC */
+        mtu_tmr -= (uint32_t)delta_time;
+    }
+
+#ifdef WLAN_SLEEP_WITH_SYNTH_POWER_OFF
+    uint32_t pre_update_mtu_tstamp = NT_REG_RD(QWLAN_MTU_MTU_GLOBAL_TIMER_REG);
+#endif /* WLAN_SLEEP_WITH_SYNTH_POWER_OFF */
+    NT_REG_WR(QWLAN_MTU_MTU_GLOBAL_TIMER_REG, mtu_tmr);
+    NT_REG_WR(QWLAN_MTU_TSF_TIMER_HI_REG, (uint32_t)(tsf >> 32));
+    NT_REG_WR(QWLAN_MTU_TSF_TIMER_LO_REG, (uint32_t)tsf);
+#ifdef SUPPORT_TWO_STA_CONC
+    NT_REG_WR(QWLAN_MTU_BSS2_CLIENT_TSF_TIMER_HI_REG, (uint32_t)(tsf2 >> 32));
+    NT_REG_WR(QWLAN_MTU_BSS2_CLIENT_TSF_TIMER_LO_REG, (uint32_t)tsf2);
+#endif /* SUPPORT_TWO_STA_CONC */
+    // TBTT need not be adjusted by SW during restoration as HW will adjust it.
+    //  If the TBTT is less than TSF, HW increments it by sw_mtu_beacon_intv every usec,
+    //  until it is higher than TSF.
+    NT_REG_WR(QWLAN_MTU_TBTT_H_REG, (uint32_t)(g_socpm_struct.mtusr_time_data.mtu_tbtt >> 32));
+    NT_REG_WR(QWLAN_MTU_TBTT_L_REG, (uint32_t)g_socpm_struct.mtusr_time_data.mtu_tbtt);
+    // This register contains sw_mtu_beacon_intv, which is used by HW to forward TBTT
+    NT_REG_WR(QWLAN_MTU_BCN_BSSID_INTV_REG, g_socpm_struct.mtusr_time_data.mtu_bcn_bssid_intv);
+#ifdef WLAN_SLEEP_WITH_SYNTH_POWER_OFF
+    nt_hal_update_rri_mtu_timestamps(pre_update_mtu_tstamp, mtu_tmr);
+#endif /* WLAN_SLEEP_WITH_SYNTH_POWER_OFF */
+}
+#endif /* SUPPORT_BMU_ERROR_RECOVERY */
+
 #endif // NT_SOCPM_SW_MTUSR
 
 #ifdef NT_NEUTRINO_1_0_SYS_MAC

@@ -43,6 +43,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define HAL_TX_QID_ACK_POLICY       0 //(1 << (2 * HAL_BMU_TX_QID_NOACK))
 #define HAL_TX_QID_NOACK_POLICY     5
 
+// Number of STA idx supported on platform
+#define HAL_BMU_NUM_STAIDX_SUPPORTED    4
+
 // BMU commands base address
 #define BMU_COMMAND_BASE_ADDRESS    0x02800000
 
@@ -558,6 +561,13 @@ typedef struct hal_rpe_stats_s {
 #endif
 #endif //((defined NT_FN_AP_HAL_DPH_DEBUG_STATS)||(defined NT_FN_STA_HAL_DPH_DEBUG_STATS)||(defined NT_FN_AP_HAL_DPH_PRODUCTION_STATS)||(defined NT_FN_STA_HAL_DPH_PRODUCTION_STATS))
 
+#ifdef SUPPORT_BMU_ERROR_RECOVERY
+typedef struct hal_bmu_recovery_info_s {
+    uint32_t pre_recovery_tpe_ctrl;
+    uint32_t pre_recovery_rxp_cfg;
+    uint32_t pre_recovery_dxe_dma_csr;
+} hal_bmu_recovery_info_t;
+#endif /* SUPPORT_BMU_ERROR_RECOVERY */
 
 #if (FERMION_CHIP_VERSION == 2)
 void hal_modules_init(uint32_t phyRtFullHarfQuarter);
@@ -983,5 +993,10 @@ TSF_BSS2_MODE
 #define BMU_READ_WQ_TL_CMD(wq)  (*(volatile uint32_t *)(BMU_COMMAND_BASE_ADDRESS | (wq<< 8) | READ_WQ_TAIL_CMDTYPE))
 #define BMU_READ_WQ_NR_CMD(wq)  (*(volatile uint32_t *)(BMU_COMMAND_BASE_ADDRESS | (wq<< 8) | READ_WQ_NR_CMDTYPE))
 #define READ_BD_PTR_CMD(bdIdx)  (*(volatile uint32_t *)(BMU_COMMAND_BASE_ADDRESS |  (bdIdx << 8) | READ_BD_POINTER_CMDTYPE))
+
+#ifdef SUPPORT_BMU_ERROR_RECOVERY
+/* BMU recovery sequence for recoevering from BMU errors */
+void hal_bmu_error_recovery(void);
+#endif /* SUPPORT_BMU_ERROR_RECOVERY */
 
 #endif
