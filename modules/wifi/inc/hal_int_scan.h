@@ -93,4 +93,20 @@ nt_status_t nt_hal_tx_rx_enable(uint8_t chnum);
  */
 nt_status_t nt_hal_scan_end(uint8_t frmtype, nt_hal_scan_t *reg_bkup,NT_BOOL connected);
 
+#ifdef SUPPORT_BMU_ERROR_RECOVERY
+/*
+ * @brief: This function is used to back-up TX/RX state and disable TX and RX before BMU recovery
+ * @param : None
+ * @returns: None
+ */
+void nt_hal_tx_rx_disable_pre_bmu_recovery(void);
+
+/*
+ * @brief: Set the TX/RX state post BMU recovery to the same state that was present before disable
+ * @param chnum: channel to switch
+ * @returns: None
+ */
+void nt_hal_tx_rx_enable_post_bmu_recovery(uint8_t chnum);
+#endif /* SUPPORT_BMU_ERROR_RECOVERY */
+
 #endif //_HAL_INT_SCAN_H_

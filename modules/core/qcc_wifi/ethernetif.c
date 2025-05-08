@@ -184,7 +184,16 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
 	(void)netif;/* Avoid compiler warning*/
 
 #ifdef SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP
-	nt_notify_top_down_wakeup_required();
+	/* Tops down wake up will be only valid if system has an active connection with AP */
+	if (DEVICE_CONNECTED(gdevp))
+	{
+		nt_notify_top_down_wakeup_required();
+	}
+	else
+	{
+		NT_LOG_PRINT(DPM, ERR, "Packet dropped, device already disconnected");
+		return ERR_CONN;
+	}
 #endif /* SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP */
     /* Wait till device is up */
     nt_dpm_wait_till_device_wakeup();

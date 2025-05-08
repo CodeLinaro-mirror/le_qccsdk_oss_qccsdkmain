@@ -244,6 +244,7 @@ typedef enum {
     PM_EVENT_CONNECTION_STATE_CHANGE,
     PM_EVENT_PROTOCOL_SLEEP_CHANGE,
     PM_EVENT_CHANNEL_CHANGE,
+    PM_EVENT_RRT_CHANGE,               /* PM event when trigger an RRI resync on change in RRTs*/
 } PM_EVENT_TYPE;
 
 /* PM AP Information */
@@ -459,6 +460,8 @@ typedef struct
     uint32_t non_polled_rri_pass_count; /* count of how many times non polled RRI completed on time */
     uint32_t non_polled_rri_fail_count; /* count of how many times non polled RRI failed to complete on time */
 #endif /* SUPPORT_SW_NON_POLLED_RRI */
+    NT_BOOL wlan_state_off;     /* tracks whether MAC is OFF/ON. considered ON when RX ready or TX/RX ready */
+    PM_RRI_MAC_STATE rri_state; /* tracks current RRI state of MAC */
 }ppm_common_t;
 extern ppm_common_t g_ppm_common_struct;
 
@@ -477,9 +480,12 @@ extern ppm_common_t g_ppm_common_struct;
 #define PM_IS_WLAN_STATE_ON(pPmStruct)          ((pPmStruct)->wlan_state_off == FALSE)
 #define PM_SET_WLAN_STATE_OFF(pPmStruct)          ((pPmStruct)->wlan_state_off = TRUE)
 #define PM_SET_WLAN_STATE_ON(pPmStruct)          ((pPmStruct)->wlan_state_off = FALSE)
+#define PM_COMMON_SET_WLAN_STATE_OFF(pPmCommonStruct)          ((pPmCommonStruct)->wlan_state_off = TRUE)
+#define PM_COMMON_SET_WLAN_STATE_ON(pPmCommonStruct)           ((pPmCommonStruct)->wlan_state_off = FALSE)
 
 #define PM_SET_RRI_STATE(pPmStruct, new_state)  ((pPmStruct)->rri_state = (new_state))
 #define PM_GET_RRI_STATE(pPmStruct)             ((pPmStruct)->rri_state)
+#define PM_COMMON_SET_RRI_STATE(pPmCommonStruct, new_state)  ((pPmCommonStruct)->rri_state = (new_state))
 
 /* Set protocol sleep exit reason in PM struct */
 #define PM_SET_SLEEP_EXIT_REASON(pPmStruct, reason) \

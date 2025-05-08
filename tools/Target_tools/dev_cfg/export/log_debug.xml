@@ -21,7 +21,7 @@
       <props id="16" id_name="NT_DEVCFG_CHAN_COEFF" min="0" max="10" helptext="channel activity filter co-efficient(0-10)" type="0x00000002"> 9 </props>
       <props id="17" id_name="NT_DEVCFG_CHAN_STATS_ROUND_OFF_CONST" min="0" max="10" helptext="channel activity round off constant(0-10)" type="0x00000002"> 10 </props>
       <props id="18" id_name="NT_DEVCFG_SPECULATIVE_WAKE_TIME_MS" min="0" max="2000" helptext="Mid point wake up time(in ms)" type="0x00000002"> 500 </props>
-      <props id=" " id_name=" " helptext=" " type=" ">  </props>
+      <props id="19" id_name="NT_DEVCFG_BMU_ERROR_RECOVERY_ENABLED" min="0" max="1" helptext="To enable or disable BMU error recovery, 1 - recovery enabled 0 - recovery disabled" type="0x00000002"> 1 </props>
       <props id=" " id_name=" " helptext=" " type=" ">  </props>
 	  <props id=" " id_name=" " helptext=" " type=" ">  </props>
       <props id=" " id_name=" " helptext=" " type=" ">  </props>
