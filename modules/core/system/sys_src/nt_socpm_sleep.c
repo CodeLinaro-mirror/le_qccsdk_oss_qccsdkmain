@@ -1545,6 +1545,60 @@ static sleep_mode nt_socpm_sleep_solver(uint64_t sleep_time)
 }
 #endif /* SUPPORT_SOC_SLEEP_SOLVER || SUPPORT_SLEEP_LIST_IMPROVEMENTS */
 
+/*
+ * @brief   Initialize MCU active state RRT and switch to active state
+ * @param  : none
+ * @return : none
+ */
+void nt_socpm_switch_mcuss_to_active(void)
+{
+    uint32_t value;
+
+    value = (QWLAN_PMU_CFG_AON_CNTL_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_PMIC_DTOP_CNTL_BIT_MASK |
+             QWLAN_PMU_CFG_AON_CNTL_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_XO_DTOP_CNTL_BIT_MASK |
+             QWLAN_PMU_CFG_AON_CNTL_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_RFA_DTOP_CNTL_BIT_MASK |
+             QWLAN_PMU_CFG_AON_CNTL_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_SON_CNTL_BIT_MASK);
+    value |= _PMU_CFG_AON_CNTL_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_MEM_MX_CNTL_BIT_MEM_NOR_MASK;
+    NT_REG_WR(QWLAN_PMU_CFG_AON_CNTL_MCU_ACTIVE_STATE_RESOURCE_REQ_REG, value);
+
+#ifdef PLATFORM_FERMION
+    value = (QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMNSS_CNTL_BIT_MASK |
+            QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMEM_BANK_A_CNTL_BIT_MASK |
+            QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMEM_BANK_B_CNTL_BIT_MASK |
+            QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMEM_BANK_C_CNTL_BIT_MASK |
+            QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMEM_BANK_D_CNTL_BIT_MASK |
+            QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMEM_BANK_E_CNTL_BIT_MASK |
+            QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_XIP_CNTL_BIT_MASK);
+
+#ifndef EMULATION_WAR
+    value |= QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_PSS_CNTL_BIT_MASK;
+#endif
+    NT_REG_WR(QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_REG, value);
+#else  /* PLATFORM_FERMION */
+    value = (QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMNSS_CNTL_BIT_MASK |
+             QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMEM_BANK_A_CNTL_BIT_MASK |
+             QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMEM_BANK_B_CNTL_BIT_MASK |
+             QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMEM_BANK_C_CNTL_BIT_MASK |
+             QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_CMEM_BANK_D_CNTL_BIT_MASK |
+             QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_PD_XIP_CNTL_BIT_MASK);
+    NT_REG_WR(QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_REG, value);
+#endif /* PLATFORM_FERMION */
+
+#ifdef PLATFORM_FERMION
+    /* remove the mem mx dynamic switching in active mode*/
+    value  = NT_REG_RD(QWLAN_PMU_DIG_TOP_CFG_REG);
+    value &= ~QWLAN_PMU_DIG_TOP_CFG_CFG_MEM_MX_DYNAMIC_SWITCHING_EN_MASK;
+    NT_REG_WR(QWLAN_PMU_DIG_TOP_CFG_REG, value);
+#endif /*PLATFORM_FERMION*/
+
+    //AON flush
+    value = NT_REG_RD(QWLAN_PMU_AON_TOP_CFG_REG);
+
+    // KEEP MCU Active Resumes after WFI instruction
+    NT_REG_WR(QWLAN_PMU_CFG_MCU_SS_STATE_REG, NT_PMU_CFG_MCU_ACTIVE_OFFSET); // Mcu active state
+}
+
+
 void vPreSleepProcessing(
     sleep_mode mode)
 {
@@ -4180,6 +4234,111 @@ nt_socpm_min_proc(
 }
 
 /*
+ *  @brief : if sleep entry failed because of a legitimate reason, handle it
+ *  @param[in] : mode - sleep mode being entered
+ *  @return : None
+ */
+void nt_socpm_handle_sleep_entry_failure(sleep_mode mode)
+{
+    (void)mode;
+
+    g_socpm_struct.wifi_ss_state = 0;
+    g_socpm_struct.nvic_icpr_status[0] = 0;
+    g_socpm_struct.nvic_icpr_status[1] = 0;
+    g_socpm_struct.nvic_icpr_status[2] = 0;
+    g_socpm_struct.nvic_icpr_status[3] = 0;
+
+#ifdef SUPPORT_STANDBY_MCU_SLEEP_MODE
+    if(StandbyMcuSleep == mode)
+    {
+#ifdef STANDBY_MCU_SLEEP_ENTRY_FAILURE_HANDLE_WAR
+        /*
+         * It is observed that when the XIP_CNTL bit is enabled in the system boot complete state RRT
+         * on an aborted standby MCU sleep entry which takes place after an entry to and exit from MCU
+         * sleep, then the CPU does not appear to receive systick interrupts even if the MCU_SS is not
+         * in system boot complete state.
+         * On disabling the XIP_CNTL bit, systick interrupts are processed again. So, this is being
+         * done as part of sleep entry failure handling.
+         */
+        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET,
+            NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ,
+            PD_XIP_CNTL_BIT, 0x0);
+#endif /* STANDBY_MCU_SLEEP_ENTRY_FAILURE_HANDLE_WAR */
+
+        /* Re-enable CMEM bank A retention on aborted standby MCU sleep entry */
+        HWIO_OUTX2F(SEQ_WCSS_PMU_OFFSET,
+            NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_CFG_CMEM_BANK_A_RET_EN,
+            CFG_CMEM_BANK_A_31_22_RET_EN, CFG_CMEM_BANK_A_21_0_RET_EN, 0x1, 0x1);
+    }
+#endif /* SUPPORT_STANDBY_MCU_SLEEP_MODE */
+
+#ifdef IMPS_DEEP_SLEEP_FAIL_HANDLE
+    /* once after IMPS indefinite deep sleep failure, device should enter into deep sleep
+     * for shorter duration. Hence, disabled indefinite deep sleep after sleep failure */
+    if(g_socpm_struct.socpm_indef_deep_sleep_en && (g_socpm_struct.deep_sleep_failed == TRUE))
+    {
+        uint32_t reg_val = NT_REG_RD(QWLAN_PMU_AON_TOP_CFG_REG);
+        reg_val &= ~QWLAN_PMU_AON_TOP_CFG_CFG_INDEFINITE_DEEPSLEEP_EN_MASK;
+        reg_val &= ~QWLAN_PMU_AON_TOP_CFG_CFG_ASSERT_CLK_REQ_DURING_SLEEP_MASK;
+        NT_REG_WR(QWLAN_PMU_AON_TOP_CFG_REG, reg_val);
+        _socpm_slpcfg_sby();
+        return;
+    }
+#endif /* IMPS_DEEP_SLEEP_FAIL_HANDLE */
+
+#if defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD)
+    /* Re-enable CPR on failed sleep entry */
+    wifi_fw_cpr_reenable();
+#endif /* defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD) */
+
+#ifdef SUPPORT_WMAC_HWDTIM
+    if(nt_wpm_is_hwdtim_mode_enabled())
+    {
+        g_ppm_common_struct.hwdtim_configured = FALSE;
+        /* disable HDM for sleep failure as it might put MAC back to sleep */
+        hal_wmac_disable_hwdtim();
+    }
+#endif /* SUPPORT_WMAC_HWDTIM */
+
+    /* Switch MCU_SS to active state as prevention of sleep entry would have
+     * moved it to SYSTEM_BOOT_COMPLETE state.
+     */
+    nt_socpm_switch_mcuss_to_active();
+#ifdef SLEEP_CLK_SWITCH_AND_CAL_2_0
+    nt_socpm_sleep_clk_switch_to_xo(TRUE);
+#endif /* SLEEP_CLK_SWITCH_AND_CAL_2_0 */
+    
+    /* we disable qtimer interrupt after the sleep recipes and before WFI. but enable 
+     * it back when soc has failed to enter into sleep.
+     */
+    nt_enable_device_irq(Qtmr_qgic2_phy_irq_0);   
+
+    /*enable all previously enabled interrupts*/
+    NT_REG_WR(NT_CM4_NVIC_ISER0_REG, nt_socpm_m4_regs[11]);
+    NT_REG_WR(NT_CM4_NVIC_ISER1_REG, nt_socpm_m4_regs[12]);
+    NT_REG_WR(NT_CM4_NVIC_ISER2_REG, nt_socpm_m4_regs[13]);
+#ifdef PLATFORM_FERMION
+    NT_REG_WR(NT_CM4_NVIC_ISER3_REG, nt_socpm_m4_regs[14]);
+#endif /* PLATFORM_FERMION */
+
+#ifdef LOW_POWER_MEMORY
+    /*To reset the state machine of low power memory framework*/
+    low_power_memory_reinit_sections();
+#endif //LOW_POWER_MEMORY
+#if defined (SUPPORT_HIGH_RES_TIMER)
+    hres_timer_post_sleep();
+#endif /* SUPPORT_HIGH_RES_TIMER */
+
+#if defined(PMU_TS_CONFIGURATION) && defined(SUPPORT_STANDBY_MCU_SLEEP_MODE)
+    /* Restart periodic temperature measurements in case of a failure to enter sleep */
+    if(StandbyMcuSleep == mode)
+    {
+        pmu_ts_configure_periodic_meas();
+    }
+#endif /* defined(PMU_TS_CONFIGURATION) && defined(SUPPORT_STANDBY_MCU_SLEEP_MODE) */
+}
+
+/*
  *  @brief : Check if there was an unexpected failure in entering to sleep after wfi
  *  @param :
  *      mode - sleep mode being entered
@@ -4257,13 +4416,11 @@ void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point
     }
     else
     {
-#if 0
-        g_socpm_struct.wifi_ss_state = 0;
-        g_socpm_struct.nvic_icpr_status[0] = 0;
-        g_socpm_struct.nvic_icpr_status[1] = 0;
-        g_socpm_struct.nvic_icpr_status[2] = 0;
-        g_socpm_struct.nvic_icpr_status[3] = 0;
-#endif
+        NT_LOG_PRINT(SOCPM, ERR, "Handle SLEEP_ENTER_FAIL post wfi %d %d %d", mode, is_ctxt_rstr_point, g_socpm_struct.wifi_ss_state);
+        NT_LOG_PRINT(SOCPM, ERR, "NVIC ICPR[0-3]: 0x%08x 0x%08x 0x%08x 0x%08x",
+                g_socpm_struct.nvic_icpr_status[0], g_socpm_struct.nvic_icpr_status[1],
+                g_socpm_struct.nvic_icpr_status[2], g_socpm_struct.nvic_icpr_status[3]);
+        nt_socpm_handle_sleep_entry_failure(mode);
     }
 }
 

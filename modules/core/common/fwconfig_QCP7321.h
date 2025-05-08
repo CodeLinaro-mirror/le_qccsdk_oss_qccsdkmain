@@ -62,6 +62,9 @@
 #define SUPPORT_SAP_POWERSAVE /* This flags enables changing beacon interval to supports sap powersave when it is conneced to EB*/
 #endif
 
+/* Enables Random Backoff for QoS Null frames triggered using SW template method */
+#define ENABLE_RBO_FOR_QOS_NULL
+
 //#define SUPPORT_RING_IF_DEBUG /* Use this flag for heavy logs in Ring IF */
 //#define SUPPORT_RING_IF_STATS
 #ifdef SUPPORT_RING_IF
