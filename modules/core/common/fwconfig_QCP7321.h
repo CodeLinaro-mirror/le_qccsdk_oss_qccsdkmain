@@ -271,6 +271,11 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 */
 #define CBC_CX_VOLTAGE_WAR
 
+/*
+When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs, 
+ default WQ need to be switched back to WQ12 to prevent transferring MGMT frames to WQ11
+*/
+#define WAR_RESTORE_DPU_DEFAULT_WQ_12_ON_EXIT_FROM_BMPS
 
 #ifdef NT_DEBUG
 /* To Enable JTAG debugging post MCU sleep */
