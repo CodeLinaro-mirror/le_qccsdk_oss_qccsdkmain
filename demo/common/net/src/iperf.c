@@ -1996,6 +1996,10 @@ ERROR_2:
     if (p_tCxt)
     {
         closesocket(p_tCxt->sock_peer);
+        
+        if(errno == EBADF)
+            errno = 0;
+
         qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
 
         if (p_tCxt->iperf_stream_id < MAX_STREAM)
