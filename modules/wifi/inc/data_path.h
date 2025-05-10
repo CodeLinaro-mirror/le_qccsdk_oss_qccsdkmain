@@ -982,6 +982,15 @@ NT_BOOL nt_dpm_is_tx_pending_in_tx_buffers_or_queues(uint8_t wmi_dev_id);
 */
 NT_BOOL nt_dpm_is_tx_busy(void);
 
+#ifdef WAR_RESTORE_DPU_DEFAULT_WQ_12_ON_EXIT_FROM_BMPS  
+/*
+ * @brief restore DPU routing post WLAN wake-up to get mgmt frames in correct WQ
+ * @param : none
+ * @return : none
+*/
+void nt_dpm_restore_dpu_default_wq_routing_post_wakeup(void);
+#endif
+
 NT_BOOL nt_dpm_sw_is_tx_busy(void);
 
 void nt_dpm_sw_set_tx_status(NT_BOOL status);
