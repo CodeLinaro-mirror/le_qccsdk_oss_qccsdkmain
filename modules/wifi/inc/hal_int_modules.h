@@ -947,6 +947,7 @@ void hal_phy_power_ftm_switch_to_listen(void);
 #endif
 void hal_mac_sw_powerup();
 void hal_mac_hw_ctrl();
+void hal_mod_txp_reset();
 
 void delay( uint32_t delay_count);
 
