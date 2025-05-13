@@ -2442,9 +2442,9 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
         memset(&stat_udp, 0, sizeof(stat_udp_pattern_t));
         p_tCxt->pktStats.prev_time = p_tCxt->pktStats.last_time = p_tCxt->pktStats.first_time = 0;
 
-        /* block for 500msec or until a packet is received */
-        tv.tv_sec = 0;
-        tv.tv_usec = 500000;
+        /* block for 2s or until a packet is received */
+        tv.tv_sec = 2;
+        tv.tv_usec = 0;
 
         while (!is_test_done) /* Receive loop */
         {
@@ -2461,7 +2461,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                     goto ERROR_3;
                 }
 
-                /* block for 500msec or until a packet is received */
+                /* block for 2s or until a packet is received */
                 memset(&read_fds, 0, sizeof(fd_set));
                 FD_SET(p_tCxt->sock_local, &read_fds);
 
@@ -2470,6 +2470,17 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                 {
                     app_get_time(&p_tCxt->pktStats.last_time);
                     goto ERROR_3; // socket no longer valid
+                }
+                else if (conn_sock == 0)
+                {
+                    /* if udp tx has started and no activity for continues 2s, early quit udp rx */
+                    uint32_t curtime;
+                    app_get_time(&curtime);
+                    if ((is_first == 0) && (curtime - p_tCxt->pktStats.first_time) / 1000 > 20)
+                    {
+                        app_get_time(&p_tCxt->pktStats.last_time);
+                        goto ERROR_3;
+                    }
                 }
 
                 if (family == AF_INET && errno == ENOTSOCK) // TODO
