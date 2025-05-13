@@ -98,6 +98,10 @@ config WIFI_FW_RAMDUMP_PRINT_FLAG
         int "when this flag is set, the whole ram info should be printed"
         default 0
 
+config BOARD_EVB_I2C_OPTION
+        bool "when this flag is set n, the I2C eeprom should be for mqm"
+        default n
+
 rsource "mpu.Kconfig"
 
 endmenu
