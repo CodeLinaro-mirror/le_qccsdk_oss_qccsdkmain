@@ -75,8 +75,6 @@ extern qbool_t get_device_connect_state(void);
 extern void qurt_thread_sleep(uint32_t duration);
 #define HEADER_VERSION1 0x80000000
 
-//uint8_t iperf_tx_quit;
-//uint8_t iperf_rx_quit;
 
 #define MAX_STREAM 10
 uint8_t iperf_stream_id[MAX_STREAM] = {0};
@@ -1174,7 +1172,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             unused_thread_index = iperf_get_unused_rx_thread_index();
             if(unused_thread_index == -1)
             {
-                IPERF_PRINTF("UDP server get unused thread index failed!\r\n");
+                IPERF_PRINTF("TCP server get unused thread index failed!\r\n");
                 if(tCxt)
                 {
                     free(tCxt);
@@ -1182,6 +1180,18 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
                 }
                 goto RET_OK;
             }
+
+            if (serverRefCount == BENCH_TCP_MAX_SERVERS)
+            {
+              IPERF_PRINTF("%s: Max num of servers supported is %d, stop here.\n", __func__, BENCH_TCP_MAX_SERVERS);
+              if(tCxt)
+              {
+                  free(tCxt);
+                  tCxt = NULL;
+              }
+              goto RET_OK;
+            }
+
             ret = nt_qurt_thread_create(iperf_tcp_rx, "tcp_rx", 3072, tCxt, iperf_rx_thread_priority, &(iperf_rx_thread_handle[unused_thread_index]));
             if (ret == -1)
             {
@@ -2221,6 +2231,9 @@ void iperf_rx_show_result(void *arg)
     {
         qurt_thread_sleep(iperf_display_interval);
 
+        if(iperf_rx_quit == 1 || p_tCxt == NULL)
+          goto QUIT;
+
         app_get_time(&iperf_curr_time);
 
         if (p_tCxt->protocol == UDP)
@@ -2275,8 +2288,8 @@ void iperf_rx_show_result(void *arg)
         }
     }
 
+QUIT:
     nt_osal_thread_delete(NULL);
-    p_tCxt->rx_task_handler = NULL;
     return;
 }
 
@@ -2555,11 +2568,7 @@ ERROR_1:
     {
         if (p_tCxt->rx_task_handler)
         {
-            IPERF_PRINTF("\n");
-            if (p_tCxt->rx_task_handler) {
-                nt_osal_thread_delete(p_tCxt->rx_task_handler);
-                p_tCxt->rx_task_handler = NULL;
-            }
+            p_tCxt->rx_task_handler = NULL;
         }
     
         qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
@@ -2808,7 +2817,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
     if (p_tCxt == NULL){
         IPERF_PRINTF("ERROR: p_tCxt in iperf_tcp_tx() is NULL\n");
-        goto tcp_rx_QUIT2;
+        goto QUIT;
     }
 
     (void)local_sin_addr;
@@ -2816,6 +2825,8 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     {
         IPERF_PRINTF("%s: Max num of servers supported is %d\n", __func__, BENCH_TCP_MAX_SERVERS);
         #if IPERF_RX_THREAD
+        free(p_tCxt);
+        p_tCxt = NULL;
         nt_osal_thread_delete(NULL);
         #endif
         return;
@@ -2832,6 +2843,8 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     {
         IPERF_PRINTF("%s: Invalid ServerId %d\n", __func__, serverId);
         #if IPERF_RX_THREAD
+        free(p_tCxt);
+        p_tCxt = NULL;
         nt_osal_thread_delete(NULL);
         #endif
         return;
@@ -2847,7 +2860,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     p_tCxt->iperf_stream_id = iperf_get_unused_id();
     if (p_tCxt->iperf_stream_id == MAX_STREAM)
     {
-        goto tcp_rx_QUIT2;
+        goto QUIT;
     }
     p_tCxt->pktStats.iperf_stream_id = p_tCxt->iperf_stream_id;
 
@@ -2868,7 +2881,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         fromlen = sizeof(struct sockaddr_in6);
         sin_addr = &foreign_addr6.sin6_addr;
 #else
-		goto tcp_rx_QUIT;
+		goto QUIT;
 #endif
     }
     else
@@ -2888,7 +2901,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         fromlen = sizeof(struct sockaddr_in);
         sin_addr = &foreign_addr.sin_addr;
 #else
-		goto tcp_rx_QUIT;
+		goto QUIT;
 #endif
     }
 
@@ -2896,14 +2909,14 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     if ((tcp_server->sockfd = socket(family, SOCK_STREAM, 0)) == A_ERROR)
     {
         IPERF_PRINTF("ERROR: Socket creation error.\n");
-        goto tcp_rx_QUIT;
+        goto QUIT;
     }
 
     /* Bind socket */
     if (bind(tcp_server->sockfd, addr, addrlen) == A_ERROR)
     {
         IPERF_PRINTF("ERROR: Socket bind error.\n");
-        goto tcp_rx_QUIT;
+        goto QUIT;
     }
 
     /* set to non-blocking mode */
@@ -2916,7 +2929,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     if (listen(tcp_server->sockfd, 5) == A_ERROR)
     {
         IPERF_PRINTF("ERROR: Socket listen error.\n");
-        goto tcp_rx_QUIT;
+        goto QUIT;
     }
 
     if (printit)
@@ -2941,12 +2954,12 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     {
         if ((iperf_rx_quit && !tcp_rx_rslt_created) || tcp_server->exit || (get_device_connect_state() == false))
         {
-            goto tcp_rx_QUIT2;
+            goto QUIT;
         }
 
         if(iperf_rx_quit && tcp_rx_rslt_created)
         {
-            goto tcp_rx_QUIT;
+            goto QUIT;
         }
 
         FD_SET(tcp_server->sockfd, &rset);
@@ -2961,7 +2974,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
                     qurt_thread_sleep(1);
                     continue;
                 }
-                else if (p_tCxt->protocol == TCP && !tcpRefCount)
+                else if (!tcpRefCount)
                 {
                     qurt_thread_sleep(1000);
                     continue;
@@ -3017,11 +3030,10 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
             closesocket(sock_peer);
             newSession = 0;
             // continue;
-            goto tcp_rx_QUIT;
+            goto QUIT;
         }
 
         session = &g_tcpSessions[sessionId];
-        session->ctxt = p_tCxt;
         session->port = tcp_server->port;
 
         /*Allocate buffer*/
@@ -3032,7 +3044,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
             iperf_tcp_CloseSession(session, &rd_set);
             newSession = 0;
             // continue;
-            goto tcp_rx_QUIT;
+            goto QUIT;
         }
 
         session->sock_peer = sock_peer;
@@ -3069,7 +3081,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     }
     else
     {
-        goto tcp_rx_QUIT;
+        goto QUIT;
     }
 
     FD_ZERO(&rset);
@@ -3079,9 +3091,9 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         if (iperf_rx_quit || (get_device_connect_state() == false))
         {
             app_get_time(&sess->pktStats.last_time);
-            goto tcp_rx_QUIT;
+            goto QUIT;
         }
-#if 1
+
         tv.tv_sec = 2;
         tv.tv_usec = 0;
         rset = rd_set;
@@ -3091,7 +3103,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
         {
             IPERF_PRINTF("select error\n");
             app_get_time(&sess->pktStats.last_time);
-            goto tcp_rx_QUIT;
+            goto QUIT;
         }
         else if (conn_sock == 0)
         {
@@ -3102,18 +3114,13 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
             {
                 IPERF_PRINTF("select timeout %d,%s\n", errno, strerror(errno));
                 app_get_time(&sess->pktStats.last_time);
-                goto tcp_rx_QUIT;
+                goto QUIT;
             }
             continue;
         }
         else if (FD_ISSET(session->sock_peer, &rset))
         {
-            //sess = session;
-            if (sess->ctxt == p_tCxt)
-            {
-#endif
                 /*Packet is available, receive it*/
-                // received = recv( sess->sock_peer, (char*)(&sess->buffer[0]), CFG_PACKET_SIZE_MAX_RX, 0);
                 received = recvfrom(sess->sock_peer, sess->buffer, CFG_PACKET_SIZE_MAX_RX, 0, from, &fromlen);
 
                 /*Valid packet received*/
@@ -3121,7 +3128,6 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
                 {
                     sess->pktStats.bytes += received;
                     sess->pktStats.total_bytes += received;
-                    // total += received;
 
                     if (sess->isFirst)
                     {
@@ -3154,38 +3160,24 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
                     {
                         app_get_time(&sess->pktStats.last_time);
                         
-                        goto tcp_rx_QUIT;
-                        // goto Restart_tcp_server;
+                        goto QUIT;
                     }
                 }
                 conn_sock--;
-#if 1                
-            }
         }
-#endif
     } while (1);
 
-tcp_rx_QUIT:
-    if (p_tCxt->rx_task_handler)
-    {
-        IPERF_PRINTF("\n");
-        if (p_tCxt->rx_task_handler) {
-            nt_osal_thread_delete(p_tCxt->rx_task_handler);
-            p_tCxt->rx_task_handler = NULL;
-            p_tCxt->session = NULL;
-        }
-    }
-    
+QUIT:
     if (session)
     {
         iperf_tcp_CloseSession(session, &rd_set);
     }
-tcp_rx_QUIT2:
+
     if (tcp_server)
     {
         iperf_tcp_stopServer(tcp_server);
     }
-    // ERROR_1:
+
     if (p_tCxt)
     {
         qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
