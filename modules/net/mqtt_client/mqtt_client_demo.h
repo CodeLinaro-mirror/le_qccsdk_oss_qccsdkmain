@@ -54,6 +54,9 @@
 /*Include backoff algorithm header for retry logic.*/
 #include "backoff_algorithm.h"
 
+#include "qurt_internal.h"
+#include "timer.h"
+
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions, Constants, and Type Declarations
  *-----------------------------------------------------------------------*/
@@ -287,6 +290,16 @@ typedef struct MQTTClientCMD
         MQTTSubscribeInfo_t unsubscribe;
     }mqtt_cmd;
 } MQTTClientCMD_t;
+
+typedef struct MQTTTaskCtrl
+{
+    qurt_signal_t  mqtt_client_signal;
+    nt_osal_timer_handle_t mqtt_keepalive_timer;
+    bool mqtt_keepalive_created;
+    bool mqtt_signal_created;
+    uint32_t mqttkeepalive_time_default;
+    uint32_t mqttkeepalive_time_bmps;
+} MQTTTaskCtrl_t;
 
 extern MQTTClientSession_t mqtt_client_sess[MQTT_DEMO_SESSION_NUM];
 
