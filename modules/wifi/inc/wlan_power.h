@@ -294,6 +294,9 @@ typedef struct {
 
 typedef struct {
     uint16_t bmps_bcn_rx_count;         /* Beacon RX count for BMPS cycle */
+    uint16_t bmps_bcn_bc_rx_count;         /* Beacon RX count for BMPS cycle */
+    uint16_t bmps_bcn_dtim_count_zero;         /* Beacon RX count for BMPS cycle */
+    uint16_t bmps_bcn_dtim_count_n_zero;         /* Beacon RX count for BMPS cycle */
     uint16_t bmps_bcn_miss_count;       /* Beacon miss count for BMPS cycle */
     /* Running bmiss count for early RX and beacon wait telescopic increment */
     uint16_t bmps_running_bmiss_count;
