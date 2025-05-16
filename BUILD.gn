@@ -99,6 +99,7 @@ projects_common = [
     "//demo/mqtt_demo",
     "//demo/matter_demo",
     "//demo/qat_demo",
+    "//demo/powertest_demo",
     "//modules/net/mqtt_client",
     "//modules/net/httpd",
     "//modules/qat",
@@ -145,6 +146,9 @@ config("common_define") {
         defines += [
             "FTM_OVER_UART",
         ]
+    }
+    if (image_name == "FERMION_POWER_TEST_DEMO"){
+        defines += [ "CONFIG_POWER_TEST_DEMO_ENABLE=1" ]
     }
 }
 
