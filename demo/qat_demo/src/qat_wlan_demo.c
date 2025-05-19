@@ -1496,17 +1496,19 @@ static QAT_Command_Status_t Extend_Command_Connect(uint32_t Op_Type, uint32_t Pa
 
          snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWJAP:connecting to ssid %s", ssid);
          QAT_Response_Str(QAT_RC_QUIET, buffer);
+
+         if(deviceId == NT_DEV_AP_ID && ret == QAPI_OK) {
+            memscpy(p_cxt->ssid, ssidLength, ssid, ssidLength);
+            p_cxt->ssid[ssidLength] = 0;
+            p_cxt->ssid_length = ssidLength;
+         }
+
          ret = qapi_WLAN_Commit(deviceId);
          if (ret != QAPI_OK) {
             QAT_Response_Str(QAT_RC_ERROR, NULL);
             return rc;
          }
 
-	      if(deviceId == NT_DEV_AP_ID && ret == QAPI_OK) {
-		      memscpy(p_cxt->ssid, ssidLength, ssid, ssidLength);
-            p_cxt->ssid[ssidLength] = 0;
-            p_cxt->ssid_length = ssidLength;
-	      }
          break;
       }
       default:
