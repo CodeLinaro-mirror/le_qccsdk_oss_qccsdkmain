@@ -52,6 +52,7 @@
 #include "qapi_status.h"
 #include "qcom_http_client.h"
 #include "qapi_heap_status.h"
+#include "network_al.h"
 
 #ifdef HTTPC_DEBUG
 #pragma push
@@ -822,7 +823,26 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
 #endif
 	    if ( IS_IPV6_LINK_LOCAL(s_addr6.sin6_addr.un.u8_addr) )
 	    {
-	        /* if this is a link local address, then the interface must be specified after % */
+	        /* if this is a link local address, then the interface must be found */
+
+            if(nt_get_netifidx_by_devmode(STA_DEVICE))
+            {
+                s_addr6.sin6_scope_id = nt_get_netifidx_by_devmode(STA_DEVICE);
+                htdbgprintf("%s() sta_dev netif interface %d\n", __func__, s_addr6.sin6_scope_id);
+            }
+
+            else if(nt_get_netifidx_by_devmode(AP_DEVICE))
+            {
+                s_addr6.sin6_scope_id = nt_get_netifidx_by_devmode(AP_DEVICE);
+                htdbgprintf("%s() ap_dev netif interface %d\n", __func__, s_addr6.sin6_scope_id);
+            }
+            else{
+                htdbgprintf("network interface not initialized\r\n");
+                goto ERROR;
+            }
+
+#if 0
+            /* if this is a link local address, then the interface must be specified after % */
 
             char * interface_name_with_percent_char = strchr(server, '%');
             char * interface_name = NULL;
@@ -839,6 +859,7 @@ int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port
                 error = HTTPC_ERR_INVALID_PARAM;
                 goto ERROR;
             }
+#endif
         }
         s_addr6.sin6_port = htons(sess->hcs_port);
         to = (struct sockaddr *)&s_addr6;

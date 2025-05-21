@@ -26,7 +26,7 @@
 #define QAT_HTTPC_CLIENT_INDEX                        1
 #define HTTP_HOST_STR_BUFFER_LENGTH					  50
 #define HTTP_BODY_BUFFER_SIZE                         10000
-#define HTTP_WAIT_RSP_TIME                            100  //10s
+#define HTTP_WAIT_RSP_TIME                            100  //100*100(HTTP_WAIT_RSP_CYCLE_INTERVAL) = 10000ms =10s
 #define HTTP_WAIT_RSP_CYCLE_INTERVAL                  100  //ms
 #define FILE_PATH_STR_BUFFER_LENGTH                   32
 #define HTTP_URL_STR_BUFFER_LENGTH                    256

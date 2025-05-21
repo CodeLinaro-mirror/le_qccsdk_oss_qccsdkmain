@@ -744,7 +744,7 @@ static QAT_Command_Status_t Extend_Command_HttpUrlCfg(uint32_t Op_Type, uint32_t
 
       case QAT_OP_QUERY:
       {	
-         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPURLCFG:%d,%s\r\n",g_https_cfg.url_size,g_https_cfg.url);
+         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPURLCFG:%d,%s\r\n",g_https_cfg.url_size, g_https_cfg.url_size>0?g_https_cfg.url:"null");
          rc = QAT_Response_Str(QAT_RC_OK, buffer);
          
          break;
@@ -1642,27 +1642,6 @@ qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf)
     //httpc setparam <client_num> <key> <value>
     if((data_buf != NULL) && (opt==QAT_HTTP_CLIENT_POST ||opt==QAT_HTTP_CLIENT_PUT))
     {
-        //process key/value data, example: key1=value1&key2=value2
-#if 0
-        if(strstr(data_buf,"="))
-        {
-            rlt = at_httpc_setparameter(data_buf);
-            if(rlt!= QAPI_OK)
-            {
-                goto endpiont;
-            }
-        }
-        else
-        {
-            //httpc setbody data
-            uint32_t revlen = strlen(data_buf);
-            rlt = at_httpc_setbodydata(data_buf,revlen);
-            if(rlt!= QAPI_OK)
-            {
-                goto endpiont;
-            }
-        }
-#endif
        //httpc setbody data
        uint32_t revlen = strlen(data_buf);
        rlt = at_httpc_setbodydata(data_buf,revlen);
@@ -1852,6 +1831,7 @@ qapi_Status_t at_httpc_getsize (char *url, int32_t timeout)
     char path_url[HTTP_URL_STR_BUFFER_LENGTH]= {0};
     uint16 count = 0;
     uint32 max_time_wait = timeout/1000 < 1?1:timeout/1000;
+    max_time_wait = max_time_wait*(1000/HTTP_WAIT_RSP_CYCLE_INTERVAL);
     qbool_t conn_enable = FALSE;
 
     //httpc stop
@@ -2021,6 +2001,7 @@ qapi_Status_t at_httpc_get (char *url, int32_t timeout)
     char path_url[HTTP_URL_STR_BUFFER_LENGTH] = {0};
     uint16 count = 0;
     uint32 max_time_wait = timeout/1000 < 1?1:timeout/1000;
+    max_time_wait = max_time_wait*(1000/HTTP_WAIT_RSP_CYCLE_INTERVAL);
     qbool_t conn_enable = FALSE;
 
     //httpc stop
@@ -2149,7 +2130,7 @@ endpiont:
         sys_msleep(HTTP_WAIT_RSP_CYCLE_INTERVAL);
         count++;
 
-        if(count>=max_time_wait)
+        if(count >= max_time_wait)
         {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCGET: GET FAIL, timeout\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
@@ -2820,11 +2801,11 @@ void gethostURL(const char *url, char*hostURL)
         const char *path_start = strchr(url, '/');
     	if (path_start != NULL) 
     	{ 
-		  snprintf(hostURL, path_start - orignalurl + 1, orignalurl);
+          strlcpy(hostURL,orignalurl,path_start - orignalurl + 1);
     	 }
     	else 
     	{ 
-		  snprintf(hostURL, HTTP_URL_STR_BUFFER_LENGTH, orignalurl);
+          strlcpy(hostURL,orignalurl,HTTP_URL_STR_BUFFER_LENGTH);
         } 
 
     } 
@@ -2833,11 +2814,11 @@ void gethostURL(const char *url, char*hostURL)
         const char *path_start = strchr(url, '/');
     	if (path_start != NULL) 
     	{ 
-		  snprintf(hostURL, path_start - orignalurl + 1, orignalurl);
+          strlcpy(hostURL,orignalurl,path_start - orignalurl + 1);
     	 }
     	else 
     	{ 
-		  snprintf(hostURL, HTTP_URL_STR_BUFFER_LENGTH, orignalurl);
+          strlcpy(hostURL,orignalurl,HTTP_URL_STR_BUFFER_LENGTH);
         } 
     }
     printf("host: %s\n", hostURL);
@@ -2857,7 +2838,7 @@ qbool_t getpathURL(const char *url, char*pathURL)
         const char *path_start = strchr(url, '/');
     	if (path_start != NULL)
     	{ 
-            snprintf(pathURL, HTTP_URL_STR_BUFFER_LENGTH, path_start);
+            strlcpy(pathURL,path_start,HTTP_URL_STR_BUFFER_LENGTH);
             rlt=TRUE;
     	}
     	else 
@@ -2870,10 +2851,10 @@ qbool_t getpathURL(const char *url, char*pathURL)
     else 
     { 
         const char *path_start = strchr(url, '/');
-    	//if ((path_start != NULL) && (strlen(path_start) > 1) )
+
     	if (path_start != NULL)
     	{ 
-		  snprintf(pathURL, HTTP_URL_STR_BUFFER_LENGTH, path_start);
+          strlcpy(pathURL,path_start,HTTP_URL_STR_BUFFER_LENGTH);
           rlt=TRUE;
     	}
     	else 
@@ -2954,14 +2935,12 @@ qbool_t saveheaderfield(const char *headerfield)
                 }
             
                 memset(header_field->name, 0, name_len+1);
-                snprintf(header_field->name, name_len + 1, headerfield);
+                snprintf(header_field->name, name_len + 1, "%s",headerfield);
                 
                 uint32 len = strlen(headerfield);
 
                 header_field->value = malloc(len -name_len + 1);
-                memcpy(header_field->value, name_end+1, len -name_len);
-                header_field->value[len -name_len] = '\0';
-                
+                strlcpy(header_field->value,name_end+1,len -name_len + 1);
                 g_https_cfg.header_field_num ++;
 
                 rlt= TRUE;
@@ -3008,7 +2987,7 @@ qbool_t save_content_type(uint8_t content_type)
        }
     
        memset(header_field->name, 0, name_len+1);
-       snprintf(header_field->name, name_len + 1, name);
+       snprintf(header_field->name, name_len + 1, "%s",name);
         
        switch(content_type)
        {
@@ -3026,7 +3005,7 @@ qbool_t save_content_type(uint8_t content_type)
                }
                
                memset(header_field->value, 0, val_len+1);
-               snprintf(header_field->value, val_len + 1, value);
+               snprintf(header_field->value, val_len + 1,"%s", value);
                rlt = TRUE;
                
                break;
@@ -3044,7 +3023,7 @@ qbool_t save_content_type(uint8_t content_type)
                }
                
                memset(header_field->value, 0, val_len+1);
-               snprintf(header_field->value, val_len + 1, value);
+               snprintf(header_field->value, val_len + 1, "%s",value);
                rlt = TRUE;
                
                break;
@@ -3062,7 +3041,7 @@ qbool_t save_content_type(uint8_t content_type)
                }
                
                memset(header_field->value, 0, val_len+1);
-               snprintf(header_field->value, val_len + 1, value);
+               snprintf(header_field->value, val_len + 1,"%s", value);
                rlt = TRUE;
                
                break;
@@ -3081,7 +3060,7 @@ qbool_t save_content_type(uint8_t content_type)
                }
                
                memset(header_field->value, 0, val_len+1);
-               snprintf(header_field->value, val_len + 1, value);
+               snprintf(header_field->value, val_len + 1, "%s",value);
                rlt = TRUE;
                
                break;
@@ -3099,7 +3078,7 @@ qbool_t save_content_type(uint8_t content_type)
                }
                
                memset(header_field->value, 0, val_len+1);
-               snprintf(header_field->value, val_len + 1, value);
+               snprintf(header_field->value, val_len + 1,"%s", value);
                rlt = TRUE;
 
                break;
@@ -3276,7 +3255,7 @@ int validate_url(const char *url)
     }
 
     // check hostname
-    if (strchr(host_start, '.') == NULL)
+    if ((strchr(host_start, '.') == NULL) && (strchr(host_start, ':') == NULL))
     {
             return 0;
     }
