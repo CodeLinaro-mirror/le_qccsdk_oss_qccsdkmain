@@ -31,40 +31,6 @@ static int received_data_num = 0;
 
 qbool_t QAT_Data_Transfer_Mode_Handle(uint32_t Length, uint8_t *Buffer);
 
-#if 0
-static QAT_Command_Status_t Extend_Command_HttpHead(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
-{
-
-   QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
-
-   switch (Op_Type)
-   {
-      case QAT_OP_EXEC:		     /* AT+WRTMEM */
-      {	
-         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCHEAD:<index>,<"req_header">\r\n");
-         rc = QAT_Response_Str(QAT_RC_OK, buffer);
-
-         break;
-      }
-      
-      case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
-      {
-
-
-         break;
-      }
-      
-      default:
-         ;
-   }
-   
-//rlt:
-       memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
-       return rc;
-
-}
-#endif
-
 static QAT_Command_Status_t Extend_Command_HttpGetSize(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
 
@@ -1894,10 +1860,7 @@ qapi_Status_t at_httpc_getsize (char *url, int32_t timeout)
     Parameter_List[Parameter_Count].Integer_Is_Valid =false;
     Parameter_List[Parameter_Count].String_Value = path_url;
     Parameter_Count++;
-    
-    //Parameter_List[Parameter_Count].Integer_Is_Valid =true;
-    //Parameter_List[Parameter_Count].Integer_Value = QAT_HTTP_GETSIZE;
-    //Parameter_Count++;
+
     at_httpc_method = QAT_HTTP_GETSIZE;
 
     rlt = httpc_command_handler(Parameter_Count,Parameter_List);
@@ -3286,50 +3249,6 @@ int validate_url(const char *url)
 }
 
 
-#if 0
-void reset_resource()
-{
-    resetSslInfo();
-
-    g_https_cfg.http_port = HTTP_DEFAULT_PORT;
-    g_https_cfg.http_port_set = FALSE;
-    g_https_cfg.https_port = HTTPS_DEFAULT_PORT;
-    g_https_cfg.https_port_set = FALSE;
-    
-    for(uint8 i =0; i<g_https_cfg.header_field_num; i++ )
-    {
-       struct at_header_field* header_field = &g_https_cfg.header_field[i];
-       if(header_field->name != NULL)
-       {
-           free(header_field->name);
-           header_field->name = NULL;
-       }
-       if(header_field->value != NULL)
-       {
-           free(header_field->value);
-           header_field->value = NULL;
-       }
-    }
-    
-    g_https_cfg.header_field_num = 0;
-    g_https_cfg.buff_offset =0;
-    
-    if (g_https_cfg.send_buff != NULL) {
-         free(g_https_cfg.send_buff);
-         g_https_cfg.send_buff = NULL;
-    }
-
-    if (g_https_cfg.url != NULL) {
-         free(g_https_cfg.url);
-         g_https_cfg.url = NULL;
-    }
-
-    if (g_https_cfg.temp_url != NULL) {
-         free(g_https_cfg.temp_url);
-         g_https_cfg.temp_url = NULL;
-    }
-}
-#endif
 static int at_arg_is_string(const char *arg)
 {
     int len = strlen(arg);

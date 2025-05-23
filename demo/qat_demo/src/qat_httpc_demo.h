@@ -138,7 +138,6 @@ qapi_Status_t at_httpc_getsize (char *url, int32_t timeout);
 qapi_Status_t at_httpc_get (char *url, int32_t timeout);
 qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data);
 qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data);
-//qapi_Status_t at_httpc_prepare (char *url, int32_t timeout);
 uint32_t splitKeyValuePairs(char *input, QAPI_Console_Parameter_t* Parameter_List);
 void gethostURL(const char *url, char*hostURL);
 qbool_t getpathURL(const char *url, char*pathURL);
