@@ -1181,6 +1181,8 @@ const QAPI_Console_Command_t net_shell_cmds[] =
 #ifdef CONFIG_HTTP_SERVER_DEMO
     {httpd_command_handler,         "httpd",     "\n\nhttpd [enable|disable] [server_port]\n"
                                     "\nHTTP SERVER: Perform Hypertext Transport protocol server operations.\n"},
+    {syscfg_command,                "syscfg",     "\n\nsyscfg\n"
+                                    "\nsyscfg: get ssid and passwod of http server config.\n"},
 #endif
 
 #ifdef CONFIG_MQTT_CLIENT_DEMO

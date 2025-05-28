@@ -15,5 +15,6 @@
 #endif
 
 qapi_Status_t httpd_command_handler(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+qapi_Status_t syscfg_command(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
 
 #endif
