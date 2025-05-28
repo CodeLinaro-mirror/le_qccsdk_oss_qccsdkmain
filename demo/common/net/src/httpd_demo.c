@@ -17,6 +17,8 @@
 
 #define HTTPS_PRINTF(...)                   printf( __VA_ARGS__)
 
+#define QAPI_WEB_MAX_SSID_SIZE                       32
+
 void httpd_command_help(void)
 {
     HTTPS_PRINTF("httpc {start | stop}\n");
@@ -62,6 +64,36 @@ usage:
         return QAPI_OK;
     }
     
-}   
+}
+
+/**
+   @brief Processes the Extend command from the Qapi.
+
+   This command will get the configuation of SYSTEM.
+
+   @param[in] Op_Type          The input command type.
+   @param[in] Parameter_Count  Number of parameters that were entered into the
+                               command line.
+   @param[in] Parameter_List   List of parameters entered into the command line.
+*/
+qapi_Status_t syscfg_command(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
+{
+   qapi_Status_t rc = QAPI_ERROR;
+   char ssid[QAPI_WEB_MAX_SSID_SIZE + 1] = {0};
+   char pwd[QAPI_WEB_MAX_SSID_SIZE + 1] = {0};
+
+    if(QAPI_OK == qapi_get_wifi_cfg(ssid, pwd))
+    {
+        HTTPS_PRINTF("HTTPSERVER SYSCFG:WIFI:%s,%s", ssid, pwd);
+		rc = QAPI_OK; 
+    }
+	else
+	{
+		HTTPS_PRINTF("HTTPSERVER SYSCFG: get system config failed\n");
+        return QAPI_ERROR;
+	}
+
+   return rc;
+}
 
 #endif
