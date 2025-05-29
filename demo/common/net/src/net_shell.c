@@ -45,6 +45,9 @@
 #include "lwip/apps/sntp.h"
 #endif
 
+extern int lwip_socket_count(void);
+extern uint8_t iperf_stream_count(void);
+
 static ip_addr_t default_ip_address[MAX_ROLE];
 static ip_addr_t default_netmask[MAX_ROLE];
 static ip_addr_t default_gw[MAX_ROLE];
@@ -1132,6 +1135,13 @@ static qapi_Status_t sntpc(uint32_t Parameter_Count, QAPI_Console_Parameter_t *P
 }
 #endif
 
+static qapi_Status_t socketstat(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+  lwip_socket_count();
+  iperf_stream_count();
+  return QAPI_OK;
+}
+
 const QAPI_Console_Command_t net_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -1197,8 +1207,10 @@ const QAPI_Console_Command_t net_shell_cmds[] =
 							"sntpc [start|stop]\n" \
 							"sntpc setOpMode <0|1>\n" \
 							"sntpc setServer <IP addr|name> [id]",
-								"\nSNTP client start or stop, configure"}
+								"\nSNTP client start or stop, configure"},
 #endif
+    {socketstat,   "socketstat", "\n\nsocketstat\n",
+                                    "\nShow the socket count in lwip stack"},
 };
 
 const QAPI_Console_Command_Group_t net_shell_cmd_group = {NET_SHELL_GROUP_NAME, sizeof(net_shell_cmds) / sizeof(QAPI_Console_Command_t), net_shell_cmds};

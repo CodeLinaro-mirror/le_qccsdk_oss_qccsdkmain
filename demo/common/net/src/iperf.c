@@ -158,11 +158,23 @@ static uint8_t iperf_stream_full(void)
 
     if (i >= MAX_STREAM)
     {
-        IPERF_PRINTF("Reach the limited streams\n");
+        IPERF_PRINTF("ERROR: iperf_stream_full: Reach the limited streams\r\n");
         return 1;
     }
     
     return 0;
+}
+
+uint8_t iperf_stream_count(void)
+{
+  uint8_t count = 0;
+  for(int i = 0; i < MAX_STREAM; i++)
+  {
+    if(iperf_stream_id[i] != 0)
+      count++;
+  }
+  IPERF_PRINTF("INFO: iperf_stream_count:%d\r\n", count);
+  return count;
 }
 
 static void iperf_common_clear_stats(THROUGHPUT_CXT *p_tCxt)
@@ -490,8 +502,13 @@ static void iperf_tcp_CloseSession(bench_tcp_session_t *session, fd_set *rd_set)
         session->buffer = 0;
     }
 
-    FD_CLR(session->sock_peer, rd_set);
-    closesocket(session->sock_peer);
+    if(A_ERROR != session->sock_peer)
+    {
+      FD_CLR(session->sock_peer, rd_set);
+      closesocket(session->sock_peer);
+      IPERF_PRINTF("INFO: %s: IPERF socket: close:%d\r\n", __func__, session->sock_peer);
+      session->sock_peer = A_ERROR;
+    }
 
     tcpRefCount = (tcpRefCount) ? (tcpRefCount - 1) : 0;
     sessionRefCount = (sessionRefCount) ? (sessionRefCount - 1) : 0;
@@ -561,8 +578,12 @@ static void iperf_tcp_stopServer(bench_tcp_server_t *server)
 {
     qurt_mutex_lock(&serverLock);
 
-    closesocket(server->sockfd);
-    server->sockfd = 0;
+    if(A_ERROR != server->sockfd)
+    {
+      closesocket(server->sockfd);
+      IPERF_PRINTF("INFO: %s: IPERF socket: close:%d, tcp_server->sockfd.\r\n", __func__, server->sockfd);
+      server->sockfd = A_ERROR;
+    }
     memset(server, 0, sizeof(bench_tcp_server_t));
     serverRefCount = (serverRefCount) ? (serverRefCount - 1) : 0;
 
@@ -1113,7 +1134,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         unused_thread_index = iperf_get_unused_rx_thread_index();
         if(unused_thread_index == -1)
         {
-            IPERF_PRINTF("UDP server get unused thread index failed!\r\n");
+            IPERF_PRINTF("ERROR: %s: UDP server get unused thread index failed!\r\n", __func__);
             if(tCxt)
             {
                 free(tCxt);
@@ -1124,7 +1145,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
         ret = nt_qurt_thread_create(iperf_udp_rx, "udp_rx", 3072, tCxt, iperf_rx_thread_priority, &(iperf_rx_thread_handle[unused_thread_index]));
         if (ret == -1)
         {
-            IPERF_PRINTF("UDP server task creation failed\r\n");
+            IPERF_PRINTF("ERROR: %s: UDP server task creation failed\r\n", __func__);
             if(tCxt)
             {
                 free(tCxt);
@@ -1506,12 +1527,15 @@ int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number) //,s
     fd_set rset;
     server_hdr *hdr;
 
+    if(NULL == p_tCxt->buffer)
+      return error;
+
     ack_buf_len = sizeof(udp_datagram) + sizeof(server_hdr);
     if (ack_buf_len > p_tCxt->params.tx_params.packet_size)
     {
         if ((ack_buf = malloc(ack_buf_len)) == NULL)
         {
-            IPERF_PRINTF("%s: received_buf malloc error\n", __func__);
+            IPERF_PRINTF("%s: received_buf malloc error\r\n", __func__);
             return error;
         }
     }
@@ -1548,7 +1572,7 @@ int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number) //,s
 
         if (sent_bytes < 0)
         {
-            IPERF_PRINTF("UDP send terminate packet error %d , retry %d \r\n", sent_bytes, retry_counter);
+            IPERF_PRINTF("ERROR: iperf_udp_tx_finish: UDP send terminate packet error %d , retry %d \r\n", sent_bytes, retry_counter);
 
             retry_counter++;
             qurt_thread_sleep(1);
@@ -1561,7 +1585,7 @@ int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number) //,s
             received = recv(p_tCxt->sock_peer, ack_buf, ack_buf_len, 0);
             if (received <= 0)
             {
-                IPERF_PRINTF("received none\n");
+                IPERF_PRINTF("INFO: iperf_udp_tx_finish: received none\r\n");
             }
             else if (received >= (int)(sizeof(udp_datagram) + sizeof(server_hdr)))
             {
@@ -1588,7 +1612,7 @@ int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number) //,s
         }
     }
     if (retry_counter == 10)
-        IPERF_PRINTF("wait server ack timeout\n");
+        IPERF_PRINTF("WARNING: iperf_udp_tx_finish:wait server ack timeout\r\n");
 
     if (ack_buf != p_tCxt->buffer)
         free(ack_buf);
@@ -1675,8 +1699,8 @@ static void iperf_client_send(void *arg)
 {
     THROUGHPUT_CXT *p_tCxt = (THROUGHPUT_CXT *)arg;
     if (p_tCxt == NULL) {
-        IPERF_PRINTF("ERROR: p_tCxt in iperf_client_send() is NULL\n");
-        goto ERROR_2;
+        IPERF_PRINTF("ERROR: p_tCxt in iperf_client_send() is NULL\r\n");
+        goto QUIT;
     }
     uint32_t cur_packet_number, n_send_ok, n_send_fail;
     int32_t send_bytes;
@@ -1702,7 +1726,7 @@ static void iperf_client_send(void *arg)
     uint32_t qurt_sleep_counter = 0;
 
     /* Sending.*/
-    IPERF_PRINTF("Sending\n");
+    IPERF_PRINTF("Sending\r\n");
     /*Reset all counters*/
     cur_packet_number = 0;
     n_send_ok = 0;
@@ -1770,7 +1794,7 @@ static void iperf_client_send(void *arg)
     p_tCxt->iperf_stream_id = iperf_get_unused_id();
     if (p_tCxt->iperf_stream_id == MAX_STREAM)
     {
-        goto ERROR_2;
+        goto QUIT;
     }
     p_tCxt->pktStats.iperf_stream_id = p_tCxt->iperf_stream_id;
     while (!is_test_done)
@@ -1790,7 +1814,7 @@ static void iperf_client_send(void *arg)
                 if ((iperf_tx_quit) || (get_device_connect_state() == false))
                 {
                     app_get_time(&p_tCxt->pktStats.last_time);
-                    goto ERROR_2;
+                    goto QUIT;
                 }
                 /*Allow small delay to allow other thread to run*/
                 qurt_thread_sleep(100);
@@ -1831,7 +1855,7 @@ static void iperf_client_send(void *arg)
                 }
                 else
                 {
-                    IPERF_PRINTF("TX err:%d\n", errno);
+                    IPERF_PRINTF("ERROR: iperf_client_send: TX err:%d\r\n", errno);
                     if(EAGAIN == errno || ENOMEM == errno)
                         break;
                     app_get_time(&p_tCxt->pktStats.last_time);
@@ -1997,15 +2021,21 @@ static void iperf_client_send(void *arg)
 
     iperf_result_print(&p_tCxt->pktStats, 0, 0, true);
 
+QUIT:
     /* Send endmark packet and wait for stats from server */
-    // iperf_udp_tx_finish(p_tCxt, cur_packet_number,to,tolen);
-    if ((p_tCxt->protocol == UDP) && (get_device_connect_state() == true))
+    if(p_tCxt->buffer)
+    {
+      if ((p_tCxt->protocol == UDP) && (get_device_connect_state() == true))
         iperf_udp_tx_finish(p_tCxt, cur_packet_number);
+    }
 
-ERROR_2:
     if (p_tCxt)
     {
+      if(A_ERROR != p_tCxt->sock_peer)
+      {
+        IPERF_PRINTF("INFO: %s: %s : IPERF socket: close:%d\r\n", __func__, (p_tCxt->protocol == UDP)?"UDP":"TCP", p_tCxt->sock_peer);
         closesocket(p_tCxt->sock_peer);
+      }
         
         if(errno == EBADF)
             errno = 0;
@@ -2044,7 +2074,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
 {
     if (p_tCxt == NULL){
         IPERF_PRINTF("ERROR: p_tCxt in iperf_udp_tx() is NULL\n");
-        goto ERROR_1;
+        goto QUIT;
     }
 
 #if LWIP_IPV4
@@ -2060,6 +2090,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
     int tos_opt;
     struct sockaddr_in src_sin;
     err_t ret;
+    p_tCxt->sock_peer = A_ERROR;
 
     if (p_tCxt->params.tx_params.v6)
     {
@@ -2078,7 +2109,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         tolen = sizeof(foreign_addr6);
         tos_opt = IPV6_TCLASS;
 #else
-		goto ERROR_1;
+		goto QUIT;
 #endif
     }
     else
@@ -2100,7 +2131,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         tolen = sizeof(foreign_addr);
         tos_opt = IP_TOS;
 #else
-		goto ERROR_1;
+		goto QUIT;
 #endif
     }
 
@@ -2116,16 +2147,18 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
     /* Create UDP socket */
     if ((p_tCxt->sock_peer = socket(family, SOCK_DGRAM, 0)) == A_ERROR) // IPPROTO_UDP
     {
-        IPERF_PRINTF("Socket creation failed\n");
-        goto ERROR_1;
+        IPERF_PRINTF("ERROR: iperf_udp_tx: Socket creation failed\n");
+        goto QUIT;
     }
+
+    IPERF_PRINTF("INFO: %s: IPERF socket: open:%d\r\n", __func__, p_tCxt->sock_peer);
 
     if (p_tCxt->params.tx_params.source_ipv4_addr != 0)
     {
         if (bind(p_tCxt->sock_peer, (struct sockaddr *)&src_sin, sizeof(src_sin)) == A_ERROR)
         {
-            IPERF_PRINTF("Socket bind failed\n");
-            goto ERROR_2;
+            IPERF_PRINTF("ERROR: iperf_udp_tx: Socket bind failed\n");
+            goto QUIT;
         }
     }
 
@@ -2133,15 +2166,10 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
     {
         if (setsockopt(p_tCxt->sock_peer, IPPROTO_IP, tos_opt, &p_tCxt->params.tx_params.ip_tos, sizeof(int)) < 0)
         {
-        	goto ERROR_2;
+        	goto QUIT;
         }
 
     }
-    // if (p_tCxt->params.tx_params.is_so_unblock)
-    // {
-    //     setsockopt(p_tCxt->sock_peer, SOL_SOCKET, O_NONBLOCK, NULL, 0);
-    //     IPERF_PRINTF("non-blocking mode\n");
-    // }
     if (p_tCxt->params.tx_params.v6 && IS_IPV6_MULTICAST(p_tCxt->params.tx_params.v6addr))
     {
 #if LWIP_IPV6
@@ -2153,7 +2181,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         val = 16;
         if (setsockopt(p_tCxt->sock_peer, IPPROTO_IP, IPV6_MULTICAST_HOPS, &val, sizeof(int)) < 0)
         {
-            goto ERROR_2;
+            goto QUIT;
         }
 
         /* disable local loopback of outgoing multicast datagrams */
@@ -2161,46 +2189,44 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
         if (setsockopt(p_tCxt->sock_peer, IPPROTO_IP, IPV6_MULTICAST_LOOP, &val,
                        sizeof(unsigned int)) < 0)
         {
-            goto ERROR_2;
+            goto QUIT;
         }
 
         if (setsockopt(p_tCxt->sock_peer, IPPROTO_IP, IPV6_MULTICAST_IF, &foreign_addr6.sin6_scope_id,
                        sizeof(unsigned int)) < 0)
         {
-            goto ERROR_2;
+            goto QUIT;
         }
 #else
-		goto ERROR_2;
+		goto QUIT;
 #endif
     }
 
     /* Connect to the server.*/
-    IPERF_PRINTF("Connecting,socket:%d\n", p_tCxt->sock_peer);
 
     if (connect(p_tCxt->sock_peer, to, tolen) == A_ERROR)
     {
         IPERF_PRINTF("Connection failed\n");
-        goto ERROR_2;
+        goto QUIT;
     }
 
     ret = nt_qurt_thread_create(iperf_client_send, "udp_client", 1024, p_tCxt, IPERF_TX_THREAD_PRIO, NULL);
 
     if (ret == -1)
     {
-        IPERF_PRINTF("UDP client task creation failed out of memory\r\n");
-        if (p_tCxt)
-        {
-            free(p_tCxt);
-            p_tCxt = NULL;
-        }
+        IPERF_PRINTF("ERROR: iperf_udp_tx: UDP client task creation failed out of memory\r\n");
+        goto QUIT;
     }
-
     return;
 
 //////////////////////////////////////////////////////////////////////////
-ERROR_2:
-    closesocket(p_tCxt->sock_peer);
-ERROR_1:
+QUIT:
+    if(A_ERROR != p_tCxt->sock_peer)
+    {
+      closesocket(p_tCxt->sock_peer);
+      IPERF_PRINTF("INFO: %s: IPERF socket: close:%d\r\n", __func__, p_tCxt->sock_peer);
+    }
+
     IPERF_PRINTF(BENCH_TEST_COMPLETED);
 
     if (p_tCxt)
@@ -2308,8 +2334,8 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     THROUGHPUT_CXT *p_tCxt = (THROUGHPUT_CXT *)arg;
 #endif
     if (p_tCxt == NULL){
-        IPERF_PRINTF("ERROR: p_tCxt in iperf_udp_rx() is NULL\n");
-        goto ERROR_1;
+        IPERF_PRINTF("ERROR: p_tCxt in iperf_udp_rx() is NULL\r\n");
+        goto QUIT;
     }
 
     int32_t received;
@@ -2333,18 +2359,19 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
     int is_test_done = 0;
     int32_t udp_datagram_size = (int32_t)sizeof(udp_datagram);
     int ret =0;
+    p_tCxt->sock_local = A_ERROR;
 
     p_tCxt->iperf_stream_id = iperf_get_unused_id();
     if (p_tCxt->iperf_stream_id == MAX_STREAM)
     {
-        goto ERROR_2;
+        goto QUIT;
     }
     p_tCxt->pktStats.iperf_stream_id = p_tCxt->iperf_stream_id;
 
     if ((p_tCxt->buffer = malloc(CFG_PACKET_SIZE_MAX_RX)) == NULL)
     {
-        IPERF_PRINTF("Out of memory error\n");
-        goto ERROR_1;
+        IPERF_PRINTF("ERROR: %s: Out of memory error\r\n", __func__);
+        goto QUIT;
     }
 
     port = p_tCxt->params.rx_params.port;
@@ -2363,7 +2390,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
         local_addr6.sin6_family = family;
         memscpy(&local_addr6.sin6_addr, sizeof(struct ip6_addr), p_tCxt->params.rx_params.local_v6addr, sizeof(struct ip6_addr));
 #else
-		goto ERROR_1;
+		goto QUIT;
 #endif
 	}
     else
@@ -2380,22 +2407,23 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
         local_addr.sin_family = family;
         local_addr.sin_addr.s_addr = p_tCxt->params.rx_params.local_address;
 #else
-		goto ERROR_1;
+		goto QUIT;
 #endif
 	}
 
     /* Open socket */
     if ((p_tCxt->sock_local = socket(family, SOCK_DGRAM, 0)) == A_ERROR)
     {
-        IPERF_PRINTF("ERROR: Socket creation error.\n");
-        goto ERROR_1;
+        IPERF_PRINTF("ERROR: %s: Socket creation error.\r\n", __func__);
+        goto QUIT;
     }
+    IPERF_PRINTF("INFO: %s: IPERF socket: open:%d\r\n", __func__, p_tCxt->sock_local);
 
     /* Bind */
     if (bind(p_tCxt->sock_local, addr, addrlen) != QAPI_OK)
     {
-        IPERF_PRINTF("ERROR: Socket bind error.\n");
-        goto ERROR_2;
+        IPERF_PRINTF("ERROR: %s: Socket bind error.\r\n", __func__);
+        goto QUIT;
     }
 
     if (p_tCxt->params.rx_params.mcEnabled)
@@ -2408,11 +2436,11 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
             group6.ipv6mr_interface = p_tCxt->params.rx_params.scope_id;
             if (setsockopt(p_tCxt->sock_local, IPPROTO_IP, IPV6_JOIN_GROUP, (void *)&group6, sizeof(group6)) != QAPI_OK)
             {
-                IPERF_PRINTF("ERROR: Socket set option failure.\n");
-                goto ERROR_2;
+                IPERF_PRINTF("ERROR: %s: Socket set option failure.\r\n", __func__);
+                goto QUIT;
             }
 #else
-			goto ERROR_2;
+			goto QUIT;
 #endif
         }
         else
@@ -2447,7 +2475,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
         stat_udp_pattern_t stat_udp;
         struct udp_datagram *mbuf_udp = (struct udp_datagram *)p_tCxt->buffer;
 
-        IPERF_PRINTF("Waiting\n");
+        IPERF_PRINTF("Waiting\r\n");
         is_test_done = 0;
 
         iperf_common_clear_stats(p_tCxt);
@@ -2464,14 +2492,14 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
             if ((iperf_rx_quit) || (get_device_connect_state() == false))
             {
                 app_get_time(&p_tCxt->pktStats.last_time);
-                goto ERROR_2;
+                goto QUIT;
             }
             do
             {
                 if ((iperf_rx_quit) || (get_device_connect_state() == false))
                 {
                     app_get_time(&p_tCxt->pktStats.last_time);
-                    goto ERROR_3;
+                    goto QUIT;
                 }
 
                 /* block for 2s or until a packet is received */
@@ -2482,7 +2510,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                 if (conn_sock == A_ERROR)
                 {
                     app_get_time(&p_tCxt->pktStats.last_time);
-                    goto ERROR_3; // socket no longer valid
+                    goto QUIT; // socket no longer valid
                 }
                 else if (conn_sock == 0)
                 {
@@ -2492,14 +2520,14 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                     if ((is_first == 0) && (curtime - p_tCxt->pktStats.first_time) / 1000 > 20)
                     {
                         app_get_time(&p_tCxt->pktStats.last_time);
-                        goto ERROR_3;
+                        goto QUIT;
                     }
                 }
 
                 if (family == AF_INET && errno == ENOTSOCK) // TODO
                 {
                     app_get_time(&p_tCxt->pktStats.last_time);
-                    goto ERROR_2;
+                    goto QUIT;
                 }
             } while (conn_sock == 0);
 
@@ -2534,12 +2562,12 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
             }
             else
             {
-                IPERF_PRINTF("error! received= %d\n", received);
+                IPERF_PRINTF("ERROR: %s received= %d\r\n",__func__, received);
                 break;
             }
         } /* receive_loop */
 
-    ERROR_3:
+#if 0
 #ifdef UDP_TX_DEBUG
 
         IPERF_PRINTF("Received 0x%x bytes, Packets %d \n",
@@ -2553,24 +2581,23 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
         }
 
         break;
+#endif
     } /* main loop */
 
-ERROR_2:
+QUIT:
     if (is_test_done)
         iperf_udp_ack_finish(p_tCxt, from, fromlen);
 
     iperf_result_print(&p_tCxt->pktStats, 0, 0, true);
 
-    closesocket(p_tCxt->sock_local);
+    if(A_ERROR != p_tCxt->sock_local)
+    {
+      closesocket(p_tCxt->sock_local);
+      IPERF_PRINTF("INFO: %s: IPERF socket: close:%d\r\n", __func__, p_tCxt->sock_local);
+    }
 
-ERROR_1:    
     if (p_tCxt)
     {
-        if (p_tCxt->rx_task_handler)
-        {
-            p_tCxt->rx_task_handler = NULL;
-        }
-    
         qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
 
         for (int i = 0; i < MAX_STREAM; i++)
@@ -2602,7 +2629,7 @@ ERROR_1:
     ret = iperf_remove_rx_thread_based_on_id(nt_qurt_thread_get_id());
     if(ret == -1)
     {
-        IPERF_PRINTF("remove_rx_thread error!\r\n");
+        IPERF_PRINTF("ERROR: %s: remove_rx_thread error!\r\n", __func__);
     }
     nt_osal_thread_delete(NULL);    
 #endif
@@ -2623,7 +2650,7 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
 {
     if (p_tCxt == NULL){
         IPERF_PRINTF("ERROR: p_tCxt in iperf_tcp_tx() is NULL\n");
-        goto ERROR_1;
+        goto QUIT;
     }
 
 #if LWIP_IPV4
@@ -2644,6 +2671,7 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
     struct timeval send_timeout = { 0 };
 
     memset(ip_str, 0, sizeof(ip_str));
+    p_tCxt->sock_peer = A_ERROR;
 
     for (i = 0; i < INCREMENTAL_PATTERN_SIZE; i++)
     {
@@ -2670,7 +2698,7 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         tolen = sizeof(foreign_addr6);
         tos_opt = IPV6_TCLASS;
 #else
-		goto ERROR_1;
+		goto QUIT;
 #endif
     }
     else
@@ -2688,16 +2716,17 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
         tolen = sizeof(foreign_addr);
         tos_opt = IP_TOS;
 #else
-		goto ERROR_1;
+		goto QUIT;
 #endif
     }
 
     /* Create socket */
     if ((p_tCxt->sock_peer = socket(family, SOCK_STREAM, 0)) == A_ERROR)
     {
-        IPERF_PRINTF("ERROR: Unable to create socket\n");
-        goto ERROR_1;
+        IPERF_PRINTF("ERROR: iperf_tcp_tx: Unable to create socket\r\n");
+        goto QUIT;
     }
+    IPERF_PRINTF("INFO: %s: IPERF socket: open:%d\r\n",__func__,  p_tCxt->sock_peer);
 
     if(p_tCxt->tcp_snd_buf > 0)
     {
@@ -2708,7 +2737,7 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
     {
         if (setsockopt(p_tCxt->sock_peer, IPPROTO_IP, tos_opt, &p_tCxt->params.tx_params.ip_tos, sizeof(int)) < 0)
         {
-        	goto ERROR_2;
+        	goto QUIT;
         }
     }
     /* enable TCP TX socket non-blocking*/
@@ -2730,30 +2759,29 @@ void iperf_tcp_tx(THROUGHPUT_CXT *p_tCxt)
     setsockopt(p_tCxt->sock_peer, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout));
 
     /* Connect to the server.*/
-    IPERF_PRINTF("TCP Connecting\n");
+    IPERF_PRINTF("INFO: iperf_tcp_tx: TCP Connecting\r\n");
     if (connect(p_tCxt->sock_peer, to, tolen) == A_ERROR)
     {
-        IPERF_PRINTF("Connection failed.\n");
-        goto ERROR_2;
+        IPERF_PRINTF("ERROR: iperf_tcp_tx: Connection failed.\r\n");
+        goto QUIT;
     }
-    IPERF_PRINTF("TCP Connected\n");
+    IPERF_PRINTF("INFO: iperf_tcp_tx: TCP Connected\r\n");
 
     ret = nt_qurt_thread_create(iperf_client_send, "tcp_client", 1024, p_tCxt, IPERF_TX_THREAD_PRIO, NULL);
 
     if (ret == -1)
     {
-        IPERF_PRINTF("UDP client task creation failed out of memory\r\n");
-        if (p_tCxt)
-        {
-            free(p_tCxt);
-            p_tCxt = NULL;
-        }
+        IPERF_PRINTF("ERROR: iperf_tcp_tx: TCP client task creation failed out of memory\r\n");
+        goto QUIT;
     }
     return;
 
-ERROR_2:
-    closesocket(p_tCxt->sock_peer);
-ERROR_1:
+QUIT:
+    if(A_ERROR != p_tCxt->sock_peer)
+    {
+      closesocket(p_tCxt->sock_peer);
+      IPERF_PRINTF("INFO: %s: IPERF socket: close:%d\r\n", __func__, p_tCxt->sock_peer);
+    }
     IPERF_PRINTF(BENCH_TEST_COMPLETED);
 
     if (p_tCxt)
@@ -2761,8 +2789,6 @@ ERROR_1:
         free(p_tCxt);
         p_tCxt = NULL;
     }
-    
-    return;
 }
 
 /************************************************************************
@@ -2806,7 +2832,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     int family;
     bench_tcp_session_t *session = NULL;
     bench_tcp_session_t *sess = NULL;
-    int sock_peer;
+    int sock_peer = A_ERROR;
     int maxfd = 0;
     int newSession = 0;
     bench_tcp_server_t *tcp_server = NULL;
@@ -2841,7 +2867,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     serverId = iperf_tcp_getServerId();
     if (serverId == -1)
     {
-        IPERF_PRINTF("%s: Invalid ServerId %d\n", __func__, serverId);
+        IPERF_PRINTF("ERROR: %s: Invalid ServerId %d\r\n", __func__, serverId);
         #if IPERF_RX_THREAD
         free(p_tCxt);
         p_tCxt = NULL;
@@ -2851,6 +2877,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     }
 
     tcp_server = &g_tcpServers[serverId];
+    tcp_server->sockfd = A_ERROR;
 
     IPERF_PRINTF("TCP Server Id: %d\n", serverId);
 
@@ -2908,9 +2935,10 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     /* Create listen socket */
     if ((tcp_server->sockfd = socket(family, SOCK_STREAM, 0)) == A_ERROR)
     {
-        IPERF_PRINTF("ERROR: Socket creation error.\n");
+        IPERF_PRINTF("ERROR: %s: Socket creation error.\r\n", __func__);
         goto QUIT;
     }
+    IPERF_PRINTF("INFO: %s: IPERF socket: open:%d, tcp_server->sockfd.\r\n", __func__, tcp_server->sockfd);
 
     /* Bind socket */
     if (bind(tcp_server->sockfd, addr, addrlen) == A_ERROR)
@@ -2984,6 +3012,7 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
             {
                 newSession = 1;
                 IPERF_PRINTF("Get a new session, socket handle:%d\n", sock_peer);
+                IPERF_PRINTF("INFO: %s: IPERF socket: open:%d\r\n", __func__, sock_peer);
                 break;
             }
         }
@@ -3026,8 +3055,9 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
         if ((sessionId = iperf_tcp_CreateSession(p_tCxt)) < 0)
         {
-            IPERF_PRINTF("Failed to create TCP RX session object\n");
+            IPERF_PRINTF("ERROR: %s: Failed to create TCP RX session object\r\n", __func__);
             closesocket(sock_peer);
+            IPERF_PRINTF("INFO: %s: IPERF socket: close:%d\r\n", __func__, sock_peer);
             newSession = 0;
             // continue;
             goto QUIT;
@@ -3035,19 +3065,18 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
 
         session = &g_tcpSessions[sessionId];
         session->port = tcp_server->port;
+        session->sock_peer = sock_peer;
 
         /*Allocate buffer*/
         if ((session->buffer = malloc(CFG_PACKET_SIZE_MAX_RX)) == NULL)
         {
             IPERF_PRINTF("Out of memory error\n");
-            session->sock_peer = sock_peer;
             iperf_tcp_CloseSession(session, &rd_set);
             newSession = 0;
             // continue;
             goto QUIT;
         }
 
-        session->sock_peer = sock_peer;
 
         //p_tCxt->iperf_stream_id++;
         session->pktStats.iperf_stream_id = p_tCxt->iperf_stream_id;
