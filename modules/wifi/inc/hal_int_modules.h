@@ -948,6 +948,9 @@ void hal_phy_power_ftm_switch_to_listen(void);
 void hal_mac_sw_powerup();
 void hal_mac_hw_ctrl();
 void hal_mod_txp_reset();
+#ifdef FERMION_TXP_TPE_WAR
+void hal_txp_tpe_reinit(void);
+#endif
 
 void delay( uint32_t delay_count);
 

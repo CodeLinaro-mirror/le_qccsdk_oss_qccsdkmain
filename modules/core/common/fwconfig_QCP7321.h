@@ -347,6 +347,9 @@ When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs,
 /* War flag for power issues seen in Fermion*/
 #define FERMION_POWER_WAR
 
+/* War flag for TXP TPE busy issues seen in Fermion bmps*/
+#define FERMION_TXP_TPE_WAR
+
 #ifdef EMULATION_BUILD
 
 #define EMULATION_WAR

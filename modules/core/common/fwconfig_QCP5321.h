@@ -309,6 +309,9 @@ WAR_COEX_VIFERMION285
 /* War flag for power issues seen in Fermion*/
 #define FERMION_POWER_WAR
 
+/* War flag for TXP TPE busy issues seen in Fermion bmps*/
+#define FERMION_TXP_TPE_WAR
+
 /* Flag to enable Sleep Clock Calibration in Active Mode
  * and necessary configuration to enable sleep mode cal */
 #define SLEEP_CLK_CAL_IN_ACTIVE_MODE
