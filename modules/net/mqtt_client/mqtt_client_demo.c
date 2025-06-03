@@ -1414,7 +1414,7 @@ void mqtt_client_process_cmd(uint32_t sessionIndex)
             disconnectMqttSession(&pMqttClientSess->mqttContext,pMqttClientSess);
         }
 
-        qurt_thread_sleep(10);
+        //qurt_thread_sleep(10);
         pMqttClientSess->mqttState = MQTT_FORCE_DISCONNECT;
 
         /* End TLS session, then close TCP connection. */
@@ -1559,7 +1559,7 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
                                            MQTT_PING_RESP_TIMEOUT_MAX_TIMES);
                         disconnectMqttSession(&pMqttClientSess->mqttContext,pMqttClientSess);
                         pMqttClientSess->mqttState = MQTT_DISCONNECT;
-                        qurt_thread_sleep(10);
+                        //qurt_thread_sleep(10);
 
                     }
                 }
@@ -1583,7 +1583,7 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
                                        pMqttClientSess->sessionIndex,
                                        MQTT_Status_strerror(mqttStatus));
                     disconnectMqttSession(&pMqttClientSess->mqttContext,pMqttClientSess);
-                    qurt_thread_sleep(10);
+                    //qurt_thread_sleep(10);
                     pMqttClientSess->mqttState = MQTT_DISCONNECT;
                 }
             }
@@ -1597,7 +1597,6 @@ void mqttc_task(void __attribute__((__unused__))*pvParameters)
                 if (pMqttClientSess->mqttTransportScheme == MQTT_OVER_TCP)
                 {
                     Plaintext_Disconnect(&pMqttClientSess->networkContext);
-
                 }
                 else if (pMqttClientSess->mqttTransportScheme == MQTT_OVER_SSL)
                 {
