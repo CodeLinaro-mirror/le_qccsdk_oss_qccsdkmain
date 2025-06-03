@@ -2046,7 +2046,7 @@ data_exchange:
 		{
 			ret = 0;
 			SSL_CLIENT_PRINTF( " Receive quit command\n" );
-			goto exit;
+			goto close_notify;
 		}
 
 		int terminated = 0;
