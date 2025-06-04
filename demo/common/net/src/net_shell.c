@@ -254,14 +254,21 @@ static qapi_Status_t dnsc(uint32_t __attribute__((__unused__)) Parameter_Count, 
     		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     	}
 
+        int insert_indx = -1;
         for(indx = 0; indx< DNS_MAX_SERVERS; indx++) {
             server_addr = (ip_addr_t *)dns_getserver(indx);
-            if(ip_addr_isany_val(*server_addr)) {
-                break;
+            if(ip_addr_cmp(server_addr, &ip_addr)) {
+                info_printf("this IP Address already exists.\n");
+    		    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+            }
+
+            if((insert_indx == -1) && ip_addr_isany_val(*server_addr)) {
+                insert_indx = indx;
             }
         }
-        if(indx != DNS_MAX_SERVERS) {
-            dns_setserver(indx, &ip_addr);
+        
+        if(insert_indx >= 0 && insert_indx < DNS_MAX_SERVERS) {
+            dns_setserver(insert_indx, &ip_addr);
             info_printf("add DNS server OK.\n");
         }else {
             info_printf("add DNS server failed, the array is full now.\n");
