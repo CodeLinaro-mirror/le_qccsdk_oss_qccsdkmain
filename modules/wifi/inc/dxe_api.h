@@ -105,6 +105,7 @@ void *nt_dxe_get_last_rx_pkt(e_dxe_channel channel);
 uint32_t nt_dxe_get_dxe_timestamp(e_dxe_channel channel);
 uint32_t hal_dxe_suspend();
 uint32_t hal_dxe_resume();
+void nt_hal_wait_until_dxe_channel_avail(void);
 #ifdef SUPPORT_BMU_ERROR_RECOVERY
 /* Store the DXE state and suspend DXE before BMU recovery */
 void hal_dxe_abort_pre_bmu_recovery(void);
