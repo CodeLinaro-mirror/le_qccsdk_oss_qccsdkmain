@@ -738,6 +738,7 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
       {	
 
 	    uint32_t indx;
+        int insert_indx = -1;
 	    const ip_addr_t * server_addr;
 	    char* cmd, *hostname;
 	    ip_addr_t ip_addr;
@@ -752,19 +753,24 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
 	        }
 	    	if (!ipaddr_aton(Parameter_List[1].String_Value, &ip_addr)) 
 			{
-	    		rc = QAT_Response_Str(QAT_RC_ERROR, "+DNSC:Invalid IP Address. Please try again");
+	    		rc = QAT_Response_Str(QAT_RC_ERROR, "+DNSC:Invalid IP Address, Please try again.");
 	    		return rc;
 	    	}
 
-	        for(indx = 0; indx< DNS_MAX_SERVERS; indx++) {
+            for(indx = 0; indx< DNS_MAX_SERVERS; indx++) {
 	            server_addr = (ip_addr_t *)dns_getserver(indx);
-	            if(ip_addr_isany_val(*server_addr)) {
-	                break;
+	            if(ip_addr_cmp(server_addr, &ip_addr)) {
+	                rc = QAT_Response_Str(QAT_RC_ERROR, "+DNSC:this IP Address already exists.");
+	    		    return rc;
+	            }
+
+                if((insert_indx == -1) && ip_addr_isany_val(*server_addr)) {
+	                insert_indx = indx;
 	            }
 	        }
-			
-	        if(indx != DNS_MAX_SERVERS) {
-	            dns_setserver(indx, &ip_addr);
+
+	        if(insert_indx >= 0 && insert_indx < DNS_MAX_SERVERS) {
+	            dns_setserver(insert_indx, &ip_addr);
 	            rc = QAT_Response_Str(QAT_RC_OK, NULL);
 	        }else {
 	            rc = QAT_Response_Str(QAT_RC_ERROR, "+DNSC:add DNS server failed, the array is full now.");
