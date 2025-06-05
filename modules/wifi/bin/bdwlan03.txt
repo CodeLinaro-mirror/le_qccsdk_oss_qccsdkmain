@@ -1474,9 +1474,9 @@ uint8	FW_CONFIG.xPAEnable	 0
 uint8	FW_CONFIG.lnaPwrMode2G	 1 
 uint8	FW_CONFIG.lnaPwrMode5G	 1 
 uint8	FW_CONFIG.calDBEnableDisableFTM	 0 
-uint8	FW_CONFIG.DpdEnable2G	 0 
-uint8	FW_CONFIG.DpdEnable5G	 0 
-uint8	FW_CONFIG.DpdEnable6G	 0 
+uint8	FW_CONFIG.DpdEnable2G	 1 
+uint8	FW_CONFIG.DpdEnable5G	 1 
+uint8	FW_CONFIG.DpdEnable6G	 1 
 int8	FW_CONFIG.txPowerOffset	 5 
 uint8	FW_CONFIG.hwCalEnable	 239 
 uint8	FW_CONFIG.CaldbBypass	 0 
