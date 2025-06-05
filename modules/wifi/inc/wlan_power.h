@@ -237,6 +237,7 @@ typedef enum {
     EXIT_REASON_CSA,	    /*When CSA bit is set in DTIM bcn*/
     EXIT_REASON_NEGATIVE_SLP_TIME,   /*Negative slp time on attempt to slp back*/
 	EXIT_REASON_EXT_INT,	    /*External wakeup by interrupt*/
+    EXIT_REASON_RTOS_TIME,	    /*wakeup by RTOS*/
     EXIT_REASON_LIMIT,
 }  PROTOCOL_SLP_EXIT_REASON;
 
@@ -503,6 +504,7 @@ void pmIdleTimeoutFunc(TimerHandle_t timer_handle);
 void pmImpsTimeoutFunc(TimerHandle_t timer_handle);
 void pmPspollTimeoutFunc(TimerHandle_t timer_handle);
 void pm_deinit(void *pm_inst);
+void set_sleep_exit_reason(void);
 //static void pmInfraPmEnable(devh_t *, uint8_t);
 /*suren : This function is used for renter to sleep mode after send the ps-poll frame to ap*/
 //static void pmCancelPspollState(devh_t *);
