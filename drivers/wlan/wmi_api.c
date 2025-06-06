@@ -1323,9 +1323,9 @@ qapi_Status_t wmi_start_wps_process(uint8_t __attribute__((__unused__)) device_I
     p_cxt->wps_in_progress = true;
     p_cxt->wps_param.config_methods = WPS_EN_INT;
     p_cxt->wps_param.auth_floor = auth_floor;
-    if (mode = QAPI_WLAN_WPS_PBC_MODE_E)
+    if (mode == QAPI_WLAN_WPS_PBC_MODE_E)
         p_cxt->wps_param.config_mode = WPS_PBC_MODE;
-    else if (mode == QAPI_WLAN_WPS_PBC_MODE_E)
+    else if (mode == QAPI_WLAN_WPS_PIN_MODE_E)
         p_cxt->wps_param.config_mode = WPS_PIN_MODE;
     else
         return QAPI_WLAN_ERROR;
