@@ -365,7 +365,8 @@ def main():
     except:
         # print the exception information as otherwise GDB absorbs it.
         print(traceback.format_exc())
-        raise
+        tool_socket.close()
+
     finally:
         tool_socket.close()
 
