@@ -1350,10 +1350,13 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
              * delta of hres timer is more accurate
              * 
             **/
-            uint64_t  delta_rtos = hres_timer_curr_time_us() - rtos_register;
+            uint64_t  delta_rtos_us = hres_timer_curr_time_us() - rtos_register;
+            uint64_t  delta_rtos = 0;
+
             NT_LOG_PRINT(SOCPM, INFO, " nt_socpm_slp_time_total %d delta_rtos %d", 
-            (uint32_t)nt_socpm_slp_time_total, (uint32_t)delta_rtos);
- 
+            (uint32_t)nt_socpm_slp_time_total, (uint32_t)delta_rtos_us);
+
+            delta_rtos = US_TO_MS(delta_rtos_us);
             vTaskStepTick(delta_rtos);
         }
         else if (nt_socpm_resume_f == 2)
