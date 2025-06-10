@@ -566,7 +566,13 @@ static qapi_Status_t bmps_cb_register(uint32_t Parameter_Count, QAPI_Console_Par
 
     return QAPI_OK;
 }
-
+static qapi_Status_t bmps_log_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if((Parameter_Count != 1 ) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    return qapi_bmps_log_enable(Parameter_List[0].Integer_Value ? 1 : 0);
+}
 static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     unsigned int index = 0;
@@ -692,6 +698,7 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
     {bcmc_filter_list , "bcmc_filter_list", "\n\nUsage: bcmc_filter_list -a [1|0] -u [dst udp port] -q\n\n", "bcmc_filter_list"},
     {bmps_cb_register , "bmps_cb_regiser", "<1|0>", "register|deregister callback function when pre-sleep/post-awake\n"},
 	{bmps_period_awake, "bmps_period_awake", "<1/0> [period in ms to awake]", "Enable BMPS(DTIM) period awake\n"},
+    {bmps_log_enable, "bmps_log_enable", "<1/0>", "Enable BMPS(DTIM) Logs\n"},
 };
 
 const QAPI_Console_Command_Group_t lowpower_shell_cmd_group = {"lowpower", sizeof(lowpower_shell_cmds) / sizeof(QAPI_Console_Command_t), lowpower_shell_cmds};
