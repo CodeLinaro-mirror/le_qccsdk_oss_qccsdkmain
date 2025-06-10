@@ -33,10 +33,12 @@
 #define HTTPS_DEFAULT_PORT                            443
 #define HTTP_DEFAULT_PORT                             80
 #define HTTPC_DEFAULT_IP_PREFER                       0   //0:ipv4, 1:ipv6
+#define HTTPC_DEFAULT_CACHE_DATA                      QAT_CACHE_DATA
+//#define HTTPC_NOT_CACHE_DATA_THRESHOLD                10//2000
 #define QAT_HTTPC_MAX_HEADER_FIELD                    10
 #define QAT_MAX_CHUNK_SIZE                            1000
 #define QAT_CHUNK_INTERVAL                            10  //ms
-
+#define QATHTTPC_PRINTF(...)                          printf( __VA_ARGS__)
 
 
 struct at_header_field{
@@ -58,6 +60,7 @@ struct at_https_global_config {
     uint32_t https_port;
     uint8_t httpc_ip_prefer;
     uint8_t is_pre_buffer;
+    uint8_t is_cache_data;
     uint32_t url_size;
     char *url;
 
@@ -123,6 +126,11 @@ typedef enum {
     QAT_SSL_PRE_BUFFER_RELEASE
 } qat_pre_buffer_type;
 
+typedef enum{
+    QAT_NOT_CACHE_DATA,
+    QAT_CACHE_DATA
+}cache_data_type;
+
 
 /*-------------------------------------------------------------------------
  * Function Declarations
@@ -132,12 +140,18 @@ static int at_arg_is_null(const char *arg);
 int at_arg_get_number(const char *arg, int *value);
 int at_arg_get_hexstr_number(const char *arg, uint32_t *value);
 int at_arg_get_string(const char *arg, char *string, int max);
+qapi_Status_t at_httpc_disconn (int32_t client_num);
 qapi_Status_t at_httpc_stop();
+qapi_Status_t at_httpc_conn(char *url);
+qapi_Status_t at_httpc_new_session (char *url,int32_t timeout);
+qapi_Status_t at_httpc_start ();
 qapi_Status_t at_httpc_request (int32_t opt, char *url, char *data_buf);
 qapi_Status_t at_httpc_getsize (char *url, int32_t timeout);
 qapi_Status_t at_httpc_get (char *url, int32_t timeout);
 qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data);
+qapi_Status_t at_httpc_post2 (char *url, int32_t data_len,char *data, int32_t numb,qbool_t finish);
 qapi_Status_t at_httpc_put (char *url, int32_t data_len,char *data);
+qapi_Status_t at_httpc_put2 (char *url, int32_t data_len,char *data, int32_t numb,qbool_t finish);
 uint32_t splitKeyValuePairs(char *input, QAPI_Console_Parameter_t* Parameter_List);
 void gethostURL(const char *url, char*hostURL);
 qbool_t getpathURL(const char *url, char*pathURL);
@@ -155,6 +169,7 @@ void reset_temp_resource();
 qbool_t save_content_type(uint8_t content_type);
 qbool_t is_succ_resp_code(int errorcode);
 int validate_url(const char *url);
+int get_valid_data_len(const char *data);
 
 
 static QAT_Command_Status_t Extend_Command_HttpClient(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List);
