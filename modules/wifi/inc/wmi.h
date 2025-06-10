@@ -233,6 +233,7 @@ typedef enum {
 	WMI_CLK_LATENCY_CMDID, /* Set the clock latency during the various sleep modes */
 	WMI_SLP_CLK_CAL_CFG_CMDID,
 	WMI_BMPS_ENABLE_CMDID,
+	WMI_BMPS_LOG_ENABLE_CMDID,
 	WMI_BMPS_IGNORE_BCMC_CMDID,
 	WMI_BMPS_TIMING_CFG_CMDID, //0xa0=160
     WMI_BMPS_RX_FILTER_ENABLE_CMDID,
@@ -1701,6 +1702,10 @@ typedef PREPACK struct{
 typedef PREPACK struct{
     uint8_t enable;
 } POSTPACK WMI_BMPS_ENABLE;
+
+typedef PREPACK struct{
+    uint8_t enable;
+} POSTPACK WMI_BMPS_LOG_ENABLE;
 
 typedef PREPACK struct{
     uint32_t time;

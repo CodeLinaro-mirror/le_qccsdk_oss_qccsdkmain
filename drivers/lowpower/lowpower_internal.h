@@ -27,6 +27,8 @@ typedef union {
         /**< The idle timeout in ms, used in qapi_bmps_cfg. */
         WMI_BMPS_ENABLE bmps_enable;
         /**< To enable/disable BMPS, used in qapi_bmps_cfg. */
+        WMI_BMPS_LOG_ENABLE bmps_log_enable;
+        /**< To enable/disable BMPS Log, used in qapi_bmps_log_enable. */
     } bmps_cfg;
     /**< BMPS cfg, used in qapi_bmps_cfg. */
     WMI_BMPS_IGNORE_BCMC bmps_ignore_bcmc;
