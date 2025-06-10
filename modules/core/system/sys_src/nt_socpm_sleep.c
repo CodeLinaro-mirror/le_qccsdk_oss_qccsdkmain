@@ -1249,7 +1249,8 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
                     _socpm_os_tmr.slp_mode = clk_gtd_sleep;
                 }
 
-                NT_LOG_PRINT(SOCPM, INFO, " _socpm_slp_lst_head %d slp_time: %d _socpm_last_slp_count:%d updated_slp_val: %d slp_mode: %d ", _socpm_slp_lst_head, (uint32_t)_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time/1000, _socpm_last_slp_count, (uint32_t)updated_slp_val,_socpm_os_tmr.slp_mode);
+                NT_LOG_PRINT(SOCPM, INFO, " _socpm_slp_lst_head %d slp_time: %d _socpm_last_slp_count:%d updated_slp_val: %d slp_mode: %d wifi_mode: %d idx_rtos %d", _socpm_slp_lst_head, (uint32_t)_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time/1000, _socpm_last_slp_count, (uint32_t)updated_slp_val,_socpm_os_tmr.slp_mode, ((NT_REG_RD(QWLAN_PMU_CFG_WIFI_SS_STATE_REG) & QWLAN_PMU_CFG_WIFI_SS_STATE_WIFI_SS_CURR_STATE_MASK)
+                                    >> QWLAN_PMU_CFG_WIFI_SS_STATE_WIFI_SS_CURR_STATE_OFFSET),_socpm_slp_list_idx_rtos);
 
             }
         }
@@ -2493,6 +2494,10 @@ void nt_socpm_sleep_lst_reorder(
     }
 
     _socpm_slp_mode = _socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_mode;
+    if (_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time < (_socpm_slp_time_supp_min_ms * 1000))
+    {
+        _socpm_slp_mode = clk_gtd_sleep;
+    }
 
     if (process_routine == 0)
     {
@@ -3147,8 +3152,23 @@ static void _socpm_slpcfg_mcuslp(void)
 
     if (wifi_ss_state != NT_PMU_CFG_WIFI_SLEEP_OFFSET)
     {
-        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_CFG_WIFI_SS_STATE,
-                     CFG_WIFI_SS_NEXT_STATE, NT_PMU_CFG_WIFI_SLEEP_OFFSET);
+        uint32_t value;
+        value = HAL_REG_RD(QWLAN_RXP_CONFIG_REG);
+        HAL_REG_WR(QWLAN_RXP_CONFIG_REG,
+                (value & ~QWLAN_RXP_CONFIG_CFG_RXP_EN_MASK)); //Disable RX
+
+        /*clear any pending AON timer interrupts. If AON interrupt is pending, wifi doesnt move to sleep state*/
+        _socpm_slptmr_off();
+
+        PM_SET_WLAN_STATE_OFF(pPmStruct);
+        NT_REG_WR(QWLAN_PMU_CFG_WIFI_SS_STATE_REG, NT_PMU_CFG_WIFI_SLEEP_OFFSET);
+
+        wifi_ss_state = HWIO_INXF(SEQ_WCSS_PMU_OFFSET,
+                        NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_CFG_WIFI_SS_STATE, WIFI_SS_CURR_STATE);
+
+        NT_LOG_PRINT(SOCPM, ERR, " wifi_ss_state %x", 
+        (uint32_t)wifi_ss_state);
+
     }
 
     PM_SET_RRI_STATE(pPmStruct, PM_RRI_MAC_DOWN_MCUSLP);
