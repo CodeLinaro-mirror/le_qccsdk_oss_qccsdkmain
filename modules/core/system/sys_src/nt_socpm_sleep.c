@@ -2494,16 +2494,10 @@ void nt_socpm_sleep_lst_reorder(
     }
 
     _socpm_slp_mode = _socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_mode;
-    if (_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time < (_socpm_slp_time_supp_min_ms * 1000))
-    {
-        _socpm_slp_mode = clk_gtd_sleep;
-    }
 
     if (process_routine == 0)
     {
-        if (((old_sleep_list_head != _socpm_slp_lst_head) ||
-             (head_prev_sleep_time != _socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time)) &&
-            (_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time > 0))
+        if ((_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time > 0))
         {
                 nt_socpm_slp_tmr_set(_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time);
             

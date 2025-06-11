@@ -160,7 +160,7 @@ static void bmps_timer_cb(void)
 static void timer_cb(xTimerHandle xTimer)
 { 
     static int cnt = 0; cnt++; 
-    printf("TICK %d\r\n", cnt); 
+    // printf("TICK %d\r\n", cnt); 
 }
 
 static qapi_Status_t bmps_period_awake(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)

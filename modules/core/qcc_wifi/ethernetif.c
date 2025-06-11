@@ -191,7 +191,7 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
 	}
 	else
 	{
-		NT_LOG_PRINT(DPM, ERR, "Packet dropped, device already disconnected");
+		NT_LOG_PRINT(DPM, INFO, "Packet dropped, device already disconnected");
 		return ERR_CONN;
 	}
 #endif /* SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP */
