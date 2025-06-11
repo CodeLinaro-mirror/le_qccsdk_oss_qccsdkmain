@@ -276,7 +276,7 @@ typedef struct {
     uint8_t acceptable_tx_count;
     uint8_t acceptable_rx_count;
     uint16_t max_bcn_rx_no_wake_limit;
-    uint8_t force_dtim;
+    uint8_t force_dtim; //num of beacon interval
     uint16_t round;
 } PM_INFRA_STA_CONFIG_PARAMS;
 
