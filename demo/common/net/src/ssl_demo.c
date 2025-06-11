@@ -1322,7 +1322,7 @@ send_request:
 		{
 			ret = 0;
 			SSL_CLIENT_PRINTF( " Receive quit command\n" );
-			goto statistics;
+			goto close_notify;
 		}
 
 		len = buffer_size - 1;
