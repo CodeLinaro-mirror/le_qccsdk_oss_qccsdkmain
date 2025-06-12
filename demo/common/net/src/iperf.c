@@ -2587,9 +2587,9 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
             stat_udp.pkts_recvd = p_tCxt->pktStats.pkts_recvd;
             rxreorder_udp_payload_report(&stat_udp);
         }
-
-        break;
 #endif
+        break;
+
     } /* main loop */
 
 QUIT:
