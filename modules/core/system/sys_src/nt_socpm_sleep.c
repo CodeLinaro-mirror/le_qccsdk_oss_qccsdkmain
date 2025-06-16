@@ -82,6 +82,8 @@ extern GPIO_Config_t gpio_config;
 #include "ferm_flash.h"
 #endif
 
+extern int rri_force_wakeup;
+
 // -------------------------------------------------------------------
 // local fns control
 
@@ -1249,8 +1251,7 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
                     _socpm_os_tmr.slp_mode = clk_gtd_sleep;
                 }
 
-                NT_LOG_PRINT(SOCPM, INFO, " _socpm_slp_lst_head %d slp_time: %d _socpm_last_slp_count:%d updated_slp_val: %d slp_mode: %d wifi_mode: %d idx_rtos %d", _socpm_slp_lst_head, (uint32_t)_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time/1000, _socpm_last_slp_count, (uint32_t)updated_slp_val,_socpm_os_tmr.slp_mode, ((NT_REG_RD(QWLAN_PMU_CFG_WIFI_SS_STATE_REG) & QWLAN_PMU_CFG_WIFI_SS_STATE_WIFI_SS_CURR_STATE_MASK)
-                                    >> QWLAN_PMU_CFG_WIFI_SS_STATE_WIFI_SS_CURR_STATE_OFFSET),_socpm_slp_list_idx_rtos);
+                NT_LOG_PRINT(SOCPM, INFO, " _socpm_slp_lst_head %d slp_time: %d _socpm_last_slp_count:%d updated_slp_val: %d slp_mode: %d _socpm_slp_list_idx_rtos %d ", _socpm_slp_lst_head, (uint32_t)_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time/1000, _socpm_last_slp_count, (uint32_t)updated_slp_val,_socpm_os_tmr.slp_mode, _socpm_slp_list_idx_rtos);
 
             }
         }
@@ -2654,8 +2655,36 @@ int nt_socpm_sleep_lst_delete(
 
 uint64_t freertosdefaultminimum(uint32_t wkup_delay_us)
 {
+    PM_STRUCT *pPmStruct = (PM_STRUCT *) gdevp->pPmStruct;
+
     SOCPM_UNUSED(wkup_delay_us);
     set_sleep_exit_reason();
+
+    if(pPmStruct->bConnected)
+    {
+
+        {
+            nt_hal_rri_soft_reset_rri_engine();
+            nt_hal_rri_restore_first();
+        }
+
+        PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
+
+    #ifdef NT_SOCPM_SW_MTUSR
+        nt_socpm_mtusr_restore_mtu_time();
+        
+    #endif // NT_SOCPM_SW_MTUSR
+
+        PM_SET_WLAN_STATE_ON(pPmStruct);
+
+        {
+            nt_hal_rri_restore_second();
+            PM_SET_RRI_STATE(pPmStruct, PM_RRI_TXRX_READY);
+        }
+
+        rri_force_wakeup = 1;
+    }
+
     return 0;
 }
 
