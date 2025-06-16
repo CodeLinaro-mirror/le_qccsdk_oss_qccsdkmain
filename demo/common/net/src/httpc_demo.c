@@ -1676,24 +1676,31 @@ usage:
         if (!body)
             return QAPI_ERROR;
 
-        HTTPC_PRINTF("body len = %d\n", strlen(body));
+        uint32_t bodylen=strlen(body);
+        if(bodylen != len)
+        {
+            HTTPC_PRINTF("warning: body len:%d,expected len:%d\n", bodylen,len);
+            if(bodylen < len)
+            {
+                len = bodylen;
+            }
+        }
 
-        error = qapi_Net_HTTPc_Set_Body(arg->client, (const char*)body, strlen(body));
+        HTTPC_PRINTF("send data len:%d\n", len);
+        error = qapi_Net_HTTPc_Set_Body(arg->client, (const char*)body, len);
         body = NULL;
 #else
         if (len > BODY_BUFFER_SIZE)
             len = BODY_BUFFER_SIZE;
-
-        //body = malloc(len+1);
 
         body = httpc_malloc_body_demo(len);
 
         if (!body)
 		    return QAPI_ERROR;
 
-        HTTPC_PRINTF("body len = %d\n", strlen(body));
+        HTTPC_PRINTF("body len = %d\n", len);
 
-		error = qapi_Net_HTTPc_Set_Body(arg->client, (const char*)body, strlen(body));
+		error = qapi_Net_HTTPc_Set_Body(arg->client, (const char*)body, len);
         free(body);
 #endif
     }

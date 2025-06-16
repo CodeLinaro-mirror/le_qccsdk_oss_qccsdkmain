@@ -45,6 +45,9 @@
 #include "lwip/apps/sntp.h"
 #endif
 
+extern int lwip_socket_count(void);
+extern uint8_t iperf_stream_count(void);
+
 static ip_addr_t default_ip_address[MAX_ROLE];
 static ip_addr_t default_netmask[MAX_ROLE];
 static ip_addr_t default_gw[MAX_ROLE];
@@ -251,14 +254,21 @@ static qapi_Status_t dnsc(uint32_t __attribute__((__unused__)) Parameter_Count, 
     		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     	}
 
+        int insert_indx = -1;
         for(indx = 0; indx< DNS_MAX_SERVERS; indx++) {
             server_addr = (ip_addr_t *)dns_getserver(indx);
-            if(ip_addr_isany_val(*server_addr)) {
-                break;
+            if(ip_addr_cmp(server_addr, &ip_addr)) {
+                info_printf("this IP Address already exists.\n");
+    		    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+            }
+
+            if((insert_indx == -1) && ip_addr_isany_val(*server_addr)) {
+                insert_indx = indx;
             }
         }
-        if(indx != DNS_MAX_SERVERS) {
-            dns_setserver(indx, &ip_addr);
+        
+        if(insert_indx >= 0 && insert_indx < DNS_MAX_SERVERS) {
+            dns_setserver(insert_indx, &ip_addr);
             info_printf("add DNS server OK.\n");
         }else {
             info_printf("add DNS server failed, the array is full now.\n");
@@ -1132,6 +1142,13 @@ static qapi_Status_t sntpc(uint32_t Parameter_Count, QAPI_Console_Parameter_t *P
 }
 #endif
 
+static qapi_Status_t socketstat(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+  lwip_socket_count();
+  iperf_stream_count();
+  return QAPI_OK;
+}
+
 const QAPI_Console_Command_t net_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -1181,6 +1198,8 @@ const QAPI_Console_Command_t net_shell_cmds[] =
 #ifdef CONFIG_HTTP_SERVER_DEMO
     {httpd_command_handler,         "httpd",     "\n\nhttpd [enable|disable] [server_port]\n"
                                     "\nHTTP SERVER: Perform Hypertext Transport protocol server operations.\n"},
+    {syscfg_command,                "syscfg",     "\n\nsyscfg\n"
+                                    "\nsyscfg: get ssid and passwod of http server config.\n"},
 #endif
 
 #ifdef CONFIG_MQTT_CLIENT_DEMO
@@ -1195,8 +1214,10 @@ const QAPI_Console_Command_t net_shell_cmds[] =
 							"sntpc [start|stop]\n" \
 							"sntpc setOpMode <0|1>\n" \
 							"sntpc setServer <IP addr|name> [id]",
-								"\nSNTP client start or stop, configure"}
+								"\nSNTP client start or stop, configure"},
 #endif
+    {socketstat,   "socketstat", "\n\nsocketstat\n",
+                                    "\nShow the socket count in lwip stack"},
 };
 
 const QAPI_Console_Command_Group_t net_shell_cmd_group = {NET_SHELL_GROUP_NAME, sizeof(net_shell_cmds) / sizeof(QAPI_Console_Command_t), net_shell_cmds};

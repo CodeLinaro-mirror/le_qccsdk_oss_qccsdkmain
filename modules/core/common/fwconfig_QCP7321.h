@@ -62,6 +62,9 @@
 #define SUPPORT_SAP_POWERSAVE /* This flags enables changing beacon interval to supports sap powersave when it is conneced to EB*/
 #endif
 
+/* Enables Random Backoff for QoS Null frames triggered using SW template method */
+#define ENABLE_RBO_FOR_QOS_NULL
+
 //#define SUPPORT_RING_IF_DEBUG /* Use this flag for heavy logs in Ring IF */
 //#define SUPPORT_RING_IF_STATS
 #ifdef SUPPORT_RING_IF
@@ -271,6 +274,11 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 */
 #define CBC_CX_VOLTAGE_WAR
 
+/*
+When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs, 
+ default WQ need to be switched back to WQ12 to prevent transferring MGMT frames to WQ11
+*/
+#define WAR_RESTORE_DPU_DEFAULT_WQ_12_ON_EXIT_FROM_BMPS
 
 #ifdef NT_DEBUG
 /* To Enable JTAG debugging post MCU sleep */
@@ -339,6 +347,9 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 /* War flag for power issues seen in Fermion*/
 #define FERMION_POWER_WAR
 
+/* War flag for TXP TPE busy issues seen in Fermion bmps*/
+#define FERMION_TXP_TPE_WAR
+
 #ifdef EMULATION_BUILD
 
 #define EMULATION_WAR
@@ -390,6 +401,12 @@ Changes for SW to configure WIFI_SS in right mode(CFG/RXB_LISTEN/RXA/TX) before 
 #define FEATURE_FPCI
 #define FPCI_DEBUG                  (0)
 #endif
+
+/* This flag enables recovery of BMU once a BMU error occurs */
+#define SUPPORT_BMU_ERROR_RECOVERY
+
+/* Check data activity after DPM stop during BMPS entry and abort sleep if necessary */
+#define BMPS_ENTRY_ABORT_ON_ACTIVITY_POST_ITO
 
 #endif // _QCP7321_H_
 

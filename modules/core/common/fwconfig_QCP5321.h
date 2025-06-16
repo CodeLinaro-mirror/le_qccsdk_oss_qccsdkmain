@@ -309,6 +309,9 @@ WAR_COEX_VIFERMION285
 /* War flag for power issues seen in Fermion*/
 #define FERMION_POWER_WAR
 
+/* War flag for TXP TPE busy issues seen in Fermion bmps*/
+#define FERMION_TXP_TPE_WAR
+
 /* Flag to enable Sleep Clock Calibration in Active Mode
  * and necessary configuration to enable sleep mode cal */
 #define SLEEP_CLK_CAL_IN_ACTIVE_MODE
@@ -358,6 +361,12 @@ Changes for SW to configure WIFI_SS in right mode(CFG/RXB_LISTEN/RXA/TX) before 
 #define FEATURE_FPCI
 #define FPCI_DEBUG                  (0)
 #endif
+
+/* This flag enables recovery of BMU once a BMU error occurs */
+#define SUPPORT_BMU_ERROR_RECOVERY
+
+/* Check data activity after DPM stop during BMPS entry and abort sleep if necessary */
+#define BMPS_ENTRY_ABORT_ON_ACTIVITY_POST_ITO
 
 #endif // _QCP5321_H_
 

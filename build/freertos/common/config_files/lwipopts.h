@@ -110,7 +110,7 @@ void *nt_dpm_memcpy(void *dst, const void *src, uint32_t length);
 
 #define LWIP_ND6_MAX_INITIAL_RA         3
 #define LWIP_ND6_INITIAL_RA_INTERVAL    2
-#define LWIP_ND6_NORMAL_RA_INTERVAL     10 /* @todo: 10 for quick connect, 600 for low affect */
+#define LWIP_ND6_NORMAL_RA_INTERVAL     9 /* @todo: 10 for quick connect, 600 for low affect */
 
 #endif /* NT_FN_IPV6 */
 

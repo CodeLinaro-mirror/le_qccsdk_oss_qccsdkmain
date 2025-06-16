@@ -50,9 +50,16 @@ static char I2COutputBuffer [120];
 #define I2C_MAX_TRANSFER_DATA_LENGTH        128      /*Max Data Length since memory limitation */
 #define I2C_SLAVE_MAX_TRANSFER_DATA_LENGTH  256      /*Max Data Length since memory limitation for i2c slave demo */
 
-/** EEPROM memory size */
+#ifdef CONFIG_BOARD_EVB_I2C_OPTION
+/** EVB EEPROM memory size */
 #define I2C_SLAVE_EEPROM_MEMORY_SIZE        4096
 #define I2C_SLAVE_EEPROM_PAGE_SIZE          32
+
+#else
+/** MQM EEPROM memory size */
+#define I2C_SLAVE_EEPROM_MEMORY_SIZE        256
+#define I2C_SLAVE_EEPROM_PAGE_SIZE          8
+#endif
 
 /** NFC Tag NT3H2111 specific definitions */
 #define NT3H2111_I2C_ADDRESS            (0xAA>>1)
@@ -255,12 +262,19 @@ static void I2CM_InitEepromDescriptors(I2CM_OpCode_t OpCode, uint32_t Address, u
 I2C_EEPROM_READ:
         /*Init Read Descriptor*/
         Desc[DescIdx].Flags= I2C_FLAGS_START_WIRTE;
-        Desc[DescIdx].Length = 2;
         Desc[DescIdx].Buffer = Buffer+BufferOffset;
+#ifdef CONFIG_BOARD_EVB_I2C_OPTION 
+        Desc[DescIdx].Length = 2;
         Desc[DescIdx].Buffer[0] = (Address&0xFF00)>>8;
         Desc[DescIdx].Buffer[1] = Address&0xFF;
-
         BufferOffset += 2;
+
+#else
+        Desc[DescIdx].Length = 1;
+        Desc[DescIdx].Buffer[0] = Address&0xFF;
+        BufferOffset += 1;
+#endif
+
         Desc[DescIdx+1].Flags= I2C_FLAGS_START_READ_STOP;
         Desc[DescIdx+1].Length = DataLen;
         Desc[DescIdx+1].Buffer = Buffer+BufferOffset;
@@ -294,12 +308,24 @@ I2C_EEPROM_READ:
 
         /*Data address descriptor*/
         Desc[i].Buffer = Buffer + BufferOffset;
+#ifdef CONFIG_BOARD_EVB_I2C_OPTION 
         Desc[i].Buffer[0] = ((Address+AddressOffset)&0xFF00)>>8;
         Desc[i].Buffer[1] = (Address+AddressOffset)&0xFF;
         Desc[i].Length = WriteLen + 2;
+
+#else
+        Desc[i].Buffer[0] = (Address+AddressOffset)&0xFF;
+        Desc[i].Length = WriteLen + 1;
+#endif
+        
         if (OpCode == I2C_MASTER_TRANSFER_WRITE)
         {
+#ifdef CONFIG_BOARD_EVB_I2C_OPTION 
 			memscpy(&(Desc[i].Buffer[2]), WriteLen, Data+DataOffset, WriteLen);
+#else
+            memscpy(&(Desc[i].Buffer[1]), WriteLen, Data+DataOffset, WriteLen);
+#endif
+
         }
 		DataOffset += WriteLen;
         BufferOffset += Desc[i].Length;
@@ -422,7 +448,11 @@ static void I2CM_PrintTransferResult(uint32_t Status, I2CM_Transfer_t *Transfer)
                 }
             }
             /** Minus the length of EEPROM Address*/
+#ifdef CONFIG_BOARD_EVB_I2C_OPTION 
             DataLen -= SucNumDesc*2;
+#else
+            DataLen -= SucNumDesc;
+#endif
             OpStr = "Write";
         }
         else if (OpCode == I2C_MASTER_TRANSFER_READ)
@@ -452,12 +482,12 @@ static void I2CM_PrintTransferResult(uint32_t Status, I2CM_Transfer_t *Transfer)
     I2CM_PRINTF("I2C SLV 0x%x Freq %d Khz %s %s Err %d.\r\n ", (unsigned int)SlaveAddress, (int)BusFreqKHz, OpStr, StaStr, (int)Status);
 
     if (DataLen > 0)
-    {
+    {        
         I2CM_PRINTF("%s Data Length %d.\r\n", OpStr, (int)DataLen);
         if (OpCode == I2C_MASTER_TRANSFER_READ)
         {
             I2CM_PRINTF("Data: ");
-            for(i=0; i<DataLen; i++)
+            for(i = 0; i< DataLen; i++)
             {
                 I2CM_PRINTF("%c", Data[i]);
             }
@@ -568,11 +598,20 @@ static I2CM_Transfer_t* I2CM_PrepareTransferCtxt(qapi_I2CM_Instance_t Instance, 
 	{
 		if (OpCode == I2C_MASTER_TRANSFER_WRITE)
 		{
+#ifdef CONFIG_BOARD_EVB_I2C_OPTION 
 			BufferLen += NumDesc*2; /*Each EEPROM Page write need 2 bytes address space*/
+#else
+            BufferLen += NumDesc; /*Each EEPROM Page write need 1 bytes address space*/
+#endif
 		}
 		else if (OpCode == I2C_MASTER_TRANSFER_READ)
 		{
+#ifdef CONFIG_BOARD_EVB_I2C_OPTION 
 			BufferLen += 2;  /* eeprom: 2 bytes address,  nfc: 1 byte address */
+
+#else
+            BufferLen += 1;  /* eeprom: 1 bytes address,  nfc: 1 byte address */
+#endif
 		}
 		else if (OpCode == I2C_MASTER_TRANSFER_WRITE_READ)
 		{

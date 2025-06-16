@@ -64,7 +64,7 @@ def apply_patches():
 def build_matter(app_type, include_dir):
     example_root = os.path.join(matter_root, 'examples', app_type, 'fermion') 
     os.chdir(example_root)
-    cmd = "gn gen output --args='fermion_output=\"{}\"'".format(include_dir)
+    cmd = "gn gen output --args=\"fermion_output=\\\"{}\\\"\"".format(include_dir)
     logging.info(cmd)
     os.system(cmd)
 

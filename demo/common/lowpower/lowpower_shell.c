@@ -41,6 +41,7 @@ uint32_t test_sleep_start_time;
 uint32_t test_sleep_min_time;
 uint32_t udp_whitelist_arr[UDP_WHITELIST_LEN]={7777,0,0,0};
 
+TimerHandle_t s_timer_handle=NULL;
 
 static uint32_t bmps_start;
 static nt_osal_timer_handle_t bmps_timer;
@@ -156,6 +157,40 @@ static void bmps_timer_cb(void)
     bmps_timer = NULL;
 }
 
+static void timer_cb(xTimerHandle xTimer)
+{ 
+    static int cnt = 0; cnt++; 
+    // printf("TICK %d\r\n", cnt); 
+}
+
+static qapi_Status_t bmps_period_awake(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint32_t period_ms = 1000;
+    if ((Parameter_Count != 1 && Parameter_Count != 2) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_Count == 2 && Parameter_List[1].Integer_Is_Valid) {
+        period_ms = Parameter_List[1].Integer_Value;
+    }
+    if (!s_timer_handle) {
+        s_timer_handle = xTimerCreate(
+        "MyTimer",
+        (period_ms / portTICK_PERIOD_MS),
+        1 /* uxAutoReload */,
+        NULL,
+        timer_cb
+        );
+    }
+
+    if (Parameter_List[0].Integer_Value) {
+        xTimerStart(s_timer_handle, portMAX_DELAY);
+    }
+    else {
+        xTimerStop(s_timer_handle, portMAX_DELAY);
+    }
+    return QAPI_OK;
+}
 static void bmps_callback_exit_timer_cb(void)
 {
     WMI_BMPS_ENABLE *pdata = (WMI_BMPS_ENABLE *)&g_lowpower_wmi;
@@ -531,7 +566,13 @@ static qapi_Status_t bmps_cb_register(uint32_t Parameter_Count, QAPI_Console_Par
 
     return QAPI_OK;
 }
-
+static qapi_Status_t bmps_log_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if((Parameter_Count != 1 ) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    return qapi_bmps_log_enable(Parameter_List[0].Integer_Value ? 1 : 0);
+}
 static qapi_Status_t bcmc_filter_list(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     unsigned int index = 0;
@@ -646,7 +687,7 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
     {bmps_ignore_bcmc, "bmps_ignore_bcmc", "<1/0>", "Ignore Bcast/Mcast wakeup during BMPS(DTIM)\n"},
     {bmps_idle_time, "bmps_idle_time", "<Idle time in ms>", "Cfg max idle time prior entering into BMPS(DTIM) sleep\n"},
     {bmps_timing_cfg, "bmps_timing_cfg", "<preBcn in us> <bcnWait in us> <telePreBcnInc in us> <teleBcnWaitInc in us>", "Cfg BMPS timing parameters\n"},
-    {imps_cfg, "imps_cfg", "<1:Enable|0:Disable> <deepsleep time in ms> <recnx timeout in ms> <cmd proc in ms> <cnx timeout in ms> <sleep mode: 2:qapi_mcu_sleep | 3:qapi_standby>", "Cfg BMPS timing parameters\n"},
+    {imps_cfg, "imps_cfg", "<1:Enable|0:Disable> <sleep time in ms> <recnx timeout in ms> <cmd proc in ms> <cnx timeout in ms> <sleep mode: 2:qapi_mcu_sleep | 3:qapi_standby>", "Cfg BMPS timing parameters\n"},
     {imps_sleep, "imps_sleep", "<1:Enable|0:Disable> <wait time in ms> <sleep time in ms> ", "Enable IMPS Directly,default mode is qapi_mcu_sleep\n"},
     {slp_clk_cal_act, "slp_clk_cal_act", "<1/0>", "Enable/disable slp_clk_cal in active mode\n"},
     {bmps_force_dtim, "bmps_force_dtim", "<Forced DTIM count>", "Force DTIM count\n"},
@@ -656,6 +697,8 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] =
     {bcmc_filter_enable, "bcmc_filter_enable", "<1|0> <log enable:1|0>", "enable or disable the bcmc filter\n"},
     {bcmc_filter_list , "bcmc_filter_list", "\n\nUsage: bcmc_filter_list -a [1|0] -u [dst udp port] -q\n\n", "bcmc_filter_list"},
     {bmps_cb_register , "bmps_cb_regiser", "<1|0>", "register|deregister callback function when pre-sleep/post-awake\n"},
+	{bmps_period_awake, "bmps_period_awake", "<1/0> [period in ms to awake]", "Enable BMPS(DTIM) period awake\n"},
+    {bmps_log_enable, "bmps_log_enable", "<1/0>", "Enable BMPS(DTIM) Logs\n"},
 };
 
 const QAPI_Console_Command_Group_t lowpower_shell_cmd_group = {"lowpower", sizeof(lowpower_shell_cmds) / sizeof(QAPI_Console_Command_t), lowpower_shell_cmds};

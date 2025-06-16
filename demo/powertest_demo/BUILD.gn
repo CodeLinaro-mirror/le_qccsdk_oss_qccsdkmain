@@ -1,0 +1,65 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+#SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+import("//configs_decl.gni")
+
+
+
+powertest_demo_inc = [
+
+    "src",
+
+    "//drivers/wlan/",
+
+    "//drivers/net/",
+
+    "//demo/common/net/src/",
+
+    "//demo/common/wlan/"
+
+]
+
+ 
+
+powertest_demo_src = [
+
+    "src/powertest_demo.c",
+
+    "src/powertest_demo_main.c",
+
+]
+
+
+
+
+
+
+not_needed("*", [ ])
+
+
+
+config("_config") {
+
+    if (image_name == "FERMION_POWER_TEST_DEMO") {
+
+        include_dirs = powertest_demo_inc
+
+    }
+
+}
+
+
+
+source_set("powertest_demo") {
+
+    if (image_name == "FERMION_POWER_TEST_DEMO") {
+
+        sources = powertest_demo_src
+
+    }
+
+}
+
+
+

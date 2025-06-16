@@ -61,6 +61,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define WIFI_LISTEN                              0x5
 #define WIFI_SLEEP                              0x6
 #define QWLAN_WUR_WUR_HDM_TBTT_WAKE_COUNT_REG	(QWLAN_WUR_BASE + 0xEC)
+
+#define _HAL_WIFI_SS_WAKEUP_MAC_POWERON_TIMEOUT_US         600
+
 extern void (*pre_beacon_interrupt_cb)();
 
 extern void (*tsf_match_interrupt_cb)();
@@ -273,6 +276,14 @@ uint16_t nt_hal_get_rri_restore_timeout(HAL_RRI_LIST_TYPE list);
  * @return : None
  */
 void nt_hal_rri_soft_reset_rri_engine(void);
+
+/*
+ *  @brief : Trimmed version of hal_wlan_sleep to put wifi sleep before soc sleep incase 
+ * it was turned on inadvertently
+ *  @param : None
+ *  @return : None
+ */
+void hal_wlan_sleep_trimmed (void);
 
 /*
  *  @brief : Enter into wifi sleep
@@ -624,7 +635,10 @@ typedef enum _twt_overwrite_md_ack_ba
 void hal_mod_tpe_mb_reg_set(twt_over_mode mode,uint32_t staId, uint32_t backEngMask);
 void nt_wlan_deepsleep();
 
-
+#ifdef SUPPORT_BMU_ERROR_RECOVERY
+/* Recipe to reset WLAN via power off and power on to recover from BMU error */
+void hal_wlan_power_cycle_for_bmu_recovery(void);
+#endif /* SUPPORT_BMU_ERROR_RECOVERY */
 
 #define HAL_BEACON_TIME_UNITS  (1024)
 #define HAL_BEACON_TBTT_CALC(bcn_intvl) (bcn_intvl * HAL_BEACON_TIME_UNITS)

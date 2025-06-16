@@ -29,6 +29,7 @@
 #endif /* FEATURE_PERIODIC_WAKE_SLEEP */
 #include "wlan_qpower.h"
 #include "hal_int_powersave.h"
+#include "halphy_api.h"
 
 /**********************************************************
  *      Power management module internal defintion file   *
@@ -236,6 +237,7 @@ typedef enum {
     EXIT_REASON_CSA,	    /*When CSA bit is set in DTIM bcn*/
     EXIT_REASON_NEGATIVE_SLP_TIME,   /*Negative slp time on attempt to slp back*/
 	EXIT_REASON_EXT_INT,	    /*External wakeup by interrupt*/
+    EXIT_REASON_RTOS_TIME,	    /*wakeup by RTOS*/
     EXIT_REASON_LIMIT,
 }  PROTOCOL_SLP_EXIT_REASON;
 
@@ -243,6 +245,7 @@ typedef enum {
     PM_EVENT_CONNECTION_STATE_CHANGE,
     PM_EVENT_PROTOCOL_SLEEP_CHANGE,
     PM_EVENT_CHANNEL_CHANGE,
+    PM_EVENT_RRT_CHANGE,               /* PM event when trigger an RRI resync on change in RRTs*/
 } PM_EVENT_TYPE;
 
 /* PM AP Information */
@@ -273,7 +276,7 @@ typedef struct {
     uint8_t acceptable_tx_count;
     uint8_t acceptable_rx_count;
     uint16_t max_bcn_rx_no_wake_limit;
-    uint8_t force_dtim;
+    uint8_t force_dtim; //num of beacon interval
     uint16_t round;
 } PM_INFRA_STA_CONFIG_PARAMS;
 
@@ -292,6 +295,9 @@ typedef struct {
 
 typedef struct {
     uint16_t bmps_bcn_rx_count;         /* Beacon RX count for BMPS cycle */
+    uint16_t bmps_bcn_bc_rx_count;         /* Beacon RX count for BMPS cycle */
+    uint16_t bmps_bcn_dtim_count_zero;         /* Beacon RX count for BMPS cycle */
+    uint16_t bmps_bcn_dtim_count_n_zero;         /* Beacon RX count for BMPS cycle */
     uint16_t bmps_bcn_miss_count;       /* Beacon miss count for BMPS cycle */
     /* Running bmiss count for early RX and beacon wait telescopic increment */
     uint16_t bmps_running_bmiss_count;
@@ -301,6 +307,13 @@ typedef struct {
     uint64_t bmps_last_tsf;     /* Last TSF used in sleep time computation */
     uint64_t bmps_slp_us;       /* Last sleep time computed */
 #endif /* WLAN_BMPS_TBTT_DEBUG */
+    bool bmps_entry_in_progress;    /* Reflects whether device is in the process of entering BMPS */
+#ifdef BMPS_ENTRY_ABORT_ON_ACTIVITY_POST_ITO
+    uint32_t final_ito_slot_rx_count;   /* RX data count at final BMPS ITO slot */
+    uint32_t final_ito_slot_tx_count;   /* TX data count at final BMPS ITO slot */
+    uint32_t post_dpm_stop_rx_count;    /* RX data count after DPM stop on BMPS entry */
+    uint32_t post_dpm_stop_tx_count;    /* TX data count after DPM stop on BMPS entry */
+#endif /* BMPS_ENTRY_ABORT_ON_ACTIVITY_POST_ITO */
 } bmps_struct_t;
 
 /* PM Dev structure*/
@@ -363,6 +376,7 @@ typedef struct {
     uint8_t no_of_acceptable_bcn_miss; /* no.of continuous beacon miss acceptable in mini mlme*/
     uint64_t last_sleep_time;
     uint8_t bmps_enabled; /* BMPS Enabled or disabled */
+    uint8_t bmps_log_enabled; /* BMPS log enabled or disabled */
     uint8_t bmps_rx_filter_enabled;
     //IMPS_STRUCT imps_struct;
     uint64_t next_dtim_tbtt_time_us;   /*next dtim tbtt time value in microseconds*/
@@ -451,6 +465,8 @@ typedef struct
     uint32_t non_polled_rri_pass_count; /* count of how many times non polled RRI completed on time */
     uint32_t non_polled_rri_fail_count; /* count of how many times non polled RRI failed to complete on time */
 #endif /* SUPPORT_SW_NON_POLLED_RRI */
+    NT_BOOL wlan_state_off;     /* tracks whether MAC is OFF/ON. considered ON when RX ready or TX/RX ready */
+    PM_RRI_MAC_STATE rri_state; /* tracks current RRI state of MAC */
 }ppm_common_t;
 extern ppm_common_t g_ppm_common_struct;
 
@@ -469,9 +485,12 @@ extern ppm_common_t g_ppm_common_struct;
 #define PM_IS_WLAN_STATE_ON(pPmStruct)          ((pPmStruct)->wlan_state_off == FALSE)
 #define PM_SET_WLAN_STATE_OFF(pPmStruct)          ((pPmStruct)->wlan_state_off = TRUE)
 #define PM_SET_WLAN_STATE_ON(pPmStruct)          ((pPmStruct)->wlan_state_off = FALSE)
+#define PM_COMMON_SET_WLAN_STATE_OFF(pPmCommonStruct)          ((pPmCommonStruct)->wlan_state_off = TRUE)
+#define PM_COMMON_SET_WLAN_STATE_ON(pPmCommonStruct)           ((pPmCommonStruct)->wlan_state_off = FALSE)
 
 #define PM_SET_RRI_STATE(pPmStruct, new_state)  ((pPmStruct)->rri_state = (new_state))
 #define PM_GET_RRI_STATE(pPmStruct)             ((pPmStruct)->rri_state)
+#define PM_COMMON_SET_RRI_STATE(pPmCommonStruct, new_state)  ((pPmCommonStruct)->rri_state = (new_state))
 
 /* Set protocol sleep exit reason in PM struct */
 #define PM_SET_SLEEP_EXIT_REASON(pPmStruct, reason) \
@@ -486,6 +505,7 @@ void pmIdleTimeoutFunc(TimerHandle_t timer_handle);
 void pmImpsTimeoutFunc(TimerHandle_t timer_handle);
 void pmPspollTimeoutFunc(TimerHandle_t timer_handle);
 void pm_deinit(void *pm_inst);
+void set_sleep_exit_reason(void);
 //static void pmInfraPmEnable(devh_t *, uint8_t);
 /*suren : This function is used for renter to sleep mode after send the ps-poll frame to ap*/
 //static void pmCancelPspollState(devh_t *);
@@ -804,6 +824,14 @@ uint64_t twt_compute_s2w_compensation_time(PM_STRUCT *pPmStruct, sleep_mode mode
  */
 uint64_t ptsm_compute_s2w_compensation_time(PM_STRUCT *pPmStruct, sleep_mode mode);
 #endif /* FEATURE_PERIODIC_WAKE_SLEEP */
+
+/*
+ * @brief  Perform necessary halphy restoration on exit form powersave
+ * @param  : dev -> device structure pointer
+ * @param  : profile -> calibration profile to restore
+ * @return : None
+ */
+void nt_wpm_wakeup_channel_restore(devh_t *dev, halphy_cal_profile_t profile);
 
 #endif // _WLAN_POWER_H_
 

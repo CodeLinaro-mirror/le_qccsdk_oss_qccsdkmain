@@ -36,6 +36,7 @@ def apps_build (board_name, ext_demo=False):
         cUtils.python_script_op(script='qccsdk.py set -S=demo/qcli_demo build')
         cUtils.python_script_op(script='qccsdk.py set -S=demo/matter_demo build')
         cUtils.python_script_op(script='qccsdk.py set -S=demo/qat_demo build')
+        cUtils.python_script_op(script='qccsdk.py set -S=demo/powertest_demo build')
 
 def set_default ():
 	cUtils.python_script_op(script='qccsdk.py set -b=qcc730v2_evb11_hostless')

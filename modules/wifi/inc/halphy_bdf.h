@@ -97,4 +97,5 @@ bool halphy_bdf_channel_supported(uint16_t channel_freq, uint16_t country_id);
 uint32_t halphy_bdf_get_rtt_base_delay(uint8_t band);
 void halphy_bdf_set_cbc_chan(uint8_t num_chan, uint32_t *ch_list);
 void halphy_bdf_set_cc(uint16_t country_code);
+bool halphy_bdf_dpd_bypass(BDF_STRUCT *pBd);
 #endif /* _HALPHY_BDF_H_ */
