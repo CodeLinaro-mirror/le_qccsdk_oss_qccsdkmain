@@ -192,13 +192,6 @@ nt_watchdog_bark_timer_reset(
 
 	value &= (long unsigned int)(~(QWLAN_PMU_AON_WDOG_CTL_WDOG_RESET_MASK));
 	NT_REG_WR(QWLAN_PMU_AON_WDOG_CTL_REG,value);                      // write 0 to AON wdog ctl reg by using wdog reset mask field
-
-    count = NT_REG_RD(QWLAN_PMU_AON_WDOG_COUNT_REG);
-    while(0 != count)
-    {
-        count = NT_REG_RD(QWLAN_PMU_AON_WDOG_COUNT_REG);
-    }
-
 }
 /*---------------------------------------------------------------------
  * FUNCTION :  nt_wdog_bark_bite_time_status(void)
