@@ -53,6 +53,8 @@
       <props id="48" id_name="NT_DEVCFG_HDM_TRIGGERED_RRI_ENABLE" min="0" max="1" helptext="Enable HDM triggered RRI restoration" type="0x00000002" oem_configurable="false"> 1 </props>
       <props id="49" id_name="NT_DEVCFG_SLP_SLOP_INTERVAL_MS" min="100" max="200" helptext="Granular interval of time to account for sleep slop offset" type="0x00000002" oem_configurable="false"> 100 </props>
       <props id="50" id_name="NT_DEVCFG_SLP_SLOP_STEP_US" min="100" max="100" helptext="Slop time to be accounted for per interval time" type="0x00000002" oem_configurable="false"> 0 </props>
+      <props id="51" id_name="NT_DEVCFG_RE_ENTER_BMPS_DELAY_MS" min="40" max="100" helptext="Delation in ms for re-enter bmps" type="0x00000002"> 40 </props>
+
    </device>
 </driver>
 </module>
