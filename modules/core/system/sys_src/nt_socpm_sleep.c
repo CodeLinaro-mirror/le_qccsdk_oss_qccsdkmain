@@ -1287,6 +1287,10 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
 #endif
 
         /* This function performs sleep recipe as per the sleep mode specified */
+#ifdef CONFIG_WATCH_DOG_ENABLE
+        /* feed watchdog before sleep */
+        nt_watchdog_bark_timer_reset();
+#endif
         vPreSleepProcessing(_socpm_slp_mode);
 
         /* Save current context and call WFI */
@@ -2880,6 +2884,7 @@ static void __attribute__((used)) socpm_enter_mcusleep()
     NT_REG_WR(QWLAN_PMU_DIG_TOP_CFG_REG, value);
 
     value = QWLAN_PMU_AON_TOP_CFG_DEFAULT;
+    value |= QWLAN_PMU_AON_TOP_CFG_AON_WDOG_SLP_ROOT_CLK_ENABLE_MASK;
     value |= QWLAN_PMU_AON_TOP_CFG_CFG_WAKEUP_MCU_SS_ON_DTIM_INTR_MASK;
     value |= QWLAN_PMU_AON_TOP_CFG_CFG_WAKEUP_WIFI_SS_ON_DTIM_INTR_MASK;
     value &= ~QWLAN_PMU_AON_TOP_CFG_CFG_ENABLE_XO_CLK_DETECT_MASK;
@@ -3048,6 +3053,7 @@ static void _socpm_slpcfg_mcuslp(void)
     // aonldo_input_sel = 2
     value |= ((1 << QWLAN_PMU_AON_TOP_CFG_CFG_AON_PMIC_AONLDO_INPUT_SEL_OFFSET) &
               QWLAN_PMU_AON_TOP_CFG_CFG_AON_PMIC_AONLDO_INPUT_SEL_MASK);
+    value |= QWLAN_PMU_AON_TOP_CFG_AON_WDOG_SLP_ROOT_CLK_ENABLE_MASK;
     NT_REG_WR(QWLAN_PMU_AON_TOP_CFG_REG, value);
 
     value = NT_REG_RD(QWLAN_PMU_SON_GDSCR_REG);
@@ -3438,6 +3444,7 @@ static void _socpm_slpcfg_light(void)
     value = QWLAN_PMU_AON_TOP_CFG_DEFAULT;
     value &= ~QWLAN_PMU_AON_TOP_CFG_CFG_ENABLE_XO_CLK_DETECT_MASK;
     value &= ~(QWLAN_PMU_AON_TOP_CFG_CFG_SLP_CLK_SWITCHING_EN_MASK);
+    value |= QWLAN_PMU_AON_TOP_CFG_AON_WDOG_SLP_ROOT_CLK_ENABLE_MASK;
     value |=QWLAN_PMU_AON_TOP_CFG_CFG_WAKEUP_MCU_SS_ON_DTIM_INTR_MASK;
     value |= QWLAN_PMU_AON_TOP_CFG_CFG_WAKEUP_WIFI_SS_ON_DTIM_INTR_MASK;
     value |= QWLAN_PMU_AON_TOP_CFG_CFG_LIGHTSLEEP_EN_MASK;
@@ -3573,6 +3580,7 @@ static void socpm_enter_deepsleep()
     } else {
         reg_val = QWLAN_PMU_AON_TOP_CFG_DEFAULT;
         //reg_val |= QWLAN_PMU_AON_TOP_CFG_CFG_P6V_SMPS_EN_MASK;
+        reg_val |= QWLAN_PMU_AON_TOP_CFG_AON_WDOG_SLP_ROOT_CLK_ENABLE_MASK;
         reg_val &= ~QWLAN_PMU_AON_TOP_CFG_CFG_ENABLE_XO_CLK_DETECT_MASK;
         reg_val &= ~QWLAN_PMU_AON_TOP_CFG_CFG_AON_PMIC_AONLDO_INPUT_SEL_MASK;
         reg_val |= ((1 << QWLAN_PMU_AON_TOP_CFG_CFG_AON_PMIC_AONLDO_INPUT_SEL_OFFSET) & QWLAN_PMU_AON_TOP_CFG_CFG_AON_PMIC_AONLDO_INPUT_SEL_MASK);
@@ -3693,12 +3701,14 @@ _socpm_slpcfg_sby(
         aon_ext_wakeup_set_lvl_trigger();
 #endif /* FIRMWARE_APPS_INFORMED_WAKE */
         reg_val |= QWLAN_PMU_AON_TOP_CFG_CFG_INDEFINITE_DEEPSLEEP_EN_MASK;
+        reg_val |= QWLAN_PMU_AON_TOP_CFG_AON_WDOG_SLP_ROOT_CLK_ENABLE_MASK;
         NT_REG_WR(QWLAN_PMU_AON_TOP_CFG_REG, reg_val);
     } else
 #endif /* FEATURE_INDEF_DEEP_SLP */
     {
         reg_val = QWLAN_PMU_AON_TOP_CFG_DEFAULT;
         //reg_val |= QWLAN_PMU_AON_TOP_CFG_CFG_P6V_SMPS_EN_MASK;
+        reg_val |= QWLAN_PMU_AON_TOP_CFG_AON_WDOG_SLP_ROOT_CLK_ENABLE_MASK;
         reg_val &= ~QWLAN_PMU_AON_TOP_CFG_CFG_ENABLE_XO_CLK_DETECT_MASK;
         reg_val &= ~QWLAN_PMU_AON_TOP_CFG_CFG_AON_PMIC_AONLDO_INPUT_SEL_MASK;
         reg_val |= ((1 << QWLAN_PMU_AON_TOP_CFG_CFG_AON_PMIC_AONLDO_INPUT_SEL_OFFSET) & QWLAN_PMU_AON_TOP_CFG_CFG_AON_PMIC_AONLDO_INPUT_SEL_MASK);

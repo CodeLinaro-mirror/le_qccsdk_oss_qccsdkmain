@@ -414,6 +414,10 @@ ram_minimum_code(
 
     g_socpm_struct.in_warm_boot = TRUE;
 
+#ifdef CONFIG_WATCH_DOG_ENABLE
+    nt_watchdog_bark_timer_reset();
+#endif
+
     if (warm_boot_sts == QWLAN_PMU_SYSTEM_STATUS_WARM_BOOT_FROM_SLEEP_MASK
 #ifdef FEATURE_FERMION_SLP_DBG
         || g_socpm_struct.socpm_mcu_sleep_dbg_mode  /* If SON is ON for debug then warmboot status fails */
@@ -589,8 +593,6 @@ slp_switch:
 #ifdef SUPPORT_QCSPI_SLAVE
             qcspi_slv_init();
 #endif /* SUPPORT_QCSPI_SLAVE */
-
-            nt_watchdog_bark_timer_reset();
 
             g_socpm_struct.in_warm_boot = FALSE;
             // will full wake, so start to process uart rx
