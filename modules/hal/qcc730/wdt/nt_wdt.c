@@ -365,10 +365,12 @@ void nt_watchdog_timer_power_state_change_cb(uint8_t evt, void *p_args)
 	(void)p_args;
 
 	if (evt == PWR_EVT_WMAC_PRE_SLEEP) {
-        nt_watchdog_timer_freeze();
+		nt_watchdog_bark_timer_reset();
+		nt_watchdog_swtimer_stop();
     }
 
 	if ((evt == PWR_EVT_WMAC_POST_AWAKE) || (evt == PWR_EVT_WMAC_SLEEP_ABORT)) {
+		qurt_timer_start(wdt_timer_handle, (TickType_t)100);
         nt_watchdog_bark_timer_reset();
     }
 }
@@ -382,16 +384,16 @@ void nt_watchdog_timer_init(void)
 		#error "Please correct the watchdog time for the bark and bite value!" 
 	#endif
 
-    bark_time = CONFIG_WATCH_DOG_BARK_TIME*1000;
+    bark_time = CONFIG_WATCH_DOG_BITE_TIME*1000;
     bite_time = CONFIG_WATCH_DOG_BITE_TIME*1000;
 	
-	wdt_timer_handle = nt_qurt_timer_create(WDOG_TIMER_NAME, NT_MS_TO_TICKS(bark_time>>1), TRUE,
+	wdt_timer_handle = nt_qurt_timer_create(WDOG_TIMER_NAME, NT_MS_TO_TICKS((bark_time-1000)), TRUE,
 			NULL, nt_watchdog_timer_call_back);
 
 	if(!wdt_timer_handle)
 		return;
 
-	//nt_watchdog_freeze_timer();
+	/*write the AON bark time same as bite time, since we feed dog using software timer*/
 	nt_watchdog_init(bite_time, bark_time);
 	fpci_evt_cb_reg((ps_evt_cb_t)&nt_watchdog_timer_power_state_change_cb, 
         PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, 10, NULL);
