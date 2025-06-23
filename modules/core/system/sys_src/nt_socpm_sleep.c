@@ -201,6 +201,11 @@ extern int rri_force_wakeup;
 #define _SOCPM_INC_TST_SLEEP // control to include a local enter-into-wfi function
 #endif
 
+
+#define CACHE_REG_BASE        0x01180000
+#define portNVIC_PENDSV_PRI   ( ( ( uint32_t ) configKERNEL_INTERRUPT_PRIORITY ) << 16UL )
+#define portNVIC_SYSTICK_PRI  ( ( ( uint32_t ) configKERNEL_INTERRUPT_PRIORITY ) << 24UL )
+
 #ifdef FEATURE_FDI
 #define FDI_AON_ISR_EN (FDI_RESET)
 #endif
@@ -283,6 +288,8 @@ static nt_socpm_sleep_t _socpm_os_tmr = {
 
 #define _SOCPM_SLP_LST_SZ 10   // #elements in the sleep function list
 #define _INVALID_SLP_LST_HD -1 // Indicates that list is empty and _socpm_slp_lst_head is invalid
+
+int g_sleep_failed=false;
 
 static _socpm_slp_lst_wkup_item_t _socpm_slp_lst[_SOCPM_SLP_LST_SZ];
 static int _socpm_slp_lst_head; // head index
@@ -1287,6 +1294,19 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         }
 #endif
 
+        g_socpm_struct.nvic_icpr_status[0] = NT_REG_RD(NT_CM4_NVIC_ISER0_CLEAR_PENDING_REG);
+        g_socpm_struct.nvic_icpr_status[1] = NT_REG_RD(NT_CM4_NVIC_ISER1_CLEAR_PENDING_REG);
+        g_socpm_struct.nvic_icpr_status[2] = NT_REG_RD(NT_CM4__NVIC_ISER2_CLEAR_PENDING_REG);
+        g_socpm_struct.nvic_icpr_status[3] = NT_REG_RD(NT_CM4_NVIC_ISER3_CLEAR_PENDING_REG);
+    
+
+        if ((g_socpm_struct.nvic_icpr_status[1] & AON_TIMER_INTR_NVIC1_MASK)
+#ifdef PLATFORM_FERMION
+                || (g_socpm_struct.nvic_icpr_status[1] & A2F_ASSERT_INTR_NVIC1_MASK) || (g_socpm_struct.nvic_icpr_status[3] & A2F_DEASSERT_INTR_NVIC3_MASK) ||  (g_socpm_struct.nvic_icpr_status[0] & NT_CM4_UART_INTERRUPT_BIT_MASK)
+#endif /* PLATFORM_FERMION */
+                    ) {
+                _socpm_slp_mode = clk_gtd_sleep;
+        }
         /* This function performs sleep recipe as per the sleep mode specified */
         vPreSleepProcessing(_socpm_slp_mode);
 
@@ -1401,14 +1421,15 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
             if (_socpm_slp_lst_head == _INVALID_SLP_LST_HD)
             {
                 /*set expiry to large value so that AON timer armed for this doesnt expire*/
-                NT_REG_WR(QWLAN_PMU_WLAN_SLP_TMR_EXP_LSB_REG, 0XFFFFFFFF);
-                __asm volatile("nop");
                 NT_REG_WR(QWLAN_PMU_WLAN_SLP_TMR_EXP_MSB_REG, 0xFFFFFF);
+                __asm volatile("nop");
+                NT_REG_WR(QWLAN_PMU_WLAN_SLP_TMR_EXP_LSB_REG, 0XFFFFFFFF);
                 __asm volatile("nop");
             }
         }
-        if (_socpm_mcu_sleep_wake == 1)
+        if (_socpm_mcu_sleep_wake == 1 || g_sleep_failed)
         {
+            g_sleep_failed = false;
             extern volatile UBaseType_t uxSchedulerSuspended;
             uxSchedulerSuspended = taskSCHEDULER_SUSPENDED;
             _socpm_mcu_sleep_wake = 0;
@@ -2655,34 +2676,38 @@ int nt_socpm_sleep_lst_delete(
 
 uint64_t freertosdefaultminimum(uint32_t wkup_delay_us)
 {
-    PM_STRUCT *pPmStruct = (PM_STRUCT *) gdevp->pPmStruct;
+    PM_STRUCT *pPmStruct;
 
     SOCPM_UNUSED(wkup_delay_us);
-    set_sleep_exit_reason();
-
-    if(pPmStruct->bConnected)
+    if(gdevp)
     {
-
+        pPmStruct = (PM_STRUCT *) gdevp->pPmStruct;
+        set_sleep_exit_reason();
+    
+        if(pPmStruct->bConnected)
         {
-            nt_hal_rri_soft_reset_rri_engine();
-            nt_hal_rri_restore_first();
+
+            {
+                nt_hal_rri_soft_reset_rri_engine();
+                nt_hal_rri_restore_first();
+            }
+
+            PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
+
+        #ifdef NT_SOCPM_SW_MTUSR
+            nt_socpm_mtusr_restore_mtu_time();
+            
+        #endif // NT_SOCPM_SW_MTUSR
+
+            PM_SET_WLAN_STATE_ON(pPmStruct);
+
+            {
+                nt_hal_rri_restore_second();
+                PM_SET_RRI_STATE(pPmStruct, PM_RRI_TXRX_READY);
+            }
+
+            rri_force_wakeup = 1;
         }
-
-        PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
-
-    #ifdef NT_SOCPM_SW_MTUSR
-        nt_socpm_mtusr_restore_mtu_time();
-        
-    #endif // NT_SOCPM_SW_MTUSR
-
-        PM_SET_WLAN_STATE_ON(pPmStruct);
-
-        {
-            nt_hal_rri_restore_second();
-            PM_SET_RRI_STATE(pPmStruct, PM_RRI_TXRX_READY);
-        }
-
-        rri_force_wakeup = 1;
     }
 
     return 0;
@@ -4362,6 +4387,36 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode)
      * moved it to SYSTEM_BOOT_COMPLETE state.
      */
     nt_socpm_switch_mcuss_to_active();
+    uart_init();
+
+    HAL_REG_WR(QWLAN_PMU_CFG_WIFI_SS_STATE_REG, NT_PMU_CFG_WIFI_CONFIG_OFFSET); //Set wifi config state
+
+    nt_hal_rri_soft_reset_rri_engine();
+
+    if (gdevp){
+        // nt_pm_enforce_rri_readiness(gdevp);
+           PM_STRUCT *pPmStruct = (PM_STRUCT *)gdevp->pPmStruct;
+            {
+                nt_hal_rri_soft_reset_rri_engine();
+                nt_hal_rri_restore_first();
+            }
+
+            PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
+
+        #ifdef NT_SOCPM_SW_MTUSR
+            nt_socpm_mtusr_restore_mtu_time();
+        #endif // NT_SOCPM_SW_MTUSR
+
+            PM_SET_WLAN_STATE_ON(pPmStruct);
+
+            {
+                nt_hal_rri_restore_second();
+                PM_SET_RRI_STATE(pPmStruct, PM_RRI_TXRX_READY);
+            }
+
+            rri_force_wakeup = 1;
+    }
+
 #ifdef SLEEP_CLK_SWITCH_AND_CAL_2_0
     nt_socpm_sleep_clk_switch_to_xo(TRUE);
 #endif /* SLEEP_CLK_SWITCH_AND_CAL_2_0 */
@@ -4371,6 +4426,13 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode)
      */
     nt_enable_device_irq(Qtmr_qgic2_phy_irq_0);   
 
+    NT_REG_WR(CACHE_REG_BASE, 0x01);
+    NT_REG_WR(CACHE_REG_BASE, 0x00);
+
+    portENABLE_INTERRUPTS();    /* Sets the BASEPRI to 0x00*/
+    portNVIC_SYSPRI2_REG |= portNVIC_PENDSV_PRI;
+    portNVIC_SYSPRI2_REG |= portNVIC_SYSTICK_PRI;
+
     /*enable all previously enabled interrupts*/
     NT_REG_WR(NT_CM4_NVIC_ISER0_REG, nt_socpm_m4_regs[11]);
     NT_REG_WR(NT_CM4_NVIC_ISER1_REG, nt_socpm_m4_regs[12]);
@@ -4378,6 +4440,11 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode)
 #ifdef PLATFORM_FERMION
     NT_REG_WR(NT_CM4_NVIC_ISER3_REG, nt_socpm_m4_regs[14]);
 #endif /* PLATFORM_FERMION */
+
+    // Initialize QCSPI on full wakeup
+#ifdef SUPPORT_QCSPI_SLAVE
+            qcspi_slv_init();
+#endif /* SUPPORT_QCSPI_SLAVE */
 
 #ifdef LOW_POWER_MEMORY
     /*To reset the state machine of low power memory framework*/
@@ -4410,6 +4477,13 @@ void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point
         return;
     }
     bool sleep_failed = TRUE;
+
+        /*complete all memory operations before storing the ICPR values
+      this is to make sure the icpr values are properly updated before the assert checks are made*/
+    __asm volatile("dsb" ::
+                       : "memory");
+    __asm volatile("isb");
+
     /* Entry to sleep on wfi failed. Check reason for failure */
     g_socpm_struct.wifi_ss_state = ((NT_REG_RD(QWLAN_PMU_CFG_WIFI_SS_STATE_REG) & QWLAN_PMU_CFG_WIFI_SS_STATE_WIFI_SS_CURR_STATE_MASK)
                                     >> QWLAN_PMU_CFG_WIFI_SS_STATE_WIFI_SS_CURR_STATE_OFFSET);
@@ -4474,6 +4548,7 @@ void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point
     }
     else
     {
+        g_sleep_failed = TRUE;
         NT_LOG_PRINT(SOCPM, ERR, "Handle SLEEP_ENTER_FAIL post wfi %d %d %d", mode, is_ctxt_rstr_point, g_socpm_struct.wifi_ss_state);
         NT_LOG_PRINT(SOCPM, ERR, "NVIC ICPR[0-3]: 0x%08x 0x%08x 0x%08x 0x%08x",
                 g_socpm_struct.nvic_icpr_status[0], g_socpm_struct.nvic_icpr_status[1],
