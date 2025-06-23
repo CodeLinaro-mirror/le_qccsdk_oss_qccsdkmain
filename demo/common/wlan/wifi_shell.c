@@ -693,18 +693,21 @@ static qapi_Status_t SetWpaPassphrase(uint32_t Parameter_Count, QAPI_Console_Par
     return QAPI_OK;
 }
 
+/* e.g.
+ * SetWpaParameters WPA2 CCMP CCMP 
+ * SetWpaParameters SAE CCMP CCMP 
+ * SetWpaParameters SAE_WPA2
+ */
 static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
-    if(  Parameter_Count != 3 || !Parameter_List || Parameter_List[0].Integer_Is_Valid || Parameter_List[1].Integer_Is_Valid || Parameter_List[2].Integer_Is_Valid) {
+    if (Parameter_Count < 1 || !Parameter_List || Parameter_List[0].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
 	uint8_t deviceId = get_active_device();
     char *wpaVer = Parameter_List[0].String_Value;
-    char *ucipher = Parameter_List[1].String_Value;
-    char *mcipher = Parameter_List[2].String_Value;
     qapi_WLAN_Auth_Mode_e e_wpa_ver;
-    qapi_WLAN_Crypt_Type_e e_cipher;
+
     if(!strcmp(wpaVer,"WPA")) {
         e_wpa_ver = QAPI_WLAN_AUTH_WPA_PSK_E;
     } else if (!strcmp(wpaVer,"WPA2")) {
@@ -717,17 +720,32 @@ static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Param
         info_printf("invalid wpa ver =%s\n", wpaVer);
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
-    if (strcmp(ucipher, mcipher)) {
-        info_printf("invaid uchipher mcipher, should be same\n");
+
+    if ((e_wpa_ver != QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) && 
+        (Parameter_Count != 3 || Parameter_List[1].Integer_Is_Valid || Parameter_List[2].Integer_Is_Valid)) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
-    if (!strcmp(ucipher, "TKIP")) {
-        e_cipher = QAPI_WLAN_CRYPT_TKIP_CRYPT_E;
-    } else if (!strcmp(ucipher, "CCMP")) {
-        e_cipher = QAPI_WLAN_CRYPT_AES_CRYPT_E;
-    } else {
-        info_printf("invaid uchipher mcipher, should be TKIP or CCMP\n");
-        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+
+    qapi_WLAN_Crypt_Type_e e_cipher;
+    if (e_wpa_ver == QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) {
+        e_cipher = QAPI_WLAN_CRYPT_AUTO;
+    }
+    else {
+        char *ucipher = Parameter_List[1].String_Value;
+        char *mcipher = Parameter_List[2].String_Value;
+
+        if (strcmp(ucipher, mcipher)) {
+            info_printf("invaid uchipher mcipher, should be same\n");
+            return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+        }
+        if (!strcmp(ucipher, "TKIP")) {
+            e_cipher = QAPI_WLAN_CRYPT_TKIP_CRYPT_E;
+        } else if (!strcmp(ucipher, "CCMP")) {
+            e_cipher = QAPI_WLAN_CRYPT_AES_CRYPT_E;
+        } else {
+            info_printf("invaid uchipher mcipher, should be TKIP or CCMP\n");
+            return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+        }
     }
     pg_wifi_shell_cxt->auth = e_wpa_ver;
     qapi_WLAN_Set_Param (deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
@@ -2495,7 +2513,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { SetDevice,       "SetDevice",             "<device = 0:AP|GO, 1:STA|P2P client",    "Set the active device"},
     { Scan,            "Scan",                  "<mode = 0: blocking| 1: non-blocking| 2:non-buffering> [ssid]",    "Scan for networks, using blocking/non-blocking/non-buffering modes. If ssid is provided, scan for specific ssid only."},
     { SetWpaPassphrase,"SetWpaPassphrase",      "<passphrase>",          "Set WPA passphrase"},
-    { SetWpaParameters,"SetWpaParameters",      "<version=WPA|WPA2|WPACERT|WPA2CERT|SAE|SAE_WPA2> <ucipher> <mcipher>",    "Set WPA specific parameters"},
+    { SetWpaParameters,"SetWpaParameters",      "<version=WPA|WPA2|WPACERT|WPA2CERT|SAE|SAE_WPA2> <ucipher>(optional) <mcipher>(optional)",    "Set WPA specific parameters"},
     { Connect,         "Connect",               "<ssid> [bssid]",        "Connect to a given ssid and given bssid(bssid option applicable to STA mode only. if AP mode connect command shouldnt take BSSID)"},
     { GetRssi,         "GetRssi",               "",                      "Get link quality indicator (SNR in dB) between AP and STA."},
     { Disconnect,      "Disconnect",            "",                      "Disconnect from AP or peer"},
