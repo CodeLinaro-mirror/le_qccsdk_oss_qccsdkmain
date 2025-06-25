@@ -278,6 +278,7 @@ typedef struct {
     uint16_t max_bcn_rx_no_wake_limit;
     uint8_t force_dtim; //num of beacon interval
     uint16_t round;
+    uint16_t bmps_re_enter_delay;
 } PM_INFRA_STA_CONFIG_PARAMS;
 
 /*The PM_ACTIVITY_POLICY Structure contains all other Activity policies for power saving mode*/

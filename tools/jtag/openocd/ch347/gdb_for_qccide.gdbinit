@@ -34,6 +34,7 @@ set remotetimeout unlimited
 # symbol-file FERMION_QCLI_DEMO.elf
 
 hb drv_flash_read
+set *(uint32_t*)0x11AF8E0=0
 
 # For ramdumps that are a result of a catastrophic exception:
 define coreregs

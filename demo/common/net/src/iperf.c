@@ -1707,6 +1707,7 @@ static void iperf_client_send(void *arg)
     uint32_t packet_size = p_tCxt->params.tx_params.packet_size;
     uint32_t now;
     struct udp_datagram *mbuf_udp;
+    struct client_hdr *mbuf_udp_client_hdr;
     /* iperf display related */
     uint32_t iperf_display_interval = 0;
     uint32_t iperf_display_last = 0;
@@ -1826,6 +1827,13 @@ static void iperf_client_send(void *arg)
             mbuf_udp->id = htonl(cur_packet_number);
             mbuf_udp->tv_sec = htonl(now / 1000);
             mbuf_udp->tv_usec = htonl((now % 1000) * 1000);
+
+            mbuf_udp_client_hdr = (struct client_hdr *)(p_tCxt->buffer + sizeof(struct udp_datagram));
+            int buflen = (packet_size < sizeof(struct udp_datagram) + sizeof(struct client_hdr)) ? \
+                        packet_size - sizeof(struct udp_datagram) : sizeof(struct client_hdr);
+
+            memset(mbuf_udp_client_hdr, 0, buflen);
+
         }
         else
         {
@@ -2036,7 +2044,7 @@ QUIT:
         IPERF_PRINTF("INFO: %s: %s : IPERF socket: close:%d\r\n", __func__, (p_tCxt->protocol == UDP)?"UDP":"TCP", p_tCxt->sock_peer);
         closesocket(p_tCxt->sock_peer);
       }
-        
+
         if(errno == EBADF)
             errno = 0;
 
@@ -2579,9 +2587,9 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
             stat_udp.pkts_recvd = p_tCxt->pktStats.pkts_recvd;
             rxreorder_udp_payload_report(&stat_udp);
         }
-
-        break;
 #endif
+        break;
+
     } /* main loop */
 
 QUIT:

@@ -92,6 +92,7 @@
 extern TickType_t xMaximumPossibleSuppressedTicks;
 extern SOCPM_STRUCT g_socpm_struct;
 extern volatile int nt_socpm_resume_f;
+extern uint64_t hres_time_pre_sleep;
 
 /* Flag set from the tick interrupt to allow the sleep processing to know if
  sleep mode was exited because of an Sleep timer interrupt or a different interrupt. */
@@ -149,6 +150,7 @@ void vPortSuppressTicksAndSleep(
 
     /* Stop the SysTick momentarily  */
     _socpm_systick_off();
+    hres_time_pre_sleep = hres_timer_curr_time_us();
 #ifdef COMPENSATE_AON_PROG_DELAY
     g_socpm_struct.systick_off_time_us = (uint32_t)hres_timer_curr_time_us();
 #endif /* COMPENSATE_AON_PROG_DELAY */

@@ -344,7 +344,8 @@ static void _wlan_fill_join_event (qapi_WLAN_Join_Comp_Evt_t *dst, const WMI_JOI
 	else
 		dst->bss_Connection_Status = 1;
 
-    if (src->status == NT_OK) {
+    /*The status of disconnection from command will be treated as success anyway in current version.*/
+    if (src->status == NT_OK || src->reason_code == DISCONNECT_CMD) {
         dst->evt_hdr.status = QAPI_OK;
     } else {
         dst->evt_hdr.status = QAPI_WLAN_ERR_EPROTO;

@@ -102,6 +102,8 @@ NMI_Handler (void)
 {
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
   ERR_FATAL_EXCEPTION("WDOG Bark", __LINE__, __FILE__);
+#else
+  nt_system_sw_reset();
 #endif
 #if (FERMION_CHIP_VERSION == 2)
 		/*This is a software workaround for the AON WDT issue in 2.0, after a WDT bite,

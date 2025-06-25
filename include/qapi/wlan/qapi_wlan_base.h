@@ -1499,7 +1499,9 @@ typedef enum
         /**< Broadcast Integrity Protocol; currently not supported. */
     QAPI_WLAN_CRYPT_KTK_CRYPT_E   = 6,
         /**< Key Transport Key; currently not supported. */
-    QAPI_WLAN_CRYPT_INVALID_E     = 7  /**< Invalid encryption type. */
+    QAPI_WLAN_CRYPT_AUTO          = 7,
+        /**< Auto Select Key based on AP capability. Support TKIP & AES for now. */
+    QAPI_WLAN_CRYPT_INVALID_E     = 8  /**< Invalid encryption type. */
 } qapi_WLAN_Crypt_Type_e;
 
 /**

@@ -17,7 +17,6 @@
 lpr_wmi_t g_lowpower_wmi;
 extern ppm_common_t g_ppm_common_struct;
 
-extern void nt_watchdog_timer_freeze(void);
 extern bool (*wakeup_cb_dtim)(uint16_t type, bool bm_cast,void* pbuf,uint16_t len);
 extern bool (*wakeup_cb_net)(uint16_t type, bool bm_cast,void* pbuf,uint16_t len);
 
@@ -56,11 +55,8 @@ qapi_Status_t qapi_deepsleep_enter(uint8_t wkup_src, uint64_t sleep_time)
     if (wkup_src == 1) {
         if (sleep_time == 0)
             return QAPI_ERR_INVALID_PARAM;
-
-        nt_watchdog_timer_freeze();
         nt_enable_standby(sleep_time);
     } else if (wkup_src == 2) {
-		nt_watchdog_timer_freeze();
         nt_enable_indef_deepsleep(0);
     } else {
         return QAPI_ERR_INVALID_PARAM;
