@@ -1000,6 +1000,12 @@ void nt_socpm_slp_tmr_set(
 #ifdef SOCPM_SLEEP_DEBUG
     slp_time_orig = sleep_time;
 #endif
+
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+    /* Compensating the right shift division error while configuring the AON timer*/
+    sleep_time = COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_SET(sleep_time);
+#endif /* COMPENSATE_RC_DIVISION_ERROR_WAR */
+
     // for pmic xo, each tick is (1/32768)s = (1/2^15)= (10^6/2^15)uS = (15625/2^9) uS
     sleep_time = _SOCPM_US_TO_AON_TICK(sleep_time);
     temp_1 = sleep_time;
@@ -1873,6 +1879,12 @@ nt_socpm_slp_tmr_get(
         time = time * g_socpm_struct.slp_clk_cal_params.xocnt / g_socpm_struct.slp_clk_cal_params.refxocnt;
 #endif
 #endif /* APPLY_SLEEP_CLK_CORRECTION */
+
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+    /* Compensating the right shift division error of RC clock with slp timer time */
+    time = COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_GET(time);
+#endif /* COMPENSATE_RC_DIVISION_ERROR_WAR */
+
     return time;
 }
 
