@@ -31,6 +31,7 @@ time_zone_t g_time_zone = {0,0,0};
 
 extern uint64_t start_tsf_beacon;
 extern int64_t rtc_time_padding;
+extern int64_t rtc_time_padding_history;
 /*-------------------------------------------------------------------------
  * Function Definition
  *-----------------------------------------------------------------------*/
@@ -227,6 +228,7 @@ qapi_Status_t qapi_Core_RTC_NTP_Set(ntp_Time_t *tm)
 	last_rtc_time = hres_timer_curr_time_ms();
 	start_tsf_beacon = 0;
 	rtc_time_padding = 0;
+	rtc_time_padding_history = 0;
 	last_ntp_time.second = tm->second;
 	last_ntp_time.frac = tm->frac;
 	
