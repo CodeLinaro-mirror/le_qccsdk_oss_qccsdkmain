@@ -708,37 +708,73 @@ static QAT_Command_Status_t Extend_Command_SetStation(uint32_t Op_Type, uint32_t
     case QAT_OP_EXEC_W_PARAM: {
         offset = 0;
         memset((void *)buffer, 0, QAT_CMD_IP_BUFFER_LENGTH);
-        if (Parameter_Count != 5 || !Parameter_List || Parameter_List[0].Integer_Is_Valid ||
-            Parameter_List[1].Integer_Is_Valid || Parameter_List[2].Integer_Is_Valid ||
-            Parameter_List[3].Integer_Is_Valid || Parameter_List[4].Integer_Is_Valid) {
+        if ((Parameter_Count != 5) && (Parameter_Count != 3)) {
             QAT_IP_PRINTF("+CIPSTA:Invalid input parameter!\r\n");
             goto fail;
         }
 
-        if ((!ipaddr_aton(Parameter_List[0].String_Value, &ip_addr)) ||
-            (!ipaddr_aton(Parameter_List[1].String_Value, &gw) ||
-             (!ipaddr_aton(Parameter_List[2].String_Value, &netmask)) ||
-             (!ip_addr_netmask_valid(ip_2_ip4(&netmask)))) ||
-            (!ipaddr_aton(Parameter_List[3].String_Value, &dns1)) ||
-            (!ipaddr_aton(Parameter_List[4].String_Value, &dns2))) {
-            QAT_IP_PRINTF("+CIPSTA:Invalid input parameter!\r\n");
-            goto fail;
+        else if (Parameter_Count == 5) {
+            if (!Parameter_List || Parameter_List[0].Integer_Is_Valid || Parameter_List[1].Integer_Is_Valid ||
+                Parameter_List[2].Integer_Is_Valid || Parameter_List[3].Integer_Is_Valid ||
+                Parameter_List[4].Integer_Is_Valid) {
+                QAT_IP_PRINTF("+CIPSTA:Invalid input parameter!\r\n");
+                goto fail;
+            }
+
+            if ((!ipaddr_aton(Parameter_List[0].String_Value, &ip_addr)) ||
+                (!ipaddr_aton(Parameter_List[1].String_Value, &gw) ||
+                 (!ipaddr_aton(Parameter_List[2].String_Value, &netmask)) ||
+                 (!ip_addr_netmask_valid(ip_2_ip4(&netmask)))) ||
+                (!ipaddr_aton(Parameter_List[3].String_Value, &dns1)) ||
+                (!ipaddr_aton(Parameter_List[4].String_Value, &dns2))) {
+                QAT_IP_PRINTF("+CIPSTA:Invalid input parameter!\r\n");
+                goto fail;
+            }
+
+            if (get_netif_by_device(AP_DEVICE)) {
+                netif = get_netif_by_device(AP_DEVICE);
+            } else if (get_netif_by_device(STA_DEVICE)) {
+                netif = get_netif_by_device(STA_DEVICE);
+            } else {
+                QAT_IP_PRINTF("+CIPSTA:network interface not initialized\r\n");
+                goto fail;
+            }
+
+            netif_set_ipaddr(netif, (const ip4_addr_t *)ip_2_ip4(&ip_addr));
+            netif_set_netmask(netif, (const ip4_addr_t *)ip_2_ip4(&netmask));
+            netif_set_gw(netif, (const ip4_addr_t *)ip_2_ip4(&gw));
+            dns_setserver(QAT_DNS_SERVER_INDEX0, &dns1);
+            dns_setserver(QAT_DNS_SERVER_INDEX1, &dns2);
         }
 
-        if (get_netif_by_device(AP_DEVICE)) {
-            netif = get_netif_by_device(AP_DEVICE);
-        } else if (get_netif_by_device(STA_DEVICE)) {
-            netif = get_netif_by_device(STA_DEVICE);
-        } else {
-            QAT_IP_PRINTF("+CIPSTA:network interface not initialized\r\n");
-            goto fail;
-        }
+        else if (Parameter_Count == 3) {
+            if (!Parameter_List || Parameter_List[0].Integer_Is_Valid || Parameter_List[1].Integer_Is_Valid ||
+                Parameter_List[2].Integer_Is_Valid) {
+                QAT_IP_PRINTF("+CIPSTA:Invalid input parameter!\r\n");
+                goto fail;
+            }
 
-        netif_set_ipaddr(netif, (const ip4_addr_t *)ip_2_ip4(&ip_addr));
-        netif_set_netmask(netif, (const ip4_addr_t *)ip_2_ip4(&netmask));
-        netif_set_gw(netif, (const ip4_addr_t *)ip_2_ip4(&gw));
-        dns_setserver(QAT_DNS_SERVER_INDEX0, &dns1);
-        dns_setserver(QAT_DNS_SERVER_INDEX1, &dns2);
+            if ((!ipaddr_aton(Parameter_List[0].String_Value, &ip_addr)) ||
+                (!ipaddr_aton(Parameter_List[1].String_Value, &gw) ||
+                 (!ipaddr_aton(Parameter_List[2].String_Value, &netmask)) ||
+                 (!ip_addr_netmask_valid(ip_2_ip4(&netmask))))) {
+                QAT_IP_PRINTF("+CIPSTA:Invalid input parameter!\r\n");
+                goto fail;
+            }
+
+            if (get_netif_by_device(AP_DEVICE)) {
+                netif = get_netif_by_device(AP_DEVICE);
+            } else if (get_netif_by_device(STA_DEVICE)) {
+                netif = get_netif_by_device(STA_DEVICE);
+            } else {
+                QAT_IP_PRINTF("+CIPSTA:network interface not initialized\r\n");
+                goto fail;
+            }
+
+            netif_set_ipaddr(netif, (const ip4_addr_t *)ip_2_ip4(&ip_addr));
+            netif_set_netmask(netif, (const ip4_addr_t *)ip_2_ip4(&netmask));
+            netif_set_gw(netif, (const ip4_addr_t *)ip_2_ip4(&gw));
+        }
 
         offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPSTA:");
         qat_net_show_info(netif, buffer, &offset);
