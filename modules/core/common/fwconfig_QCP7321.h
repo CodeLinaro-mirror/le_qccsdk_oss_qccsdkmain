@@ -366,6 +366,11 @@ When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs,
 /* Flag to enable Sleep Clock Calibration in Sleep Mode */
 #define SLEEP_CLK_CAL_IN_SLEEP_MODE
 #endif /* SLEEP_CLK_CAL_IN_ACTIVE_MODE */
+#ifdef SLEEP_CLK_CAL_IN_ACTIVE_MODE
+/* WAR flag to compensate the RC clock division error for 
+ * Fermion 2.0 new timer implementation */
+#define COMPENSATE_RC_DIVISION_ERROR_WAR
+#endif /* SLEEP_CLK_CAL_IN_ACTIVE_MODE */
 
 #define FERMION_TEMP_COMP_SUPPORT /* Adjust the SCPC finegain offset based on temperature to maintain TPC accuracy */
 #define TEMP_BASED_TARGET_POWER /* Target Power will be changed based on temperature by changing the SCPC offset */
