@@ -171,4 +171,10 @@ uint8_t wlan_beacon_get_tbtt(devh_t* dev, uint64_t* tbtt_estimate);
  */
 uint8_t wlan_beacon_get_dtim_tbtt(devh_t* dev, uint64_t* tbtt_estimate);
 
+/**
+ * @brief  : Update RTC padding time according to TSF
+ * @Param  : bss 
+ * @Return : none
+ */
+void wlan_beacon_update_rtc_padding_time(bss_t *bss);
 #endif /* __WLAN_BEACON_H_ */
