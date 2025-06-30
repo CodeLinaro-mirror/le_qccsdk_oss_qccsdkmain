@@ -2411,7 +2411,8 @@ bool nt_socpm_sleep_lst_update(
                     wkup_delay_us = delta_time_us - slp_lst_node->slp_info.slp_time;
                 }
                 /* Handling the multiple entry of the sleep list with wkup delay */
-                sleep_back = slp_lst_node->slp_info.min_cb_fn(wkup_delay_us);
+                if (g_socpm_struct.in_warm_boot == TRUE)
+                    sleep_back = slp_lst_node->slp_info.min_cb_fn(wkup_delay_us);
 
                 if (sleep_back <= 0)
                 {
@@ -4497,7 +4498,7 @@ void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point
     {
         return;
     }
-    bool sleep_failed = TRUE;
+    bool sleep_failed = false;
 
         /*complete all memory operations before storing the ICPR values
       this is to make sure the icpr values are properly updated before the assert checks are made*/
@@ -4574,6 +4575,7 @@ void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point
         NT_LOG_PRINT(SOCPM, ERR, "NVIC ICPR[0-3]: 0x%08x 0x%08x 0x%08x 0x%08x",
                 g_socpm_struct.nvic_icpr_status[0], g_socpm_struct.nvic_icpr_status[1],
                 g_socpm_struct.nvic_icpr_status[2], g_socpm_struct.nvic_icpr_status[3]);
+        NT_REG_WR(QWLAN_PMU_SLP_CNTL_REG,0);
         nt_socpm_handle_sleep_entry_failure(mode);
     }
 }
