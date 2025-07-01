@@ -2709,7 +2709,10 @@ uint64_t freertosdefaultminimum(uint32_t wkup_delay_us)
             }
 
             PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
-
+        
+        /*SW MTU time restoration must to be conducted when RRI first list restored
+          because MTU TSF will be retored to 0 after RRI first list restored.
+        */
         #ifdef NT_SOCPM_SW_MTUSR
             nt_socpm_mtusr_restore_mtu_time();
             
@@ -4656,7 +4659,9 @@ void nt_socpm_mtusr_restore_mtu_time(
             (uint32_t)g_socpm_struct.mtusr_time_data.mtu_timestamp.time,0);
 #endif
     if (((gdevp) && (gdevp->pPmStruct)) &&
-        (((PM_STRUCT *)gdevp->pPmStruct)->wlan_state_off && g_socpm_struct.mtusr_time_data.aon_programmed) &&
+        (((PM_STRUCT *)gdevp->pPmStruct)->wlan_state_off && 
+        g_socpm_struct.mtusr_time_data.aon_programmed ||
+        PM_GET_RRI_STATE((PM_STRUCT *)gdevp->pPmStruct) == PM_RRI_RX_READY) &&
         (g_socpm_struct.mtusr_time_data.aon_timestamp.type ==
          g_socpm_struct.mtusr_time_data.mtu_timestamp.type))
     {
