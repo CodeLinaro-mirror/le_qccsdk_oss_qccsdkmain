@@ -30,7 +30,7 @@
 #define QAPI_FW_UPGRADE_ERR_HTTP_RX_QUEUE_EMPTY         __QAPI_ERROR(QAPI_MOD_FWUP, 110)
 
 /* HTTP misc */
-#define HTTP_TIMEOUT		    5000   //in milliseconds
+#define HTTP_TIMEOUT		    10000   //in milliseconds
 #define HTTP_PAYLOAD_SIZE	    512
 #define HTTP_FILE_NAME_LENGTH   128
 #define HTTPC_OTA_DEMO_MAX_NUM  1
@@ -77,8 +77,6 @@ typedef struct {
     int32_t error_code;
     uint8_t getting_started;
     TaskHandle_t task_handle;
-    qurt_signal_t signal;
-    qurt_mutex_t mutex;
     int8_t retry_count;
     qapi_Net_HTTPc_handle_t client;
     uint32_t num;
@@ -86,8 +84,9 @@ typedef struct {
     char *url;
     qapi_Ssl_Config_t *sslCfg;
     qapi_Ssl_Cert_t *sslCert;
-    TimerHandle_t http_timer;
     HTTP_Queue_t* http_rx_queue;
+    uint32_t http_timeout;
+    int32_t resp_code;
 } http_session_info_t;
 
 
