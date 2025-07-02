@@ -975,6 +975,7 @@ void nt_socpm_slp_tmr_set(
     uint32_t loop_start_time, curr_time_us;
 #endif /* COMPENSATE_AON_PROG_DELAY */
     uint32_t temp_1, temp_2, temp_3;
+    uint64_t sleep_time_us ;
 
 #ifdef SOCPM_SLEEP_DEBUG
     uint64_t slp_time_orig;
@@ -1005,6 +1006,8 @@ void nt_socpm_slp_tmr_set(
     /* Compensating the right shift division error while configuring the AON timer*/
     sleep_time = COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_SET(sleep_time);
 #endif /* COMPENSATE_RC_DIVISION_ERROR_WAR */
+
+    sleep_time_us= sleep_time;
 
     // for pmic xo, each tick is (1/32768)s = (1/2^15)= (10^6/2^15)uS = (15625/2^9) uS
     sleep_time = _SOCPM_US_TO_AON_TICK(sleep_time);
@@ -1090,6 +1093,8 @@ void nt_socpm_slp_tmr_set(
 
     NT_REG_WR(QWLAN_PMU_WLAN_SLP_TMR_EXP_LSB_REG, temp_1);
     __asm volatile("nop");
+
+    g_socpm_struct.rc_set_time_us = sleep_time_us;
 
     nt_clear_device_irq(AON_cmnss_wlan_slp_tmr_int);
 

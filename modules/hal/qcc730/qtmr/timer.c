@@ -64,6 +64,8 @@ static uint8_t dump_idx  = 0;
 static timers_type timers = { {NULL,NULL}, 0, FALSE, TRUE};
 #endif
 
+extern uint64_t hres_com_us_rtc;
+
 /*-------------------------------------------------------------------------
  * Function Definitions
  * ----------------------------------------------------------------------*/
@@ -1787,7 +1789,12 @@ uint32_t hres_timer_curr_time_ms(void)
 #ifdef SUPPORT_HIGH_RES_TIMER
     uint64_t curr_time_ms;
     timer_cvt_from_tick64(hres_timer_timetick_get(), T_MSEC, &curr_time_ms);
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+    return curr_time_ms - hres_com_us_rtc/1000;
+#else
     return curr_time_ms;
+#endif
+
 #else /* SUPPORT_HIGH_RES_TIMER */
     return (uint32_t)(nt_hal_get_curr_time() / 1000);
 #endif /* SUPPORT_HIGH_RES_TIMER */
@@ -1803,7 +1810,11 @@ uint64_t hres_timer_curr_time_us(void)
 #ifdef SUPPORT_HIGH_RES_TIMER
     uint64_t curr_time_us;
     timer_cvt_from_tick64(hres_timer_timetick_get(), T_USEC, &curr_time_us);
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+    return curr_time_us - hres_com_us_rtc;
+#else
     return curr_time_us;
+#endif
 #else /* SUPPORT_HIGH_RES_TIMER */
     return nt_hal_get_curr_time();
 #endif /* SUPPORT_HIGH_RES_TIMER */
