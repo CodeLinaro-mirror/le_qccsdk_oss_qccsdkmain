@@ -16,6 +16,7 @@
 //#include "qurt_internal.h"
 //#include "qurt_mutex.h"
 //#include "qurt_signal.h"
+#include "qurt_internal.h"
 #include "sockets.h"
 #include "timer.h"
 #include "qapi_firmware_upgrade.h"
@@ -92,9 +93,6 @@ void ota_http_free_rcv_queue(HTTP_Queue_t* queue) {
 static void ota_http_fin()
 {
     if (ota_http_sess != NULL) {
-        if (ota_http_sess->mutex != 0) {
-            qurt_mutex_delete(&ota_http_sess->mutex);
-        }
 
         if (ota_http_sess->task_handle != NULL) {
             nt_osal_thread_delete(ota_http_sess->task_handle);
@@ -104,9 +102,6 @@ static void ota_http_fin()
             free(ota_http_sess->task_handle);
             ota_http_sess->url = NULL;
         }
-        
-        nt_delete_timer(ota_http_sess->http_timer);
-        ota_http_sess->http_timer = NULL;
         
         ota_http_free_rcv_queue(ota_http_sess->http_rx_queue);
         
@@ -124,16 +119,14 @@ static void ota_http_fin()
  *   buf_len:    received data buffer size in bytes
  *  ret_size:    data size in buffer after receiving done
  */
-void _ota_http_timeout_signal_set(void)
-{
-    qurt_signal_set(&ota_http_sess->signal, HTTP_RX_TIMEOUT_SIG_MASK);
-}
 qapi_Status_t plugin_http_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t *ret_size, void *init_param)
 {
     uint8_t *receive_buf = buffer;
     qapi_Status_t ret;
     HTTP_Queue_Node_t *temp = NULL;
     uint32_t signal;
+    uint32_t http_ota_recv_start_ms = 0;
+    uint32_t http_ota_recv_curr_ms = 0;
 
     UNUSED(init_param);
 
@@ -165,34 +158,27 @@ qapi_Status_t plugin_http_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t 
     
     if (ota_http_sess->status == HTTP_OTA_STATUS_RUNNING) {
         
-        if (ota_http_sess->http_rx_queue->front == NULL) 
+        http_ota_recv_start_ms = (uint32_t)hres_timer_curr_time_us() / 1000;
+
+        while (ota_http_sess->http_rx_queue->front == NULL) 
         {
-            //Queue is empty, waitting data...
-            if(nt_start_timer(ota_http_sess->http_timer) != NT_TIMER_SUCCESS)
-            {
-                return QAPI_FW_UPGRADE_ERR_HTTP_TIMEOUT_TIMER_FAILED;
-            }
+            http_ota_recv_curr_ms = (uint32_t)hres_timer_curr_time_us() / 1000;
             
-            signal = qurt_signal_wait(&ota_http_sess->signal, HTTP_RX_ALL_SIG_MASK, QURT_SIGNAL_ATTR_CLEAR_MASK);
-            
-            if(signal & HTTP_RX_BUF_READY_SIG_MASK)
-            {
-                ;
-            }
-            else if(signal & HTTP_RX_TIMEOUT_SIG_MASK)
+            if(http_ota_recv_curr_ms - http_ota_recv_start_ms > ota_http_sess->http_timeout)
             {
                 return QAPI_FW_UPGRADE_ERR_HTTP_RX_QUEUE_EMPTY;
-            } 
-        }
-        
-        if(nt_stop_timer(ota_http_sess->http_timer) != NT_TIMER_SUCCESS)
-        {
-            return QAPI_FW_UPGRADE_ERR_HTTP_TIMEOUT_TIMER_FAILED;
-        }
-        
-        qurt_mutex_lock(&ota_http_sess->mutex);
-        temp = ota_http_sess->http_rx_queue->front;
+            }
 
+            /*No MACRO for resp_code for http client now, just use magic number for now*/
+            /*for image not found*/
+            if(ota_http_sess->resp_code == 404)
+            {
+                return QAPI_FW_UPGRADE_ERR_IMAGE_NOT_FOUND;
+            }
+            qurt_thread_sleep(5);
+        }    
+        
+        temp = ota_http_sess->http_rx_queue->front;
         *ret_size = temp->buffer_len;
         memscpy(buffer, temp->buffer_len, temp->buffer, temp->buffer_len);
         
@@ -204,7 +190,6 @@ qapi_Status_t plugin_http_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t 
         }
         free(temp->buffer);
         free(temp);
-        qurt_mutex_unlock(&ota_http_sess->mutex);
     }
 
     return QAPI_OK;
@@ -233,6 +218,15 @@ void http_client_cb_ota(void* arg, int32_t state, void* http_resp)
     {
         int32_t resp_code = temp->resp_Code;
 
+        /*No MACRO for resp_code for http client now, just use magic number for now*/
+        /*for image not found*/
+        if(resp_code == 404)
+        {
+            ota_http_sess->resp_code = resp_code;
+            OTA_HTTPC_PRINTF("HTTP Client Demo No Image Found\n");
+            return;
+        }
+
         if (temp->length && temp->data)
         {
             HTTP_Queue_Node_t *node = NULL;
@@ -243,9 +237,10 @@ void http_client_cb_ota(void* arg, int32_t state, void* http_resp)
                 OTA_HTTPC_PRINTF("HTTP Client Demo malloc node error %d\n", state);
                 return;
             }
-
+            memset(node, 0, sizeof(HTTP_Queue_Node_t));
+            
             node->buffer = NULL;
-            node->buffer = malloc(temp->length);
+            node->buffer = (uint8_t*)malloc(temp->length);
 
             if (node->buffer == NULL)
             {
@@ -253,12 +248,13 @@ void http_client_cb_ota(void* arg, int32_t state, void* http_resp)
                 free(node); // Free the node to avoid memory leak
                 return;
             }
+
+            memset(node->buffer, 0, temp->length);
             
             memcpy(node->buffer, temp->data, temp->length);
             
             node->buffer_len = temp->length;
-
-            qurt_mutex_lock(&ota_http_sess->mutex);
+            node->next = NULL;
 
             if(ota_http_sess->http_rx_queue->rear == NULL)
             {
@@ -269,9 +265,6 @@ void http_client_cb_ota(void* arg, int32_t state, void* http_resp)
                 ota_http_sess->http_rx_queue->rear->next = node;
                 ota_http_sess->http_rx_queue->rear = node;
             }
-
-            qurt_mutex_unlock(&ota_http_sess->mutex);
-            qurt_signal_set(&ota_http_sess->signal, HTTP_RX_BUF_READY_SIG_MASK);
 
             *ptotal_len += temp->length;
             contentlength = temp->contentlength;
@@ -309,6 +302,8 @@ void http_client_cb_ota(void* arg, int32_t state, void* http_resp)
             OTA_HTTPC_PRINTF("HTTP Client Receive error: %d\nPlease input 'httpc disconnect %d'\n", state, hc->num);
         *ptotal_len = 0;
     }
+	/*small delay to prevent lwip pool exhaustion*/
+	qurt_thread_sleep(10);
 }
 
 qapi_Status_t ota_httpc_conn(const char *url)
@@ -350,6 +345,28 @@ qapi_Status_t ota_httpc_conn(const char *url)
     
     Parameter_Count++;
     
+    rlt = httpc_command_handler(Parameter_Count,Parameter_List);
+
+    return rlt;
+}
+
+qapi_Status_t ota_httpc_disconn (int32_t client_num)
+{
+    qapi_Status_t rlt = QAPI_OK;
+    char host[HTTP_HOST_STR_BUFFER_LENGTH];
+
+    //Construct connect Command
+    //httpc disconnect <client_num>
+    uint32_t  Parameter_Count =0;
+    QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
+    Parameter_List[Parameter_Count].Integer_Is_Valid =false;
+    Parameter_List[Parameter_Count].String_Value ="disconnect";
+    Parameter_Count++;
+
+    Parameter_List[Parameter_Count].Integer_Is_Valid =true;
+    Parameter_List[Parameter_Count].Integer_Value = client_num;
+    Parameter_Count++;
+
     rlt = httpc_command_handler(Parameter_Count,Parameter_List);
 
     return rlt;
@@ -499,14 +516,16 @@ qapi_Status_t plugin_http_init(const char* interface_name, const char *url, void
     qapi_Status_t ret;
     char path_url[HTTP_URL_STR_BUFFER_LENGTH] = {0};
     uint32_t  Parameter_Count =0;
+    uint32_t  http_timeout = 0;
+    uint8_t   http_connect_retry_count = 3;
     QAPI_Console_Parameter_t Parameter_List[QAT_HTTPC_MAXIMUM_NUMBER_OF_PARAMETERS];
     
     UNUSED(interface_name);
-    UNUSED(init_param);
     
     if (ota_http_sess != NULL) {
         return QAPI_FW_UPGRADE_ERR_HTTP_SESSION_ALREADY_START;
     }
+
 
     ota_http_sess = malloc(sizeof(http_session_info_t));
     if (ota_http_sess == NULL) {
@@ -514,6 +533,14 @@ qapi_Status_t plugin_http_init(const char* interface_name, const char *url, void
     }
 
     memset(ota_http_sess, 0, sizeof(http_session_info_t));
+
+    if (init_param != NULL) {
+        /*we will use init_param as timeout time of http*/
+        ota_http_sess->http_timeout = *(uint32_t *)init_param;
+    }
+    else {
+        ota_http_sess->http_timeout = HTTP_TIMEOUT;
+    }
 
     ota_http_sess->url = malloc(strlen(url)+1);
     if (ota_http_sess->url == NULL) {
@@ -534,47 +561,50 @@ qapi_Status_t plugin_http_init(const char* interface_name, const char *url, void
     ota_http_sess->status = HTTP_OTA_STATUS_RUNNING;
     ota_http_sess->getting_started = 0;
     
-    ret = ota_httpc_stop();
-    if (ret)
-    {
-        ret = QAPI_FW_UPGRADE_ERR_HTTP_STOP_FAIL;
-        goto http_init_end;
-    }
-    
-    ret = ota_httpc_start();
-    if (ret)
-    {
-        ret = QAPI_FW_UPGRADE_ERR_HTTP_START_FAIL;
-        goto http_init_end;
-    }
-    
-    //httpc new session
-    ret = ota_httpc_new_session(url,HTTP_TIMEOUT);
-    if(ret)
-    {
-        ret = QAPI_FW_UPGRADE_ERR_HTTP_START_NEW_SESS_FAIL;
-        goto http_init_end;
-    }
-    
     //httpc connect
-    ret = ota_httpc_conn(url);
+    while(http_connect_retry_count--)
+    {
+        /*when something wrong happened during receiving, a disconnection would be needed to close the socket*/
+        ota_httpc_disconn(1);
+
+        ret = ota_httpc_stop();
+        if (ret)
+        {
+            ret = QAPI_FW_UPGRADE_ERR_HTTP_STOP_FAIL;
+            goto http_init_end;
+        }
+
+        ret = ota_httpc_start();
+        if (ret)
+        {
+            ret = QAPI_FW_UPGRADE_ERR_HTTP_START_FAIL;
+            goto http_init_end;
+        }
+
+        //httpc new session
+        ret = ota_httpc_new_session(url,ota_http_sess->http_timeout);
+        if(ret)
+        {
+            ret = QAPI_FW_UPGRADE_ERR_HTTP_START_NEW_SESS_FAIL;
+            goto http_init_end;
+        }
+
+        ret = ota_httpc_conn(url);
+        if(!ret){
+            break;
+        }
+        else{
+            OTA_HTTPC_PRINTF("HTTP connect failed, Try %d time !!!!\n", http_connect_retry_count);
+            qurt_thread_sleep(10);
+        }
+    }
+
     if(ret)
     {
         ret = QAPI_FW_UPGRADE_ERR_HTTP_CONNECT_FAIL;
-        goto http_init_end;
+        OTA_HTTPC_PRINTF("HTTP connect failed!\n");
+        goto http_init_end; 
     }
-    
-    ota_http_sess->http_timer = NULL;
-    ota_http_sess->http_timer = nt_create_timer(_ota_http_timeout_signal_set,NULL,HTTP_TIMEOUT,FALSE);
-    if(!(ota_http_sess->http_timer))
-    {
-        ret = QAPI_FW_UPGRADE_ERR_HTTP_NO_MEMORY;
-        goto http_init_end;
-    }
-    
-    qurt_mutex_create(&ota_http_sess->mutex);
-    qurt_signal_create(&ota_http_sess->signal);
-
     
     /*
     Parameter_List[0].Integer_Is_Valid =false;

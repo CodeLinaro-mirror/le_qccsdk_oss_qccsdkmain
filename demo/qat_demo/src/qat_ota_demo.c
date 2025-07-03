@@ -29,6 +29,7 @@ typedef struct {
     char *url;
     char *cfg_file;
     uint32_t flags;
+    uint32_t timeout_time;
     uint32_t process_state_cnt;
 } qat_fw_upgrade_params_t;
 
@@ -170,7 +171,7 @@ static void qat_fw_upgrade_HTTP_upgrade_task(void __attribute__((__unused__))*pv
     if (qat_upgrade_params == NULL) {
         goto http_thread_end;
     }
-    resp_code = qapi_Fw_Upgrade(qat_upgrade_params->interface_name, &plugin, qat_upgrade_params->url, qat_upgrade_params->cfg_file, qat_upgrade_params->flags, qat_fw_upgrade_callback, NULL);
+    resp_code = qapi_Fw_Upgrade(qat_upgrade_params->interface_name, &plugin, qat_upgrade_params->url, qat_upgrade_params->cfg_file, qat_upgrade_params->flags, qat_fw_upgrade_callback, &qat_upgrade_params->timeout_time);
     
     if (QAPI_OK != resp_code) {
         offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_ERROR: Firmware Upgrade Image Download Failed ERR:%d\r\n",resp_code);
@@ -351,7 +352,7 @@ static QAT_Command_Status_t Extend_Command_OTA_FWUP(uint32_t Op_Type, uint32_t P
         case QAT_OP_EXEC:
 	    {
             rc = QAT_Response_Str(QAT_RC_OK, "AT+OTAFWUP: get usage of command\r\n"\
-										 "AT+OTAFWUP=<protocol(only http now)>,<url>,<fw filename>,[flag]\r\n");
+										 "AT+OTAFWUP=<protocol(only http now)>,<url>,<fw filename>,[flag],[timeout(in ms)]\r\n");
             break;
 	    }
         case QAT_OP_EXEC_W_PARAM: 	     /* AT+OTAFWD= */
@@ -364,7 +365,7 @@ static QAT_Command_Status_t Extend_Command_OTA_FWUP(uint32_t Op_Type, uint32_t P
             char *cmd = NULL;
             
             if (Parameter_Count > 5) {
-                rc = QAT_Response_Str(QAT_RC_ERROR, "AT+OTAFWUP=<protocol(only http now)>,<url>,<fw filename>,[flag]\r\n");
+                rc = QAT_Response_Str(QAT_RC_ERROR, "AT+OTAFWUP=<protocol(only http now)>,<url>,<fw filename>,[flag],[timeout(in ms)]\r\n");
                 return rc;
             }
 
@@ -419,13 +420,18 @@ static QAT_Command_Status_t Extend_Command_OTA_FWUP(uint32_t Op_Type, uint32_t P
 
                 if (Parameter_Count == 3) {
                     qat_upgrade_params->flags = QAPI_FW_UPGRADE_FLAG_AUTO_REBOOT;
+                    qat_upgrade_params->timeout_time = HTTP_TIMEOUT;
                 } else if (Parameter_Count == 4) {
                     qat_upgrade_params->flags = Parameter_List[3].Integer_Value;
+                    qat_upgrade_params->timeout_time = HTTP_TIMEOUT;
+                } else if (Parameter_Count == 5) {
+                    qat_upgrade_params->flags = Parameter_List[3].Integer_Value;
+                    qat_upgrade_params->timeout_time = Parameter_List[4].Integer_Value;;
                 }
 
                 rc = QAT_Response_Str(QAT_RC_OK, NULL);
                 
-                nt_qurt_thread_create(qat_fw_upgrade_HTTP_upgrade_task, "qat_fw_upgrade_demo", 1024, NULL, 7, &qat_fw_upgrade_task_handle);
+                nt_qurt_thread_create(qat_fw_upgrade_HTTP_upgrade_task, "qat_fw_upgrade_demo", 1024*4, NULL, 7, &qat_fw_upgrade_task_handle);
                 
             }
             
