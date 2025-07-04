@@ -104,7 +104,6 @@ extern SOCPM_STRUCT g_socpm_struct;
 uint32_t load_r13[2];
 int process_routine = 0;
 int process_uart_rx_irq = 1;
-uint64_t hres_com_us_rtc = 0;
 
 typedef struct _min_pair_s_ {
     uint32_t addr;
@@ -323,11 +322,6 @@ ram_minimum_code(
         NT_REG_RD(QWLAN_PMU_CFG_MCU_ACTIVE_STATE_RESOURCE_REQ_REG),NT_REG_RD(QWLAN_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ_REG));
 #endif
     min_mcu_active();
-	
-#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
-    uint32_t time_after_comp = nt_socpm_get_slp_tmr_us();
-    hres_com_us_rtc += g_socpm_struct.rc_set_time_us - time_after_comp;
-#endif
 
 #ifdef POWER_SLP_CLK_SWITCH_WAR
    /** Disable sleep clock before sleep and enable on warm boot as a workaround
