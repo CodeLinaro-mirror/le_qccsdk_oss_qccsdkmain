@@ -266,7 +266,6 @@ typedef struct {
     uint32_t unapplied_err_us;
     uint32_t systick_off_time_us;
     uint32_t aon_program_time_us;
-    uint32_t rc_set_time_us;
 #if defined (SUPPORT_SOC_SLEEP_SOLVER)
     uint64_t aon_program_time_qtimer_us; /*time at which last time AON timer was programmed*/
 #endif /*SUPPORT_SOC_SLEEP_SOLVER*/
