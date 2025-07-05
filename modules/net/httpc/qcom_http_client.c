@@ -60,6 +60,11 @@
 #pragma O0
 #endif
 
+#ifdef CONFIG_QAT_OTA_DEMO
+#include "ota_http.h"
+extern http_session_info_t *ota_http_sess;
+#endif
+
 #define htdbgprintf(...)    printf( __VA_ARGS__)
 
 TaskHandle_t th_httpc = NULL;
@@ -2366,7 +2371,16 @@ int https_client_recv_handle(httpclient_sess *sess, uint8_t *buf, int length)
             sess->hcs_rxbufoffset += readval;
             *(sess->hcs_rxbuffer + sess->hcs_rxbufoffset) = '\0';
             err = http_client_processpkt(sess, readval);
-            htdbgprintf("%s:%d readval%d err:%d\n", __func__, __LINE__, readval,err);
+#ifdef CONFIG_QAT_OTA_DEMO
+            if (ota_http_sess->status == HTTP_OTA_STATUS_RUNNING) {
+                /*no need to print when running OTA over HTTP*/
+            }
+            else
+#endif       
+            {
+                htdbgprintf("%s:%d readval%d err:%d\n", __func__, __LINE__, readval,err);
+            }
+            
             rx_len += readval;
         }
         if( mbedtls_ssl_get_bytes_avail(&(sess->sslCtx->context)) == 0 )
@@ -2598,7 +2612,15 @@ int http_client_processpkt(httpclient_sess *sess, int length)
         htdbgprintf("%s %d fatal error!\n", __func__, __LINE__);
         return HTTPC_ERROR;
     }
-    htdbgprintf("Received packet. Size:%u.BufferOff:%u\n", length, sess->hcs_rxbufoffset);
+#ifdef CONFIG_QAT_OTA_DEMO
+    if (ota_http_sess->status == HTTP_OTA_STATUS_RUNNING) {
+        /*no need to print when running OTA over HTTP*/
+    }
+    else
+#endif       
+    {
+        htdbgprintf("Received packet. Size:%u.BufferOff:%u\n", length, sess->hcs_rxbufoffset);  
+    }
 
     if (!length)
     {
@@ -3136,7 +3158,16 @@ int http_client_readbuf(httpclient_sess *sess)
 
     if (readval <= 0)          /* error on socket? */
     {
-        htdbgprintf("%s: readval:%d ERRNO:%d\n",__func__,readval,err);
+#ifdef CONFIG_QAT_OTA_DEMO
+        if (ota_http_sess->status == HTTP_OTA_STATUS_RUNNING) {
+            /*no need to print when running OTA over HTTP*/
+        }
+        else
+#endif       
+        {
+            htdbgprintf("%s: readval:%d ERRNO:%d\n",__func__,readval,err);
+        }
+
         if ((err == EWOULDBLOCK) || (err == ENOBUFS))
         {
             readval = 0;         /* No new data arrived */
@@ -3176,7 +3207,15 @@ int http_client_readbuf(httpclient_sess *sess)
         sess->hcs_rxbufoffset += readval;
         *(sess->hcs_rxbuffer + sess->hcs_rxbufoffset) = '\0';
         err = http_client_processpkt(sess, readval);
-        htdbgprintf("%s:%d readval%d err:%d\n", __func__, __LINE__, readval,err);
+#ifdef CONFIG_QAT_OTA_DEMO
+        if (ota_http_sess->status == HTTP_OTA_STATUS_RUNNING) {
+            /*no need to print when running OTA over HTTP*/
+        }
+        else
+#endif       
+        {
+            htdbgprintf("%s: readval:%d ERRNO:%d\n",__func__,readval,err);
+        }
     }
 
     return (readval);

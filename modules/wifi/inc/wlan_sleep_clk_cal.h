@@ -45,7 +45,7 @@
 #define HBIN_12_TO_15_RANGE 0xFFFFF
 
 #define HBIN_RANGE_BIT_OFFSET 5 /* number of bits to specify a hbin range */
-#define REF_SLEEP_CLK_CNT 0x20              //sleep clock count for calibration
+#define REF_SLEEP_CLK_CNT 0x400             //sleep clock count for calibration
 #define RS_VALUE 0x6                        //sleep clk count * RS Value = calibration interval
 #define MIN_SLP_DURATION_FOR_SLP_CLK_CAL 20000  // 20 ms
 #define TS_HYS_THRESH 2  //Temp sensor hysterisis threshold, to avoid frequent cal re-trigger when TS change only a little bit

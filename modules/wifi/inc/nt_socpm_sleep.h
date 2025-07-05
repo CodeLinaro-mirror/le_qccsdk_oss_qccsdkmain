@@ -176,6 +176,27 @@ extern uint8_t ignore_bcmc_in_bmps;
 /* Upper limit on sleep slop offset time */
 #define SLEEP_SLOP_OFFSET_UPPER_LIMIT_US        1500
 
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+#define XO_CLOCK_CYCLES_FOR_REF_CNT_256     262500                // Nominal number of 38.4 MHZ XO clock cycles for REF_SLEEP_CLK_CNT <=256
+#define XO_CLOCK_CYCLES_FOR_REF_CNT_512     523828                // Nominal number of 38.4 MHZ XO clock cycles for REF_SLEEP_CLK_CNT 512
+#define XO_CLOCK_CYCLES_FOR_REF_CNT_1024    1048828               // Nominal number of 38.4 MHZ XO clock cycles for REF_SLEEP_CLK_CNT 1024
+#define RIGHT_SHIFT_DIVIDE_VAL_256          262144                // Right shift divide value in power of and approximation of Nominal number <=256
+#define RIGHT_SHIFT_DIVIDE_VAL_512          524288                // Right shift divide value in power of and approximation of Nominal number 512
+#define RIGHT_SHIFT_DIVIDE_VAL_1024         1048576               // Right shift divide value in power of and approximation of Nominal number 1024
+#define NO_RIGHT_SHIFT  (18 + (REF_SLEEP_CLK_CNT >> 9))           // Number of right shift required to divide
+ 
+#if (REF_SLEEP_CLK_CNT <= 256)
+#define COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_SET(sleep_time) ((uint64_t)(sleep_time * XO_CLOCK_CYCLES_FOR_REF_CNT_256) >> NO_RIGHT_SHIFT)
+#define COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_GET(sleep_time) ((uint64_t)(sleep_time * RIGHT_SHIFT_DIVIDE_VAL_256) / XO_CLOCK_CYCLES_FOR_REF_CNT_256)
+#elif (REF_SLEEP_CLK_CNT <= 512)
+#define COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_SET(sleep_time) ((uint64_t)(sleep_time * XO_CLOCK_CYCLES_FOR_REF_CNT_512) >> NO_RIGHT_SHIFT)
+#define COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_GET(sleep_time) ((uint64_t)(sleep_time * RIGHT_SHIFT_DIVIDE_VAL_512) / XO_CLOCK_CYCLES_FOR_REF_CNT_512)
+#else
+#define COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_SET(sleep_time) ((uint64_t)(sleep_time * XO_CLOCK_CYCLES_FOR_REF_CNT_1024) >> NO_RIGHT_SHIFT) 
+#define COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_GET(sleep_time) ((uint64_t)(sleep_time * RIGHT_SHIFT_DIVIDE_VAL_1024) / XO_CLOCK_CYCLES_FOR_REF_CNT_1024)
+#endif /* REF_SLEEP_CLK_CNT */
+#endif /* COMPENSATE_RC_DIVISION_ERROR_WAR */
+
 /* Time from CPU sleep to CLK_REQ going low, as profiled from waveforms */
 #define MCU_SLEEP_HW_W2S_TRANSITION_TIME_US        (1500)
 
@@ -245,6 +266,7 @@ typedef struct {
     uint32_t unapplied_err_us;
     uint32_t systick_off_time_us;
     uint32_t aon_program_time_us;
+    uint32_t rc_set_time_us;
 #if defined (SUPPORT_SOC_SLEEP_SOLVER)
     uint64_t aon_program_time_qtimer_us; /*time at which last time AON timer was programmed*/
 #endif /*SUPPORT_SOC_SLEEP_SOLVER*/

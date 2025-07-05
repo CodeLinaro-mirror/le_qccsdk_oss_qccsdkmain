@@ -395,11 +395,13 @@ void wifi_fw_gpio_init(bool __attribute__((__unused__)) is_init_after_sleep)
 #ifdef NT_GPIO_FLAG
 #ifdef PLATFORM_FERMION
     nt_gpio_pin_mode(NT_GPIOA, MULTIUSE_SYNC_GPIO, GPIO_OUTPUT);
+
+#ifdef CONFIG_RING_IF_ONLY
     /* Feature FIRMWARE_APPS_INFORMED_WAKE defines FIRMWARE_2_HOST_GPIO for ring_update interrupt */
     nt_gpio_pin_mode(FIRMWARE_2_HOST_GPIO_PORT, FIRMWARE_2_HOST_GPIO, GPIO_OUTPUT);
     /* Pull Up if active low */
     nt_gpio_pin_write(FIRMWARE_2_HOST_GPIO_PORT, FIRMWARE_2_HOST_GPIO, FIRMWARE_2_HOST_DE_ASSERT);
-
+#endif
 #endif /* PLATFORM_FERMION */
     if (!is_init_after_sleep)
     {

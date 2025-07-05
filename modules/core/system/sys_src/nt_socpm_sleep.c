@@ -975,6 +975,7 @@ void nt_socpm_slp_tmr_set(
     uint32_t loop_start_time, curr_time_us;
 #endif /* COMPENSATE_AON_PROG_DELAY */
     uint32_t temp_1, temp_2, temp_3;
+    uint64_t sleep_time_us ;
 
 #ifdef SOCPM_SLEEP_DEBUG
     uint64_t slp_time_orig;
@@ -1000,6 +1001,14 @@ void nt_socpm_slp_tmr_set(
 #ifdef SOCPM_SLEEP_DEBUG
     slp_time_orig = sleep_time;
 #endif
+
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+    /* Compensating the right shift division error while configuring the AON timer*/
+    sleep_time = COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_SET(sleep_time);
+#endif /* COMPENSATE_RC_DIVISION_ERROR_WAR */
+
+    sleep_time_us= sleep_time;
+
     // for pmic xo, each tick is (1/32768)s = (1/2^15)= (10^6/2^15)uS = (15625/2^9) uS
     sleep_time = _SOCPM_US_TO_AON_TICK(sleep_time);
     temp_1 = sleep_time;
@@ -1084,6 +1093,8 @@ void nt_socpm_slp_tmr_set(
 
     NT_REG_WR(QWLAN_PMU_WLAN_SLP_TMR_EXP_LSB_REG, temp_1);
     __asm volatile("nop");
+
+    g_socpm_struct.rc_set_time_us = sleep_time_us;
 
     nt_clear_device_irq(AON_cmnss_wlan_slp_tmr_int);
 
@@ -1876,6 +1887,12 @@ nt_socpm_slp_tmr_get(
         time = time * g_socpm_struct.slp_clk_cal_params.xocnt / g_socpm_struct.slp_clk_cal_params.refxocnt;
 #endif
 #endif /* APPLY_SLEEP_CLK_CORRECTION */
+
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+    /* Compensating the right shift division error of RC clock with slp timer time */
+    time = COMPENSATE_RC_DIVISION_ERROR_SLP_TMR_GET(time);
+#endif /* COMPENSATE_RC_DIVISION_ERROR_WAR */
+
     return time;
 }
 
@@ -2399,7 +2416,8 @@ bool nt_socpm_sleep_lst_update(
                     wkup_delay_us = delta_time_us - slp_lst_node->slp_info.slp_time;
                 }
                 /* Handling the multiple entry of the sleep list with wkup delay */
-                sleep_back = slp_lst_node->slp_info.min_cb_fn(wkup_delay_us);
+                if (g_socpm_struct.in_warm_boot == TRUE)
+                    sleep_back = slp_lst_node->slp_info.min_cb_fn(wkup_delay_us);
 
                 if (sleep_back <= 0)
                 {
@@ -2696,7 +2714,10 @@ uint64_t freertosdefaultminimum(uint32_t wkup_delay_us)
             }
 
             PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
-
+        
+        /*SW MTU time restoration must to be conducted when RRI first list restored
+          because MTU TSF will be retored to 0 after RRI first list restored.
+        */
         #ifdef NT_SOCPM_SW_MTUSR
             nt_socpm_mtusr_restore_mtu_time();
             
@@ -4485,7 +4506,7 @@ void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point
     {
         return;
     }
-    bool sleep_failed = TRUE;
+    bool sleep_failed = false;
 
         /*complete all memory operations before storing the ICPR values
       this is to make sure the icpr values are properly updated before the assert checks are made*/
@@ -4562,6 +4583,7 @@ void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point
         NT_LOG_PRINT(SOCPM, ERR, "NVIC ICPR[0-3]: 0x%08x 0x%08x 0x%08x 0x%08x",
                 g_socpm_struct.nvic_icpr_status[0], g_socpm_struct.nvic_icpr_status[1],
                 g_socpm_struct.nvic_icpr_status[2], g_socpm_struct.nvic_icpr_status[3]);
+        NT_REG_WR(QWLAN_PMU_SLP_CNTL_REG,0);
         nt_socpm_handle_sleep_entry_failure(mode);
     }
 }
@@ -4642,7 +4664,9 @@ void nt_socpm_mtusr_restore_mtu_time(
             (uint32_t)g_socpm_struct.mtusr_time_data.mtu_timestamp.time,0);
 #endif
     if (((gdevp) && (gdevp->pPmStruct)) &&
-        (((PM_STRUCT *)gdevp->pPmStruct)->wlan_state_off && g_socpm_struct.mtusr_time_data.aon_programmed) &&
+        (((PM_STRUCT *)gdevp->pPmStruct)->wlan_state_off && 
+        g_socpm_struct.mtusr_time_data.aon_programmed ||
+        PM_GET_RRI_STATE((PM_STRUCT *)gdevp->pPmStruct) == PM_RRI_RX_READY) &&
         (g_socpm_struct.mtusr_time_data.aon_timestamp.type ==
          g_socpm_struct.mtusr_time_data.mtu_timestamp.type))
     {

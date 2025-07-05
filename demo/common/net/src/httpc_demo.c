@@ -334,9 +334,9 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
 #ifdef CONFIG_QAT_HTTPC_DEMO
                         if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD)||(at_httpc_method == QAT_HTTP_POST))
                         {
-                            snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "%s",data);
+                            memscpy(buffer, MAX_QAT_PRINTF_LENGTH, data, print_len);
                             
-                            QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                            QAT_Response_Buffer(QAT_RC_QUIET_NO_CR, buffer, print_len);
                             memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
                         }
 #else
@@ -356,8 +356,8 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
 #ifdef CONFIG_QAT_HTTPC_DEMO
                         if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD)||(at_httpc_method == QAT_HTTP_POST))
                         {
-                            snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "%s",data);
-                            QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                            memscpy(buffer, MAX_QAT_PRINTF_LENGTH, data,tmp_len);
+                            QAT_Response_Buffer(QAT_RC_QUIET_NO_CR, buffer,tmp_len);
                             memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
                         }
 #else
@@ -373,8 +373,8 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
 #ifdef CONFIG_QAT_HTTPC_DEMO
                     if((at_httpc_method == QAT_HTTP_GET)||(at_httpc_method == QAT_HTTP_HEAD)||(at_httpc_method == QAT_HTTP_POST))
                     {
-                        snprintf(buffer, MAX_QAT_PRINTF_LENGTH, "%s",data);
-                        QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
+                        memscpy(buffer, MAX_QAT_PRINTF_LENGTH, data, temp->length);
+                        QAT_Response_Buffer(QAT_RC_QUIET_NO_CR, buffer, temp->length);
                         memset((void*)buffer, 0, MAX_QAT_PRINTF_LENGTH);
                     }
 #else

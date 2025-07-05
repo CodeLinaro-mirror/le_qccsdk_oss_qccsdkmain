@@ -32,6 +32,7 @@ time_zone_t g_time_zone = {0,0,0};
 extern uint64_t start_tsf_beacon;
 extern int64_t rtc_time_padding;
 extern int64_t rtc_time_padding_history;
+extern uint64_t hres_com_us_rtc;
 /*-------------------------------------------------------------------------
  * Function Definition
  *-----------------------------------------------------------------------*/
