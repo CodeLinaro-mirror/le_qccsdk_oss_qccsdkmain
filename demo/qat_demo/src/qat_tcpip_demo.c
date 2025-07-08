@@ -503,6 +503,14 @@ static void qat_net_show_info(struct netif *netif, char *buffer, int *p_offset)
     *p_offset += snprintf(buffer + *p_offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,", ipaddr_ntoa(ip_addr));
     *p_offset += snprintf(buffer + *p_offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,", ipaddr_ntoa(gw));
     *p_offset += snprintf(buffer + *p_offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,", ipaddr_ntoa(netmask));
+
+    if(IP_GET_TYPE(dns1) == IPADDR_TYPE_V6){
+        dns1 = IP4_ADDR_ANY;
+    }
+    if(IP_GET_TYPE(dns2) == IPADDR_TYPE_V6){
+        dns2 = IP4_ADDR_ANY;
+    }
+
     *p_offset += snprintf(buffer + *p_offset, QAT_CMD_IP_BUFFER_LENGTH, "%s,", ipaddr_ntoa(dns1));
     *p_offset += snprintf(buffer + *p_offset, QAT_CMD_IP_BUFFER_LENGTH, "%s", ipaddr_ntoa(dns2));
 }
@@ -683,21 +691,35 @@ static QAT_Command_Status_t Extend_Command_SetStation(uint32_t Op_Type, uint32_t
             }
         }
 
-        // For now, use the IPv6 default router address as the DNS server address.
         if (v6_enable) {
-            if (default_router_list[0].neighbor_entry != NULL) {
-                char addr_str[INET6_ADDRSTRLEN];
-                ip6addr_ntoa_r(&default_router_list[0].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
-                offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", addr_str);
+            ip_addr_t *dns1 = (ip_addr_t *)dns_getserver(QAT_DNS_SERVER_INDEX0);
+            ip_addr_t *dns2 = (ip_addr_t *)dns_getserver(QAT_DNS_SERVER_INDEX1);
+            if(IP_GET_TYPE(dns1) == IPADDR_TYPE_V4){
+                dns1 = IP4_ADDR_ANY;
             }
-            if (default_router_list[1].neighbor_entry != NULL) {
-                char addr_str[INET6_ADDRSTRLEN];
-                ip6addr_ntoa_r(&default_router_list[1].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
-                offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", addr_str);
-            } else {
-                char addr_str[INET6_ADDRSTRLEN];
-                ip6addr_ntoa_r(&default_router_list[0].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
-                offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", addr_str);
+            if(IP_GET_TYPE(dns2) == IPADDR_TYPE_V4){
+                dns2 = IP4_ADDR_ANY;
+            }
+            if((dns1 != IP4_ADDR_ANY) || (dns2 != IP4_ADDR_ANY)){
+                offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", ipaddr_ntoa(dns1));
+                offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", ipaddr_ntoa(dns2));
+            }
+            else {
+                /* For now, use the IPv6 default router address as the DNS server address.*/
+                if (default_router_list[0].neighbor_entry != NULL) {
+                    char addr_str[INET6_ADDRSTRLEN];
+                    ip6addr_ntoa_r(&default_router_list[0].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
+                    offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", addr_str);
+                }
+                if (default_router_list[1].neighbor_entry != NULL) {
+                    char addr_str[INET6_ADDRSTRLEN];
+                    ip6addr_ntoa_r(&default_router_list[1].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
+                    offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", addr_str);
+                } else {
+                    char addr_str[INET6_ADDRSTRLEN];
+                    ip6addr_ntoa_r(&default_router_list[0].neighbor_entry->next_hop_address, addr_str, sizeof(addr_str));
+                    offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, ",%s/64", addr_str);
+                }
             }
         }
 
