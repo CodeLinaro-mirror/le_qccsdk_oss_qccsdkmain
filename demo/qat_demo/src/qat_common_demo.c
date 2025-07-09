@@ -791,7 +791,7 @@ static QAT_Command_Status_t Extend_Command_DNSC(uint32_t Op_Type, uint32_t Param
 
 	        for(indx = 0; indx< DNS_MAX_SERVERS; indx++) {
 	            server_addr = (ip_addr_t *)dns_getserver(indx);
-	            if((!ip_addr_isany_val(*server_addr)) && ip_addr_cmp(server_addr, &ip_addr)) 
+	            if((!ip_addr_isany_val(*server_addr)) && ip_addr_cmp_zoneless(server_addr, &ip_addr)) 
 				{
 	                dns_setserver(indx, NULL);
 	                rc = QAT_Response_Str(QAT_RC_OK, NULL);

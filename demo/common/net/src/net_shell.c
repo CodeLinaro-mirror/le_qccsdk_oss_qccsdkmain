@@ -284,7 +284,7 @@ static qapi_Status_t dnsc(uint32_t __attribute__((__unused__)) Parameter_Count, 
 
         for(indx = 0; indx< DNS_MAX_SERVERS; indx++) {
             server_addr = (ip_addr_t *)dns_getserver(indx);
-            if((!ip_addr_isany_val(*server_addr)) && ip_addr_cmp(server_addr, &ip_addr)) {
+            if((!ip_addr_isany_val(*server_addr)) && ip_addr_cmp_zoneless(server_addr, &ip_addr)) {
                 dns_setserver(indx, NULL);
                 info_printf("del DNS server OK.\n");
             }
