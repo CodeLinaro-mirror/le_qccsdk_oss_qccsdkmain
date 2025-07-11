@@ -1470,7 +1470,9 @@ typedef enum
         /**< WPA3 SAE mode of authentication. */
     QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E  = 10,
         /**< WPA2 and SAE mixed mode of authentication. */
-    QAPI_WLAN_AUTH_INVALID_E         = 11  /**< Invalid authentication method. */
+    QAPI_WLAN_AUTH_WPA_WPA2_SAE_MIXED_E  = 11,
+        /**< WPA, WPA2 and SAE mixed mode of authentication. */
+    QAPI_WLAN_AUTH_INVALID_E         = 12  /**< Invalid authentication method. */
 } qapi_WLAN_Auth_Mode_e;
 
 /**

@@ -697,6 +697,7 @@ static qapi_Status_t SetWpaPassphrase(uint32_t Parameter_Count, QAPI_Console_Par
  * SetWpaParameters WPA2 CCMP CCMP 
  * SetWpaParameters SAE CCMP CCMP 
  * SetWpaParameters SAE_WPA2
+ * SetWpaParameters SAE_WPA2_WPA
  */
 static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
@@ -716,18 +717,20 @@ static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Param
         e_wpa_ver = QAPI_WLAN_AUTH_WPA3_SAE_E;
 	} else if (!strcmp(wpaVer,"SAE_WPA2")) {
         e_wpa_ver = QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E;
+    } else if(!strcmp(wpaVer,"SAE_WPA2_WPA")) {
+        e_wpa_ver = QAPI_WLAN_AUTH_WPA_WPA2_SAE_MIXED_E;
     } else {
         info_printf("invalid wpa ver =%s\n", wpaVer);
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
-    if ((e_wpa_ver != QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) && 
+    if (((e_wpa_ver != QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) && (e_wpa_ver != QAPI_WLAN_AUTH_WPA_WPA2_SAE_MIXED_E)) && 
         (Parameter_Count != 3 || Parameter_List[1].Integer_Is_Valid || Parameter_List[2].Integer_Is_Valid)) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
     qapi_WLAN_Crypt_Type_e e_cipher;
-    if (e_wpa_ver == QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) {
+    if ((e_wpa_ver == QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) || (e_wpa_ver == QAPI_WLAN_AUTH_WPA_WPA2_SAE_MIXED_E)) {
         e_cipher = QAPI_WLAN_CRYPT_AUTO;
     }
     else {
@@ -2513,7 +2516,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { SetDevice,       "SetDevice",             "<device = 0:AP|GO, 1:STA|P2P client",    "Set the active device"},
     { Scan,            "Scan",                  "<mode = 0: blocking| 1: non-blocking| 2:non-buffering> [ssid]",    "Scan for networks, using blocking/non-blocking/non-buffering modes. If ssid is provided, scan for specific ssid only."},
     { SetWpaPassphrase,"SetWpaPassphrase",      "<passphrase>",          "Set WPA passphrase"},
-    { SetWpaParameters,"SetWpaParameters",      "<version=WPA|WPA2|WPACERT|WPA2CERT|SAE|SAE_WPA2> <ucipher>(optional) <mcipher>(optional)",    "Set WPA specific parameters"},
+    { SetWpaParameters,"SetWpaParameters",      "<version=WPA|WPA2|WPACERT|WPA2CERT|SAE|SAE_WPA2|SAE_WPA2_WPA> <ucipher>(optional) <mcipher>(optional)",    "Set WPA specific parameters"},
     { Connect,         "Connect",               "<ssid> [bssid]",        "Connect to a given ssid and given bssid(bssid option applicable to STA mode only. if AP mode connect command shouldnt take BSSID)"},
     { GetRssi,         "GetRssi",               "",                      "Get link quality indicator (SNR in dB) between AP and STA."},
     { Disconnect,      "Disconnect",            "",                      "Disconnect from AP or peer"},
