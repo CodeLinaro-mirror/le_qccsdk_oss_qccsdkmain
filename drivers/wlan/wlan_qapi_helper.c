@@ -520,7 +520,7 @@ qapi_Status_t wlan_set_amsdu_rx(uint8_t device_ID, uint8_t enable)
 	return error;
 }
 
-qapi_Status_t wlan_set_sta_slptime(uint8_t device_ID, uint16_t time, uint16_t round_type)
+qapi_Status_t wlan_set_sta_force_dtim(uint8_t device_ID, uint32_t force_dtim)
 {
 	qapi_Status_t error = QAPI_OK;
 	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
@@ -528,7 +528,7 @@ qapi_Status_t wlan_set_sta_slptime(uint8_t device_ID, uint16_t time, uint16_t ro
 
 	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
 	cmd->pdev_param_id = WIFI_PARAM_SET_STA_DTIM;
-	cmd->pdev_param_value = time | (round_type << 16);
+	cmd->pdev_param_value = force_dtim;
 	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
 
 	if(p_cxt->wlan_set_param_block_mode) {
@@ -547,10 +547,11 @@ qapi_Status_t wlan_get_sta_slptime(uint32_t *listen_interval)
 	extern uint16_t wlan_get_listen_interval(devh_t *dev, uint16_t beaconInterval);
 	uint16_t ni_intval = gdevp->bss->ni_intval;
 
-	if (gdevp->ifState == IF_UP)
+	if (gdevp->ifState == IF_UP) {
 		*listen_interval = (uint32_t)wlan_get_listen_interval(gdevp, ni_intval) * ni_intval;
-	else
-		*listen_interval = (uint32_t)wlan_get_listen_interval(gdevp, 100) * 100;
+	} else {
+		return QAPI_ERROR;
+	}
 	return QAPI_OK;
 }
 
