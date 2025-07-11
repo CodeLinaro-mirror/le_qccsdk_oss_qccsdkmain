@@ -787,15 +787,13 @@ static QAT_Command_Status_t Extend_Command_SetWpaParameters(uint32_t Op_Type, ui
    {
       case QAT_OP_EXEC_W_PARAM:   /* AT+CWWPA */
       {
-         char *wpaVer = Parameter_List[0].String_Value;
-         char *ucipher = Parameter_List[1].String_Value;
-         char *mcipher = Parameter_List[2].String_Value;
-
-         if( Parameter_Count != 3 || !Parameter_List || Parameter_List[0].Integer_Is_Valid || Parameter_List[1].Integer_Is_Valid || Parameter_List[2].Integer_Is_Valid) {
+         if(Parameter_Count < 1 || !Parameter_List || Parameter_List[0].Integer_Is_Valid) {
             QAT_Response_Str(QAT_RC_ERROR, NULL);
             return rc;
          }
 
+         char *wpaVer = Parameter_List[0].String_Value;
+         
          if(!strcmp(wpaVer,"WPA")) {
             e_wpa_ver = QAPI_WLAN_AUTH_WPA_PSK_E;
          } else if (!strcmp(wpaVer,"WPA2")) {
@@ -809,19 +807,33 @@ static QAT_Command_Status_t Extend_Command_SetWpaParameters(uint32_t Op_Type, ui
             QAT_Response_Str(QAT_RC_ERROR, buffer);
             return rc;
          }
-         if (strcmp(ucipher, mcipher)) {
-            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWWPA:invaid uchipher mcipher, should be same");
-            QAT_Response_Str(QAT_RC_ERROR, buffer);
+
+         if ((e_wpa_ver != QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) && 
+            (Parameter_Count != 3 || Parameter_List[1].Integer_Is_Valid || Parameter_List[2].Integer_Is_Valid)) {
+            QAT_Response_Str(QAT_RC_ERROR, NULL);
             return rc;
          }
-         if (!strcmp(ucipher, "TKIP")) {
-            e_cipher = QAPI_WLAN_CRYPT_TKIP_CRYPT_E;
-         } else if (!strcmp(ucipher, "CCMP")) {
-            e_cipher = QAPI_WLAN_CRYPT_AES_CRYPT_E;
+
+         if (e_wpa_ver == QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) {
+            e_cipher = QAPI_WLAN_CRYPT_AUTO;
          } else {
-            snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWWPA:invaid uchipher mcipher, should be TKIP or CCMP");
-            QAT_Response_Str(QAT_RC_ERROR, buffer);
-            return rc;
+            char *ucipher = Parameter_List[1].String_Value;
+            char *mcipher = Parameter_List[2].String_Value;
+
+            if (strcmp(ucipher, mcipher)) {
+               snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWWPA:invaid uchipher mcipher, should be same");
+               QAT_Response_Str(QAT_RC_ERROR, buffer);
+               return rc;
+            }
+            if (!strcmp(ucipher, "TKIP")) {
+               e_cipher = QAPI_WLAN_CRYPT_TKIP_CRYPT_E;
+            } else if (!strcmp(ucipher, "CCMP")) {
+               e_cipher = QAPI_WLAN_CRYPT_AES_CRYPT_E;
+            } else {
+               snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWWPA:invaid uchipher mcipher, should be TKIP or CCMP");
+               QAT_Response_Str(QAT_RC_ERROR, buffer);
+               return rc;
+            }
          }
          pg_wifi_shell_cxt->auth = e_wpa_ver;
          qapi_WLAN_Set_Param (deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
