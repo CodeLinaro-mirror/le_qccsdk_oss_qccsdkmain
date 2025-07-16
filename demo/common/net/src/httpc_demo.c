@@ -261,6 +261,9 @@ void app_hexdump(void *inbuf, uint32_t inlen, int ascii, int addr)
 
 #define HEXDUMP(inbuf, inlen, ascii, addr)  app_hexdump(inbuf, inlen, ascii, addr)
 
+#ifdef CONFIG_QAT_HTTPC_DEMO
+extern qbool_t conn_enable;
+#endif
 void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
 {
     (void) arg;
@@ -494,8 +497,12 @@ void http_client_cb_demo(void* arg, int32_t state, void* http_resp)
     }
     else
     {
-        if(QAPI_NET_HTTPC_RX_ERROR_SERVER_CLOSED == state)
+        if(QAPI_NET_HTTPC_RX_ERROR_SERVER_CLOSED == state){
             HTTPC_PRINTF("HTTP Client server closed on client[%d].\n", hc->num);
+#ifdef CONFIG_QAT_HTTPC_DEMO
+            conn_enable = FALSE;
+#endif
+        }
         else
             HTTPC_PRINTF("HTTP Client Receive error: %d\nPlease input 'httpc disconnect %d'\n", state, hc->num);
         *ptotal_len = 0;

@@ -215,17 +215,17 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
    char buffer[HTTP_STR_BUFFER_LENGTH];
 
 
-   switch (Op_Type)
-   {
-      case QAT_OP_EXEC:		     /* AT+WRTMEM */
-      {	
-         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST=<\"url\">,<length>,[<\"http_req_header\">],[...]\r\n");
-         rc = QAT_Response_Str(QAT_RC_OK, buffer);
-         break;
-      }
+    switch (Op_Type)
+    {
+        case QAT_OP_EXEC:		     /* AT+WRTMEM */
+        {	
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST=<\"url\">,<length>,[<\"http_req_header\">],[...]\r\n");
+            rc = QAT_Response_Str(QAT_RC_OK, buffer);
+            break;
+        }
       
-      case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
-      {
+        case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
+        {
             if(Parameter_Count < 2)
             {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST:Invalid Parameter Count %d\r\n", Parameter_Count);
@@ -320,10 +320,10 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
             global_send_finish=false;
 
             break;
-      }
+        }
 
-      case QAT_OP_EXEC_IN_DATA_MODEL:
-      {
+        case QAT_OP_EXEC_IN_DATA_MODEL:
+        {
             uint32_t revlen = Parameter_Count;
             char * output_buf = (char*)Parameter_List;
             uint32_t sendlen = 0;
@@ -469,34 +469,27 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
             }
 
            break;
-      }
+        }
       
-      default:
+        default:
          ;
-   }
+    }
 rlt:
     memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
-    if(send_num >0)
-    {
-       if(result != QAPI_OK)
-       {
-            if(at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED)
-            {
+    if (send_num >0) {
+        if (result != QAPI_OK) {
+            if (at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, HTTP state:%d\r\n",at_rec_state);
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
-            }
-            else
-            {
+            } else {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, error_code:%d\r\n",result);
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
             }
 
             //httpc disconn
-            if(global_conn_enable)
-            {
+            if (global_conn_enable) {
                 result = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-                if(result != QAPI_OK)
-                {
+                if (result != QAPI_OK) {
                     snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
                     QAT_Response_Str(QAT_RC_ERROR, buffer);
                 }
@@ -505,95 +498,83 @@ rlt:
 
             //httpc stop
             result = at_httpc_stop();
-            if(result != QAPI_OK)
-            {
+            if (result != QAPI_OK) {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
             }
 
-            if(global_chunkdata){
+            if (global_chunkdata) {
                 free(global_chunkdata);
                 global_chunkdata = NULL;
             }
-       }
+        }
 
-       if(global_send_finish)
-       {
+        if (global_send_finish) {
             uint16 count = 0;
-            while(1)
-            {
-              if(at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED)
-              {
-                   if((at_rec_state == QAPI_NET_HTTPC_RX_FINISHED))
-                   {
+            while(1) {
+                if (at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) {
+                    if((at_rec_state == QAPI_NET_HTTPC_RX_FINISHED)){
                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
                        QAT_Response_Str(QAT_RC_OK, buffer);
-                   }
-                   else
-                   {
+                    } else {
                         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, HTTP state:%d\r\n",at_rec_state);
                         QAT_Response_Str(QAT_RC_ERROR, buffer);
-                   }
-
-                   //httpc disconn
-                   if(global_conn_enable)
-                   {
-                      result = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-                      if(result != QAPI_OK)
-                      {
-                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
-                        QAT_Response_Str(QAT_RC_ERROR, buffer);
-                      }
-                      global_conn_enable = false;
-                   }
-
-                   //httpc stop
-                   result = at_httpc_stop();
-                   if(result != QAPI_OK)
-                   {
-                     snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
-                     QAT_Response_Str(QAT_RC_ERROR, buffer);
-                   }
-
-                 break;
-              }
-
-              sys_msleep(HTTP_WAIT_RSP_CYCLE_INTERVAL);
-              count++;
-
-              if(count>HTTP_WAIT_RSP_TIME)
-              {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, timeout\r\n");
-                QAT_Response_Str(QAT_RC_ERROR, buffer);
-
-                //httpc disconn
-                if(global_conn_enable)
-                {
-                    result = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-                    if(result != QAPI_OK)
-                    {
-                     snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
-                     QAT_Response_Str(QAT_RC_ERROR, buffer);
                     }
-                    global_conn_enable = false;
+
+                    if (!g_https_cfg.is_keep_alive) {
+                        //httpc disconn
+                        if (global_conn_enable) {
+                            result = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+                            if (result != QAPI_OK) {
+                                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+                                QAT_Response_Str(QAT_RC_ERROR, buffer);
+                            }
+                            global_conn_enable = false;
+                        }
+
+                        //httpc stop
+                        result = at_httpc_stop();
+                        if (result != QAPI_OK) {
+                            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
+                            QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        }
+                    }
+
+                    break;
                 }
 
-                //httpc stop
-                result = at_httpc_stop();
-                if(result != QAPI_OK)
-                {
-                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
-                 QAT_Response_Str(QAT_RC_ERROR, buffer);
-                }
+                sys_msleep(HTTP_WAIT_RSP_CYCLE_INTERVAL);
+                count++;
 
-                break;
-              }
+                if (count>HTTP_WAIT_RSP_TIME) {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, timeout\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+
+                    //httpc disconn
+                    if (global_conn_enable) {
+                        result = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+                        if(result != QAPI_OK){
+                            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+                            QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        }
+                        global_conn_enable = false;
+                    }
+
+                    //httpc stop
+                    result = at_httpc_stop();
+                    if (result != QAPI_OK) {
+                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    }
+
+                    break;
+                }
             }
-            if(global_chunkdata){
+            if (global_chunkdata) {
                 free(global_chunkdata);
                 global_chunkdata = NULL;
             }
-       }
+        }
     }
     return rc;
 }
@@ -1321,141 +1302,150 @@ rlt:
 
 static QAT_Command_Status_t Extend_Command_HttpNetCfg(uint32_t Op_Type, uint32_t Parameter_Count, QAT_Parameter_t *Parameter_List)
 {
-   QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
-   qapi_Status_t result = QAPI_OK;
-   qbool_t  isIntegerValid = false;
-   qbool_t  ip_prefer_set = false;
-   char buffer[HTTP_STR_BUFFER_LENGTH];
+    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+    qapi_Status_t result = QAPI_OK;
+    qbool_t  isIntegerValid = false;
+    qbool_t  ip_prefer_set = false;
+    char buffer[HTTP_STR_BUFFER_LENGTH];
 
-   switch (Op_Type)
-   {
-      case QAT_OP_EXEC:		     /* AT+WRTMEM */
-      {	
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG=<netcfg_type>,<value>\r\n");
-        rc = QAT_Response_Str(QAT_RC_OK, buffer);
-        break;
-      }
+    switch (Op_Type) {
+        case QAT_OP_EXEC: 		     /* AT+WRTMEM */
+        {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG=<netcfg_type>,<value>\r\n");
+            rc = QAT_Response_Str(QAT_RC_OK, buffer);
+            break;
+        }
       
-      case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
-      {
-
-        if(Parameter_Count != 2)
+        case QAT_OP_EXEC_W_PARAM: 	     /* AT+WRTMEM */
         {
-           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid Parameter Count %d\r\n", Parameter_Count);
-           rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-           goto rlt;
-        }
+            if(Parameter_Count != 2) {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid Parameter Count %d\r\n", Parameter_Count);
+                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto rlt;
+            }
         
-        int netcfg_type = Parameter_List[0].Integer_Value;
-        if(!Parameter_List[0].Integer_Is_Valid
-            || netcfg_type < QAT_NET_CFG_HTTP_PORT 
-            || netcfg_type >= QAT_NET_CFG_MAX)
-        {
-           snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid netcfg type value\r\n");
-           rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-           goto rlt;
+            int netcfg_type = Parameter_List[0].Integer_Value;
+            if(!Parameter_List[0].Integer_Is_Valid
+                || netcfg_type < QAT_NET_CFG_HTTP_PORT 
+                || netcfg_type >= QAT_NET_CFG_MAX){
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid netcfg type value\r\n");
+                rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto rlt;
+            }
+
+            switch (netcfg_type) {
+                case QAT_NET_CFG_HTTP_PORT:
+                { 
+                    if(!Parameter_List[1].Integer_Is_Valid)
+                    {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid port value\r\n");
+                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto rlt;
+                    }
+                    g_https_cfg.http_port = Parameter_List[1].Integer_Value;
+
+                    break;
+                }
+                case QAT_NET_CFG_HTTPS_PORT:
+                { 
+                    if(!Parameter_List[1].Integer_Is_Valid)
+                    {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid port value\r\n");
+                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto rlt;
+                    }
+                    g_https_cfg.https_port = Parameter_List[1].Integer_Value;
+                    break;
+                }
+                case QAT_NET_CFG_IP_PREFER:
+                { 
+                    if(!Parameter_List[1].Integer_Is_Valid 
+                        || Parameter_List[1].Integer_Value < IP_V4 
+                        ||Parameter_List[1].Integer_Value > IP_V6)
+                    {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid prefer IP value\r\n");
+                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto rlt;
+                    }
+                    g_https_cfg.httpc_ip_prefer = Parameter_List[1].Integer_Value;
+                    break;
+                }
+                case QAT_NET_CFG_PRE_ACCLOCATE_SSL_BUFFER:
+                { 
+                    if(!Parameter_List[1].Integer_Is_Valid 
+                        || Parameter_List[1].Integer_Value < QAT_SSL_PRE_BUFFER_ALLOCATE 
+                        ||Parameter_List[1].Integer_Value > QAT_SSL_PRE_BUFFER_RELEASE)
+                    {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid pre allocate ssl buf value\r\n");
+                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto rlt;
+                    }
+                    g_https_cfg.is_pre_buffer = Parameter_List[1].Integer_Value;
+                    if(g_https_cfg.is_pre_buffer == QAT_SSL_PRE_BUFFER_RELEASE)
+                    {
+                        result =  qapi_Net_HTTPc_Rlease_Pre_allocate_buffer();
+                        if(result != QAPI_OK)
+                        {
+                            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG release ssl buf failed\r\n");
+                            rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                            goto rlt;
+                        }
+                    }
+                    break;
+                }
+                case QAT_NET_CFG_CACHE_DATA:
+                {
+                    if(!Parameter_List[1].Integer_Is_Valid 
+                        || Parameter_List[1].Integer_Value < QAT_NOT_CACHE_DATA 
+                        ||Parameter_List[1].Integer_Value > QAT_CACHE_DATA)
+                    {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid cache data value\r\n");
+                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto rlt;
+                    }
+
+                    g_https_cfg.is_cache_data = Parameter_List[1].Integer_Value;
+                    break;
+                }
+                case QAT_NET_CFG_SESSION_KEEP_ALIVE:
+                {
+                    if(!Parameter_List[1].Integer_Is_Valid 
+                        || Parameter_List[1].Integer_Value < QAT_NOT_KEEP_ALIVE 
+                        ||Parameter_List[1].Integer_Value > QAT_KEEP_ALIVE)
+                    {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid keep alive value\r\n");
+                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    goto rlt;
+                    }
+
+                    g_https_cfg.is_keep_alive = Parameter_List[1].Integer_Value;
+                    break;
+                }
+
+                default:
+                ;
+            }
+
+            QAT_Response_Str(QAT_RC_OK, NULL);
+            
+            break;
         }
 
-        switch (netcfg_type)
+        case QAT_OP_QUERY:
         {
-          case QAT_NET_CFG_HTTP_PORT:
-          { 
-            if(!Parameter_List[1].Integer_Is_Valid)
-            {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid port value\r\n");
-               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-               goto rlt;
-            }
-            g_https_cfg.http_port = Parameter_List[1].Integer_Value;
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH,"+HTTPNETCFG:http port:%d, https port:%d, ip prefer:%d, ssl pre allocate buffer:%d, data cache:%d, keep alive:%d\r\n", 
+            g_https_cfg.http_port,g_https_cfg.https_port,g_https_cfg.httpc_ip_prefer,g_https_cfg.is_pre_buffer,g_https_cfg.is_cache_data,g_https_cfg.is_keep_alive);
 
+            rc = QAT_Response_Str(QAT_RC_OK, buffer);
             break;
-          }
-          case QAT_NET_CFG_HTTPS_PORT:
-          { 
-            if(!Parameter_List[1].Integer_Is_Valid)
-            {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid port value\r\n");
-               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-               goto rlt;
-            }
-            g_https_cfg.https_port = Parameter_List[1].Integer_Value;
-            break;
-          }
-          case QAT_NET_CFG_IP_PREFER:
-          { 
-            if(!Parameter_List[1].Integer_Is_Valid 
-                || Parameter_List[1].Integer_Value < IP_V4 
-                ||Parameter_List[1].Integer_Value > IP_V6)
-            {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid prefer IP value\r\n");
-               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-               goto rlt;
-            }
-            g_https_cfg.httpc_ip_prefer = Parameter_List[1].Integer_Value;
-            break;
-          }
-          case QAT_NET_CFG_PRE_ACCLOCATE_SSL_BUFFER:
-          { 
-            if(!Parameter_List[1].Integer_Is_Valid 
-                || Parameter_List[1].Integer_Value < QAT_SSL_PRE_BUFFER_ALLOCATE 
-                ||Parameter_List[1].Integer_Value > QAT_SSL_PRE_BUFFER_RELEASE)
-            {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid pre allocate ssl buf value\r\n");
-               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-               goto rlt;
-            }
-            g_https_cfg.is_pre_buffer = Parameter_List[1].Integer_Value;
-            if(g_https_cfg.is_pre_buffer == QAT_SSL_PRE_BUFFER_RELEASE)
-            {
-                  result =  qapi_Net_HTTPc_Rlease_Pre_allocate_buffer();
-                  if(result != QAPI_OK)
-                  {
-                       snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG release ssl buf failed\r\n");
-                       rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-                       goto rlt;
-                  }
-            }
-            break;
-          }
-          case QAT_NET_CFG_CACHE_DATA:
-          {
-            if(!Parameter_List[1].Integer_Is_Valid 
-                || Parameter_List[1].Integer_Value < QAT_NOT_CACHE_DATA 
-                ||Parameter_List[1].Integer_Value > QAT_CACHE_DATA)
-            {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPNETCFG Invalid cache data value\r\n");
-               rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-               goto rlt;
-            }
-
-            g_https_cfg.is_cache_data = Parameter_List[1].Integer_Value;
-            break;
-          }
-
-          default:
-           ;
         }
-
-        QAT_Response_Str(QAT_RC_OK, NULL);
-        
-        break;
-      }
-
-      case QAT_OP_QUERY:
-      {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH,"+HTTPNETCFG:http port:%d, https port:%d, ip prefer:%d, ssl pre allocate buffer:%d, data cache:%d\r\n", 
-        g_https_cfg.http_port,g_https_cfg.https_port,g_https_cfg.httpc_ip_prefer,g_https_cfg.is_pre_buffer,g_https_cfg.is_cache_data);
-
-        rc = QAT_Response_Str(QAT_RC_OK, buffer);
-        break;
-      }
       
-      default:
+        default:
          ;
-   }
+    }
 rlt:
-   memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
-   return rc;
+    memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
+    return rc;
 }
 
 /**
@@ -1629,6 +1619,7 @@ void Initialize_QAT_HttpC_Demo (void)
     g_https_cfg.httpc_ip_prefer = HTTPC_DEFAULT_IP_PREFER;
     g_https_cfg.is_pre_buffer = QAT_SSL_PRE_BUFFER_INITIAL;
     g_https_cfg.is_cache_data = HTTPC_DEFAULT_CACHE_DATA;
+    g_https_cfg.is_keep_alive = HTTPC_DEFAULT_KEEP_ALIVE;
 }
 
 qapi_Status_t at_httpc_start ()
@@ -3142,63 +3133,60 @@ endpiont:
    return rlt;
 }
 
+qbool_t conn_enable = FALSE;
 qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
 {
     qapi_Status_t rlt = QAPI_OK;
     char buffer[HTTP_STR_BUFFER_LENGTH]= {0};
     char path_url[HTTP_URL_STR_BUFFER_LENGTH]= {0};
     uint16 count = 0;
-    qbool_t conn_enable = FALSE;
 
+    if ((g_https_cfg.is_keep_alive && conn_enable) == 0) {
     //httpc stop
-    rlt = at_httpc_stop();
-    if(rlt != QAPI_OK)
-    {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
-        QAT_Response_Str(QAT_RC_ERROR, buffer);
-        goto endpiont;
+        rlt = at_httpc_stop();
+        if (rlt != QAPI_OK) {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
+            goto endpiont;
+        }
+
+        //httpc start
+        rlt = at_httpc_start();
+        if (rlt != QAPI_OK) {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client start fail\r\n");
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
+            goto endpiont;
+        }
+
+        //httpc new session
+        rlt = at_httpc_new_session(url,TIMEOUT_MS);
+        if (rlt != QAPI_OK) {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session setup fail\r\n");
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
+            goto endpiont;
+        }
+
+        //httpc conn
+        rlt = at_httpc_conn(url);
+        if (rlt != QAPI_OK) {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: connection fail\r\n");
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
+            goto endpiont;
+        }
+        conn_enable = TRUE;
     }
 
-    //httpc start
-    rlt = at_httpc_start();
-    if(rlt != QAPI_OK)
-    {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client start fail\r\n");
-        QAT_Response_Str(QAT_RC_ERROR, buffer);
-        goto endpiont;
-    }
+    at_rec_state = QAPI_NET_HTTPC_RX_MORE_DATA;
 
-    //httpc new session
-     rlt = at_httpc_new_session(url,TIMEOUT_MS);
-    if(rlt != QAPI_OK)
-    {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session setup fail\r\n");
-        QAT_Response_Str(QAT_RC_ERROR, buffer);
-        goto endpiont;
-    }
-
-    //httpc conn
-    rlt = at_httpc_conn(url);
-    if(rlt != QAPI_OK)
-    {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: connection fail\r\n");
-        QAT_Response_Str(QAT_RC_ERROR, buffer);
-        goto endpiont;
-    }
-    conn_enable = TRUE;
-
-    if(g_https_cfg.header_field_num > 0)
-    {
-       for(uint8_t i=0; i < g_https_cfg.header_field_num; i++)
-       {
+    if (g_https_cfg.header_field_num > 0) {
+        for (uint8_t i=0; i < g_https_cfg.header_field_num; i++) {
            rlt = at_httpc_addheaderfield(i);
-           if(rlt != QAPI_OK)
-           {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: add headerfield fail, index:%d\r\n",i);
-               QAT_Response_Str(QAT_RC_ERROR, buffer);
-               goto endpiont;
-           }
-       }
+           if (rlt != QAPI_OK) {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: add headerfield fail, index:%d\r\n",i);
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+                goto endpiont;
+            }
+        }
     }
 
     //Construct client request Command
@@ -3217,7 +3205,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
     Parameter_List[Parameter_Count].Integer_Value = QAT_HTTPC_CLIENT_INDEX;
     Parameter_Count++;
 
-    if(!getpathURL(url,path_url))
+    if (!getpathURL(url,path_url))
     {
         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: get object url fail\r\n");
         QAT_Response_Str(QAT_RC_ERROR, buffer);
@@ -3232,26 +3220,20 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
 
 
     
-    if(data_len <= QAT_MAX_CHUNK_SIZE)
-    {
+    if (data_len <= QAT_MAX_CHUNK_SIZE) {
         rlt = at_httpc_setbodydata(data, data_len);
         
-        if(rlt == QAPI_OK)
-        {
+        if (rlt == QAPI_OK) {
             rlt = httpc_command_handler(Parameter_Count,Parameter_List);
-            if(rlt != QAPI_OK)
-            {
+            if (rlt != QAPI_OK) {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: handle client request fail\r\n");
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
                 goto endpiont;
             }
         }
-    }
-    else  //if data len > QAT_MAX_CHUNK_SIZE, need use chunk
-    {
+    } else {  //if data len > QAT_MAX_CHUNK_SIZE, need use chunk
         char * chunkdata = malloc(QAT_MAX_CHUNK_SIZE+1);
-        if(chunkdata == NULL)
-        {
+        if (chunkdata == NULL) {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: malloc memory fail\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
             rlt == QAPI_ERR_NO_MEMORY;
@@ -3263,28 +3245,22 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
         uint16_t sendatalen = 0;
         uint16_t chunkflag = 0;
         Parameter_Count +=3;
-        for(uint16_t count = 0; count < sendnum; count++)
-        {
-            if(count == sendnum-1)
-            {
+        for (uint16_t count = 0; count < sendnum; count++) {
+            if (count == sendnum-1) {
                 sendatalen = data_len -QAT_MAX_CHUNK_SIZE*count;
                 memcpy(chunkdata, senddata, sendatalen);
                 chunkdata[sendatalen] = '\0';
-            }
-            else
-            {
+            } else {
                 sendatalen = QAT_MAX_CHUNK_SIZE;
                 memcpy(chunkdata, senddata, sendatalen);
                 chunkdata[QAT_MAX_CHUNK_SIZE] = '\0';
             }
 
             rlt = at_httpc_setbodydata(chunkdata, sendatalen);
-            if(rlt == QAPI_OK)
-            {
-                if(count == 0){
+            if (rlt == QAPI_OK) {
+                if (count == 0) {
                     chunkflag = 129;
-                }
-                else{
+                } else {
                     chunkflag = 128;
                 }
                 Parameter_List[Parameter_Count-3].Integer_Is_Valid =true;
@@ -3297,8 +3273,7 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
                 Parameter_List[Parameter_Count-1].Integer_Value = data_len;
                 
                 rlt = httpc_command_handler(Parameter_Count,Parameter_List);
-                if(rlt != QAPI_OK)
-                {
+                if (rlt != QAPI_OK) {
                     snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: handle client request fail\r\n");
                     QAT_Response_Str(QAT_RC_ERROR, buffer);
                     goto endpiont;
@@ -3307,11 +3282,10 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
 
             senddata += sendatalen;
             sys_msleep(QAT_CHUNK_INTERVAL);
-            if(at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED)
-            {
-                if(chunkdata){
-                  free(chunkdata);
-                 }
+            if (at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) {
+                if (chunkdata) {
+                    free(chunkdata);
+                }
                 goto endpiont;
             }
         }
@@ -3329,13 +3303,12 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
 
         
         rlt = httpc_command_handler(Parameter_Count,Parameter_List);
-        if(rlt != QAPI_OK)
-        {
+        if (rlt != QAPI_OK) {
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: handle client request fail\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
         }
         
-        if(chunkdata){
+        if (chunkdata) {
             free(chunkdata);
         }
     }
@@ -3343,83 +3316,70 @@ qapi_Status_t at_httpc_post (char *url, int32_t data_len,char *data)
 
 endpiont:
 
-   while(1)
-   {
-      if((at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) || (rlt != QAPI_OK))
-      {
-           if((at_rec_state == QAPI_NET_HTTPC_RX_FINISHED))
-           {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
-               QAT_Response_Str(QAT_RC_OK, buffer);
-           }
-           else if(at_rec_state < QAPI_NET_HTTPC_RX_FINISHED)
-           {
+    while(1) {
+        if ((at_rec_state <= QAPI_NET_HTTPC_RX_FINISHED) || (rlt != QAPI_OK)) {
+            if ((at_rec_state == QAPI_NET_HTTPC_RX_FINISHED)) {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND OK, Resp_code: %d\r\n",at_rec_error_code);
+                QAT_Response_Str(QAT_RC_OK, buffer);
+            } else if(at_rec_state < QAPI_NET_HTTPC_RX_FINISHED) {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, error_code:%d\r\n",at_rec_state);
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
-           }
-           else
-           {
-               snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, error_code:%d\r\n",rlt);
-               QAT_Response_Str(QAT_RC_ERROR, buffer);
-           }
-
-
-           //httpc disconn
-           if(conn_enable)
-           {
-              rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-              if(rlt != QAPI_OK)
-              {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+            } else {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, error_code:%d\r\n",rlt);
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
-              }
-           }
-           
-           //httpc stop
-           rlt = at_httpc_stop();
-           if(rlt != QAPI_OK)
-           {
-             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
-             QAT_Response_Str(QAT_RC_ERROR, buffer);
-           }
-
-         break;
-      }
-
-      sys_msleep(HTTP_WAIT_RSP_CYCLE_INTERVAL);
-      count++;
-
-      if(count>HTTP_WAIT_RSP_TIME)
-      {
-        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, timeout\r\n");
-        QAT_Response_Str(QAT_RC_ERROR, buffer);
-
-        //httpc disconn
-        if(conn_enable)
-        {
-            rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
-            if(rlt != QAPI_OK)
-            {
-             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
-             QAT_Response_Str(QAT_RC_ERROR, buffer);
             }
-        }
-        
-        //httpc stop
-        rlt = at_httpc_stop();
-        if(rlt != QAPI_OK)
-        {
-         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
-         QAT_Response_Str(QAT_RC_ERROR, buffer);
-        }
-        
-        break;
-      }
-      
-   }
 
-   memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
-   return rlt;
+            if (!g_https_cfg.is_keep_alive) {
+                //httpc disconn
+                if (conn_enable) {
+                    rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+                    if (rlt != QAPI_OK) {
+                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    }
+                }
+                
+                //httpc stop
+                rlt = at_httpc_stop();
+                if (rlt != QAPI_OK) {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                }
+            }
+
+            break;
+        }
+
+        sys_msleep(HTTP_WAIT_RSP_CYCLE_INTERVAL);
+        count++;
+
+        if (count>HTTP_WAIT_RSP_TIME) {
+            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, timeout\r\n");
+            QAT_Response_Str(QAT_RC_ERROR, buffer);
+
+            //httpc disconn
+            if (conn_enable) {
+                rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+                if (rlt != QAPI_OK) {
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+                    QAT_Response_Str(QAT_RC_ERROR, buffer);
+                }
+            }
+        
+            //httpc stop
+            rlt = at_httpc_stop();
+            if (rlt != QAPI_OK) {
+                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
+                QAT_Response_Str(QAT_RC_ERROR, buffer);
+            }
+            
+            break;
+        }
+      
+    }
+
+    memset((void*)buffer, 0, HTTP_STR_BUFFER_LENGTH);
+    return rlt;
 }
 qapi_Status_t at_httpc_post2 (char *url, int32_t data_len,char *data,int32_t numb,qbool_t finish)
 {
