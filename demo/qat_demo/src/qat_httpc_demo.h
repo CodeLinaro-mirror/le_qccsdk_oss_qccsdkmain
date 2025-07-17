@@ -34,6 +34,7 @@
 #define HTTP_DEFAULT_PORT                             80
 #define HTTPC_DEFAULT_IP_PREFER                       0   //0:ipv4, 1:ipv6
 #define HTTPC_DEFAULT_CACHE_DATA                      QAT_CACHE_DATA
+#define HTTPC_DEFAULT_KEEP_ALIVE                      QAT_NOT_KEEP_ALIVE
 //#define HTTPC_NOT_CACHE_DATA_THRESHOLD                10//2000
 #define QAT_HTTPC_MAX_HEADER_FIELD                    10
 #define QAT_MAX_CHUNK_SIZE                            1000
@@ -63,6 +64,7 @@ struct at_https_global_config {
     uint8_t is_cache_data;
     uint32_t url_size;
     char *url;
+    uint8_t is_keep_alive;
 
     //temporary resource for one at cmd opertaion
     char *temp_url;
@@ -112,6 +114,7 @@ typedef enum {
 	QAT_NET_CFG_IP_PREFER,
 	QAT_NET_CFG_PRE_ACCLOCATE_SSL_BUFFER,
 	QAT_NET_CFG_CACHE_DATA,
+    QAT_NET_CFG_SESSION_KEEP_ALIVE,
 	QAT_NET_CFG_MAX
 } net_cfg_type;
 
@@ -130,6 +133,11 @@ typedef enum{
     QAT_NOT_CACHE_DATA,
     QAT_CACHE_DATA
 }cache_data_type;
+
+typedef enum{
+    QAT_NOT_KEEP_ALIVE,
+    QAT_KEEP_ALIVE
+}keep_alive_type;
 
 
 /*-------------------------------------------------------------------------
