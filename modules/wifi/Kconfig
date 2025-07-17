@@ -24,20 +24,5 @@ config QCSPI_HFC_ATCMD_ENABLE
         bool "Enable AT command over QCSPI. if AT Command over QCSPI is not needed , please default to n"
         default n
 
-config WATCH_DOG_ENABLE
-	bool "Watch Dog function. Please default to n"
-	default n
-
-config WATCH_DOG_BARK_TIME
-	int "When this timer timeout, it will trigger the bark interrupt, in unit of seconds. Make sure to be smaller than bite timer."
-	depends on WATCH_DOG_ENABLE
-	default 4
-
-config WATCH_DOG_BITE_TIME
-	int "When this timer timeout, it will trigger the reset, in unit of seconds.  Make sure to be bigger than bark timer."
-	depends on WATCH_DOG_ENABLE
-	default 5
-
-
 endmenu
 endmenu
