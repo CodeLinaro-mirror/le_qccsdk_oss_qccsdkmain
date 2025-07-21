@@ -18,26 +18,24 @@
 //#include <platform/CHIPDeviceLayer.h>
 #include <lib/core/CHIPError.h>
 
-class AppTask
-{
-
+class AppTask {
 public:
     CHIP_ERROR StartAppTask();
-    static void AppTaskMain(void * pvParameter);
+    static void AppTaskMain(void *pvParameter);
 
-    void PostEvent(const AppEvent * event);
+    void PostEvent(const AppEvent *event);
 
 private:
-    friend AppTask & GetAppTask(void);
+    friend AppTask &GetAppTask(void);
 
     CHIP_ERROR Init();
 
-    void DispatchEvent(AppEvent * event);
+    void DispatchEvent(AppEvent *event);
 
     static AppTask sAppTask;
 };
 
-inline AppTask & GetAppTask(void)
+inline AppTask &GetAppTask(void)
 {
     return AppTask::sAppTask;
 }

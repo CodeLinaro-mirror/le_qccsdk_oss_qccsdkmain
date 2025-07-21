@@ -15,66 +15,69 @@
 #include <queue>
 
 namespace chip {
-namespace DeviceLayer {
+    namespace DeviceLayer {
 
-/**
- * Concrete implementation of the PlatformManager singleton object for qca platforms.
- */
-class PlatformManagerImpl final : public PlatformManager, public Internal::GenericPlatformManagerImpl_FreeRTOS<PlatformManagerImpl>
-{
-    // Allow the PlatformManager interface class to delegate method calls to
-    // the implementation methods provided by this class.
-    friend PlatformManager;
+        /**
+         * Concrete implementation of the PlatformManager singleton object for qca platforms.
+         */
+        class PlatformManagerImpl final : public PlatformManager,
+                                          public Internal::GenericPlatformManagerImpl_FreeRTOS<PlatformManagerImpl> {
+            // Allow the PlatformManager interface class to delegate method calls to
+            // the implementation methods provided by this class.
+            friend PlatformManager;
 
-    // Allow the generic implementation base class to call helper methods on
-    // this class.
+            // Allow the generic implementation base class to call helper methods on
+            // this class.
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-    friend Internal::GenericPlatformManagerImpl_FreeRTOS<PlatformManagerImpl>;
+            friend Internal::GenericPlatformManagerImpl_FreeRTOS<PlatformManagerImpl>;
 #endif
 
-public:
-    // ===== Platform-specific members that may be accessed directly by the application.
-    
-    System::Clock::Timestamp GetStartTime() { return mStartTime; }
+        public:
+            // ===== Platform-specific members that may be accessed directly by the application.
 
-private:
-    // ===== Methods that implement the PlatformManager abstract interface.
+            System::Clock::Timestamp GetStartTime()
+            {
+                return mStartTime;
+            }
 
-    CHIP_ERROR _InitChipStack(void); 
-    void _Shutdown(void); 
+        private:
+            // ===== Methods that implement the PlatformManager abstract interface.
 
-    // ===== Members for internal use by the following friends.
+            CHIP_ERROR _InitChipStack(void);
+            void _Shutdown(void);
 
-    friend PlatformManager & PlatformMgr();
-    friend PlatformManagerImpl & PlatformMgrImpl();
-    //friend class Internal::BLEManagerImpl;
+            // ===== Members for internal use by the following friends.
 
-    System::Clock::Timestamp mStartTime = System::Clock::kZero;
+            friend PlatformManager &PlatformMgr();
+            friend PlatformManagerImpl &PlatformMgrImpl();
+            // friend class Internal::BLEManagerImpl;
 
-    static PlatformManagerImpl sInstance;
-};
+            System::Clock::Timestamp mStartTime = System::Clock::kZero;
 
-/**
- * Returns the public interface of the PlatformManager singleton object.
- *
- * chip applications should use this to access features of the PlatformManager object
- * that are common to all platforms.
- */
-inline PlatformManager & PlatformMgr()
-{
-    return PlatformManagerImpl::sInstance;
-}
+            static PlatformManagerImpl sInstance;
+        };
 
-/**
- * Returns the platform-specific implementation of the PlatformManager singleton object.
- *
- * chip applications can use this to gain access to features of the PlatformManager
- * that are specific to the ESP32 platform.
- */
-inline PlatformManagerImpl & PlatformMgrImpl()
-{
-    return PlatformManagerImpl::sInstance;
-}
+        /**
+         * Returns the public interface of the PlatformManager singleton object.
+         *
+         * chip applications should use this to access features of the PlatformManager object
+         * that are common to all platforms.
+         */
+        inline PlatformManager &PlatformMgr()
+        {
+            return PlatformManagerImpl::sInstance;
+        }
 
-} // namespace DeviceLayer
-} // namespace chip
+        /**
+         * Returns the platform-specific implementation of the PlatformManager singleton object.
+         *
+         * chip applications can use this to gain access to features of the PlatformManager
+         * that are specific to the ESP32 platform.
+         */
+        inline PlatformManagerImpl &PlatformMgrImpl()
+        {
+            return PlatformManagerImpl::sInstance;
+        }
+
+    }  // namespace DeviceLayer
+}  // namespace chip

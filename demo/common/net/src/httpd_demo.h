@@ -11,7 +11,7 @@
 #include "qat_api.h"
 
 #ifndef min
-#define  min(a,b)    (((a) <= (b)) ? (a) : (b))
+#define min(a, b) (((a) <= (b)) ? (a) : (b))
 #endif
 
 qapi_Status_t httpd_command_handler(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);

@@ -38,11 +38,11 @@
 
 /* Logging configuration for the Demo. */
 #ifndef LIBRARY_LOG_NAME
-    #define LIBRARY_LOG_NAME    "DEMO"
+#define LIBRARY_LOG_NAME "DEMO"
 #endif
 
 #ifndef LIBRARY_LOG_LEVEL
-    #define LIBRARY_LOG_LEVEL    LOG_INFO
+#define LIBRARY_LOG_LEVEL LOG_INFO
 #endif
 #include "logging_stack.h"
 
@@ -61,14 +61,14 @@
  * #define BROKER_ENDPOINT               "...insert here..."
  */
 
-#define BROKER_ENDPOINT               "192.168.0.122"
+#define BROKER_ENDPOINT "192.168.0.122"
 
 /**
  * @brief MQTT server port number.
  *
  * In general, port 1883 is for unsecured MQTT connections.
  */
-#define BROKER_PORT    ( 1883 )
+#define BROKER_PORT (1883)
 
 /**
  * @brief MQTT client identifier.
@@ -76,7 +76,7 @@
  * No two clients may use the same client identifier simultaneously.
  */
 #ifndef CLIENT_IDENTIFIER
-    #define CLIENT_IDENTIFIER    "testclient"
+#define CLIENT_IDENTIFIER "testclient"
 #endif
 
 #endif /* ifndef DEMO_CONFIG_H */

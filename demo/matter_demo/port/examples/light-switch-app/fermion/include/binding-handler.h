@@ -13,8 +13,7 @@ CHIP_ERROR InitBindingHandler();
 void SwitchWorkerFunction(intptr_t context);
 void BindingWorkerFunction(intptr_t context);
 
-struct BindingCommandData
-{
+struct BindingCommandData {
     chip::EndpointId localEndpointId = 1;
     chip::CommandId commandId;
     chip::ClusterId clusterId;

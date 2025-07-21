@@ -1,8 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
- 
+ */
 
 #ifndef __I2C_DEMO_H__
 #define __I2C_DEMO_H__
@@ -19,7 +18,8 @@
    QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR  - Open error.
    QAPI_OK - Open successfully.
 */
-qapi_Status_t cmd_I2CM_Open(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List);
+qapi_Status_t cmd_I2CM_Open(uint32_t __attribute__((__unused__)) Parameter_Count,
+                            QAPI_Console_Parameter_t __attribute__((__unused__)) * Parameter_List);
 
 /**
    @brief Perform an I2C Master transfer.
@@ -38,7 +38,8 @@ qapi_Status_t cmd_I2CM_Open(uint32_t __attribute__((__unused__)) Parameter_Count
    QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR  - Transfer error.
    QAPI_OK - Transfer successfully.
 */
-qapi_Status_t cmd_I2CM_Transfer(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List);
+qapi_Status_t cmd_I2CM_Transfer(uint32_t __attribute__((__unused__)) Parameter_Count,
+                                QAPI_Console_Parameter_t __attribute__((__unused__)) * Parameter_List);
 
 /**
    @brief Cancel I2C Master Transfer.
@@ -50,7 +51,8 @@ qapi_Status_t cmd_I2CM_Transfer(uint32_t __attribute__((__unused__)) Parameter_C
    QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR  - Cancel error.
    QAPI_OK - Cancel successfully.
 */
-qapi_Status_t cmd_I2CM_Cancel(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List);
+qapi_Status_t cmd_I2CM_Cancel(uint32_t __attribute__((__unused__)) Parameter_Count,
+                              QAPI_Console_Parameter_t __attribute__((__unused__)) * Parameter_List);
 
 /**
    @brief Close I2C Master Instance.
@@ -62,5 +64,6 @@ qapi_Status_t cmd_I2CM_Cancel(uint32_t __attribute__((__unused__)) Parameter_Cou
    QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR  - Close error.
    QAPI_OK - Close successfully.
 */
-qapi_Status_t cmd_I2CM_Close(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List);
+qapi_Status_t cmd_I2CM_Close(uint32_t __attribute__((__unused__)) Parameter_Count,
+                             QAPI_Console_Parameter_t __attribute__((__unused__)) * Parameter_List);
 #endif

@@ -38,11 +38,11 @@
 
 /* Logging configuration for the MQTT library. */
 #ifndef LIBRARY_LOG_NAME
-    #define LIBRARY_LOG_NAME    "MQTT"
+#define LIBRARY_LOG_NAME "MQTT"
 #endif
 
 #ifndef LIBRARY_LOG_LEVEL
-    #define LIBRARY_LOG_LEVEL    LOG_INFO
+#define LIBRARY_LOG_LEVEL LOG_INFO
 #endif
 
 #include "logging_stack.h"
@@ -65,7 +65,7 @@
  * and incoming PUBLISHes, and thus, 2 * MQTT_STATE_ARRAY_MAX_COUNT amount
  * of memory is statically allocated for the state records.
  */
-#define MQTT_STATE_ARRAY_MAX_COUNT    10U
+#define MQTT_STATE_ARRAY_MAX_COUNT 10U
 
 /**
  * @brief Number of milliseconds to wait for a ping response to a ping
@@ -74,6 +74,6 @@
  * If a ping response is not received before this timeout, then
  * #MQTT_ProcessLoop will return #MQTTKeepAliveTimeout.
  */
-#define MQTT_PINGRESP_TIMEOUT_MS      500U
+#define MQTT_PINGRESP_TIMEOUT_MS 500U
 
 #endif /* ifndef CORE_MQTT_CONFIG_H_ */

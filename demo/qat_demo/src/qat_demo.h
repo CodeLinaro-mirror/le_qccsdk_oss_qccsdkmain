@@ -16,7 +16,7 @@ void Initialize_QAT_TCPIP_Demo(void);
 
 void Initialize_QAT_Wlan_Demo(void);
 
-void Initialize_QAT_Http_Server_Demo (void);
+void Initialize_QAT_Http_Server_Demo(void);
 
 void Initialize_QAT_HttpC_Demo(void);
 

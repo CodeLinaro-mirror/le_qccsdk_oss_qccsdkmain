@@ -38,11 +38,11 @@
 
 /* Logging configuration for the Demo. */
 #ifndef LIBRARY_LOG_NAME
-    #define LIBRARY_LOG_NAME    "DEMO"
+#define LIBRARY_LOG_NAME "DEMO"
 #endif
 
 #ifndef LIBRARY_LOG_LEVEL
-    #define LIBRARY_LOG_LEVEL    LOG_INFO
+#define LIBRARY_LOG_LEVEL LOG_INFO
 #endif
 #include "logging_stack.h"
 
@@ -61,13 +61,13 @@
  * #define BROKER_ENDPOINT               "...insert here..."
  */
 
-#define BROKER_ENDPOINT               "192.168.0.122"
+#define BROKER_ENDPOINT "192.168.0.122"
 /**
  * @brief MQTT server port number.
  *
  * In general, port 8883 is for secured MQTT connections.
  */
-#define BROKER_PORT    ( 8883 )
+#define BROKER_PORT (8883)
 
 /**
  * @brief Path of the file containing the server's root CA certificate.
@@ -77,7 +77,7 @@
  * #define ROOT_CA_CERT_PATH         ".....insert here...."
  */
 
-#define ROOT_CA_CERT_PATH         "/lfs/ca.crt"
+#define ROOT_CA_CERT_PATH "/lfs/ca.crt"
 
 /**
  * @brief MQTT client identifier.
@@ -85,7 +85,7 @@
  * No two clients may use the same client identifier simultaneously.
  */
 #ifndef CLIENT_IDENTIFIER
-    #define CLIENT_IDENTIFIER    "testclient"
+#define CLIENT_IDENTIFIER "testclient"
 #endif
 
 #endif /* ifndef DEMO_CONFIG_H */

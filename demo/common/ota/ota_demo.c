@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #include <stdlib.h>
 #include "string.h"
@@ -21,8 +21,8 @@
 /**********************************************************************************************************/
 /* Preprocessor Definitions and Constants											                      */
 /**********************************************************************************************************/
-#define FW_UPGRADE_PRINTF_HANDLE  qcli_fw_upgrade_group
-#define UNUSED(x)                 (void)(x)
+#define FW_UPGRADE_PRINTF_HANDLE qcli_fw_upgrade_group
+#define UNUSED(x)                (void)(x)
 
 /**********************************************************************************************************/
 /* Type Declarations											                                          */
@@ -37,7 +37,7 @@ typedef struct {
 /**********************************************************************************************************/
 /* Globals											                                                      */
 /**********************************************************************************************************/
-QAPI_Console_Group_Handle_t qcli_fw_upgrade_group;              /* Handle for our QCLI Command Group. */
+QAPI_Console_Group_Handle_t qcli_fw_upgrade_group; /* Handle for our QCLI Command Group. */
 fw_upgrade_params_t *upgrade_params = NULL;
 TaskHandle_t fw_upgrade_task_handle = NULL;
 TaskHandle_t fw_upgrade_resume_task_handle = NULL;
@@ -52,27 +52,27 @@ static qapi_Status_t Command_Display_ActiveImage(uint32_t Parameter_Count, QAPI_
 static qapi_Status_t Command_Fw_Upgrade_Cancel(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 static qapi_Status_t Command_Fw_Upgrade_Suspend(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 static qapi_Status_t Command_Fw_Upgrade_Resume(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
-static qapi_Status_t Command_Fw_Upgrade_TFTP_Upgrade(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
+static qapi_Status_t Command_Fw_Upgrade_TFTP_Upgrade(uint32_t Parameter_Count,
+                                                     QAPI_Console_Parameter_t *Parameter_List);
 static qapi_Status_t Command_Fw_Set_Image_Size(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 
 /* The following is the complete command list for the Firmware Upgrade demo. */
-const QAPI_Console_Command_t Fw_Upgrade_Command_List[] =
-{
+const QAPI_Console_Command_t Fw_Upgrade_Command_List[] = {
     /* cmd_function                     cmd_string usage_string                    description */
-    {Command_Display_FWD,               "fwd",     "",                             "Display FWD"},
-    {Command_Delete_FWD,                "del",     "[fwd]",                        "Erase FWD"},
-    {Command_Done_Trial,                "trial",   "[1|0] [reboot flag]",          "Accept/Reject Trial FWD"},
-    {Command_Display_ActiveImage,       "img",     "[id]",                         "Display Active FWD Image Info"},
-    {Command_Fw_Upgrade_TFTP_Upgrade,   "tftp",    "[if] [server] [file] [flag]",  "tftp [if_name] [tftp_server] [fw filename] [flag]\r\n"},
-    {Command_Fw_Upgrade_Cancel,         "cancel",  "",                             "cancel fw upgrade\r\n"},
-    {Command_Fw_Upgrade_Suspend,        "suspend", "",                             "suspend fw upgrade\r\n"},
-    {Command_Fw_Upgrade_Resume,         "resume",  "",                             "resume fw upgrade\r\n"},
-    {Command_Fw_Set_Image_Size,         "setsize", "[fwd] [id] [size]",            "set image size\r\n"},
+    {Command_Display_FWD, "fwd", "", "Display FWD"},
+    {Command_Delete_FWD, "del", "[fwd]", "Erase FWD"},
+    {Command_Done_Trial, "trial", "[1|0] [reboot flag]", "Accept/Reject Trial FWD"},
+    {Command_Display_ActiveImage, "img", "[id]", "Display Active FWD Image Info"},
+    {Command_Fw_Upgrade_TFTP_Upgrade, "tftp", "[if] [server] [file] [flag]",
+     "tftp [if_name] [tftp_server] [fw filename] [flag]\r\n"},
+    {Command_Fw_Upgrade_Cancel, "cancel", "", "cancel fw upgrade\r\n"},
+    {Command_Fw_Upgrade_Suspend, "suspend", "", "suspend fw upgrade\r\n"},
+    {Command_Fw_Upgrade_Resume, "resume", "", "resume fw upgrade\r\n"},
+    {Command_Fw_Set_Image_Size, "setsize", "[fwd] [id] [size]", "set image size\r\n"},
 };
 
-const QAPI_Console_Command_Group_t Fw_Upgrade_Command_Group =
-{
-    "FwUp",  /* Firmware Upgrade */
+const QAPI_Console_Command_Group_t Fw_Upgrade_Command_Group = {
+    "FwUp", /* Firmware Upgrade */
     sizeof(Fw_Upgrade_Command_List) / sizeof(QAPI_Console_Command_t),
     Fw_Upgrade_Command_List,
 };
@@ -124,9 +124,13 @@ static qapi_Status_t Command_Display_FWD(uint32_t Parameter_Count, QAPI_Console_
         return QAPI_ERROR;
     }
 
-    //get active FWD
+    // get active FWD
     Index = qapi_Fw_Upgrade_Get_Active_FWD(&boot_type, &fwd_present);
-    QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Active FWD: %s  index:%d, present:%d\r\n", (boot_type==QAPI_FW_UPGRADE_FWD_BOOT_TYPE_TRIAL)?"Trial":(boot_type==QAPI_FW_UPGRADE_FWD_BOOT_TYPE_CURRENT)?"Current":"Golden",Index,fwd_present);
+    QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Active FWD: %s  index:%d, present:%d\r\n",
+                (boot_type == QAPI_FW_UPGRADE_FWD_BOOT_TYPE_TRIAL)     ? "Trial"
+                : (boot_type == QAPI_FW_UPGRADE_FWD_BOOT_TYPE_CURRENT) ? "Current"
+                                                                       : "Golden",
+                Index, fwd_present);
 
     for (Index = 0; Index < 3; Index++) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "FWD %d\r\n", Index);
@@ -169,7 +173,7 @@ static qapi_Status_t Command_Display_FWD(uint32_t Parameter_Count, QAPI_Console_
 */
 static qapi_Status_t Command_Delete_FWD(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-   int32_t Index;
+    int32_t Index;
 
     if (Parameter_Count != 1) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "usage: del [fwd num]\r\n");
@@ -187,7 +191,7 @@ static qapi_Status_t Command_Delete_FWD(uint32_t Parameter_Count, QAPI_Console_P
     }
 
     Index = Parameter_List[0].Integer_Value;
-    QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Delete FWD%d\r\n", Index );
+    QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Delete FWD%d\r\n", Index);
 
     if (qapi_Fw_Upgrade_init() != QAPI_OK) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "\r\nFU Init Error\r\n");
@@ -199,9 +203,9 @@ static qapi_Status_t Command_Delete_FWD(uint32_t Parameter_Count, QAPI_Console_P
         return QAPI_ERROR;
     }
 
-   QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "done\r\n");
+    QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "done\r\n");
 
-   return QAPI_OK;
+    return QAPI_OK;
 }
 
 /**
@@ -210,12 +214,13 @@ static qapi_Status_t Command_Delete_FWD(uint32_t Parameter_Count, QAPI_Console_P
 */
 static qapi_Status_t Command_Done_Trial(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-    if ((Parameter_Count != 2) || (Parameter_List[0].Integer_Is_Valid == 0) || (Parameter_List[1].Integer_Is_Valid == 0)) {
+    if ((Parameter_Count != 2) || (Parameter_List[0].Integer_Is_Valid == 0) ||
+        (Parameter_List[1].Integer_Is_Valid == 0)) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "usage: trial [1|0] [reboot flag]\r\n");
         return QAPI_ERR_INVALID_PARAM;
     }
 
-    if ((Parameter_List[0].Integer_Value > 1)  || (Parameter_List[1].Integer_Value > 1)) {
+    if ((Parameter_List[0].Integer_Value > 1) || (Parameter_List[1].Integer_Value > 1)) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Invalid parameter\r\n");
         return QAPI_ERR_INVALID_PARAM;
     }
@@ -245,7 +250,7 @@ static void Display_Image_Info(qapi_Part_Hdl_t hdl)
 {
     uint32_t i = 0, id = 0, size = 0, start = 0;
 
-    //get image id
+    // get image id
     if (qapi_Fw_Upgrade_Get_Image_ID(hdl, &id) != QAPI_OK) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Failed to get image id\r\n");
         return;
@@ -253,7 +258,7 @@ static void Display_Image_Info(qapi_Part_Hdl_t hdl)
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Image id is 0x%x(%d)\r\n", id, id);
     }
 
-    //get image version
+    // get image version
     if (qapi_Fw_Upgrade_Get_Image_Version(hdl, &id) != QAPI_OK) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "failed to get image version\r\n");
         return;
@@ -261,7 +266,7 @@ static void Display_Image_Info(qapi_Part_Hdl_t hdl)
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Image version is 0x%x(%d)\r\n", id, id);
     }
 
-    //get image start address at flash
+    // get image start address at flash
     if (qapi_Fw_Upgrade_Get_Partition_Start(hdl, &start) != QAPI_OK) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Failed to get image start address\r\n");
         return;
@@ -269,7 +274,7 @@ static void Display_Image_Info(qapi_Part_Hdl_t hdl)
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Image start address is 0x%x(%d)\r\n", start, start);
     }
 
-    //get image size
+    // get image size
     if (qapi_Fw_Upgrade_Get_Partition_Size(hdl, &size) != QAPI_OK) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Failed to get image size\r\n");
         return;
@@ -278,9 +283,10 @@ static void Display_Image_Info(qapi_Part_Hdl_t hdl)
     }
 
     {
-    // read image from flash
-#define MYBUF_SIZE   32
-        char buf[MYBUF_SIZE] = {'\0'};;
+        // read image from flash
+#define MYBUF_SIZE 32
+        char buf[MYBUF_SIZE] = {'\0'};
+        ;
         if (qapi_Fw_Upgrade_Read_Partition(hdl, 0, buf, MYBUF_SIZE, &size) != QAPI_OK) {
             QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Failed to read image\r\n");
             return;
@@ -299,11 +305,11 @@ static void Display_Image_Info(qapi_Part_Hdl_t hdl)
 */
 static qapi_Status_t Command_Display_ActiveImage(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-   qapi_Status_t Ret_Val = QAPI_ERROR;
-   uint8_t Index;
-   uint32_t id;
-   uint32_t boot_type, fwd_present;
-   qapi_Part_Hdl_t hdl = NULL, hdl1;
+    qapi_Status_t Ret_Val = QAPI_ERROR;
+    uint8_t Index;
+    uint32_t id;
+    uint32_t boot_type, fwd_present;
+    qapi_Part_Hdl_t hdl = NULL, hdl1;
 
     if (qapi_Fw_Upgrade_init() != QAPI_OK) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "FU Init Error\r\n");
@@ -322,19 +328,23 @@ static qapi_Status_t Command_Display_ActiveImage(uint32_t Parameter_Count, QAPI_
 
     id = Parameter_List[0].Integer_Value;
 
-    //get active FWD
+    // get active FWD
     Index = qapi_Fw_Upgrade_Get_Active_FWD(&boot_type, &fwd_present);
-    QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Active FWD: %s  index:%d, present:%d\r\n", (boot_type==QAPI_FW_UPGRADE_FWD_BOOT_TYPE_TRIAL)?"Trial":(boot_type==QAPI_FW_UPGRADE_FWD_BOOT_TYPE_CURRENT)?"Current":"Golden",Index,fwd_present);
+    QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Active FWD: %s  index:%d, present:%d\r\n",
+                (boot_type == QAPI_FW_UPGRADE_FWD_BOOT_TYPE_TRIAL)     ? "Trial"
+                : (boot_type == QAPI_FW_UPGRADE_FWD_BOOT_TYPE_CURRENT) ? "Current"
+                                                                       : "Golden",
+                Index, fwd_present);
 
     if (id != 0) {
-        //get hdl based on img id
+        // get hdl based on img id
         if (qapi_Fw_Upgrade_Find_Partition(Index, id, &hdl) != QAPI_OK) {
             QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "fail to locate the image with id %d\r\n", id);
             goto cmd_img_end;
         }
         Display_Image_Info(hdl);
     } else {
-        //get and display all images at current FWD
+        // get and display all images at current FWD
         if (qapi_Fw_Upgrade_First_Partition(Index, &hdl) != QAPI_OK) {
             QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "fail to locate the first image\r\n");
             goto cmd_img_end;
@@ -353,10 +363,10 @@ static qapi_Status_t Command_Display_ActiveImage(uint32_t Parameter_Count, QAPI_
     Ret_Val = QAPI_OK;
 
 cmd_img_end:
-   if (hdl != NULL)
-       qapi_Fw_Upgrade_Close_Partition(hdl);
+    if (hdl != NULL)
+        qapi_Fw_Upgrade_Close_Partition(hdl);
 
-   return(Ret_Val);
+    return (Ret_Val);
 }
 
 /****************************************************************************************/
@@ -383,21 +393,20 @@ static void fw_upgrade_free_memory()
         }
         free(upgrade_params);
         upgrade_params = NULL;
-
     }
 }
 
 static qapi_Status_t Command_Fw_Upgrade_Cancel(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-	qapi_Status_t resp_code;
+    qapi_Status_t resp_code;
 
     UNUSED(Parameter_Count);
     UNUSED(Parameter_List);
 
-	resp_code = qapi_Fw_Upgrade_Cancel();
+    resp_code = qapi_Fw_Upgrade_Cancel();
 
     if (QAPI_OK != resp_code) {
-        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Fail to cancel Firmware Upgrade Download: ERR:%d\r\n",resp_code);
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Fail to cancel Firmware Upgrade Download: ERR:%d\r\n", resp_code);
         return QAPI_ERROR;
     } else {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "OK to cancel Firmware Upgrade Download\r\n");
@@ -407,15 +416,15 @@ static qapi_Status_t Command_Fw_Upgrade_Cancel(uint32_t Parameter_Count, QAPI_Co
 
 static qapi_Status_t Command_Fw_Upgrade_Suspend(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-	qapi_Status_t resp_code;
+    qapi_Status_t resp_code;
 
     UNUSED(Parameter_Count);
     UNUSED(Parameter_List);
 
-	resp_code = qapi_Fw_Upgrade_Suspend();
+    resp_code = qapi_Fw_Upgrade_Suspend();
 
     if (QAPI_OK != resp_code) {
-        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Fail to suspend Firmware Upgrade Download: ERR:%d\r\n",resp_code);
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Fail to suspend Firmware Upgrade Download: ERR:%d\r\n", resp_code);
         return QAPI_ERROR;
     } else {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "OK to suspend Firmware Upgrade Download\r\n");
@@ -423,14 +432,14 @@ static qapi_Status_t Command_Fw_Upgrade_Suspend(uint32_t Parameter_Count, QAPI_C
     }
 }
 
-static void fw_upgrade_resume_upgrade_task(void __attribute__((__unused__))*pvParameters)
+static void fw_upgrade_resume_upgrade_task(void __attribute__((__unused__)) * pvParameters)
 {
     qapi_Status_t resp_code;
 
-	resp_code = qapi_Fw_Upgrade_Resume();
+    resp_code = qapi_Fw_Upgrade_Resume();
 
     if (QAPI_OK != resp_code) {
-        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Fail to resume Firmware Upgrade Download: ERR:%d\r\n",resp_code);
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Fail to resume Firmware Upgrade Download: ERR:%d\r\n", resp_code);
     } else {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Firmware Upgrade Image Download Completed successfully\r\n");
     }
@@ -444,29 +453,29 @@ static qapi_Status_t Command_Fw_Upgrade_Resume(uint32_t Parameter_Count, QAPI_Co
     UNUSED(Parameter_Count);
     UNUSED(Parameter_List);
 
-    nt_qurt_thread_create(fw_upgrade_resume_upgrade_task, "fw_upgrade_resume", 1024, NULL, configUART_COMMAND_CONSOLE_TASK_PRIORITY, &fw_upgrade_resume_task_handle);
+    nt_qurt_thread_create(fw_upgrade_resume_upgrade_task, "fw_upgrade_resume", 1024, NULL,
+                          configUART_COMMAND_CONSOLE_TASK_PRIORITY, &fw_upgrade_resume_task_handle);
     return QAPI_OK;
 }
 
-static void fw_upgrade_TFTP_upgrade_task(void __attribute__((__unused__))*pvParameters)
+static void fw_upgrade_TFTP_upgrade_task(void __attribute__((__unused__)) * pvParameters)
 {
     qapi_Status_t resp_code;
-    qapi_Fw_Upgrade_Plugin_t plugin = {plugin_tftp_init,
-                                plugin_tftp_recv_data,
-                                plugin_tftp_abort,
-								plugin_tftp_resume,
-                                plugin_tftp_fin};
+    qapi_Fw_Upgrade_Plugin_t plugin = {plugin_tftp_init, plugin_tftp_recv_data, plugin_tftp_abort, plugin_tftp_resume,
+                                       plugin_tftp_fin};
 
     if (upgrade_params == NULL) {
         goto tftp_thread_end;
     }
-    resp_code = qapi_Fw_Upgrade(upgrade_params->interface_name, &plugin, upgrade_params->url, upgrade_params->cfg_file, upgrade_params->flags, fw_upgrade_callback, NULL);
+    resp_code = qapi_Fw_Upgrade(upgrade_params->interface_name, &plugin, upgrade_params->url, upgrade_params->cfg_file,
+                                upgrade_params->flags, fw_upgrade_callback, NULL);
 
     if (QAPI_OK != resp_code) {
-        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Firmware Upgrade Image Download Failed ERR:%d\r\n",resp_code);
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Firmware Upgrade Image Download Failed ERR:%d\r\n", resp_code);
 
         if (resp_code == QAPI_FW_UPGRADE_ERR_TRIAL_IS_RUNNING) {
-            QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Trial Partition is running, need reboot to do Firmware Upgrade.\r\n");
+            QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE,
+                        "Trial Partition is running, need reboot to do Firmware Upgrade.\r\n");
         }
     } else {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Firmware Upgrade Image Download Completed successfully\r\n");
@@ -493,9 +502,8 @@ static qapi_Status_t Command_Fw_Upgrade_TFTP_Upgrade(uint32_t Parameter_Count, Q
         return QAPI_ERR_INVALID_PARAM;
     }
 
-    if (Parameter_Count == 4 && 
-        ((!Parameter_List[3].Integer_Is_Valid) ||
-        (!(Parameter_List[3].Integer_Value & flags) && Parameter_List[3].Integer_Value != 0))) {
+    if (Parameter_Count == 4 && ((!Parameter_List[3].Integer_Is_Valid) || (!(Parameter_List[3].Integer_Value & flags) &&
+                                                                           Parameter_List[3].Integer_Value != 0))) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "Flag bit0: auto reboot, bit1: dup fs\r\n");
         return QAPI_ERR_INVALID_PARAM;
     }
@@ -542,14 +550,15 @@ static qapi_Status_t Command_Fw_Upgrade_TFTP_Upgrade(uint32_t Parameter_Count, Q
     } else if (Parameter_Count == 4) {
         upgrade_params->flags = Parameter_List[3].Integer_Value;
     }
-    
-    nt_qurt_thread_create(fw_upgrade_TFTP_upgrade_task, "fw_upgrade_demo", 1024, NULL, configUART_COMMAND_CONSOLE_TASK_PRIORITY, &fw_upgrade_task_handle);
+
+    nt_qurt_thread_create(fw_upgrade_TFTP_upgrade_task, "fw_upgrade_demo", 1024, NULL,
+                          configUART_COMMAND_CONSOLE_TASK_PRIORITY, &fw_upgrade_task_handle);
 
 tftp_upgrade_end:
     if (ret != QAPI_OK) {
         fw_upgrade_free_memory();
     }
-   return ret;
+    return ret;
 }
 
 /**
@@ -557,17 +566,17 @@ tftp_upgrade_end:
 */
 static qapi_Status_t Command_Fw_Set_Image_Size(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-   uint32_t id, size;
-   uint8_t index;
-   qapi_Part_Hdl_t hdl = NULL;
+    uint32_t id, size;
+    uint8_t index;
+    qapi_Part_Hdl_t hdl = NULL;
 
-	if (Parameter_Count != 3) {
+    if (Parameter_Count != 3) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "usage: setsize [fwd num] [image id] [size]\r\n");
         return QAPI_ERROR;
     }
 
-    if ((Parameter_List[0].Integer_Is_Valid == 0) || (Parameter_List[1].Integer_Is_Valid == 0)
-		|| (Parameter_List[2].Integer_Is_Valid == 0)) {
+    if ((Parameter_List[0].Integer_Is_Valid == 0) || (Parameter_List[1].Integer_Is_Valid == 0) ||
+        (Parameter_List[2].Integer_Is_Valid == 0)) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "usage: setsize [fwd num] [image id] [size]\r\n");
         return QAPI_ERROR;
     }
@@ -577,30 +586,29 @@ static qapi_Status_t Command_Fw_Set_Image_Size(uint32_t Parameter_Count, QAPI_Co
         return QAPI_ERROR;
     }
 
-	if (Parameter_List[2].Integer_Value != 0) {
+    if (Parameter_List[2].Integer_Value != 0) {
         QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "size can only be 0 for now\r\n");
         return QAPI_ERROR;
     }
 
-	index = Parameter_List[0].Integer_Value;
-	id = Parameter_List[1].Integer_Value;
-	size = Parameter_List[2].Integer_Value;
+    index = Parameter_List[0].Integer_Value;
+    id = Parameter_List[1].Integer_Value;
+    size = Parameter_List[2].Integer_Value;
 
-	if (qapi_Fw_Upgrade_init() != QAPI_OK) {
-		QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "FU Init Error\r\n");
-		return QAPI_ERROR;
-	}
+    if (qapi_Fw_Upgrade_init() != QAPI_OK) {
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "FU Init Error\r\n");
+        return QAPI_ERROR;
+    }
 
-	if (qapi_Fw_Upgrade_Find_Partition(index, id, &hdl) != QAPI_OK) {
-		QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "fail to locate the image with id %d\r\n", id);
-		return QAPI_ERROR;
-	}
+    if (qapi_Fw_Upgrade_Find_Partition(index, id, &hdl) != QAPI_OK) {
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "fail to locate the image with id %d\r\n", id);
+        return QAPI_ERROR;
+    }
 
-	if (qapi_Fw_Upgrade_Set_Image_Size(hdl, size) != QAPI_OK) {
-		QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "fail to set the size of image with id %d\r\n", id);
-		return QAPI_ERROR;
-	}
+    if (qapi_Fw_Upgrade_Set_Image_Size(hdl, size) != QAPI_OK) {
+        QCLI_Printf(FW_UPGRADE_PRINTF_HANDLE, "fail to set the size of image with id %d\r\n", id);
+        return QAPI_ERROR;
+    }
 
-	return QAPI_OK;
+    return QAPI_OK;
 }
-

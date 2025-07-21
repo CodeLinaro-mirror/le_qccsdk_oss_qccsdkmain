@@ -17,8 +17,7 @@
 #include <platform/internal/GenericConnectivityManagerImpl_WiFi.ipp>
 #endif
 
-extern "C"
-{
+extern "C" {
 //#include <qapi/qurt_thread.h>
 //#include <qapi/qurt_timer.h>
 }
@@ -27,28 +26,28 @@ using namespace ::chip;
 using namespace ::chip::TLV;
 using namespace ::chip::DeviceLayer::Internal;
 namespace chip {
-namespace DeviceLayer {
+    namespace DeviceLayer {
 
-/** Singleton instance of the ConnectivityManager implementation object.
- */
-ConnectivityManagerImpl ConnectivityManagerImpl::sInstance;
+        /** Singleton instance of the ConnectivityManager implementation object.
+         */
+        ConnectivityManagerImpl ConnectivityManagerImpl::sInstance;
 
-CHIP_ERROR ConnectivityManagerImpl::_Init()
-{
-    // Initialize the generic base classes that require it.
+        CHIP_ERROR ConnectivityManagerImpl::_Init()
+        {
+            // Initialize the generic base classes that require it.
 #if CHIP_DEVICE_CONFIG_ENABLE_WIFI
-    InitWiFi();
+            InitWiFi();
 #endif
-    return CHIP_NO_ERROR;
-}
+            return CHIP_NO_ERROR;
+        }
 
-void ConnectivityManagerImpl::_OnPlatformEvent(const ChipDeviceEvent * event)
-{
-    // Forward the event to the generic base classes as needed.
+        void ConnectivityManagerImpl::_OnPlatformEvent(const ChipDeviceEvent *event)
+        {
+            // Forward the event to the generic base classes as needed.
 #if CHIP_DEVICE_CONFIG_ENABLE_WIFI
-    OnWiFiPlatformEvent(event);
+            OnWiFiPlatformEvent(event);
 #endif
-}
+        }
 
-} // namespace DeviceLayer
-} // namespace chip
+    }  // namespace DeviceLayer
+}  // namespace chip

@@ -1,7 +1,7 @@
 /*
-* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-* SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 /*-------------------------------------------------------------------------
  * Include Files
@@ -23,27 +23,21 @@ qapi_Status_t pmtud_demo(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
     char *ptr = NULL;
     int32_t mtu;
 
-    if (Parameter_Count < 1 || Parameter_List == NULL)
-    {
+    if (Parameter_Count < 1 || Parameter_List == NULL) {
         printf("\nUsage: mtud [--dst host]\n");
         printf("  --dst = find the mtu to dst host\n");
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
-    
-    for (uint8_t i = 0; i < Parameter_Count ; i++)
-    {
-        if (0 == strcmp(Parameter_List[i].String_Value, "--dst"))
-        {
+
+    for (uint8_t i = 0; i < Parameter_Count; i++) {
+        if (0 == strcmp(Parameter_List[i].String_Value, "--dst")) {
             i++;
             ptr = Parameter_List[i].String_Value;
-            if (!ipaddr_aton(ptr,&ip_addr))
-            {
+            if (!ipaddr_aton(ptr, &ip_addr)) {
                 printf("error: invalid address\n");
                 return QAPI_ERR_INVALID_PARAM;
             }
-        }
-        else
-        {
+        } else {
             printf("Default network interface not initialized");
             return QAPI_ERR_INVALID_PARAM;
         }
@@ -58,4 +52,3 @@ qapi_Status_t pmtud_demo(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
     printf("Minimum MTU found: %d\n", mtu);
     return QAPI_OK;
 }
-

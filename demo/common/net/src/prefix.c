@@ -1,7 +1,7 @@
 /*
-* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-* SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 /**
  * @file
@@ -16,12 +16,11 @@
 #include <stdio.h>
 #include "data_path.h"
 
-
-#define PREFIX_OPTION_TYPE 3
+#define PREFIX_OPTION_TYPE   3
 #define PREFIX_OPTION_LENGTH 4
-#define PREFIX_OPTION_FLAGS 0xC0
+#define PREFIX_OPTION_FLAGS  0xC0
 
-#define DEFAULT_HOP_LIMIT 64
+#define DEFAULT_HOP_LIMIT       64
 #define DEFAULT_ROUTER_LIFETIME 1800
 
 #ifndef ICMPV6_CHECKSUM_REQUIRED
@@ -33,11 +32,12 @@
 #endif
 
 #if NET_SHELL_INFO
-#define info_printf(msg,...)     printf(NET_SHELL_GROUP_PRINTF_SUFFIX msg, ##__VA_ARGS__)
+#define info_printf(msg, ...) printf(NET_SHELL_GROUP_PRINTF_SUFFIX msg, ##__VA_ARGS__)
 #else
-#define info_printf(args...)     do { } while (0)
+#define info_printf(args...) \
+    do {                     \
+    } while (0)
 #endif
-
 
 static struct raw_pcb *prefix_pcb_v6;
 static ip_addr_t target_addr;
@@ -65,7 +65,8 @@ static void fill_ra_header(struct ra_header *p_ra)
     p_ra->retrans_timer = 0;
 }
 
-static void fill_prefix_option(struct prefix_option *prefix_opt, uint32_t prefixlen, uint32_t prefix_lifetime, uint32_t valid_lifetime)
+static void fill_prefix_option(struct prefix_option *prefix_opt, uint32_t prefixlen, uint32_t prefix_lifetime,
+                               uint32_t valid_lifetime)
 {
     prefix_opt->type = PREFIX_OPTION_TYPE;
     prefix_opt->length = PREFIX_OPTION_LENGTH;
@@ -80,7 +81,8 @@ static void fill_prefix_option(struct prefix_option *prefix_opt, uint32_t prefix
     memcpy(&prefix_opt->prefix, &(prefix_addr.u_addr.ip6), sizeof(prefix_opt->prefix));
 }
 
-void prefix_send(ip_addr_t *ip_addr, uint32_t prefixlen, uint32_t prefix_lifetime, uint32_t valid_lifetime, uint8_t netid)
+void prefix_send(ip_addr_t *ip_addr, uint32_t prefixlen, uint32_t prefix_lifetime, uint32_t valid_lifetime,
+                 uint8_t netid)
 {
     struct pbuf *p;
     struct ra_header *ra;
@@ -104,9 +106,9 @@ void prefix_send(ip_addr_t *ip_addr, uint32_t prefixlen, uint32_t prefix_lifetim
     IP_SET_TYPE_VAL(target_addr, IPADDR_TYPE_V6);
     prefix_pcb_v6->chksum_reqd = ICMPV6_CHECKSUM_REQUIRED;
     prefix_pcb_v6->chksum_offset = ICMPV6_CHECKSUM_POSITION_OFFSET;
-    prefix_pcb_v6->mcast_ifindex = netid; 
+    prefix_pcb_v6->mcast_ifindex = netid;
 
-    // send ICMPv6            
+    // send ICMPv6
     if (raw_sendto(prefix_pcb_v6, p, &target_addr) != ERR_OK) {
         info_printf("Error sending ICMPv6 RA message\n");
     } else {

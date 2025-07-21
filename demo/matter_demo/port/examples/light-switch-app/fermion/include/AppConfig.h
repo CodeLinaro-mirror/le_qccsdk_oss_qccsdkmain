@@ -8,9 +8,7 @@
 #define APP_TASK_NAME "Switch"
 
 typedef void *QCLI_Group_Handle_t;
-extern "C"
-{
-	void QCLI_Printf(QCLI_Group_Handle_t Group_Handle, const char *format, ...);
+extern "C" {
+void QCLI_Printf(QCLI_Group_Handle_t Group_Handle, const char *format, ...);
 }
 extern QCLI_Group_Handle_t qcli_matter_handle;
-

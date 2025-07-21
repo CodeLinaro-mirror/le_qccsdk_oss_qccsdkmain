@@ -25,11 +25,10 @@
 
 #define _HTTPC_H_
 
-
 #include "qapi_status.h"
 
 #ifndef min
-#define  min(a,b)    (((a) <= (b)) ? (a) : (b))
+#define min(a, b) (((a) <= (b)) ? (a) : (b))
 #endif
 
 #ifdef CONFIG_QAT_HTTPC_DEMO
@@ -37,16 +36,8 @@ extern uint16_t at_httpc_method;
 extern int at_rec_state;
 extern uint16_t at_rec_error_code;
 
-
-typedef enum {
-	QAT_HTTP_HEAD = 1,
-	QAT_HTTP_GET,
-	QAT_HTTP_GETSIZE,
-	QAT_HTTP_POST,
-	QAT_HTTP_PUT
-} HTTPC_Method;
+typedef enum { QAT_HTTP_HEAD = 1, QAT_HTTP_GET, QAT_HTTP_GETSIZE, QAT_HTTP_POST, QAT_HTTP_PUT } HTTPC_Method;
 #endif
-
 
 qapi_Status_t httpc_command_handler(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 

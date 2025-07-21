@@ -36,14 +36,14 @@ extern QAPI_Console_Group_Handle_t net_shell_cmd_group_handle; /* Handle for our
 
 // #define UDP_TX_DEBUG
 
-#define IPV6_TCLASS 16 /* int; set IPV6 traffic class */
+#define IPV6_TCLASS                     16 /* int; set IPV6 traffic class */
 #define IS_IPV6_MULTICAST(ipv6_Address) (((uint8_t *)ipv6_Address)[0] == 0xff)
 
 /* loopback behavior (disabled or enabled) for multicast packets */
-#define IPV6_MC_LPBK_DIS 0 /**< Disable loopback behavior for multicast packets. */
-#define IPV6_MC_LPBK_EN 1  /**< Enable loopback behavior for multicast packets. */
-#define IPERF_TX_THREAD_PRIO 5
-#define IPERF_RX_THREAD_PRIO 6
+#define IPV6_MC_LPBK_DIS         0 /**< Disable loopback behavior for multicast packets. */
+#define IPV6_MC_LPBK_EN          1 /**< Enable loopback behavior for multicast packets. */
+#define IPERF_TX_THREAD_PRIO     5
+#define IPERF_RX_THREAD_PRIO     6
 #define IPERF_RESULT_THREAD_PRIO 3
 
 #define MAX_IPERF_RX_THREAD_COUNTE 4
@@ -80,7 +80,7 @@ uint8_t iperf_stream_id[MAX_STREAM] = {0};
 uint16_t bench_udp_rx_port_in_use[MAX_STREAM] = {0}; /* Used to prevent two udp rx streams from using the same port */
 
 #define BENCH_TCP_RX_MAX_SESSIONS 2 /* Max number of TCP RX sessions */
-#define BENCH_TCP_MAX_SERVERS 2     /* Max number of TCP servers that can execute in parallel */
+#define BENCH_TCP_MAX_SERVERS     2 /* Max number of TCP servers that can execute in parallel */
 bench_tcp_session_t g_tcpSessions[BENCH_TCP_RX_MAX_SESSIONS]; /* Array of TCP Session objects */
 #define BENCH_TCP_PKTS_PER_DOT 1000                           /* Produce a progress dot each X packets */
 
@@ -98,8 +98,8 @@ bool tcp_rx_rslt_created = false; /* indicate iperf_rx_show_result thread is cre
  *
  **************************************************************************************/
 #define TCP_QUEUE_PBUF_THRESHOLD_DEFAULT 21
-#define TCP_QUEUE_PBUF_THRESHOLD_LOW 12
-#define TCP_QUEUE_PBUF_THRESHOLD_STEP 3
+#define TCP_QUEUE_PBUF_THRESHOLD_LOW     12
+#define TCP_QUEUE_PBUF_THRESHOLD_STEP    3
 
 #define Mbps (1000 * 1000)
 #define Kbps 1000
@@ -123,7 +123,10 @@ void iperf_decrs_tcp_queue_pbuf_thrsh(void)
     return;
 }
 
-static void app_get_time(uint32_t *time_ms) { *time_ms = hres_timer_curr_time_ms(); }
+static void app_get_time(uint32_t *time_ms)
+{
+    *time_ms = hres_timer_curr_time_ms();
+}
 
 static uint8_t iperf_get_unused_id()
 {
@@ -194,9 +197,9 @@ static void iperf_upgrade_rx_thread_priority(void)
     uint8_t thread_index;
     for (thread_index = 0; thread_index < MAX_IPERF_RX_THREAD_COUNTE; thread_index++) {
         if (iperf_rx_thread_handle[thread_index] != NULL) {
-            nt_qurt_thread_set_priority(iperf_rx_thread_handle[thread_index],
-                                        iperf_rx_thread_priority +
-                                            1); /*increase udp rx thread priority in multi-thread context*/
+            nt_qurt_thread_set_priority(
+                iperf_rx_thread_handle[thread_index],
+                iperf_rx_thread_priority + 1); /*increase udp rx thread priority in multi-thread context*/
         }
     }
 
@@ -334,14 +337,14 @@ static uint32_t iperf_common_SetParams(THROUGHPUT_CXT *p_rxtCxt, uint32_t v6, co
     }
 
     switch (type) {
-    case RX:
-        p_rxtCxt->params.rx_params.v6 = v6;
-        p_rxtCxt->params.rx_params.port = port;
-        break;
-    case TX:
-        p_rxtCxt->params.tx_params.v6 = v6;
-        p_rxtCxt->params.tx_params.port = port;
-        break;
+        case RX:
+            p_rxtCxt->params.rx_params.v6 = v6;
+            p_rxtCxt->params.rx_params.port = port;
+            break;
+        case TX:
+            p_rxtCxt->params.tx_params.v6 = v6;
+            p_rxtCxt->params.tx_params.port = port;
+            break;
     }
     p_rxtCxt->test_type = type;
     return 0;
@@ -616,7 +619,7 @@ static void rxreorder_udp_payload_statistics(stat_udp_pattern_t *stat_udp, char 
 #endif
 
 #define RATIO_BASE (10000)
-#define UINT32MAX (0xffffffff)
+#define UINT32MAX  (0xffffffff)
 
 static unsigned short ratio(uint32_t numerator, uint32_t denominator, unsigned short base)
 {
@@ -710,8 +713,9 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
 
     if (Parameter_Count < 1) {
         IPERF_PRINTF("\nUsage: iperf [-s|-c host] [options]\n");
-        IPERF_PRINTF("  -p  = The server port for the server to listen on and the client to connect to. This should be "
-                     "the same in both client and server. Default is 5001.\n");
+        IPERF_PRINTF(
+            "  -p  = The server port for the server to listen on and the client to connect to. This should be "
+            "the same in both client and server. Default is 5001.\n");
         IPERF_PRINTF("  -i  = Sets the interval time in seconds between periodic bandwidth\n");
         IPERF_PRINTF("  -u  = Use UDP rather than TCP\n");
         IPERF_PRINTF("  -l = The length of buffers to read or write\n");
@@ -741,7 +745,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
             receiver_ip = Parameter_List[index].String_Value;
             if (inet_pton(AF_INET, receiver_ip, &ipAddress) == 1) {
                 /* is valid IPV4 */
-                if ((ipAddress & 0xf0000000) == 0xE0000000) // 224.xxx.xxx.xxx - 239.xxx.xxx.xxx
+                if ((ipAddress & 0xf0000000) == 0xE0000000)  // 224.xxx.xxx.xxx - 239.xxx.xxx.xxx
                 {
                     mcastEnabled = 1;
                 }
@@ -799,7 +803,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
                 rateString[strlen(rateString) - 1] = '\0';
                 udpRate = atoi(rateString);
                 tcpRate = udpRate;
-                bandwidth_unit = 0; // Mbps
+                bandwidth_unit = 0;  // Mbps
                 if (udpRate == 0 || udpRate > 100) {
                     IPERF_PRINTF("error: invalid bandwidth value, unit is Mbps, should less 100\n");
                     return QAPI_ERR_INVALID_PARAM;
@@ -808,7 +812,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
                 rateString[strlen(rateString) - 1] = '\0';
                 udpRate = atoi(rateString);
                 tcpRate = udpRate;
-                bandwidth_unit = 1; // Kbps
+                bandwidth_unit = 1;  // Kbps
                 if (udpRate == 0 || udpRate > 100000) {
                     IPERF_PRINTF("error: invalid bandwidth value, unit is Kbps, should less 100000\n");
                     return QAPI_ERR_INVALID_PARAM;
@@ -1246,13 +1250,12 @@ void iperf_result_print2(STATS *pCxtPara, uint32_t msInterval, uint64_t totalbyt
 
 void pattern(char *outBuf, int inBytes)
 {
-
     while (inBytes-- > 0) {
         outBuf[inBytes] = (inBytes % 10) + '0';
     }
 }
 
-int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number) //,struct sockaddr *to, uint32_t tolen)
+int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number)  //,struct sockaddr *to, uint32_t tolen)
 {
     int32_t received;
     int error = A_ERROR;
@@ -1277,7 +1280,7 @@ int iperf_udp_tx_finish(THROUGHPUT_CXT *p_tCxt, uint32_t cur_packet_number) //,s
             return error;
         }
     } else {
-        ack_buf = p_tCxt->buffer; // reuse
+        ack_buf = p_tCxt->buffer;  // reuse
         ack_buf_len = p_tCxt->params.tx_params.packet_size;
     }
     memset(ack_buf, 0, ack_buf_len);
@@ -1502,7 +1505,7 @@ static void iperf_client_send(void *arg)
 
         app_get_time(&iperf_tcp_start_time);
     }
-    iperf_display_interval = p_tCxt->pktStats.iperf_display_interval; // second
+    iperf_display_interval = p_tCxt->pktStats.iperf_display_interval;  // second
     iperf_display_last = p_tCxt->pktStats.first_time;
     iperf_display_next = iperf_display_last + iperf_display_interval * 1000;
 
@@ -1829,7 +1832,7 @@ void iperf_udp_tx(THROUGHPUT_CXT *p_tCxt)
     IPERF_PRINTF("------------------------------------------------------------\n");
 
     /* Create UDP socket */
-    if ((p_tCxt->sock_peer = socket(family, SOCK_DGRAM, 0)) == A_ERROR) // IPPROTO_UDP
+    if ((p_tCxt->sock_peer = socket(family, SOCK_DGRAM, 0)) == A_ERROR)  // IPPROTO_UDP
     {
         IPERF_PRINTF("ERROR: iperf_udp_tx: Socket creation failed\n");
         goto QUIT;
@@ -1920,7 +1923,7 @@ void iperf_rx_show_result(void *arg)
         return;
     }
 
-    iperf_display_interval = p_tCxt->pktStats.iperf_display_interval * 1000; // ms
+    iperf_display_interval = p_tCxt->pktStats.iperf_display_interval * 1000;  // ms
 
     while (1) {
         qurt_thread_sleep(iperf_display_interval);
@@ -2150,7 +2153,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                 conn_sock = select(p_tCxt->sock_local + 1, &read_fds, NULL, NULL, &tv);
                 if (conn_sock == A_ERROR) {
                     app_get_time(&p_tCxt->pktStats.last_time);
-                    goto QUIT; // socket no longer valid
+                    goto QUIT;  // socket no longer valid
                 } else if (conn_sock == 0) {
                     /* if udp tx has started and no activity for continues 2s, early quit udp rx */
                     uint32_t curtime;
@@ -2161,7 +2164,7 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                     }
                 }
 
-                if (family == AF_INET && errno == ENOTSOCK) // TODO
+                if (family == AF_INET && errno == ENOTSOCK)  // TODO
                 {
                     app_get_time(&p_tCxt->pktStats.last_time);
                     goto QUIT;

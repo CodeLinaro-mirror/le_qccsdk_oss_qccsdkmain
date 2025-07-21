@@ -38,16 +38,15 @@
 
 /* Logging configuration for the Demo. */
 #ifndef LIBRARY_LOG_NAME
-    #define LIBRARY_LOG_NAME     "DEMO"
+#define LIBRARY_LOG_NAME "DEMO"
 #endif
 #ifndef LIBRARY_LOG_LEVEL
-    #define LIBRARY_LOG_LEVEL    LOG_INFO
+#define LIBRARY_LOG_LEVEL LOG_INFO
 #endif
 
 #include "logging_stack.h"
 
 /************ End of logging configuration ****************/
-
 
 /**
  * @brief Details of the MQTT broker to connect to.
@@ -58,7 +57,7 @@
  * #define BROKER_ENDPOINT               "...insert here..."
  */
 
-#define BROKER_ENDPOINT               "192.168.0.122"
+#define BROKER_ENDPOINT "192.168.0.122"
 
 /**
  * @brief AWS IoT MQTT broker port number.
@@ -69,7 +68,7 @@
  * name. When using port 8883, ALPN is not required.
  */
 #ifndef BROKER_PORT
-    #define BROKER_PORT    ( 8883 )
+#define BROKER_PORT (8883)
 #endif
 
 /**
@@ -88,7 +87,7 @@
  * ROOT_CA_CERT_PATH to the absolute path if this demo is executed from elsewhere.
  */
 #ifndef ROOT_CA_CERT_PATH
-    #define ROOT_CA_CERT_PATH    "/lfs/ca.crt"
+#define ROOT_CA_CERT_PATH "/lfs/ca.crt"
 #endif
 
 /**
@@ -102,7 +101,7 @@
  *
  * #define CLIENT_CERT_PATH    "...insert here..."
  */
-#define CLIENT_CERT_PATH    "/lfs/client.crt"
+#define CLIENT_CERT_PATH "/lfs/client.crt"
 /**
  * @brief Path of the file containing the client's private key.
  *
@@ -114,7 +113,7 @@
  *
  * #define CLIENT_PRIVATE_KEY_PATH    "...insert here..."
  */
-#define CLIENT_PRIVATE_KEY_PATH    "/lfs/client.key"
+#define CLIENT_PRIVATE_KEY_PATH "/lfs/client.key"
 /**
  * @brief The username value for authenticating client to MQTT broker when
  * username/password based client authentication is used.
@@ -155,38 +154,38 @@
  * No two clients may use the same client identifier simultaneously.
  */
 #ifndef CLIENT_IDENTIFIER
-    #define CLIENT_IDENTIFIER    "testclient"
+#define CLIENT_IDENTIFIER "testclient"
 #endif
 
 /**
  * @brief Size of the network buffer for MQTT packets.
  */
-#define NETWORK_BUFFER_SIZE       ( 1024U )
+#define NETWORK_BUFFER_SIZE (1024U)
 
 /**
  * @brief The name of the operating system that the application is running on.
  * The current value is given as an example. Please update for your specific
  * operating system.
  */
-#define OS_NAME                   "Ubuntu"
+#define OS_NAME "Ubuntu"
 
 /**
  * @brief The version of the operating system that the application is running
  * on. The current value is given as an example. Please update for your specific
  * operating system version.
  */
-#define OS_VERSION                "22.04 LTS"
+#define OS_VERSION "22.04 LTS"
 
 /**
  * @brief The name of the hardware platform the application is running on. The
  * current value is given as an example. Please update for your specific
  * hardware platform.
  */
-#define HARDWARE_PLATFORM_NAME    "PC"
+#define HARDWARE_PLATFORM_NAME "PC"
 
 /**
  * @brief The name of the MQTT library used and its version, following an "@"
  * symbol.
  */
-#define MQTT_LIB                  "core-mqtt@2.1.1"
+#define MQTT_LIB "core-mqtt@2.1.1"
 #endif /* ifndef DEMO_CONFIG_H_ */

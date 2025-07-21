@@ -6,9 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void app_init(void)
-{
-}
+void app_init(void) {}
 
 extern void mqtt_demo_main();
 

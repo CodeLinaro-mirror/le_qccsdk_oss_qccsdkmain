@@ -27,32 +27,31 @@ void MatterTimeFormatLocalizationPluginServerInitCallback();
 void MatterUserLabelPluginServerInitCallback();
 void MatterWiFiNetworkDiagnosticsPluginServerInitCallback();
 
-#define MATTER_PLUGINS_INIT \
-    MatterAccessControlPluginServerInitCallback(); \
+#define MATTER_PLUGINS_INIT                                     \
+    MatterAccessControlPluginServerInitCallback();              \
     MatterAdministratorCommissioningPluginServerInitCallback(); \
-    MatterBasicInformationPluginServerInitCallback(); \
-    MatterColorControlPluginServerInitCallback(); \
-    MatterDescriptorPluginServerInitCallback(); \
-    MatterDiagnosticLogsPluginServerInitCallback(); \
+    MatterBasicInformationPluginServerInitCallback();           \
+    MatterColorControlPluginServerInitCallback();               \
+    MatterDescriptorPluginServerInitCallback();                 \
+    MatterDiagnosticLogsPluginServerInitCallback();             \
     MatterEthernetNetworkDiagnosticsPluginServerInitCallback(); \
-    MatterFixedLabelPluginServerInitCallback(); \
-    MatterGeneralCommissioningPluginServerInitCallback(); \
-    MatterGeneralDiagnosticsPluginServerInitCallback(); \
-    MatterGroupKeyManagementPluginServerInitCallback(); \
-    MatterGroupsPluginServerInitCallback(); \
-    MatterIdentifyPluginServerInitCallback(); \
-    MatterLevelControlPluginServerInitCallback(); \
-    MatterLocalizationConfigurationPluginServerInitCallback(); \
-    MatterNetworkCommissioningPluginServerInitCallback(); \
-    MatterOccupancySensingPluginServerInitCallback(); \
-    MatterOnOffPluginServerInitCallback(); \
-    MatterOperationalCredentialsPluginServerInitCallback(); \
+    MatterFixedLabelPluginServerInitCallback();                 \
+    MatterGeneralCommissioningPluginServerInitCallback();       \
+    MatterGeneralDiagnosticsPluginServerInitCallback();         \
+    MatterGroupKeyManagementPluginServerInitCallback();         \
+    MatterGroupsPluginServerInitCallback();                     \
+    MatterIdentifyPluginServerInitCallback();                   \
+    MatterLevelControlPluginServerInitCallback();               \
+    MatterLocalizationConfigurationPluginServerInitCallback();  \
+    MatterNetworkCommissioningPluginServerInitCallback();       \
+    MatterOccupancySensingPluginServerInitCallback();           \
+    MatterOnOffPluginServerInitCallback();                      \
+    MatterOperationalCredentialsPluginServerInitCallback();     \
     MatterOtaSoftwareUpdateRequestorPluginServerInitCallback(); \
-    MatterScenesManagementPluginServerInitCallback(); \
-    MatterSoftwareDiagnosticsPluginServerInitCallback(); \
-    MatterSwitchPluginServerInitCallback(); \
-    MatterThreadNetworkDiagnosticsPluginServerInitCallback(); \
-    MatterTimeFormatLocalizationPluginServerInitCallback(); \
-    MatterUserLabelPluginServerInitCallback(); \
+    MatterScenesManagementPluginServerInitCallback();           \
+    MatterSoftwareDiagnosticsPluginServerInitCallback();        \
+    MatterSwitchPluginServerInitCallback();                     \
+    MatterThreadNetworkDiagnosticsPluginServerInitCallback();   \
+    MatterTimeFormatLocalizationPluginServerInitCallback();     \
+    MatterUserLabelPluginServerInitCallback();                  \
     MatterWiFiNetworkDiagnosticsPluginServerInitCallback();
-

@@ -32,17 +32,17 @@
  *
  * 0xFFF1: Chip's Vendor Id.
  */
-#define CHIP_DEVICE_CONFIG_DEVICE_VENDOR_ID 0xFFF1 
+#define CHIP_DEVICE_CONFIG_DEVICE_VENDOR_ID 0xFFF1
 
 /**
  * CHIP_DEVICE_CONFIG_DEVICE_PRODUCT_ID
  *
  * 0x8005: QCA lighting-app
  */
-#define CHIP_DEVICE_CONFIG_DEVICE_PRODUCT_ID 0x8005 
+#define CHIP_DEVICE_CONFIG_DEVICE_PRODUCT_ID 0x8005
 
 /**
- * CHIP_DEVICE_CONFIG_DEVICE_HARDWARE_VERSION 
+ * CHIP_DEVICE_CONFIG_DEVICE_HARDWARE_VERSION
  *
  * The hardware version number assigned to device or product by the device vendor.  This
  * number is scoped to the device product id, and typically corresponds to a revision of the
@@ -50,7 +50,6 @@
  * This value is generally *not* incremented for device software revisions.
  */
 #define CHIP_DEVICE_CONFIG_DEVICE_HARDWARE_VERSION 1
-
 
 /*
  * CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION_STRING
@@ -62,7 +61,6 @@
 #ifndef CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION_STRING
 #define CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION_STRING "0.1ALPHA"
 #endif
-
 
 /*
  * CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION
