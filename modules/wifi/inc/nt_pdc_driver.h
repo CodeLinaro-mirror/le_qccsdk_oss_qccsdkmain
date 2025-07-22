@@ -1,21 +1,20 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ */
 
 #ifndef CORE_SYSTEM_INC_NT_PDC_DRIVER_H_
 #define CORE_SYSTEM_INC_NT_PDC_DRIVER_H_
 
-
-#include<stdint.h>
+#include <stdint.h>
 #include "nt_pdc.h"
 //#define NT_FN_PDC_     				0 //Enable PDC
 #ifdef NT_FN_PDC_
 /*--------------------------------------------------------Vote(frame)-------------------------------------------------------------------
 ______________________________________________________________________________________________________________________________________________________________________________________________
 |_________GPIO_____________|__________SPI_____________|__________I2C_____________|__________UART____________|__________SECIP___________|____________XIP___________|___________RRAM___________|
-|Don't care bit | ctrl bit |Don't care bit | ctrl bit |Don't care bit | ctrl bit |Don't care bit | ctrl bit |Don't care bit | ctrl bit |Don't care bit | ctrl bit |Don't care bit | ctrl bit |
+|Don't care bit | ctrl bit |Don't care bit | ctrl bit |Don't care bit | ctrl bit |Don't care bit | ctrl bit |Don't care
+bit | ctrl bit |Don't care bit | ctrl bit |Don't care bit | ctrl bit |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 */
@@ -85,4 +84,3 @@ void nt_hal_driver(uint32_t power_domain, uint32_t control_state, uint32_t mcu_s
 
 #endif
 #endif /* CORE_SYSTEM_INC_NT_PDC_DRIVER_H_ */
-

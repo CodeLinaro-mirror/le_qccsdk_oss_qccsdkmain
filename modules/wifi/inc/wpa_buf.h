@@ -2,7 +2,7 @@
  * wpa_buf.h
  */
 /*
-*/
+ */
 /*
  * Dynamic data buffer
  * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
@@ -35,24 +35,23 @@
  * from this file to access data.
  */
 struct wpabuf {
-	size_t size; /* total size of the allocated buffer */
-	size_t used; /* length of data in the buffer */
-	uint8_t *ext_data; /* pointer to external data; NULL if data follows
-		       * struct wpabuf */
-	/* optionally followed by the allocated buffer */
+    size_t size;       /* total size of the allocated buffer */
+    size_t used;       /* length of data in the buffer */
+    uint8_t *ext_data; /* pointer to external data; NULL if data follows
+                        * struct wpabuf */
+                       /* optionally followed by the allocated buffer */
 };
 
-
 int wpabuf_resize(struct wpabuf **buf, size_t add_len);
-struct wpabuf * wpabuf_alloc(size_t len);
-struct wpabuf * wpabuf_alloc_ext_data(uint8_t *data, size_t len);
-struct wpabuf * wpabuf_alloc_copy(const void *data, size_t len);
-struct wpabuf * wpabuf_dup(const struct wpabuf *src);
+struct wpabuf *wpabuf_alloc(size_t len);
+struct wpabuf *wpabuf_alloc_ext_data(uint8_t *data, size_t len);
+struct wpabuf *wpabuf_alloc_copy(const void *data, size_t len);
+struct wpabuf *wpabuf_dup(const struct wpabuf *src);
 void wpabuf_free(struct wpabuf *buf);
-void * wpabuf_put(struct wpabuf *buf, size_t len);
-struct wpabuf * wpabuf_concat(struct wpabuf *a, struct wpabuf *b);
-struct wpabuf * wpabuf_zeropad(struct wpabuf *buf, size_t len);
-//void wpabuf_printf(struct wpabuf *buf, const char *fmt, ...) PRINTF_FORMAT(2, 3);
+void *wpabuf_put(struct wpabuf *buf, size_t len);
+struct wpabuf *wpabuf_concat(struct wpabuf *a, struct wpabuf *b);
+struct wpabuf *wpabuf_zeropad(struct wpabuf *buf, size_t len);
+// void wpabuf_printf(struct wpabuf *buf, const char *fmt, ...) PRINTF_FORMAT(2, 3);
 
 /* Macros for handling unaligned memory accesses */
 
@@ -110,7 +109,7 @@ static inline uint32_t WPA_GET_LE32(const uint8_t *a)
 }
 #endif
 
-//static inline void WPA_PUT_LE32(uint8_t *a, uint32_t val)
+// static inline void WPA_PUT_LE32(uint8_t *a, uint32_t val)
 //{
 //	a[3] = (val >> 24) & 0xff;
 //	a[2] = (val >> 16) & 0xff;
@@ -194,7 +193,7 @@ static inline size_t wpabuf_tailroom(const struct wpabuf *buf)
  * @buf: wpabuf buffer
  * Returns: Pointer to the head of the buffer data
  */
-const void * wpabuf_head(const struct wpabuf *buf);
+const void *wpabuf_head(const struct wpabuf *buf);
 
 #if 0
 static inline const uint8_t * wpabuf_head_u8(const struct wpabuf *buf)
@@ -208,11 +207,9 @@ static inline const uint8_t * wpabuf_head_u8(const struct wpabuf *buf)
  * @buf: wpabuf buffer
  * Returns: Pointer to the head of the buffer data
  */
-void * wpabuf_mhead(struct wpabuf *buf);
+void *wpabuf_mhead(struct wpabuf *buf);
 
-
-uint8_t * wpabuf_mhead_u8(struct wpabuf *buf);
-
+uint8_t *wpabuf_mhead_u8(struct wpabuf *buf);
 
 #if 0
 static inline void wpabuf_put_u8(struct wpabuf *buf, uint8_t data)
@@ -253,17 +250,13 @@ static inline void wpabuf_put_be32(struct wpabuf *buf, uint32_t data)
 #endif
 static inline void wpabuf_put_le16(struct wpabuf *buf, uint16_t data)
 {
-	uint8_t *pos = wpabuf_put(buf, 2);
-	WPA_PUT_LE16(pos, data);
+    uint8_t *pos = wpabuf_put(buf, 2);
+    WPA_PUT_LE16(pos, data);
 }
 
-void wpabuf_put_data(struct wpabuf *buf, const void *data,
-				   size_t len);
+void wpabuf_put_data(struct wpabuf *buf, const void *data, size_t len);
 
-
-void wpabuf_put_buf(struct wpabuf *dst,
-				  const struct wpabuf *src);
-
+void wpabuf_put_buf(struct wpabuf *dst, const struct wpabuf *src);
 
 #if 0
 static inline void wpabuf_set(struct wpabuf *buf, const void *data, size_t len)
@@ -278,6 +271,6 @@ static inline void wpabuf_put_str(struct wpabuf *dst, const char *str)
 }
 #endif
 
-#endif //NT_FN_WPA3
+#endif  // NT_FN_WPA3
 
 #endif /* CORE_WIFI_SECURITY_INC_WPA_BUF_H_ */

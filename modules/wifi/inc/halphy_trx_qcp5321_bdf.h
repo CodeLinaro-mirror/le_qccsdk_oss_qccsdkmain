@@ -26,8 +26,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 // Definitions are synced to bdwlan
 
 // CTL Regulatory domains
-typedef enum ctl_domain
-{
+typedef enum ctl_domain {
     NEW_FCC = 0x1,
     NEW_ETSI = 0x3,
     NEW_MKK = 0x4,
@@ -37,8 +36,7 @@ typedef enum ctl_domain
     NEW_NO_CTL = 0xFF,
 } ctl_domain_t;
 
-typedef enum ctl_11b_offset_index
-{
+typedef enum ctl_11b_offset_index {
     FCC_11B_OFFSET,
     ETSI_11B_OFFSET,
     MKK_11B_OFFSET,
@@ -48,22 +46,19 @@ typedef enum ctl_11b_offset_index
 } ctl_11b_offset_index_t;
 
 // CTL MODE - WLAN packet types
-typedef enum ctl_mode
-{
+typedef enum ctl_mode {
     CTL_MODE_LEGACY = 0,
     CTL_MODE_11B = 1,
     CTL_MODE_HT20_VHT20 = 2,
 } ctl_mode_t;
 
 typedef enum power_types_6g /* 6G power mode, Not used if not 6G */
-{
-    POWER_TYPE_LPI = 0,
-    POWER_TYPE_SP = 1,
-    POWER_TYPE_VLP = 2,
+{ POWER_TYPE_LPI = 0,
+  POWER_TYPE_SP = 1,
+  POWER_TYPE_VLP = 2,
 } power_types_6g_t;
 
-typedef enum rate_idx_bdf_e
-{
+typedef enum rate_idx_bdf_e {
     RATE_1_L = 0,
     RATE_2_L,
     RATE_2_S,
@@ -95,13 +90,13 @@ typedef enum rate_idx_bdf_e
  * ----------------------------------------------------------------------*/
 
 // CTL fail safe power limit                TODO:: All power values need to be get approved by  regulatory team and HWS
-#define CTL_FAIL_SAFE_PWR 20   // 10 dBm - 0.50 dBm accuracy. Based on CTL BDF data. Multiplied x2 by FW
-#define WHAL_MAX_RATE_POWER 63 // 31.5 dbm
-#define CTL_FAIL_SAFE_FS 1
+#define CTL_FAIL_SAFE_PWR            20  // 10 dBm - 0.50 dBm accuracy. Based on CTL BDF data. Multiplied x2 by FW
+#define WHAL_MAX_RATE_POWER          63  // 31.5 dbm
+#define CTL_FAIL_SAFE_FS             1
 #define WHAL_MAX_RATE_PWR_MULTIPLIER 2
 
-#define MAX_PWR_FOR_ANY_RATE 60 // 15dbm, This value should be given by HWS
-#define DEFAULT_SUBBAND 0
+#define MAX_PWR_FOR_ANY_RATE 60  // 15dbm, This value should be given by HWS
+#define DEFAULT_SUBBAND      0
 
 /*------------------------------------------------------------------------
  * Function Declarations and Documentation
@@ -123,22 +118,22 @@ uint8_t phyrf_bdf_get_rxgain_cal_cfg_rate(uint8_t band);
 uint8_t phyrf_bdf_get_rxgain_cal_cfg_num_chan(uint8_t band);
 uint16_t phyrf_bdf_get_rxgain_cal_cfg_num_pkts(uint8_t band);
 uint16_t phyrf_bdf_get_rxgain_cal_cfg_chan(uint8_t band, uint8_t chan_idx);
-void phyrf_bdf_set_rxgain_cal_result(uint8_t band, uint8_t chan_idx, uint8_t rxNFCalPowerDBr,
-                                     uint8_t rxNFCalPowerDBm, uint8_t minCCAThreshold);
+void phyrf_bdf_set_rxgain_cal_result(uint8_t band, uint8_t chan_idx, uint8_t rxNFCalPowerDBr, uint8_t rxNFCalPowerDBm,
+                                     uint8_t minCCAThreshold);
 
 void phyrf_bdf_clear_scpc_cal_data_by_band(uint8_t band);
 void phyrf_bdf_get_scpc_cal_cfg_by_band(uint8_t band, SCPC_CAL_CFG *p_scpc_cal_cfg);
 uint16_t phyrf_bdf_get_tpc_cal_chan(uint8_t band, uint8_t chan_idx);
 void phyrf_bdf_set_scpc_cal_result(uint8_t band, uint8_t chan_idx, bool is_ofdm, int8_t scpc_power_offset);
 
-void phyrf_bdf_get_ed_threshold(uint16_t freq, uint8_t* p_agc_ed_threshold, power_types_6g_t power_mode_6g);
+void phyrf_bdf_get_ed_threshold(uint16_t freq, uint8_t *p_agc_ed_threshold, power_types_6g_t power_mode_6g);
 #if (FERMION_CHIP_VERSION == 2)
 int8_t phyrf_bdf_get_fine_gain_offset(int8_t offset, mod_type_t mod_type, bool isTpcCal);
 #endif
 int8_t phyrf_bdf_get_fine_gain_process_corner_offset(uint8_t chip_type, uint8_t band);
 
 bool phyrf_bdf_is_ceb_enabled(freq_band_t band);
-void phyrf_bdf_get_temp_based_update_list(PHYRF_REG_TEMP_BASED_UPDATE* p_phyrf_reg_update_list);
+void phyrf_bdf_get_temp_based_update_list(PHYRF_REG_TEMP_BASED_UPDATE *p_phyrf_reg_update_list);
 
 #if (FERMION_CHIP_VERSION == 2)
 bool phyrf_bdf_is_dac_bo_enable(uint16_t chan);

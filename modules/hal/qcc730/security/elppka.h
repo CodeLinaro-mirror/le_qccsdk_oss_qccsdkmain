@@ -53,69 +53,55 @@
 
 #include <stdint.h>
 
-#define PKA_JUMP_PROBABILITY_100_PERCENT    0x1FFF
-#define PKA_JUMP_PROBABILITY_0_PERCENT      0
+#define PKA_JUMP_PROBABILITY_100_PERCENT 0x1FFF
+#define PKA_JUMP_PROBABILITY_0_PERCENT   0
 
 struct pka_state {
-   uint32_t *regbase;
-   uint32_t instructions_since_go;
-   uint32_t time_in_ms_since_go;
-   int operands_are_in_big_endian_format;
-   uint32_t last_return_code_register_value;
-   void * operation_complete_signal_ptr;
-   struct pka_config {
-      unsigned alu_size, rsa_size, ecc_size;
-      unsigned fw_ram_size, fw_rom_size;
-   } cfg;
+    uint32_t *regbase;
+    uint32_t instructions_since_go;
+    uint32_t time_in_ms_since_go;
+    int operands_are_in_big_endian_format;
+    uint32_t last_return_code_register_value;
+    void *operation_complete_signal_ptr;
+    struct pka_config {
+        unsigned alu_size, rsa_size, ecc_size;
+        unsigned fw_ram_size, fw_rom_size;
+    } cfg;
 };
 
 struct pka_fw {
-   unsigned long ram_size, rom_size;
-   const char *errmsg;
+    unsigned long ram_size, rom_size;
+    const char *errmsg;
 
-   struct pka_fw_tag {
-      unsigned long origin, tag_length, timestamp, md5_coverage;
-      unsigned char md5[16];
-   } ram_tag, rom_tag;
+    struct pka_fw_tag {
+        unsigned long origin, tag_length, timestamp, md5_coverage;
+        unsigned char md5[16];
+    } ram_tag, rom_tag;
 
-   /* For internal use */
-   struct elppka_fw_priv *priv;
+    /* For internal use */
+    struct elppka_fw_priv *priv;
 };
 
-enum {
-   PKA_OPERAND_A,
-   PKA_OPERAND_B,
-   PKA_OPERAND_C,
-   PKA_OPERAND_D,
-   PKA_OPERAND_MAX
-};
+enum { PKA_OPERAND_A, PKA_OPERAND_B, PKA_OPERAND_C, PKA_OPERAND_D, PKA_OPERAND_MAX };
 
 int elppka_init(struct pka_state *pka, uint32_t *regbase);
 
 void elppka_setup(struct pka_state *pka, int pka_operands_are_in_big_endian_format);
 
-int elppka_start(struct pka_state *pka, uint32_t pka_cmd, uint32_t flags,
-                                                        unsigned size);
+int elppka_start(struct pka_state *pka, uint32_t pka_cmd, uint32_t flags, unsigned size);
 
 void elppka_abort(struct pka_state *pka);
-void elppka_ack_irq(struct pka_state * pka);
-void elppka_enable_irq(struct pka_state * pka);
-void elppka_disable_irq(struct pka_state * pka);
+void elppka_ack_irq(struct pka_state *pka);
+void elppka_enable_irq(struct pka_state *pka);
+void elppka_disable_irq(struct pka_state *pka);
 int elppka_get_status(struct pka_state *pka, unsigned *code);
 
-int elppka_cancel_outstanding_operation(struct pka_state * pka);
+int elppka_cancel_outstanding_operation(struct pka_state *pka);
 
-int elppka_perform_operation(
-    struct pka_state *pka,
-    uint32_t pka_cmd,
-    uint32_t flags,
-    unsigned size
-    );
+int elppka_perform_operation(struct pka_state *pka, uint32_t pka_cmd, uint32_t flags, unsigned size);
 
-int elppka_load_operand(struct pka_state *pka, unsigned bank, unsigned index,
-                                         unsigned size, const uint8_t *data);
-int elppka_unload_operand(struct pka_state *pka, unsigned bank, unsigned index,
-                                                 unsigned size, uint8_t *data);
+int elppka_load_operand(struct pka_state *pka, unsigned bank, unsigned index, unsigned size, const uint8_t *data);
+int elppka_unload_operand(struct pka_state *pka, unsigned bank, unsigned index, unsigned size, uint8_t *data);
 
 uint32_t elppka_is_zero_flag_set(struct pka_state *pka);
 uint32_t elppka_set_f0_flag(uint32_t flags);
@@ -125,12 +111,10 @@ uint32_t elppka_set_f3_flag(uint32_t flags);
 void elppka_set_index_l_register(struct pka_state *pka, uint32_t value);
 void elppka_set_jump_probability_register(struct pka_state *pka, uint32_t value);
 
-
 void elppka_set_byteswap(struct pka_state *pka, int swap);
 
 /* Firmware image handling */
-int elppka_fw_parse(struct pka_fw *fw, const unsigned char *data,
-                                       unsigned long len);
+int elppka_fw_parse(struct pka_fw *fw, const unsigned char *data, unsigned long len);
 void elppka_fw_free(struct pka_fw *fw);
 
 int elppka_fw_lookup_entry(struct pka_fw *fw, const char *entry);
@@ -138,4 +122,3 @@ int elppka_fw_lookup_entry(struct pka_fw *fw, const char *entry);
 int elppka_fw_load(struct pka_state *pka);
 
 #endif
-

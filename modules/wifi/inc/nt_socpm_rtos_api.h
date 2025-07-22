@@ -41,19 +41,18 @@
 #include "timer.h"
 
 // Systick Register to load on system resume
-#define configSYSTICK_CLOCK_HZ (60000000u)
-#define portNVIC_SYSTICK_CLK_BIT (1UL << 2UL)
-#define portNVIC_SYSTICK_CTRL_REG (*((volatile uint32_t *)0xe000e010))
-#define portNVIC_SYSTICK_LOAD_REG (*((volatile uint32_t *)0xe000e014))
+#define configSYSTICK_CLOCK_HZ             (60000000u)
+#define portNVIC_SYSTICK_CLK_BIT           (1UL << 2UL)
+#define portNVIC_SYSTICK_CTRL_REG          (*((volatile uint32_t *)0xe000e010))
+#define portNVIC_SYSTICK_LOAD_REG          (*((volatile uint32_t *)0xe000e014))
 #define portNVIC_SYSTICK_CURRENT_VALUE_REG (*((volatile uint32_t *)0xe000e018))
-#define portNVIC_SYSPRI2_REG (*((volatile uint32_t *)0xe000ed20))
+#define portNVIC_SYSPRI2_REG               (*((volatile uint32_t *)0xe000ed20))
 /* ...then bits in the registers. */
-#define portNVIC_SYSTICK_INT_BIT (1UL << 1UL)
-#define portNVIC_SYSTICK_ENABLE_BIT (1UL << 0UL)
+#define portNVIC_SYSTICK_INT_BIT        (1UL << 1UL)
+#define portNVIC_SYSTICK_ENABLE_BIT     (1UL << 0UL)
 #define portNVIC_SYSTICK_COUNT_FLAG_BIT (1UL << 16UL)
-#define portNVIC_PENDSVCLEAR_BIT (1UL << 27UL)
+#define portNVIC_PENDSVCLEAR_BIT        (1UL << 27UL)
 #define portNVIC_PEND_SYSTICK_CLEAR_BIT (1UL << 25UL)
-
 
 // tick compensation for vPreSleepProcessing + vPostSleepProcessing
 //  it is assumption at this stage need to be dynamic
@@ -63,8 +62,7 @@
 // see portNVIC_SYSTICK_CLK_BIT
 #define _SOCPM_SYSTICK_CLK_BIT (1UL << 2UL)
 
-void vPortSuppressTicksAndSleep(
-    TickType_t xExpectedIdleTime);
+void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime);
 
 void _socpm_systick_off(void);
 void _socpm_systick_on(void);

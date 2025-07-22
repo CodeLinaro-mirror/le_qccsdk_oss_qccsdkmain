@@ -38,8 +38,6 @@
 
 *****************************************************************************/
 
-
-
 /** include files **/
 
 #include "nt_osal.h"
@@ -50,19 +48,19 @@
 #include "hal_int_modules.h"
 #ifdef WIFI_HW_AES
 /*------------------------------------------------------------------------
-* Preprocessor Definitions and Constants
-* ----------------------------------------------------------------------*/
-#define AES128_KEY_SIZE_IN_BYTES 	16
-#define AES256_KEY_SIZE_IN_BYTES 	32
-#define AES_SW_IO 					0x2
-#define AES128_CBC_ENCRYPT 			0x442
-#define AES256_CBC_ENCRYPT 			0x452
-#define AES128_CBC_DECRYPT 			0x42
-#define AES256_CBC_DECRYPT 			0x52
+ * Preprocessor Definitions and Constants
+ * ----------------------------------------------------------------------*/
+#define AES128_KEY_SIZE_IN_BYTES 16
+#define AES256_KEY_SIZE_IN_BYTES 32
+#define AES_SW_IO                0x2
+#define AES128_CBC_ENCRYPT       0x442
+#define AES256_CBC_ENCRYPT       0x452
+#define AES128_CBC_DECRYPT       0x42
+#define AES256_CBC_DECRYPT       0x52
 
 /*------------------------------------------------------------------------
-* Function Definitions
-* ----------------------------------------------------------------------*/
+ * Function Definitions
+ * ----------------------------------------------------------------------*/
 /**
  * @brief  Driver for configuring HW crypt to CBC
  * @param  key_size : Size of key /8 i.e, 16 for AES 128 and 32 for AES 256
@@ -74,80 +72,81 @@
  * @param  p_out 	: Pointer to in data
  * @return Error codes
  */
-int32_t hcal_aes_cbc(uint8_t key_size,uint8_t mode,const uint8_t *p_key,const uint8_t *p_iv,const uint8_t *p_in, uint32_t size , uint8_t *p_out)
+int32_t hcal_aes_cbc(uint8_t key_size, uint8_t mode, const uint8_t *p_key, const uint8_t *p_iv, const uint8_t *p_in,
+                     uint32_t size, uint8_t *p_out)
 {
-	uint32_t *key = (uint32_t*)p_key;
-	uint32_t *iv = (uint32_t*)p_iv;
-	uint32_t dout[32] = {0};
-	uint8_t secip_power_domain = 0;
-	if(!(HAL_REG_RD(QWLAN_PMU_SECIP_GDSCR_REG) & QWLAN_PMU_SECIP_GDSCR_GDS_CTL_PWR_STATUS_MASK))
-	{
-		NT_LOG_PRINT(SECURITY,ERR, "SecIP is power domain is turned off, turning SecIP power domain on locally");
-		hal_secip_sw_power_req(1);
-		secip_power_domain = 1;
-	}
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG, AES_SW_IO); // use the SW mode of cryto, disable HW mode
-	//NT_LOG_PRINT(SECURITY, ERR, "QWLAN_PMU_SECIP_GDSCR_REG: %d", HAL_REG_RD(QWLAN_PMU_SECIP_GDSCR_REG));
-	//NT_LOG_PRINT(SECURITY, ERR, "QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_VERSION_REG: %d", HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_VERSION_REG));
-	//NT_LOG_PRINT(SECURITY, ERR, "QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG: %d", HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG));
-    if(AES_ENCRYPT == mode){
-		if(AES128_KEY_SIZE_IN_BYTES == key_size)
-	    	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, AES128_CBC_ENCRYPT);
-		else
-	    	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, AES256_CBC_ENCRYPT);
-	}
-    else{
-		if(AES128_KEY_SIZE_IN_BYTES == key_size)
-	    	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, AES128_CBC_DECRYPT);
-		else
-	    	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, AES256_CBC_DECRYPT);
-	}
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_SIZE_REG,size);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_START_REG,0);
-	// total segment size
-	//  formatted A_length + P_length
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SEG_SIZE_REG,size);
+    uint32_t *key = (uint32_t *)p_key;
+    uint32_t *iv = (uint32_t *)p_iv;
+    uint32_t dout[32] = {0};
+    uint8_t secip_power_domain = 0;
+    if (!(HAL_REG_RD(QWLAN_PMU_SECIP_GDSCR_REG) & QWLAN_PMU_SECIP_GDSCR_GDS_CTL_PWR_STATUS_MASK)) {
+        NT_LOG_PRINT(SECURITY, ERR, "SecIP is power domain is turned off, turning SecIP power domain on locally");
+        hal_secip_sw_power_req(1);
+        secip_power_domain = 1;
+    }
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG, AES_SW_IO);  // use the SW mode of cryto, disable HW mode
+    // NT_LOG_PRINT(SECURITY, ERR, "QWLAN_PMU_SECIP_GDSCR_REG: %d", HAL_REG_RD(QWLAN_PMU_SECIP_GDSCR_REG));
+    // NT_LOG_PRINT(SECURITY, ERR, "QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_VERSION_REG: %d",
+    // HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_VERSION_REG)); NT_LOG_PRINT(SECURITY, ERR,
+    // "QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG: %d", HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG));
+    if (AES_ENCRYPT == mode) {
+        if (AES128_KEY_SIZE_IN_BYTES == key_size)
+            HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, AES128_CBC_ENCRYPT);
+        else
+            HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, AES256_CBC_ENCRYPT);
+    } else {
+        if (AES128_KEY_SIZE_IN_BYTES == key_size)
+            HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, AES128_CBC_DECRYPT);
+        else
+            HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, AES256_CBC_DECRYPT);
+    }
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_SIZE_REG, size);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_START_REG, 0);
+    // total segment size
+    //  formatted A_length + P_length
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SEG_SIZE_REG, size);
 
-	// write encryption keys
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_0_REG, key[0]);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_1_REG, key[1]);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_2_REG, key[2]);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_3_REG, key[3]);
-	if(AES256_KEY_SIZE_IN_BYTES == key_size){ //AES256
-		HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_4_REG, key[4]);
-		HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_5_REG, key[5]);
-		HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_6_REG, key[6]);
-		HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_7_REG, key[7]);
-	}
-	// write IV vactor
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_CNTR0_IV0_REG, iv[0]);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_CNTR1_IV1_REG, iv[1]);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_CNTR2_IV2_REG, iv[2]);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_CNTR3_IV3_REG, iv[3]);
+    // write encryption keys
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_0_REG, key[0]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_1_REG, key[1]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_2_REG, key[2]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_3_REG, key[3]);
+    if (AES256_KEY_SIZE_IN_BYTES == key_size) {  // AES256
+        HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_4_REG, key[4]);
+        HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_5_REG, key[5]);
+        HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_6_REG, key[6]);
+        HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SW_KEY0_7_REG, key[7]);
+    }
+    // write IV vactor
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_CNTR0_IV0_REG, iv[0]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_CNTR1_IV1_REG, iv[1]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_CNTR2_IV2_REG, iv[2]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_CNTR3_IV3_REG, iv[3]);
 
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_REG, 0x1);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_REG, 0x1);
 
-	if(size & 0x3){
-		size +=4;
-	}
-	crypto_arm3((const uint8_t *)p_in, dout,(uint32_t)(size >> 2),(uint32_t)(size >> 2));
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG,0);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_SIZE_REG,0);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_START_REG,0);
-	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SEG_SIZE_REG,0);
-	if(1 == secip_power_domain){
-		hal_secip_sw_power_req(1);
-	}
+    if (size & 0x3) {
+        size += 4;
+    }
+    crypto_arm3((const uint8_t *)p_in, dout, (uint32_t)(size >> 2), (uint32_t)(size >> 2));
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, 0);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_SIZE_REG, 0);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_START_REG, 0);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SEG_SIZE_REG, 0);
+    if (1 == secip_power_domain) {
+        hal_secip_sw_power_req(1);
+    }
 
-	memcpy(p_out,&dout,size*sizeof(uint8_t));
-	return 0;
+    memcpy(p_out, &dout, size * sizeof(uint8_t));
+    return 0;
 }
 
 #endif
 #ifdef NT_FN_HW_CRYPTO
 #define QCC 1
 
-#if 0 /* Disabling unused function to avoid KW issues. If this function needs to be used in future, KW issues need to be addressed */
+#if 0 /* Disabling unused function to avoid KW issues. If this function needs to be used in future, KW issues need to \
+         be addressed */
 int32_t aes128_cbc_known_answer_piomode(int mode, const unsigned char iv[16], const unsigned char *input,const uint32_t key[8],unsigned char *output)
 {
   //uint32_t i;
@@ -242,7 +241,6 @@ int32_t aes128_cbc_known_answer_piomode(int mode, const unsigned char iv[16], co
    	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_INFO_NONCE2_REG, nonce[2]);
    	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_INFO_NONCE3_REG, nonce[3]);
 
-
 #endif
 
 	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_REG, 1 << QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_GO_OFFSET);
@@ -312,8 +310,6 @@ int32_t nt_aes256_cbc(int mode,
 	nonce[1] = 0x00000000;
 	nonce[2] = 0x00000000;
 	nonce[3] = 0x00000000;
-
-
 
 #ifdef QCC
 
@@ -394,7 +390,6 @@ int32_t nt_aes256_cbc(int mode,
 	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_INFO_NONCE2_REG, nonce[2]);
 	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_INFO_NONCE3_REG, nonce[3]);
 
-
 #endif
 
 	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_REG, 1 << QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_GO_OFFSET);
@@ -413,9 +408,6 @@ int32_t nt_aes256_cbc(int mode,
 	return 0;
 
 }
-
-
-
 
 #endif
 

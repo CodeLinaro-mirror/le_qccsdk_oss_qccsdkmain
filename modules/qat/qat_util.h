@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
-#ifndef __QAT_UTIL_H__ // [
+#ifndef __QAT_UTIL_H__  // [
 #define __QAT_UTIL_H__
 
 /*-------------------------------------------------------------------------
@@ -14,7 +14,6 @@
 #include "qapi_types.h"
 #include "qapi_status.h"
 #include "qat_api.h"
-
 
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -117,7 +116,7 @@ qbool_t QAT_Hex_String_To_Array(char *String, uint32_t *OutputSize, uint8_t *Out
     - true  if the parameter is valid.
     - false if the parameter is not valid.
 */
-//qbool_t QAT_Verify_Integer_Parameter(QAT_Parameter_t *Parameter, int32_t MinValue, int32_t MaxValue);
+// qbool_t QAT_Verify_Integer_Parameter(QAT_Parameter_t *Parameter, int32_t MinValue, int32_t MaxValue);
 
 /**
    @brief Verifies if a given command line parameter is a valid unsigned integer
@@ -173,5 +172,4 @@ void QAT_Dump_Data(const char *Prefix, uint16_t Length, const uint8_t *Buffer);
 */
 qbool_t QAT_Verify_Integer_Parameter(int Parameter, int32_t MinValue, int32_t MaxValue);
 
-#endif // ] #ifndef __QAT_UTIL_H__
-
+#endif  // ] #ifndef __QAT_UTIL_H__

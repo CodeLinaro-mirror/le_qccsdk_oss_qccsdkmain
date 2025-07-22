@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*----------------------------------------------------------------------------*
  * @file wifi_fw_dbg_infra.c
  * @brief Implementation of Fermion Debug infra
@@ -18,45 +18,49 @@
 #include "nt_devcfg.h"
 #include "nt_hw_support.h"
 
-#define FDI_MOD_DEF_BMAP            ((uint32_t) -1)
-#define NT_IS_ISR                   ((HW_REG_RD (NT_ICSR_REG)) & NT_SCB_ICSR_VECTACTIVE_Msk) != 0
+#define FDI_MOD_DEF_BMAP ((uint32_t)-1)
+#define NT_IS_ISR        ((HW_REG_RD(NT_ICSR_REG)) & NT_SCB_ICSR_VECTACTIVE_Msk) != 0
 
 /*----------------------------------------------------------------------------
-* Extern Functions
-*----------------------------------------------------------------------------*/
+ * Extern Functions
+ *----------------------------------------------------------------------------*/
 extern uint8_t get_warmboot_status(void);
 
 /*----------------------------------------------------------------------------
  * Static Function Declare
  *----------------------------------------------------------------------------*/
 #if FDI_PRINT_ON_UT == FDI_SET
-static void _post_wm_cb(fifo_t* p_fifo);
-static fdi_ret_t _fdi_enqueue(fifo_t* q, char* node);
+static void _post_wm_cb(fifo_t *p_fifo);
+static fdi_ret_t _fdi_enqueue(fifo_t *q, char *node);
 #endif /* FDI_PRINT_ON_UT */
 
 #if FDI_EN_POST_PROCESS == FDI_SET
-static void _fdi_thread(void* p_queue);
-static void _fdi_post_process_complete_cb(fifo_t* p_fifo);
+static void _fdi_thread(void *p_queue);
+static void _fdi_post_process_complete_cb(fifo_t *p_fifo);
 static void _swap_log_buffer(void);
 #else
 #if FDI_PRINT_ON_UT == FDI_SET
-static fdi_ret_t _fdi_dequeue(fifo_t* q, char* node);
-static fdi_ret_t _fdi_trav_q(fifo_t* q, size_t* next_el, char* node);
+static fdi_ret_t _fdi_dequeue(fifo_t *q, char *node);
+static fdi_ret_t _fdi_trav_q(fifo_t *q, size_t *next_el, char *node);
 #endif
 #endif /* FDI_EN_POST_PROCESS */
 
-fdi_ret_t _fdi_push_ins_node(const fdi_node_ins_t* ins_node);
+fdi_ret_t _fdi_push_ins_node(const fdi_node_ins_t *ins_node);
 /*----------------------------------------------------------------------------
  * Static Variables
  *----------------------------------------------------------------------------*/
 #if FDI_EN_POST_PROCESS == FDI_SET
-FIFO_INIT_BUFFER_CIRCULAR(fdi_log_ping, FDI_FIFO_DEPTH, fdi_node_ins_t, FDI_FIFO_ABS_WATERMARK(FDI_FIFO_DEF_WATERMARK), _post_wm_cb);
-FIFO_INIT_BUFFER_CIRCULAR(fdi_log_pong, FDI_FIFO_DEPTH, fdi_node_ins_t, FDI_FIFO_ABS_WATERMARK(FDI_FIFO_DEF_WATERMARK), _post_wm_cb);
+FIFO_INIT_BUFFER_CIRCULAR(fdi_log_ping, FDI_FIFO_DEPTH, fdi_node_ins_t, FDI_FIFO_ABS_WATERMARK(FDI_FIFO_DEF_WATERMARK),
+                          _post_wm_cb);
+FIFO_INIT_BUFFER_CIRCULAR(fdi_log_pong, FDI_FIFO_DEPTH, fdi_node_ins_t, FDI_FIFO_ABS_WATERMARK(FDI_FIFO_DEF_WATERMARK),
+                          _post_wm_cb);
 /* Queue to push Non-processed starts with identifiers */
-FIFO_INIT_BUFFER_CIRCULAR(fdi_log_idfs, FDI_FIFO_DEPTH, fdi_node_ins_t, FDI_FIFO_ABS_WATERMARK(FDI_FIFO_DEF_WATERMARK), NULL);
+FIFO_INIT_BUFFER_CIRCULAR(fdi_log_idfs, FDI_FIFO_DEPTH, fdi_node_ins_t, FDI_FIFO_ABS_WATERMARK(FDI_FIFO_DEF_WATERMARK),
+                          NULL);
 #else
 #if FDI_PRINT_ON_UT == FDI_SET
-FIFO_INIT_BUFFER_CIRCULAR(fdi_log_full, FDI_FIFO_DEPTH, fdi_node_ins_t, FDI_FIFO_ABS_WATERMARK(FDI_FIFO_DEF_WATERMARK), _post_wm_cb);
+FIFO_INIT_BUFFER_CIRCULAR(fdi_log_full, FDI_FIFO_DEPTH, fdi_node_ins_t, FDI_FIFO_ABS_WATERMARK(FDI_FIFO_DEF_WATERMARK),
+                          _post_wm_cb);
 #endif
 #endif
 
@@ -75,8 +79,7 @@ static FDI_PS_DATA uint32_t g_sequence_number = FDI_RESET;
  * Global Variables
  *----------------------------------------------------------------------------*/
 FDI_PS_DATA fdi_reg_t g_fdi_node_table[FDI_MAX_NODE];
-fdi_t g_fdi =
-{
+fdi_t g_fdi = {
 #if FDI_EN_POST_PROCESS == FDI_SET
     .watermark = FDI_FIFO_ABS_WATERMARK(FDI_FIFO_DEF_WATERMARK),
     .buffer_ptr_idfs = &FIFO_INSTANCE(fdi_log_idfs),
@@ -90,28 +93,27 @@ fdi_t g_fdi =
 #endif /* FDI_PRINT_ON_UT */
 #endif /* FDI_EN_POST_PROCESS */
     .p_reg_table = g_fdi_node_table,
-    .module_bmap_en = FDI_MOD_DEF_BMAP
-};
+    .module_bmap_en = FDI_MOD_DEF_BMAP};
 
 /*----------------------------------------------------------------------------
  * Function Define
  *----------------------------------------------------------------------------*/
- /**********************************************************************************************
-  * @brief Register an Event Node
-  *
-  * @param id        ID of the Node
-  * @param attr      attr_t
-  * @param p_cb      pointer for Post log insertion Callback
-  * @param p_ret     pointer to fdi_reg_t type pointer var for return the Address of registration
-  * @return fdi_ret_t
-  ***********************************************************************************************/
-fdi_ret_t fdi_reg_node(uint16_t id, attr_t attr, post_ins_cb p_cb, fdi_reg_t** p_ret)
+/**********************************************************************************************
+ * @brief Register an Event Node
+ *
+ * @param id        ID of the Node
+ * @param attr      attr_t
+ * @param p_cb      pointer for Post log insertion Callback
+ * @param p_ret     pointer to fdi_reg_t type pointer var for return the Address of registration
+ * @return fdi_ret_t
+ ***********************************************************************************************/
+fdi_ret_t fdi_reg_node(uint16_t id, attr_t attr, post_ins_cb p_cb, fdi_reg_t **p_ret)
 {
     FDI_ASSERT_IF_FALSE(id < FDI_MAX_NODE, FDI_RET_FAILED_NODE_MAX);
     FDI_ASSERT_IF_FALSE(p_ret != NULL, FDI_RET_FAILED_ASSERT_PARAM);
 
     g_fdi_node_table[id].attr = (uint16_t)((attr.Enable << FDI_NODE_ATTR_ENABLE_OFFSET) |
-        (attr.log_level << FDI_NODE_ATTR_LOG_LVL_OFFSET) | id);
+                                           (attr.log_level << FDI_NODE_ATTR_LOG_LVL_OFFSET) | id);
     g_fdi_node_table[id].module_bmap = attr.module_bmap;
     g_fdi_node_table[id].p_cb = p_cb;
     *p_ret = &(g_fdi_node_table[id]);
@@ -126,11 +128,10 @@ fdi_ret_t fdi_reg_node(uint16_t id, attr_t attr, post_ins_cb p_cb, fdi_reg_t** p
  * @param identifier        A param to indentify corresponding start and stop. Can be defaulted to NULL
  * @return fdi_ret_t
  *******************************************************************************************************/
-FDI_PS_TXT fdi_ret_t fdi_insert_log(const fdi_reg_t* p_reg, tick_type_t tick_type, uint32_t identifier)
+FDI_PS_TXT fdi_ret_t fdi_insert_log(const fdi_reg_t *p_reg, tick_type_t tick_type, uint32_t identifier)
 {
     /* If BMPS context call fdi_rmc_inst*/
-    if (get_warmboot_status() == FDI_SET)
-    {
+    if (get_warmboot_status() == FDI_SET) {
 #if defined(FEATURE_FDI_RMC)
         return fdi_rmc_inst((p_reg->attr & FDI_NODE_ATTR_ID_MASK), tick_type, identifier);
 #else
@@ -173,9 +174,8 @@ FDI_PS_TXT fdi_ret_t fdi_insert_log(const fdi_reg_t* p_reg, tick_type_t tick_typ
  *
  * @return fdi_ret_t
  *******************************************************************************************************/
-fdi_ret_t fdi_node2log(const fdi_reg_t* p_reg, fdi_node_ins_t* ins_node)
+fdi_ret_t fdi_node2log(const fdi_reg_t *p_reg, fdi_node_ins_t *ins_node)
 {
-
     FDI_ASSERT_IF_FALSE(p_reg != NULL, FDI_RET_FAILED_ASSERT_PARAM);
 #ifndef NT_DEBUG
     FDI_ASSERT_IF_FALSE((p_reg->attr & LOG_LEVEL_PROD) != FDI_RESET, FDI_RET_FAILED_ASSERT_PROD_NOT_ENABLE);
@@ -203,12 +203,9 @@ fdi_ret_t fdi_node_en(uint16_t node_id, uint8_t en_flag)
 {
     FDI_ASSERT_IF_FALSE(node_id < FDI_MAX_NODE, FDI_RET_FAILED_ASSERT_PARAM);
 
-    if (en_flag)
-    {
+    if (en_flag) {
         g_fdi.p_reg_table[node_id].attr |= (FDI_SET << FDI_NODE_ATTR_ENABLE_OFFSET);
-    }
-    else
-    {
+    } else {
         g_fdi.p_reg_table[node_id].attr &= ~(FDI_SET << FDI_NODE_ATTR_ENABLE_OFFSET);
     }
 
@@ -224,19 +221,14 @@ fdi_ret_t fdi_mod_en(uint32_t bmap, uint8_t en_flag)
 {
     FDI_ASSERT_IF_FALSE(bmap != FDI_MOD_DEF_BMAP, FDI_RET_FAILED_ASSERT_PARAM);
 
-    if (en_flag)
-    {
+    if (en_flag) {
         g_fdi.module_bmap_en |= bmap;
-    }
-    else
-    {
+    } else {
         g_fdi.module_bmap_en &= ~bmap;
     }
     NT_LOG_PRINT(COMMON, ERR, "Modules Enabled:");
-    for (fdi_mod_t mod = FDI_MOD_PWR; mod < FDI_MOD_MAX; mod++)
-    {
-        if ((g_fdi.module_bmap_en & (FDI_SET << mod)) != FDI_RESET)
-        {
+    for (fdi_mod_t mod = FDI_MOD_PWR; mod < FDI_MOD_MAX; mod++) {
+        if ((g_fdi.module_bmap_en & (FDI_SET << mod)) != FDI_RESET) {
             NT_LOG_PRINT(COMMON, ERR, "[%02u] : [1]", mod);
         }
     }
@@ -256,15 +248,11 @@ fdi_ret_t fdi_trigger_pp()
 
     g_fdi_signal_flag = FDI_SET;
 
-    if (eTaskGetState(xFDIHandle) < eSuspended)
-    {
+    if (eTaskGetState(xFDIHandle) < eSuspended) {
         /* If FDI Task is not suspended */
-        if (NT_IS_ISR)
-        {
+        if (NT_IS_ISR) {
             xEventGroupSetBitsFromISR(xFDIEventGroup, FDI_WM_EVT_BIT_MASK, &xHigherPriorityTaskWoken);
-        }
-        else
-        {
+        } else {
             xEventGroupSetBits(xFDIEventGroup, FDI_WM_EVT_BIT_MASK);
         }
     }
@@ -285,7 +273,8 @@ fdi_ret_t fdi_set_wm(uint8_t wm_percent)
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     BaseType_t sem_ret = pdFALSE;
 
-    sem_ret = (NT_IS_ISR) ? xSemaphoreTakeFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreTake(xFDI_SEM, portMAX_DELAY);
+    sem_ret = (NT_IS_ISR) ? xSemaphoreTakeFromISR(xFDI_SEM, &xHigherPriorityTaskWoken)
+                          : xSemaphoreTake(xFDI_SEM, portMAX_DELAY);
     FDI_ASSERT_IF_FALSE(sem_ret != pdFALSE, FDI_RET_FAILED_ASSERT_SEMAPHORE_GET);
 
     g_fdi.watermark = FDI_FIFO_ABS_WATERMARK(wm_percent);
@@ -304,33 +293,22 @@ fdi_ret_t fdi_set_wm(uint8_t wm_percent)
  *********************************************/
 void fdi_init(void)
 {
-    if (g_fdi.module_bmap_en == FDI_MOD_DEF_BMAP)
-    {
-        g_fdi.module_bmap_en = *((uint32_t*)(nt_devcfg_get_config(NT_DEVCFG_DEFAULT_LOG_BMAP)));
+    if (g_fdi.module_bmap_en == FDI_MOD_DEF_BMAP) {
+        g_fdi.module_bmap_en = *((uint32_t *)(nt_devcfg_get_config(NT_DEVCFG_DEFAULT_LOG_BMAP)));
     }
 
-    if (xFDI_SEM == NULL)
-    {
+    if (xFDI_SEM == NULL) {
         xFDI_SEM = xSemaphoreCreateBinary();
         xSemaphoreGive(xFDI_SEM);
     }
 #if FDI_EN_POST_PROCESS
-    if (xFDIHandle == NULL || eTaskGetState(xFDIHandle) < eDeleted)
-    {
+    if (xFDIHandle == NULL || eTaskGetState(xFDIHandle) < eDeleted) {
         /* Init FDI Thread */
-        nt_qurt_thread_create(
-            _fdi_thread,
-            FDI_THREAD_NAME,
-            FDI_THREAD_STACK_SIZE,
-            &g_fdi,
-            FDI_THREAD_PRIOR,
-            &xFDIHandle
-        );
+        nt_qurt_thread_create(_fdi_thread, FDI_THREAD_NAME, FDI_THREAD_STACK_SIZE, &g_fdi, FDI_THREAD_PRIOR,
+                              &xFDIHandle);
         if (xFDIHandle != NULL)
             xFDIEventGroup = xEventGroupCreate();
-    }
-    else
-    {
+    } else {
         return;
     }
 
@@ -351,26 +329,20 @@ fdi_ret_t fdi_print_log(
 #if FDI_EN_POST_PROCESS
     uint16_t node_id = FDI_RESET;
 
-    while (node_id < FDI_MAX_NODE)
-    {
+    while (node_id < FDI_MAX_NODE) {
         if ((((g_fdi.p_reg_table[node_id].module_bmap) & g_fdi.module_bmap_en) != FDI_RESET) &&
-            (g_fdi.p_reg_table[node_id].event_ctr != FDI_RESET))
-        {
-            NT_LOG_PRINT(COMMON, ERR,
-                "FDI_2:%04u:%04u:%010u:%010u:%010u:%010u;",
+            (g_fdi.p_reg_table[node_id].event_ctr != FDI_RESET)) {
+            NT_LOG_PRINT(
+                COMMON, ERR, "FDI_2:%04u:%04u:%010u:%010u:%010u:%010u;",
                 (unsigned int)(g_fdi.p_reg_table[node_id].attr & FDI_NODE_ATTR_ID_MASK),
-                (unsigned int) g_fdi.p_reg_table[node_id].event_ctr,
-                (unsigned int) g_fdi.p_reg_table[node_id].tick_last,
-                (unsigned int) g_fdi.p_reg_table[node_id].tick_peak,
-                (unsigned int) g_fdi.p_reg_table[node_id].tick_avrg,
-                (unsigned int) g_fdi.p_reg_table[node_id].tick_min
-            );
-            if (clear)
-            {
+                (unsigned int)g_fdi.p_reg_table[node_id].event_ctr, (unsigned int)g_fdi.p_reg_table[node_id].tick_last,
+                (unsigned int)g_fdi.p_reg_table[node_id].tick_peak, (unsigned int)g_fdi.p_reg_table[node_id].tick_avrg,
+                (unsigned int)g_fdi.p_reg_table[node_id].tick_min);
+            if (clear) {
                 g_fdi.p_reg_table[node_id].tick_avrg = FDI_RESET;
                 g_fdi.p_reg_table[node_id].tick_last = FDI_RESET;
                 g_fdi.p_reg_table[node_id].tick_peak = FDI_RESET;
-                g_fdi.p_reg_table[node_id].tick_min  = FDI_RESET;
+                g_fdi.p_reg_table[node_id].tick_min = FDI_RESET;
                 g_fdi.p_reg_table[node_id].event_ctr = FDI_RESET;
             }
         }
@@ -384,28 +356,17 @@ fdi_ret_t fdi_print_log(
     uint8_t cond = FDI_RET_SUCCESS;
     volatile uint8_t is_clear = clear;
 
-    do
-    {
-        el_next = is_clear ? FDI_SET : el_next;                         /* Set el_nect if want to traverse */
-        cond = is_clear != FDI_RESET ?
-            _fdi_dequeue(FDI_LOG_FIFO, (char*)&node_ret) :              /* Dequeue if want to clear */
-            _fdi_trav_q(FDI_LOG_FIFO, &el_next, (char*)&node_ret);      /* Traverse only as we dont want to clear */
-        if (cond == FDI_RET_SUCCESS)
-        {
-            if (((node_ret.attr >> FDI_INS_ATTR_TICK_TYPE_OFFSET) & 0x01) == TICK_TYPE_STOP_TICK)
-            {
-                NT_LOG_PRINT(COMMON, ERR, "FDI_1:%04u:%02u:SP:%010u:%u;",
-                    node_ret.sq_no,
-                    node_ret.attr & FDI_NODE_ATTR_ID_MASK,
-                    node_ret.ticks,
-                    node_ret.identifier);
-            }
-            else {
-                NT_LOG_PRINT(COMMON, ERR, "FDI_1:%04u:%02u:ST:%010u:%u;",
-                    node_ret.sq_no,
-                    node_ret.attr & FDI_NODE_ATTR_ID_MASK,
-                    node_ret.ticks,
-                    node_ret.identifier);
+    do {
+        el_next = is_clear ? FDI_SET : el_next; /* Set el_nect if want to traverse */
+        cond = is_clear != FDI_RESET ? _fdi_dequeue(FDI_LOG_FIFO, (char *)&node_ret) : /* Dequeue if want to clear */
+                   _fdi_trav_q(FDI_LOG_FIFO, &el_next, (char *)&node_ret); /* Traverse only as we dont want to clear */
+        if (cond == FDI_RET_SUCCESS) {
+            if (((node_ret.attr >> FDI_INS_ATTR_TICK_TYPE_OFFSET) & 0x01) == TICK_TYPE_STOP_TICK) {
+                NT_LOG_PRINT(COMMON, ERR, "FDI_1:%04u:%02u:SP:%010u:%u;", node_ret.sq_no,
+                             node_ret.attr & FDI_NODE_ATTR_ID_MASK, node_ret.ticks, node_ret.identifier);
+            } else {
+                NT_LOG_PRINT(COMMON, ERR, "FDI_1:%04u:%02u:ST:%010u:%u;", node_ret.sq_no,
+                             node_ret.attr & FDI_NODE_ATTR_ID_MASK, node_ret.ticks, node_ret.identifier);
             }
         }
     } while (cond == FDI_RET_SUCCESS && (el_next != FIFO_RESET));
@@ -414,7 +375,7 @@ fdi_ret_t fdi_print_log(
     return FDI_RET_SUCCESS;
 }
 
- /**********************************************
+/**********************************************
  * @brief Get current Timestamp
  *
  * @return uint32_t
@@ -422,7 +383,7 @@ fdi_ret_t fdi_print_log(
 FDI_PS_TXT uint32_t fdi_get_time_stamp(void)
 {
 #ifdef SUPPORT_HIGH_RES_TIMER
-    return (uint32_t) hres_timer_timetick_get();
+    return (uint32_t)hres_timer_timetick_get();
 #else
     return FDI_RESET;
 #endif /* SUPPORT_HIGH_RES_TIMER */
@@ -437,27 +398,19 @@ FDI_PS_TXT uint32_t fdi_get_time_stamp(void)
  * @param ins_node
  * @return fdi_ret_t
  ***************************************************************/
-fdi_ret_t _fdi_push_ins_node(const fdi_node_ins_t* ins_node)
+fdi_ret_t _fdi_push_ins_node(const fdi_node_ins_t *ins_node)
 {
 #if FDI_PRINT_ON_UT == FDI_SET
     /* Enqueue the node */
-    return _fdi_enqueue(FDI_LOG_FIFO, (char*)ins_node);
+    return _fdi_enqueue(FDI_LOG_FIFO, (char *)ins_node);
 #else
     /* Directly print on console/diag buffer */
-    if (((ins_node->attr >> FDI_INS_ATTR_TICK_TYPE_OFFSET) & 0x01) == TICK_TYPE_STOP_TICK)
-    {
-        NT_LOG_PRINT(COMMON, ERR, "FDI_1:%04u:%02u:SP:%010u:%u;",
-            ins_node->sq_no,
-            ins_node->attr & FDI_NODE_ATTR_ID_MASK,
-            ins_node->ticks,
-            ins_node->identifier);
-    }
-    else {
-        NT_LOG_PRINT(COMMON, ERR, "FDI_1:%04u:%02u:ST:%010u:%u;",
-            ins_node->sq_no,
-            ins_node->attr & FDI_NODE_ATTR_ID_MASK,
-            ins_node->ticks,
-            ins_node->identifier);
+    if (((ins_node->attr >> FDI_INS_ATTR_TICK_TYPE_OFFSET) & 0x01) == TICK_TYPE_STOP_TICK) {
+        NT_LOG_PRINT(COMMON, ERR, "FDI_1:%04u:%02u:SP:%010u:%u;", ins_node->sq_no,
+                     ins_node->attr & FDI_NODE_ATTR_ID_MASK, ins_node->ticks, ins_node->identifier);
+    } else {
+        NT_LOG_PRINT(COMMON, ERR, "FDI_1:%04u:%02u:ST:%010u:%u;", ins_node->sq_no,
+                     ins_node->attr & FDI_NODE_ATTR_ID_MASK, ins_node->ticks, ins_node->identifier);
     }
     return FDI_RET_SUCCESS;
 #endif
@@ -469,121 +422,102 @@ fdi_ret_t _fdi_push_ins_node(const fdi_node_ins_t* ins_node)
  *
  * @param p_queue
  **********************************************/
-static void _fdi_thread(void* p_queue)
+static void _fdi_thread(void *p_queue)
 {
-    fdi_t* p_node = (fdi_t*)p_queue;
+    fdi_t *p_node = (fdi_t *)p_queue;
     EventBits_t evt = FDI_RESET;
     fdi_node_ins_t node_ret;
     fdi_node_ins_t get_start_node;
     static size_t start_idfs_ctr = FDI_RESET;
     static size_t start_idfs_idx = FDI_RESET;
 
-    while (FDI_SET)
-    {
-        evt = xEventGroupWaitBits(
-            xFDIEventGroup,
-            FDI_WM_EVT_BIT_MASK,
-            pdTRUE,     /* Clear on Exit */
-            pdFALSE,    /* Wait for All Bits */
-            portMAX_DELAY
-        );
-        if (evt == FDI_WM_EVT_BIT_MASK)
-        {
+    while (FDI_SET) {
+        evt = xEventGroupWaitBits(xFDIEventGroup, FDI_WM_EVT_BIT_MASK, pdTRUE, /* Clear on Exit */
+                                  pdFALSE,                                     /* Wait for All Bits */
+                                  portMAX_DELAY);
+        if (evt == FDI_WM_EVT_BIT_MASK) {
             _swap_log_buffer();
             /* No need to lock the queue as the operation is over inactive buffer */
-            while (fifo_dequeue(p_node->buffer_ptr_inactive, (char*)&node_ret) != FIFO_FAILURE)
-            {
+            while (fifo_dequeue(p_node->buffer_ptr_inactive, (char *)&node_ret) != FIFO_FAILURE) {
                 /* Manage missed sequence number */
-                if ((node_ret.sq_no - g_processed_sq_no) > FDI_SET)
-                {
+                if ((node_ret.sq_no - g_processed_sq_no) > FDI_SET) {
                     /* The sequence missed */
                     g_missed_sq_no += (node_ret.sq_no - g_processed_sq_no);
-                    NT_LOG_PRINT(COMMON, ERR,
-                        "FDI_3: Missed sequence: %04u;",
-                        (unsigned int) g_missed_sq_no
-                    );
+                    NT_LOG_PRINT(COMMON, ERR, "FDI_3: Missed sequence: %04u;", (unsigned int)g_missed_sq_no);
                 }
-                    g_processed_sq_no = node_ret.sq_no;
+                g_processed_sq_no = node_ret.sq_no;
                 /* node_ret post process */
-                if ((node_ret.attr & (FDI_SET << FDI_INS_ATTR_TICK_TYPE_OFFSET)) == (FDI_SET << FDI_INS_ATTR_TICK_TYPE_OFFSET))
-                {
+                if ((node_ret.attr & (FDI_SET << FDI_INS_ATTR_TICK_TYPE_OFFSET)) ==
+                    (FDI_SET << FDI_INS_ATTR_TICK_TYPE_OFFSET)) {
                     /* STOP Node Process */
-                    if ((node_ret.identifier != FDI_RESET) && (start_idfs_ctr != FDI_RESET))
-                    {
+                    if ((node_ret.identifier != FDI_RESET) && (start_idfs_ctr != FDI_RESET)) {
                         /* STOP Node Process having identifier */
                         start_idfs_idx = start_idfs_ctr;
-                        while (start_idfs_idx > FDI_RESET)
-                        {
+                        while (start_idfs_idx > FDI_RESET) {
                             /* Search for correspondinf START node with same identifier */
-                            fifo_dequeue(p_node->buffer_ptr_idfs, (char*)&get_start_node);
-                            if (node_ret.identifier == get_start_node.identifier)
-                            {
+                            fifo_dequeue(p_node->buffer_ptr_idfs, (char *)&get_start_node);
+                            if (node_ret.identifier == get_start_node.identifier) {
                                 p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].evt_start = get_start_node.ticks;
                                 start_idfs_ctr--;
                                 break;
-                            }
-                            else
-                            {
+                            } else {
                                 /* Enqueue it again if the identifier does not match */
-                                fifo_enqueue(p_node->buffer_ptr_idfs, (char*)&get_start_node);
+                                fifo_enqueue(p_node->buffer_ptr_idfs, (char *)&get_start_node);
                             }
                             start_idfs_idx--;
                         }
                     }
                     /* Condition for Event Start Occured */
-                    if (p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].evt_start != FDI_RESET)
-                    {
+                    if (p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].evt_start != FDI_RESET) {
                         /* Increment event counter */
                         p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].event_ctr++;
 
                         /* Update last tick captured */
-                        p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last = node_ret.ticks - p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].evt_start;
+                        p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last =
+                            node_ret.ticks - p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].evt_start;
 
                         /* Enter tick_min */
                         p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_min =
-                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_min > FDI_RESET ?
-                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_min < p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last ?
-                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_min : p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last :
-                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last;
+                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_min > FDI_RESET
+                                ? p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_min <
+                                          p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last
+                                      ? p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_min
+                                      : p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last
+                                : p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last;
 
                         /* Enter tick_peak */
                         p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_peak =
-                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last > p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_peak ?
-                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last : p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_peak;
+                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last >
+                                    p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_peak
+                                ? p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last
+                                : p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_peak;
 
                         /* Enter tick_avg*/
-                        p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_avrg = (
-                            ((p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_avrg *
-                            (p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].event_ctr - FDI_SET)) +
-                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last) /
-                            p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].event_ctr);
+                        p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_avrg =
+                            (((p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_avrg *
+                               (p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].event_ctr - FDI_SET)) +
+                              p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].tick_last) /
+                             p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].event_ctr);
 
                         /* Reset evt_start indecating the node process completed */
-                        p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].evt_start = FDI_RESET;     // Reset
+                        p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].evt_start = FDI_RESET;  // Reset
                     }
-                }
-                else if ((node_ret.attr & (FDI_SET << FDI_INS_ATTR_TICK_TYPE_OFFSET)) == FDI_RESET)
-                {
+                } else if ((node_ret.attr & (FDI_SET << FDI_INS_ATTR_TICK_TYPE_OFFSET)) == FDI_RESET) {
                     /* START Node Process */
-                    if (node_ret.identifier != FDI_RESET)
-                    {
+                    if (node_ret.identifier != FDI_RESET) {
                         /* STOP Node Process having identifier. Push it to idfs buffer */
-                        fifo_enqueue(p_node->buffer_ptr_idfs, (char*)&node_ret);
+                        fifo_enqueue(p_node->buffer_ptr_idfs, (char *)&node_ret);
                         start_idfs_ctr++;
-                    }
-                    else
-                    {
+                    } else {
                         p_node->p_reg_table[FDI_NODE_ID(node_ret.attr)].evt_start = node_ret.ticks;
                     }
                 }
-                taskYIELD();    /* Chaeck for any other task required to be scheduled */
+                taskYIELD(); /* Chaeck for any other task required to be scheduled */
             }
             g_fdi_signal_flag = FDI_RESET;
             _fdi_post_process_complete_cb(p_node->buffer_ptr_inactive);
-        }
-        else
-        {
-            taskYIELD();    /* UNKNOW STATE Context Switch*/
+        } else {
+            taskYIELD(); /* UNKNOW STATE Context Switch*/
         }
     }
 }
@@ -592,7 +526,7 @@ static void _fdi_thread(void* p_queue)
  * @brief Post Process complete callback
  *
  *********************************************/
-static void _fdi_post_process_complete_cb(fifo_t* p_fifo)
+static void _fdi_post_process_complete_cb(fifo_t *p_fifo)
 {
     NT_LOG_PRINT(COMMON, INFO, "FDI Post process complete, %u", p_fifo->n_el_curr);
 }
@@ -603,7 +537,7 @@ static void _fdi_post_process_complete_cb(fifo_t* p_fifo)
  *********************************************/
 static void _swap_log_buffer(void)
 {
-    fifo_t* temp = NULL;
+    fifo_t *temp = NULL;
 
     /* Swap ptrs */
     xSemaphoreTake(xFDI_SEM, portMAX_DELAY);
@@ -621,7 +555,7 @@ static void _swap_log_buffer(void)
  * @param node
  * @return fdi_ret_t
  **********************************************/
-static fdi_ret_t _fdi_dequeue(fifo_t* q, char* node)
+static fdi_ret_t _fdi_dequeue(fifo_t *q, char *node)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     BaseType_t sem_ret = pdFALSE;
@@ -631,7 +565,8 @@ static fdi_ret_t _fdi_dequeue(fifo_t* q, char* node)
     /* If Scheduler is suspended then wait_ticks = 0 */
     wait_ticks = (xTaskGetSchedulerState() == taskSCHEDULER_SUSPENDED) ? FDI_RESET : portMAX_DELAY;
 
-    sem_ret = (NT_IS_ISR) ? xSemaphoreTakeFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreTake(xFDI_SEM, wait_ticks);
+    sem_ret =
+        (NT_IS_ISR) ? xSemaphoreTakeFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreTake(xFDI_SEM, wait_ticks);
     FDI_ASSERT_IF_FALSE(sem_ret != pdFALSE, FDI_RET_FAILED_ASSERT_SEMAPHORE_GET);
     ret = fifo_dequeue(q, node);
     (NT_IS_ISR) ? xSemaphoreGiveFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreGive(xFDI_SEM);
@@ -646,7 +581,7 @@ static fdi_ret_t _fdi_dequeue(fifo_t* q, char* node)
  * @param node
  * @return fdi_ret_t
  *********************************************/
-static fdi_ret_t _fdi_trav_q(fifo_t* q, size_t* next_el, char* node)
+static fdi_ret_t _fdi_trav_q(fifo_t *q, size_t *next_el, char *node)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     BaseType_t sem_ret = pdFALSE;
@@ -656,7 +591,8 @@ static fdi_ret_t _fdi_trav_q(fifo_t* q, size_t* next_el, char* node)
     /* If Scheduler is suspended then wait_ticks = 0 */
     wait_ticks = (xTaskGetSchedulerState() == taskSCHEDULER_SUSPENDED) ? FDI_RESET : portMAX_DELAY;
 
-    sem_ret = (NT_IS_ISR) ? xSemaphoreTakeFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreTake(xFDI_SEM, wait_ticks);
+    sem_ret =
+        (NT_IS_ISR) ? xSemaphoreTakeFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreTake(xFDI_SEM, wait_ticks);
     FDI_ASSERT_IF_FALSE(sem_ret != pdFALSE, FDI_RET_FAILED_ASSERT_SEMAPHORE_GET);
     ret = fifo_trav_renterant(q, next_el, node);
     (NT_IS_ISR) ? xSemaphoreGiveFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreGive(xFDI_SEM);
@@ -674,7 +610,7 @@ static fdi_ret_t _fdi_trav_q(fifo_t* q, size_t* next_el, char* node)
  * @param node
  * @return fdi_ret_t
  *********************************************/
-static fdi_ret_t _fdi_enqueue(fifo_t* q, char* node)
+static fdi_ret_t _fdi_enqueue(fifo_t *q, char *node)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     BaseType_t sem_ret = pdFALSE;
@@ -684,7 +620,8 @@ static fdi_ret_t _fdi_enqueue(fifo_t* q, char* node)
     /* If Scheduler is suspended then wait_ticks = 0 */
     wait_ticks = (xTaskGetSchedulerState() == taskSCHEDULER_SUSPENDED) ? FDI_RESET : portMAX_DELAY;
 
-    sem_ret = (NT_IS_ISR) ? xSemaphoreTakeFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreTake(xFDI_SEM, wait_ticks);
+    sem_ret =
+        (NT_IS_ISR) ? xSemaphoreTakeFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreTake(xFDI_SEM, wait_ticks);
     FDI_ASSERT_IF_FALSE(sem_ret != pdFALSE, FDI_RET_FAILED_ASSERT_SEMAPHORE_GET);
     ret = fifo_enqueue(q, node);
     (NT_IS_ISR) ? xSemaphoreGiveFromISR(xFDI_SEM, &xHigherPriorityTaskWoken) : xSemaphoreGive(xFDI_SEM);
@@ -696,11 +633,10 @@ static fdi_ret_t _fdi_enqueue(fifo_t* q, char* node)
  * @brief Post watermark callback for the FIFOs defined
  *
  *****************************************************/
-static void _post_wm_cb(fifo_t* p_fifo)
+static void _post_wm_cb(fifo_t *p_fifo)
 {
 #if FDI_EN_POST_PROCESS == FDI_SET
-    if (g_fdi_signal_flag == FDI_RESET)
-    {
+    if (g_fdi_signal_flag == FDI_RESET) {
         NT_LOG_PRINT(COMMON, INFO, "FDI Post process trigger, %u", p_fifo->n_el_curr);
         fdi_trigger_pp();
     }

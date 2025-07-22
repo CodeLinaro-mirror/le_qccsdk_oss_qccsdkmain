@@ -1,12 +1,11 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ */
 
 /*****************************************************************************************************************************/
 /*                                                                                                                           */
-/*       Firmware Upgrade Mem                                                                                                */
+/*       Firmware Upgrade Mem */
 /*                                                                                                                           */
 /*****************************************************************************************************************************/
 #include <stdio.h>
@@ -22,20 +21,20 @@
 /**********************************************************************************************************/
 extern uint32_t _ln_FDT_Start_Addr;
 extern uint32_t _ln_SBL_MEM_Size;
-#define FDT_START                      ((void *)&_ln_FDT_Start_Addr)
-#define SBL_MEM_SIZE                   ((void *)&_ln_SBL_MEM_Size)
+#define FDT_START    ((void *)&_ln_FDT_Start_Addr)
+#define SBL_MEM_SIZE ((void *)&_ln_SBL_MEM_Size)
 
-#define FW_UPGRADE_MAX_FWD             (3)
-#define FW_UPGRADE_INVALID_FWD         (0xFF)
+#define FW_UPGRADE_MAX_FWD     (3)
+#define FW_UPGRADE_INVALID_FWD (0xFF)
 
-#define FW_UPGRADE_MAX_HANDLES         (10)
+#define FW_UPGRADE_MAX_HANDLES (10)
 
 #ifndef offsetof
-#define offsetof(TYPE, MEMBER)         ((uint32_t) &((TYPE *)0)->MEMBER)
+#define offsetof(TYPE, MEMBER) ((uint32_t) & ((TYPE *)0)->MEMBER)
 #endif
 
-#define PARTITION_CLIENT_HANDLE_START  &partition_handles[0]
-#define PARTITION_CLIENT_HANDLE_END    &partition_handles[FW_UPGRADE_MAX_HANDLES - 1]
+#define PARTITION_CLIENT_HANDLE_START &partition_handles[0]
+#define PARTITION_CLIENT_HANDLE_END   &partition_handles[FW_UPGRADE_MAX_HANDLES - 1]
 
 /**********************************************************************************************************/
 /* Type and definitions                                                                                   */
@@ -51,37 +50,37 @@ typedef struct {
 /* Type and definitions of FDT mainly used by application                                                 */
 /**********************************************************************************************************/
 /* Maximum FW Image entries supported in the FWD */
-#define MAX_FW_IMAGE_ENTRIES           30
+#define MAX_FW_IMAGE_ENTRIES 30
 /* FWD_SIGNATURE (=0x46574454 "FWDT") */
-#define FW_UPGRADE_MAGIC_V1		       0x54445746
+#define FW_UPGRADE_MAGIC_V1 0x54445746
 
 /* FW Image Entry as described in the FW Descriptor Table of APP */
 typedef struct {
-  uint32  image_id;
-  uint32  start_block;
-  uint32  total_blocks;
-  uint32  img_version;
+    uint32 image_id;
+    uint32 start_block;
+    uint32 total_blocks;
+    uint32 img_version;
 } image_entry;
 
 /* Firmware Descriptor Table in flash mainly for APP. 512 bytes in size */
 typedef struct {
-  uint32  signature;
-  uint32  version;
-  uint32  rank;
-  uint8   status;
-  uint8   total_images;
-  uint8   reserved[18];
-  image_entry image_entries[MAX_FW_IMAGE_ENTRIES];
+    uint32 signature;
+    uint32 version;
+    uint32 rank;
+    uint8 status;
+    uint8 total_images;
+    uint8 reserved[18];
+    image_entry image_entries[MAX_FW_IMAGE_ENTRIES];
 } fwd;
 
 /**********************************************************************************************************/
 /* Type and definitions of FDT mainly used by bootloader                                                  */
 /**********************************************************************************************************/
-#define FDT_SIGNATURE	0x54445746
-#define FDT_SIZE	    1024
-#define FDE_SIZE	    32
-#define FDE_START_IDX	0
-#define FDT_MAX_ENTRY   ((FDT_SIZE/FDE_SIZE) - 1)
+#define FDT_SIGNATURE 0x54445746
+#define FDT_SIZE      1024
+#define FDE_SIZE      32
+#define FDE_START_IDX 0
+#define FDT_MAX_ENTRY ((FDT_SIZE / FDE_SIZE) - 1)
 
 /* Image id in firmware descriptor entry. */
 typedef enum {
@@ -110,26 +109,26 @@ typedef enum {
 
 /* FW Descriptor Header as described in the FW Descriptor Table. */
 typedef struct {
-	uint32_t signature;
-	uint32_t num_fde;
-	uint8_t reserve[24];
+    uint32_t signature;
+    uint32_t num_fde;
+    uint8_t reserve[24];
 } fdt_hdr;
 
 /* FW Descriptor Entry as described in the FW Descriptor Table. */
 typedef struct {
-	uint32_t id;
-	uint32_t rank;
-	uint32_t format;
-	uint32_t addr;
-	uint32_t state;
-	uint32_t version;
-	uint8_t reserve[8];
+    uint32_t id;
+    uint32_t rank;
+    uint32_t format;
+    uint32_t addr;
+    uint32_t state;
+    uint32_t version;
+    uint8_t reserve[8];
 } fdt_entry;
 
 /* Firmware Descriptor Table in FDT mainly for SBL. */
 typedef struct {
-	fdt_hdr header;
-	fdt_entry fde[0];
+    fdt_hdr header;
+    fdt_entry fde[0];
 } fdt_s;
 
 /**********************************************************************************************************/
@@ -163,7 +162,7 @@ static fu_partition_client_t *fw_upgrade_get_partition_client_entry()
         i++;
     }
 
-    //no entry available
+    // no entry available
     if (i >= FW_UPGRADE_MAX_HANDLES) {
         return NULL;
     } else {
@@ -171,34 +170,36 @@ static fu_partition_client_t *fw_upgrade_get_partition_client_entry()
     }
 }
 
-static fw_upgrade_status_code_t fw_upgrade_mem_parameters_validation(fu_part_hdl_t handle, uint32_t byte_offset, uint32_t byte_count, void *buffer)
+static fw_upgrade_status_code_t fw_upgrade_mem_parameters_validation(fu_part_hdl_t handle, uint32_t byte_offset,
+                                                                     uint32_t byte_count, void *buffer)
 {
-  uint32_t limit = 0;
-  fw_upgrade_status_code_t ret = FW_UPGRADE_OK_E;
-  fu_partition_client_t *private = NULL;
+    uint32_t limit = 0;
+    fw_upgrade_status_code_t ret = FW_UPGRADE_OK_E;
+    fu_partition_client_t *private = NULL;
 
-  if ((handle == NULL) || (buffer == NULL) || (byte_count == 0)) {
-      ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
-      goto end1;
-  }
+    if ((handle == NULL) || (buffer == NULL) || (byte_count == 0)) {
+        ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
+        goto end1;
+    }
 
-  if (fw_upgrade_partition_handle_validation(handle) != FW_UPGRADE_OK_E) {
-      ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
-      goto end1;
-  }
+    if (fw_upgrade_partition_handle_validation(handle) != FW_UPGRADE_OK_E) {
+        ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
+        goto end1;
+    }
 
-  private = (fu_partition_client_t *)handle;
+private
+    = (fu_partition_client_t *)handle;
 
-  limit = private->img_start + private->img_size;
+    limit = private->img_start + private->img_size;
 
-  /* Boundary Check */
-  if ((private->img_start + byte_offset + byte_count) > limit) {
-      ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
-      goto end1;
-  }
+    /* Boundary Check */
+    if ((private->img_start + byte_offset + byte_count) > limit) {
+        ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
+        goto end1;
+    }
 
 end1:
-  return ret;
+    return ret;
 }
 
 /*
@@ -207,8 +208,8 @@ end1:
 static uint32_t fw_upgrade_get_first_programming_image_start_address(void)
 {
     fu_part_hdl_t hdl;
-    uint32_t img1_size =0, img1_start =0, img_start = 0;
-    uint8_t  current;
+    uint32_t img1_size = 0, img1_start = 0, img_start = 0;
+    uint8_t current;
 
     current = fw_upgrade_get_active_fwd(NULL, NULL);
 
@@ -256,7 +257,7 @@ static uint32_t fw_upgrade_get_first_programming_image_start_address(void)
         }
     }
 
-    //make sure the start address should be bigger than FWDs
+    // make sure the start address should be bigger than FWDs
     img1_start = FW_UPGRADE_MAX_FWD * fw_upgrade_mem_params->fwd_region_size;
     if (img1_start > img_start) {
         img_start = img1_start;
@@ -267,9 +268,9 @@ static uint32_t fw_upgrade_get_first_programming_image_start_address(void)
 
 static fw_upgrade_status_code_t fw_upgrade_get_imageSet_end_addr(uint8_t fwd_num, uint32_t *endAddr)
 {
-	fw_upgrade_status_code_t 	ret = FW_UPGRADE_ERROR_E;
-	uint32_t        magic = 0, rtnAddr;
-	fu_part_hdl_t   hdl = NULL, hdl_next;
+    fw_upgrade_status_code_t ret = FW_UPGRADE_ERROR_E;
+    uint32_t magic = 0, rtnAddr;
+    fu_part_hdl_t hdl = NULL, hdl_next;
     fu_partition_client_t *client_entry;
 
     fw_upgrade_get_fwd_info(fwd_num, FW_UPGRADE_FWD_MAGIC_E, (uint8_t *)&magic);
@@ -289,17 +290,17 @@ static fw_upgrade_status_code_t fw_upgrade_get_imageSet_end_addr(uint8_t fwd_num
                 client_entry = (fu_partition_client_t *)hdl;
                 if (client_entry->img_id != SBL_IMG_ID) {
                     rtnAddr = client_entry->img_start + client_entry->img_size;
-    				if (rtnAddr > *endAddr) {
-    					*endAddr = rtnAddr;
-    				}
+                    if (rtnAddr > *endAddr) {
+                        *endAddr = rtnAddr;
+                    }
                 }
             }
             client_entry->ref_count = 0;
-			ret = FW_UPGRADE_OK_E;
+            ret = FW_UPGRADE_OK_E;
         }
     }
 
-	return ret;
+    return ret;
 }
 
 static fw_upgrade_status_code_t fw_upgrade_reject_sbl_trial_fde()
@@ -312,9 +313,7 @@ static fw_upgrade_status_code_t fw_upgrade_reject_sbl_trial_fde()
 
     fdt = (fdt_s *)FDT_START;
 
-    if (fdt == NULL ||
-        fdt->header.signature != FDT_SIGNATURE ||
-        fdt->header.num_fde == 0 ||
+    if (fdt == NULL || fdt->header.signature != FDT_SIGNATURE || fdt->header.num_fde == 0 ||
         fdt->header.num_fde > FDT_MAX_ENTRY) {
         return FW_UPGRADE_ERR_INVALID_FDT_E;
     }
@@ -336,7 +335,7 @@ static fw_upgrade_status_code_t fw_upgrade_reject_sbl_trial_fde()
     update_fde.rank = FDE_IMG_RANK_AGED;
     update_fde.state = FDE_IMG_STATE_INVALID;
 
-    if (nt_rram_write(((uint32_t)&(fdt->fde[sbl_trial_idx])), (void *)&update_fde, sizeof(fdt_entry)) != 0) {
+    if (nt_rram_write(((uint32_t) & (fdt->fde[sbl_trial_idx])), (void *)&update_fde, sizeof(fdt_entry)) != 0) {
         return FW_UPGRADE_ERROR_E;
     }
 
@@ -414,7 +413,7 @@ fw_upgrade_status_code_t fw_upgrade_erase_fwd(uint8_t fwd_idx)
         goto erase_FWD_end;
     }
 
-    if (drv_flash_erase(FLASH_BLOCK_ERASE_E, fwd_idx, 1, NULL, NULL) != FLASH_DEVICE_DONE){
+    if (drv_flash_erase(FLASH_BLOCK_ERASE_E, fwd_idx, 1, NULL, NULL) != FLASH_DEVICE_DONE) {
         ret = FW_UPGRADE_ERROR_E;
     } else {
         ret = FW_UPGRADE_OK_E;
@@ -467,11 +466,9 @@ fw_upgrade_status_code_t fw_upgrade_set_fwd_info(uint8_t fwd_idx, fw_upgrade_fwd
     }
 
     if (ret == FW_UPGRADE_OK_E) {
-        start_addr = fw_upgrade_mem_params->mem_start + \
-            fw_upgrade_mem_params->fwd_region_size * fwd_idx + \
-            offset;
+        start_addr = fw_upgrade_mem_params->mem_start + fw_upgrade_mem_params->fwd_region_size * fwd_idx + offset;
 
-        if(drv_flash_write(start_addr, byte_cnt, value, NULL, NULL) != FLASH_DEVICE_DONE) {
+        if (drv_flash_write(start_addr, byte_cnt, value, NULL, NULL) != FLASH_DEVICE_DONE) {
             ret = FW_UPGRADE_ERROR_E;
         }
     }
@@ -523,10 +520,8 @@ fw_upgrade_status_code_t fw_upgrade_get_fwd_info(uint8_t fwd_idx, fw_upgrade_fwd
     }
 
     if (ret == FW_UPGRADE_OK_E) {
-        start_addr = fw_upgrade_mem_params->mem_start + \
-            fw_upgrade_mem_params->fwd_region_size * fwd_idx + \
-            offset;
-        if(drv_flash_read(start_addr, byte_cnt, result, NULL, NULL) != FLASH_DEVICE_DONE) {
+        start_addr = fw_upgrade_mem_params->mem_start + fw_upgrade_mem_params->fwd_region_size * fwd_idx + offset;
+        if (drv_flash_read(start_addr, byte_cnt, result, NULL, NULL) != FLASH_DEVICE_DONE) {
             ret = FW_UPGRADE_ERROR_E;
         }
     }
@@ -544,9 +539,7 @@ uint8_t fw_upgrade_get_active_fwd(uint32_t *fwd_boot_type, uint32_t *valid_fwd)
 
     fdt = (fdt_s *)FDT_START;
 
-    if (fdt == NULL ||
-        fdt->header.signature != FDT_SIGNATURE ||
-        fdt->header.num_fde == 0 ||
+    if (fdt == NULL || fdt->header.signature != FDT_SIGNATURE || fdt->header.num_fde == 0 ||
         fdt->header.num_fde > FDT_MAX_ENTRY) {
         return FW_UPGRADE_INVALID_FWD;
     }
@@ -584,27 +577,26 @@ fw_upgrade_status_code_t fw_upgrade_accept_trial_fwd(void)
     uint32_t rank, fwd_boot_type, config;
 
     /* reset wdog reset counter */
-    //TODOl wdt reset
-    //qapi_System_WDTCount_Reset();
+    // TODOl wdt reset
+    // qapi_System_WDTCount_Reset();
 
     ret = fw_upgrade_get_trial_active_fwd_index(&trial, &current, &rank);
     if (ret == FW_UPGRADE_OK_E) {
-		fw_upgrade_get_active_fwd(&fwd_boot_type, NULL);
-		//only allow active FWD is trial to accept
-		if (fwd_boot_type == FW_UPGRADE_FWD_BOOT_TYPE_TRIAL)
-		{
-			//set trial rank to the biggest number
-			rank += 1;
-			ret = fw_upgrade_set_fwd_info(trial, FW_UPGRADE_FWD_RANK_E, (uint8_t *)&rank);
+        fw_upgrade_get_active_fwd(&fwd_boot_type, NULL);
+        // only allow active FWD is trial to accept
+        if (fwd_boot_type == FW_UPGRADE_FWD_BOOT_TYPE_TRIAL) {
+            // set trial rank to the biggest number
+            rank += 1;
+            ret = fw_upgrade_set_fwd_info(trial, FW_UPGRADE_FWD_RANK_E, (uint8_t *)&rank);
             config = CONFIG_FW_UPGRADE_FWD_SUPPORT_NUM;
-			//set current FWD status to invalid except current FWD is golden
-			if ((ret == FW_UPGRADE_OK_E) && (config == 2 || (config == 3 && current != 0))) {
+            // set current FWD status to invalid except current FWD is golden
+            if ((ret == FW_UPGRADE_OK_E) && (config == 2 || (config == 3 && current != 0))) {
                 status = FW_UPGRADE_FWD_STATUS_INVALID;
                 ret = fw_upgrade_set_fwd_info(current, FW_UPGRADE_FWD_STATUS_E, &status);
             }
-		} else {
-			ret = FW_UPGRADE_ERROR_E;
-		}
+        } else {
+            ret = FW_UPGRADE_ERROR_E;
+        }
     }
     return ret;
 }
@@ -617,18 +609,18 @@ fw_upgrade_status_code_t fw_upgrade_reject_trial_fwd(void)
     fu_part_hdl_t hdl;
 
     /* reset wdog reset counter */
-    //TODOl wdt reset
-    //qapi_System_WDTCount_Reset();
+    // TODOl wdt reset
+    // qapi_System_WDTCount_Reset();
 
     ret = fw_upgrade_get_trial_active_fwd_index(&trial, &current, &rank);
     if (ret == FW_UPGRADE_OK_E) {
-        //set trial FWD status to invalid
+        // set trial FWD status to invalid
         status = FW_UPGRADE_FWD_STATUS_INVALID;
         ret = fw_upgrade_set_fwd_info(trial, FW_UPGRADE_FWD_STATUS_E, &status);
-        //set trial FWD rank to 1
+        // set trial FWD rank to 1
         if (ret == FW_UPGRADE_OK_E) {
             rank = 1;
-			ret = fw_upgrade_set_fwd_info(trial, FW_UPGRADE_FWD_RANK_E, (uint8_t *)&rank);
+            ret = fw_upgrade_set_fwd_info(trial, FW_UPGRADE_FWD_RANK_E, (uint8_t *)&rank);
 
             if (ret == FW_UPGRADE_OK_E) {
                 ret = fw_upgrade_find_partition(trial, SBL_IMG_ID, &hdl);
@@ -647,14 +639,14 @@ fw_upgrade_status_code_t fw_upgrade_select_trial_fwd(uint8_t *fwd_index, uint32_
 {
     fw_upgrade_status_code_t ret = FW_UPGRADE_ERROR_E;
     uint32_t config, mem_size, mem_start, end_addr, rank;
-    uint32_t img_start =0;
+    uint32_t img_start = 0;
     uint8_t trial, current;
 
     /* get FWD support num */
     config = CONFIG_FW_UPGRADE_FWD_SUPPORT_NUM;
 
     /*only support one partition, can't upgrade */
-    if (config == 1){
+    if (config == 1) {
         return ret;
     }
 
@@ -662,39 +654,39 @@ fw_upgrade_status_code_t fw_upgrade_select_trial_fwd(uint8_t *fwd_index, uint32_
     mem_start = fw_upgrade_mem_params->mem_start;
 
     /* get the start addess of app image except file system image */
-	img_start = fw_upgrade_get_first_programming_image_start_address();
-	/* get current FWD index num and biggest rank num */
+    img_start = fw_upgrade_get_first_programming_image_start_address();
+    /* get current FWD index num and biggest rank num */
     fw_upgrade_get_trial_active_fwd_index(&trial, &current, &rank);
 
-    if (config == 2) {  /* support 2 FWDs case */
-		/* set trial FWD index num */
-        *fwd_index = current==0?1:0;
-		/* we need set size and start address align with block_size */
+    if (config == 2) { /* support 2 FWDs case */
+                       /* set trial FWD index num */
+        *fwd_index = current == 0 ? 1 : 0;
+        /* we need set size and start address align with block_size */
         mem_size = (mem_size - (img_start - mem_start)) / fw_upgrade_mem_params->block_size;
         *size = (mem_size / config * fw_upgrade_mem_params->block_size);
-		*start_address = img_start+(*fwd_index)*(*size);
-		if (*fwd_index == 1) {
-			if (fw_upgrade_get_imageSet_end_addr(0, &end_addr) != FW_UPGRADE_OK_E) {
-				/* can't get fwd info */
-				return ret;
-			}
+        *start_address = img_start + (*fwd_index) * (*size);
+        if (*fwd_index == 1) {
+            if (fw_upgrade_get_imageSet_end_addr(0, &end_addr) != FW_UPGRADE_OK_E) {
+                /* can't get fwd info */
+                return ret;
+            }
 
-			if (*start_address < end_addr) {
-				*size = *size - (end_addr - *start_address);
-				*start_address = end_addr;
-			}
-		}
-    } else {   /* support 3 (golgen+2) FWDs case */
-        *fwd_index = current==0?1:(current==1)?2:1;
-		if (fw_upgrade_get_imageSet_end_addr(0, &end_addr) != FW_UPGRADE_OK_E) {
-			/* can't get fwd info */
-			return ret;
-		}
+            if (*start_address < end_addr) {
+                *size = *size - (end_addr - *start_address);
+                *start_address = end_addr;
+            }
+        }
+    } else { /* support 3 (golgen+2) FWDs case */
+        *fwd_index = current == 0 ? 1 : (current == 1) ? 2 : 1;
+        if (fw_upgrade_get_imageSet_end_addr(0, &end_addr) != FW_UPGRADE_OK_E) {
+            /* can't get fwd info */
+            return ret;
+        }
 
-		/* we need set size and start address align with flash_block_size */
+        /* we need set size and start address align with flash_block_size */
         mem_size = (mem_size - (end_addr - mem_start)) / fw_upgrade_mem_params->block_size;
         *size = (mem_size / (config - 1) * fw_upgrade_mem_params->block_size);
-		*start_address = end_addr+(*fwd_index-1)*(*size);
+        *start_address = end_addr + (*fwd_index - 1) * (*size);
     }
     return FW_UPGRADE_OK_E;
 }
@@ -708,15 +700,15 @@ fw_upgrade_status_code_t fw_upgrade_get_current_index(uint8_t *current)
     /* init return */
     *current = FW_UPGRADE_FWD_STATUS_UNUSED;
 
-	/* init FW upgrade module */
-	if (fw_upgrade_init() != FW_UPGRADE_OK_E)
-		goto get_cur_end;
+    /* init FW upgrade module */
+    if (fw_upgrade_init() != FW_UPGRADE_OK_E)
+        goto get_cur_end;
 
     /* we support 2 FWDs and 1 GLN+2FWDs mode */
     config = CONFIG_FW_UPGRADE_FWD_SUPPORT_NUM;
 
     /* verify FWD 1 and FWD 2 */
-    for (i = 0; i < config; i++){
+    for (i = 0; i < config; i++) {
         if (fw_upgrade_get_fwd_info(i, FW_UPGRADE_FWD_MAGIC_E, (uint8_t *)&magic) != FW_UPGRADE_OK_E) {
             goto get_cur_end;
         }
@@ -730,8 +722,9 @@ fw_upgrade_status_code_t fw_upgrade_get_current_index(uint8_t *current)
             goto get_cur_end;
         }
 
-        if ((magic == FW_UPGRADE_MAGIC_V1) && (status == FW_UPGRADE_FWD_STATUS_VALID) && (image_nums > 0) && (image_nums != 0xff)) {
-            if ((rank_l != FW_UPGRADE_FWD_RANK_TRIAL) && (rank_l  > 0)) {
+        if ((magic == FW_UPGRADE_MAGIC_V1) && (status == FW_UPGRADE_FWD_STATUS_VALID) && (image_nums > 0) &&
+            (image_nums != 0xff)) {
+            if ((rank_l != FW_UPGRADE_FWD_RANK_TRIAL) && (rank_l > 0)) {
                 *current = i;
                 break;
             }
@@ -757,10 +750,10 @@ fw_upgrade_status_code_t fw_upgrade_get_trial_active_fwd_index(uint8_t *trial, u
     *current = 0;
     *rank = 0;
 
-	/* init FW upgrade module */
-	if (fw_upgrade_init() != FW_UPGRADE_OK_E) {
-		goto cmd_get_index_end;
-	}
+    /* init FW upgrade module */
+    if (fw_upgrade_init() != FW_UPGRADE_OK_E) {
+        goto cmd_get_index_end;
+    }
 
     /* we support 2 FWDs and 1 GLN+2FWDs mode */
     config = CONFIG_FW_UPGRADE_FWD_SUPPORT_NUM;
@@ -769,11 +762,11 @@ fw_upgrade_status_code_t fw_upgrade_get_trial_active_fwd_index(uint8_t *trial, u
         goto cmd_get_index_end;
     }
 
-    //two FWDs
+    // two FWDs
     if (config == 2) {
         s1 = 0;
         s2 = 2;
-    } else {  //three FWDs
+    } else {  // three FWDs
         if (fw_upgrade_get_fwd_info(0, FW_UPGRADE_FWD_RANK_E, (uint8_t *)&rank_l) != FW_UPGRADE_OK_E) {
             goto cmd_get_index_end;
         }
@@ -798,7 +791,8 @@ fw_upgrade_status_code_t fw_upgrade_get_trial_active_fwd_index(uint8_t *trial, u
             goto cmd_get_index_end;
         }
 
-        if ((magic == FW_UPGRADE_MAGIC_V1) && (status == FW_UPGRADE_FWD_STATUS_VALID) && (image_nums > 0) && (image_nums != 0xff)) {
+        if ((magic == FW_UPGRADE_MAGIC_V1) && (status == FW_UPGRADE_FWD_STATUS_VALID) && (image_nums > 0) &&
+            (image_nums != 0xff)) {
             if (rank_l == FW_UPGRADE_FWD_RANK_TRIAL) {
                 *trial = i;
             } else {
@@ -833,7 +827,8 @@ fw_upgrade_status_code_t fw_upgrade_partition_handle_validation(fu_part_hdl_t ha
     return FW_UPGRADE_ERROR_E;
 }
 
-fw_upgrade_status_code_t fw_upgrade_create_partition(uint8_t fwd_idx, uint32_t id, uint32_t version, uint32_t start, uint32_t size, fu_part_hdl_t *hdl)
+fw_upgrade_status_code_t fw_upgrade_create_partition(uint8_t fwd_idx, uint32_t id, uint32_t version, uint32_t start,
+                                                     uint32_t size, fu_part_hdl_t *hdl)
 {
     fw_upgrade_status_code_t ret = FW_UPGRADE_OK_E;
     uint32_t start_addr, i;
@@ -852,28 +847,26 @@ fw_upgrade_status_code_t fw_upgrade_create_partition(uint8_t fwd_idx, uint32_t i
     }
 
     if (id != SBL_IMG_ID) {
-        //check start addr and size
-        if ((start % fw_upgrade_mem_params->block_size) != 0 || \
-            (size % fw_upgrade_mem_params->block_size) != 0) {
+        // check start addr and size
+        if ((start % fw_upgrade_mem_params->block_size) != 0 || (size % fw_upgrade_mem_params->block_size) != 0) {
             ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
             goto create_partition_end;
         }
     }
 
-    //get valid client entry
+    // get valid client entry
     if ((client_entry = fw_upgrade_get_partition_client_entry()) == NULL) {
-       ret = FW_UPGRADE_ERROR_E;
-       goto create_partition_end;
+        ret = FW_UPGRADE_ERROR_E;
+        goto create_partition_end;
     }
 
-    start_addr = fw_upgrade_mem_params->mem_start + \
-        fw_upgrade_mem_params->fwd_region_size * fwd_idx;
+    start_addr = fw_upgrade_mem_params->mem_start + fw_upgrade_mem_params->fwd_region_size * fwd_idx;
     if (drv_flash_read(start_addr, sizeof(fwd), (uint8_t *)&fwd, NULL, NULL) != FLASH_DEVICE_DONE) {
         ret = FW_UPGRADE_ERROR_E;
         goto create_partition_end;
     }
 
-    //find valid free entry
+    // find valid free entry
     for (i = 0; i < MAX_FW_IMAGE_ENTRIES; i++) {
         if (fwd.image_entries[i].image_id == FW_UPGRADE_FWD_IMAGE_UNUSED) {
             break;
@@ -886,9 +879,9 @@ fw_upgrade_status_code_t fw_upgrade_create_partition(uint8_t fwd_idx, uint32_t i
         goto create_partition_end;
     }
 
-    start_addr = start_addr + 32 + i*sizeof(image_entry);
+    start_addr = start_addr + 32 + i * sizeof(image_entry);
 
-    memset((void *) &img_entry, 0xff, sizeof(img_entry));
+    memset((void *)&img_entry, 0xff, sizeof(img_entry));
     img_entry.image_id = id;
     memscpy(&img_entry.img_version, 4, &version, 4);
     if (id != SBL_IMG_ID) {
@@ -940,9 +933,8 @@ fw_upgrade_status_code_t fw_upgrade_first_partition(uint8_t fwd_idx, fu_part_hdl
         goto first_partition_end;
     }
 
-    //read FWD
-    start_addr = fw_upgrade_mem_params->mem_start + \
-        fw_upgrade_mem_params->fwd_region_size * fwd_idx;
+    // read FWD
+    start_addr = fw_upgrade_mem_params->mem_start + fw_upgrade_mem_params->fwd_region_size * fwd_idx;
     if (drv_flash_read(start_addr, sizeof(fwd), (uint8_t *)&fwd, NULL, NULL) != FLASH_DEVICE_DONE) {
         ret = FW_UPGRADE_ERROR_E;
         goto first_partition_end;
@@ -992,25 +984,24 @@ fw_upgrade_status_code_t fw_upgrade_next_partition(fu_part_hdl_t curr, fu_part_h
     h = (fu_partition_client_t *)curr;
 
     if ((client_entry = fw_upgrade_get_partition_client_entry()) == NULL) {
-       ret = FW_UPGRADE_ERR_GET_PARTITION_NULL_E;
-       goto next_partition_end;
+        ret = FW_UPGRADE_ERR_GET_PARTITION_NULL_E;
+        goto next_partition_end;
     }
 
-    start_addr = fw_upgrade_mem_params->mem_start + \
-        fw_upgrade_mem_params->fwd_region_size * h->fwd_idx;
+    start_addr = fw_upgrade_mem_params->mem_start + fw_upgrade_mem_params->fwd_region_size * h->fwd_idx;
     if (drv_flash_read(start_addr, sizeof(fwd), (uint8_t *)&fwd, NULL, NULL) != FLASH_DEVICE_DONE) {
         ret = FW_UPGRADE_ERR_FLASH_READ_FAIL_E;
         goto next_partition_end;
     }
 
-    //check if is valid id
-    idx = h->img_idx+1;
+    // check if is valid id
+    idx = h->img_idx + 1;
     if (idx >= MAX_FW_IMAGE_ENTRIES) {
         ret = FW_UPGRADE_ERR_REACH_MAX_IMAGE_ENTRY_E;
         goto next_partition_end;
     }
 
-    if (fwd.image_entries[idx].image_id  == FW_UPGRADE_FWD_IMAGE_UNUSED) {
+    if (fwd.image_entries[idx].image_id == FW_UPGRADE_FWD_IMAGE_UNUSED) {
         ret = FW_UPGRADE_ERR_IMAGE_UNUSED_E;
         goto next_partition_end;
     }
@@ -1051,19 +1042,18 @@ fw_upgrade_status_code_t fw_upgrade_find_partition(uint8_t fwd_idx, uint32_t id,
         goto find_partition_end;
     }
 
-    if ((client_entry = fw_upgrade_get_partition_client_entry()) == NULL ) {
-       ret = FW_UPGRADE_ERR_GET_PARTITION_NULL_E;
-       goto find_partition_end;
+    if ((client_entry = fw_upgrade_get_partition_client_entry()) == NULL) {
+        ret = FW_UPGRADE_ERR_GET_PARTITION_NULL_E;
+        goto find_partition_end;
     }
 
-    start_addr = fw_upgrade_mem_params->mem_start + \
-        fw_upgrade_mem_params->fwd_region_size * fwd_idx;
+    start_addr = fw_upgrade_mem_params->mem_start + fw_upgrade_mem_params->fwd_region_size * fwd_idx;
     if (drv_flash_read(start_addr, sizeof(fwd), (uint8_t *)&fwd, NULL, NULL) != FLASH_DEVICE_DONE) {
         ret = FW_UPGRADE_ERR_FLASH_READ_FAIL_E;
         goto find_partition_end;
     }
 
-    //find valid entry
+    // find valid entry
     for (i = 0; i < MAX_FW_IMAGE_ENTRIES; i++) {
         if (fwd.image_entries[i].image_id == id) {
             break;
@@ -1107,8 +1097,7 @@ fw_upgrade_status_code_t fw_upgrade_set_image_id(fu_part_hdl_t *hdl, uint32_t id
         goto set_image_id_end;
     }
 
-    if ((hdl == NULL) ||
-        (fw_upgrade_partition_handle_validation(hdl) != FW_UPGRADE_OK_E)) {
+    if ((hdl == NULL) || (fw_upgrade_partition_handle_validation(hdl) != FW_UPGRADE_OK_E)) {
         ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
         goto set_image_id_end;
     }
@@ -1121,9 +1110,9 @@ fw_upgrade_status_code_t fw_upgrade_set_image_id(fu_part_hdl_t *hdl, uint32_t id
         goto set_image_id_end;
     }
 
-    start_addr = (fw_upgrade_mem_params->mem_start + \
-        fw_upgrade_mem_params->fwd_region_size * fwd_idx + offsetof(fwd, image_entries)) + \
-        (client_entry->img_idx * sizeof(image_entry) + offsetof(image_entry, image_id));
+    start_addr = (fw_upgrade_mem_params->mem_start + fw_upgrade_mem_params->fwd_region_size * fwd_idx +
+                  offsetof(fwd, image_entries)) +
+                 (client_entry->img_idx * sizeof(image_entry) + offsetof(image_entry, image_id));
     new_id = id;
 
     if (drv_flash_write(start_addr, sizeof(uint32_t), (void *)&new_id, NULL, NULL) != FLASH_DEVICE_DONE) {
@@ -1149,8 +1138,7 @@ fw_upgrade_status_code_t fw_upgrade_set_image_version(fu_part_hdl_t *hdl, uint32
         goto set_image_version_end;
     }
 
-    if ((hdl == NULL) ||
-        (fw_upgrade_partition_handle_validation(hdl) != FW_UPGRADE_OK_E)) {
+    if ((hdl == NULL) || (fw_upgrade_partition_handle_validation(hdl) != FW_UPGRADE_OK_E)) {
         ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
         goto set_image_version_end;
     }
@@ -1163,9 +1151,9 @@ fw_upgrade_status_code_t fw_upgrade_set_image_version(fu_part_hdl_t *hdl, uint32
         goto set_image_version_end;
     }
 
-    start_addr = (fw_upgrade_mem_params->mem_start + \
-        fw_upgrade_mem_params->fwd_region_size * fwd_idx + offsetof(fwd, image_entries)) + \
-        (client_entry->img_idx * sizeof(image_entry) + offsetof(image_entry, img_version));
+    start_addr = (fw_upgrade_mem_params->mem_start + fw_upgrade_mem_params->fwd_region_size * fwd_idx +
+                  offsetof(fwd, image_entries)) +
+                 (client_entry->img_idx * sizeof(image_entry) + offsetof(image_entry, img_version));
     if (drv_flash_write(start_addr, sizeof(uint32_t), (void *)&version, NULL, NULL) != FLASH_DEVICE_DONE) {
         ret = FW_UPGRADE_ERROR_E;
         goto set_image_version_end;
@@ -1189,8 +1177,7 @@ fw_upgrade_status_code_t fw_upgrade_set_image_size(fu_part_hdl_t *hdl, uint32_t 
         goto set_image_size_end;
     }
 
-    if ((hdl == NULL) || (size != 0) || \
-        (fw_upgrade_partition_handle_validation(hdl) != FW_UPGRADE_OK_E)) {
+    if ((hdl == NULL) || (size != 0) || (fw_upgrade_partition_handle_validation(hdl) != FW_UPGRADE_OK_E)) {
         ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
         goto set_image_size_end;
     }
@@ -1203,17 +1190,17 @@ fw_upgrade_status_code_t fw_upgrade_set_image_size(fu_part_hdl_t *hdl, uint32_t 
         goto set_image_size_end;
     }
 
-	img_id = client_entry->img_id;
-	/* disable APP or SBL image is not allowed */
-	if((img_id == APP_IMG_ID) || (img_id == SBL_IMG_ID)) {
-		ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
+    img_id = client_entry->img_id;
+    /* disable APP or SBL image is not allowed */
+    if ((img_id == APP_IMG_ID) || (img_id == SBL_IMG_ID)) {
+        ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
         goto set_image_size_end;
-	}
+    }
 
-    start_addr = (fw_upgrade_mem_params->mem_start + \
-        fw_upgrade_mem_params->fwd_region_size * fwd_idx + offsetof(fwd, image_entries)) + \
-        (client_entry->img_idx * sizeof(image_entry) + offsetof(image_entry, total_blocks));
-    if (drv_flash_write(start_addr, sizeof(uint32_t), (void *) &size, NULL, NULL) != FLASH_DEVICE_DONE) {
+    start_addr = (fw_upgrade_mem_params->mem_start + fw_upgrade_mem_params->fwd_region_size * fwd_idx +
+                  offsetof(fwd, image_entries)) +
+                 (client_entry->img_idx * sizeof(image_entry) + offsetof(image_entry, total_blocks));
+    if (drv_flash_write(start_addr, sizeof(uint32_t), (void *)&size, NULL, NULL) != FLASH_DEVICE_DONE) {
         ret = FW_UPGRADE_ERROR_E;
         goto set_image_size_end;
     }
@@ -1240,22 +1227,21 @@ fw_upgrade_status_code_t fw_upgrade_erase_partition(fu_part_hdl_t hdl, uint32_t 
         return ret;
     }
 
-    if ((nbytes == 0) || (nbytes % fw_upgrade_mem_params->block_size != 0) || \
+    if ((nbytes == 0) || (nbytes % fw_upgrade_mem_params->block_size != 0) ||
         (offset % fw_upgrade_mem_params->block_size != 0)) {
         ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
         goto erase_partition_end;
     }
-
 
     if (offset + nbytes > h->img_size) {
         ret = FW_UPGRADE_ERR_INVALID_PARAM_E;
         goto erase_partition_end;
     }
 
-    start_block = (h->img_start+offset) / fw_upgrade_mem_params->block_size;
+    start_block = (h->img_start + offset) / fw_upgrade_mem_params->block_size;
     total_blocks = nbytes / fw_upgrade_mem_params->block_size;
 
-    if(drv_flash_erase(FLASH_BLOCK_ERASE_E, start_block, total_blocks, NULL, NULL) != FLASH_DEVICE_DONE) {
+    if (drv_flash_erase(FLASH_BLOCK_ERASE_E, start_block, total_blocks, NULL, NULL) != FLASH_DEVICE_DONE) {
         ret = FW_UPGRADE_ERROR_E;
     }
 
@@ -1288,7 +1274,8 @@ fw_upgrade_status_code_t fw_upgrade_write_partition(fu_part_hdl_t hdl, uint32_t 
     return ret;
 }
 
-fw_upgrade_status_code_t fw_upgrade_read_partition(fu_part_hdl_t hdl, uint32_t offset, char *buf, uint32_t max_bytes, uint32_t *nbytes)
+fw_upgrade_status_code_t fw_upgrade_read_partition(fu_part_hdl_t hdl, uint32_t offset, char *buf, uint32_t max_bytes,
+                                                   uint32_t *nbytes)
 {
     fu_partition_client_t *h;
     uint32_t start_addr;
@@ -1302,7 +1289,7 @@ fw_upgrade_status_code_t fw_upgrade_read_partition(fu_part_hdl_t hdl, uint32_t o
     h = (fu_partition_client_t *)hdl;
     start_addr = h->img_start + offset;
 
-    //SBL image is in RRAM
+    // SBL image is in RRAM
     if (h->img_id == SBL_IMG_ID) {
         if (nt_rram_read(start_addr, (void *)buf, max_bytes) != 0) {
             return FW_UPGRADE_ERROR_E;
@@ -1331,9 +1318,7 @@ fw_upgrade_status_code_t fw_upgrade_select_sbl_trial_fde(uint32_t *sbl_idx, uint
         return FW_UPGRADE_ERR_INVALID_PARAM_E;
     }
 
-    if (fdt == NULL ||
-        fdt->header.signature != FDT_SIGNATURE ||
-        fdt->header.num_fde == 0 ||
+    if (fdt == NULL || fdt->header.signature != FDT_SIGNATURE || fdt->header.num_fde == 0 ||
         fdt->header.num_fde > FDT_MAX_ENTRY) {
         return FW_UPGRADE_ERR_INVALID_FDT_E;
     }
@@ -1362,17 +1347,14 @@ fw_upgrade_status_code_t fw_upgrade_set_sbl_trial_fde(uint32_t sbl_trial_idx, ui
 
     fdt = (fdt_s *)FDT_START;
 
-    if (fdt == NULL ||
-        fdt->header.signature != FDT_SIGNATURE ||
-        fdt->header.num_fde == 0 ||
+    if (fdt == NULL || fdt->header.signature != FDT_SIGNATURE || fdt->header.num_fde == 0 ||
         fdt->header.num_fde > FDT_MAX_ENTRY) {
         return FW_UPGRADE_ERR_INVALID_FDT_E;
     }
 
     fde = fdt->fde;
 
-    if (sbl_trial_idx >= fdt->header.num_fde ||
-        fde[sbl_trial_idx].id != FDE_IMG_ID_SBL ||
+    if (sbl_trial_idx >= fdt->header.num_fde || fde[sbl_trial_idx].id != FDE_IMG_ID_SBL ||
         fde[sbl_trial_idx].rank != FDE_IMG_RANK_AGED) {
         return FW_UPGRADE_ERR_INVALID_PARAM_E;
     }
@@ -1382,7 +1364,7 @@ fw_upgrade_status_code_t fw_upgrade_set_sbl_trial_fde(uint32_t sbl_trial_idx, ui
     update_fde.state = FDE_IMG_STATE_NEW;
     update_fde.version = version;
 
-    if (nt_rram_write(((uint32_t)&(fdt->fde[sbl_trial_idx])), (void *)&update_fde, sizeof(fdt_entry)) != 0) {
+    if (nt_rram_write(((uint32_t) & (fdt->fde[sbl_trial_idx])), (void *)&update_fde, sizeof(fdt_entry)) != 0) {
         return FW_UPGRADE_ERROR_E;
     }
 
@@ -1398,9 +1380,7 @@ fw_upgrade_status_code_t fw_upgrade_set_force_boot(uint8_t force_boot_fwd)
 
     fdt = (fdt_s *)FDT_START;
 
-    if (fdt == NULL ||
-        fdt->header.signature != FDT_SIGNATURE ||
-        fdt->header.num_fde == 0 ||
+    if (fdt == NULL || fdt->header.signature != FDT_SIGNATURE || fdt->header.num_fde == 0 ||
         fdt->header.num_fde > FDT_MAX_ENTRY) {
         return FW_UPGRADE_INVALID_FWD;
     }
@@ -1420,10 +1400,9 @@ fw_upgrade_status_code_t fw_upgrade_set_force_boot(uint8_t force_boot_fwd)
     memscpy(&update_fde, sizeof(fdt_entry), &(fdt->fde[app_idx]), sizeof(fdt_entry));
     update_fde.reserve[1] = force_boot_fwd;
 
-    if (nt_rram_write(((uint32_t)&(fdt->fde[app_idx])), (void *)&update_fde, sizeof(fdt_entry)) != 0) {
+    if (nt_rram_write(((uint32_t) & (fdt->fde[app_idx])), (void *)&update_fde, sizeof(fdt_entry)) != 0) {
         return FW_UPGRADE_ERROR_E;
     }
 
     return FW_UPGRADE_OK_E;
 }
-

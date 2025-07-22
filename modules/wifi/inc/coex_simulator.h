@@ -18,7 +18,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "nt_flags.h"
 #include "nt_common.h"
 
-
 #if defined(SUPPORT_COEX)
 #if defined(SUPPORT_COEX_SIMULATOR)
 #include "coex_gpm.h"
@@ -27,14 +26,14 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
  * state information. It also holds different management entities required for the
  * operation of the Coex Simulator.
  */
-typedef struct simulator{
-	tMciGpm   gpm;
-	uint8_t   is_bton;
-}COEX_SIM_SIMULATOR;
+typedef struct simulator {
+    tMciGpm gpm;
+    uint8_t is_bton;
+} COEX_SIM_SIMULATOR;
 
 extern COEX_SIM_SIMULATOR g_sim;
 
-uint8_t coex_sim_gpm_create( uint32_t *args, uint8_t num_args);
+uint8_t coex_sim_gpm_create(uint32_t *args, uint8_t num_args);
 uint8_t coex_sim_get_bt_state();
 void coex_sim_set_bt_state(uint8_t bt_on);
 

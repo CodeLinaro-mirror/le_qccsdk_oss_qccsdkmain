@@ -27,12 +27,12 @@ esp_err_t null_func(httpd_req_t *req)
     return ESP_OK;
 }
 
-httpd_uri_t handler_limit_uri (char* path)
+httpd_uri_t handler_limit_uri(char *path)
 {
     httpd_uri_t uri = {
-        .uri      = path,
-        .method   = HTTP_GET,
-        .handler  = null_func,
+        .uri = path,
+        .method = HTTP_GET,
+        .handler = null_func,
         .user_ctx = NULL,
     };
     return uri;
@@ -41,7 +41,7 @@ httpd_uri_t handler_limit_uri (char* path)
 static inline unsigned num_digits(unsigned x)
 {
     unsigned digits = 1;
-    while ((x = x/10) != 0) {
+    while ((x = x / 10) != 0) {
         digits++;
     }
     return digits;
@@ -52,11 +52,11 @@ static inline unsigned num_digits(unsigned x)
 void test_handler_limit(httpd_handle_t hd)
 {
     int i;
-    char x[HTTPD_TEST_MAX_URI_HANDLERS+1][num_digits(HTTPD_TEST_MAX_URI_HANDLERS)+1];
-    httpd_uri_t uris[HTTPD_TEST_MAX_URI_HANDLERS+1];
+    char x[HTTPD_TEST_MAX_URI_HANDLERS + 1][num_digits(HTTPD_TEST_MAX_URI_HANDLERS) + 1];
+    httpd_uri_t uris[HTTPD_TEST_MAX_URI_HANDLERS + 1];
 
     for (i = 0; i < HTTPD_TEST_MAX_URI_HANDLERS + 1; i++) {
-        snprintf(x[i],"%d",i);
+        snprintf(x[i], "%d", i);
         uris[i] = handler_limit_uri(x[i]);
     }
 
@@ -131,8 +131,7 @@ TEST_CASE("Leak Test", "[HTTP SERVER]")
         unsigned num_tasks = uxTaskGetNumberOfTasks();
         task_count++;
         if (num_tasks != task_count) {
-            printf("Incorrect task count (starting): %d expected %d\n",
-                   num_tasks, task_count);
+            printf("Incorrect task count (starting): %d expected %d\n", num_tasks, task_count);
             res = false;
         }
     }
@@ -146,8 +145,7 @@ TEST_CASE("Leak Test", "[HTTP SERVER]")
         unsigned num_tasks = uxTaskGetNumberOfTasks();
         task_count--;
         if (num_tasks != task_count) {
-            printf("Incorrect task count (stopping): %d expected %d\n",
-                   num_tasks, task_count);
+            printf("Incorrect task count (stopping): %d expected %d\n", num_tasks, task_count);
             res = false;
         }
     }
@@ -175,57 +173,55 @@ TEST_CASE("URI Wildcard Matcher Tests", "[HTTP SERVER]")
         bool matches;
     };
 
-    struct uritest uris[] = {
-        {"/", "/", true},
-        {"", "", true},
-        {"/", "", false},
-        {"/wrong", "/", false},
-        {"/", "/wrong", false},
-        {"/asdfghjkl/qwertrtyyuiuioo", "/asdfghjkl/qwertrtyyuiuioo", true},
-        {"/path", "/path", true},
-        {"/path", "/path/", false},
-        {"/path/", "/path", false},
+    struct uritest uris[] = {{"/", "/", true},
+                             {"", "", true},
+                             {"/", "", false},
+                             {"/wrong", "/", false},
+                             {"/", "/wrong", false},
+                             {"/asdfghjkl/qwertrtyyuiuioo", "/asdfghjkl/qwertrtyyuiuioo", true},
+                             {"/path", "/path", true},
+                             {"/path", "/path/", false},
+                             {"/path/", "/path", false},
 
-        {"?", "", false}, // this is not valid, but should not crash
-        {"?", "sfsdf", false},
+                             {"?", "", false},  // this is not valid, but should not crash
+                             {"?", "sfsdf", false},
 
-        {"/path/?", "/pa", false},
-        {"/path/?", "/path", true},
-        {"/path/?", "/path/", true},
-        {"/path/?", "/path/alalal", false},
+                             {"/path/?", "/pa", false},
+                             {"/path/?", "/path", true},
+                             {"/path/?", "/path/", true},
+                             {"/path/?", "/path/alalal", false},
 
-        {"/path/*", "/path", false},
-        {"/path/*", "/", false},
-        {"/path/*", "/path/", true},
-        {"/path/*", "/path/blabla", true},
+                             {"/path/*", "/path", false},
+                             {"/path/*", "/", false},
+                             {"/path/*", "/path/", true},
+                             {"/path/*", "/path/blabla", true},
 
-        {"*", "", true},
-        {"*", "/", true},
-        {"*", "/aaa", true},
+                             {"*", "", true},
+                             {"*", "/", true},
+                             {"*", "/aaa", true},
 
-        {"/path/?*", "/pat", false},
-        {"/path/?*", "/pathb", false},
-        {"/path/?*", "/pathxx", false},
-        {"/path/?*", "/pathblabla", false},
-        {"/path/?*", "/path", true},
-        {"/path/?*", "/path/", true},
-        {"/path/?*", "/path/blabla", true},
+                             {"/path/?*", "/pat", false},
+                             {"/path/?*", "/pathb", false},
+                             {"/path/?*", "/pathxx", false},
+                             {"/path/?*", "/pathblabla", false},
+                             {"/path/?*", "/path", true},
+                             {"/path/?*", "/path/", true},
+                             {"/path/?*", "/path/blabla", true},
 
-        {"/path/*?", "/pat", false},
-        {"/path/*?", "/pathb", false},
-        {"/path/*?", "/pathxx", false},
-        {"/path/*?", "/path", true},
-        {"/path/*?", "/path/", true},
-        {"/path/*?", "/path/blabla", true},
+                             {"/path/*?", "/pat", false},
+                             {"/path/*?", "/pathb", false},
+                             {"/path/*?", "/pathxx", false},
+                             {"/path/*?", "/path", true},
+                             {"/path/*?", "/path/", true},
+                             {"/path/*?", "/path/blabla", true},
 
-        {"/path/*/xxx", "/path/", false},
-        {"/path/*/xxx", "/path/*/xxx", true},
-        {}
-    };
+                             {"/path/*/xxx", "/path/", false},
+                             {"/path/*/xxx", "/path/*/xxx", true},
+                             {}};
 
     struct uritest *ut = &uris[0];
 
-    while(ut->template != 0) {
+    while (ut->template != 0) {
         bool match = httpd_uri_match_wildcard(ut->template, ut->uri, strlen(ut->uri));
         TEST_ASSERT(match == ut->matches);
         ut++;

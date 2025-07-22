@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*========================================================================
  *
  * @file wifi_fw_ext_int_api.h
@@ -26,28 +26,27 @@
  * ----------------------------------------------------------------------*/
 #ifdef PLATFORM_FERMION
 
-#define FIRMWARE_2_HOST_ASSERT          !FIRMWARE_2_HOST_GPIO_DEF_POL
-#define FIRMWARE_2_HOST_DE_ASSERT       FIRMWARE_2_HOST_GPIO_DEF_POL
+#define FIRMWARE_2_HOST_ASSERT    !FIRMWARE_2_HOST_GPIO_DEF_POL
+#define FIRMWARE_2_HOST_DE_ASSERT FIRMWARE_2_HOST_GPIO_DEF_POL
 
 /*
  *  FIRMWARE_2_HOST GPIO default config
  */
 
-#define FIRMWARE_2_HOST_GPIO_DEF_POL        TRUE            //>> Default polarity of the FIRMWARE_2_HOST GPIO
-#define FIRMWARE_2_HOST_GPIO_PORT           NT_GPIOA        //>> Default GPIO PORT being used
-#define FIRMWARE_2_HOST_GPIO                GPIO_PIN_8      //>> Default GPIO PIN being used
-#define MAX_F2A_PULSE_WIDTH_US              25              //>> Max F2A pulse Width
-#define MAX_INTER_F2A_INTERVAL_US           10              //>> Max interval between F2A pulses
+#define FIRMWARE_2_HOST_GPIO_DEF_POL TRUE        //>> Default polarity of the FIRMWARE_2_HOST GPIO
+#define FIRMWARE_2_HOST_GPIO_PORT    NT_GPIOA    //>> Default GPIO PORT being used
+#define FIRMWARE_2_HOST_GPIO         GPIO_PIN_8  //>> Default GPIO PIN being used
+#define MAX_F2A_PULSE_WIDTH_US       25          //>> Max F2A pulse Width
+#define MAX_INTER_F2A_INTERVAL_US    10          //>> Max interval between F2A pulses
 
-#define A2F_ASSERT_INTR_NVIC1_MASK          (0x1 << 31)
-#define A2F_DEASSERT_INTR_NVIC3_MASK        (0x1 << 12)
+#define A2F_ASSERT_INTR_NVIC1_MASK   (0x1 << 31)
+#define A2F_DEASSERT_INTR_NVIC3_MASK (0x1 << 12)
 
 #ifdef FIRMWARE_APPS_INFORMED_WAKE
-typedef enum f2a_short_reason
-{
-    F2A_SHORT_REASON_RING_TX_RX,                            //>> F2A short due to Ring Tx, Rx request
-    F2A_SHORT_REASON_A2F_RESP,                              //>> F2A Short in resp of A2F assert
-    F2A_SHORT_REASON_TWT_SP_START,                          //>> F2A Short because of TWT SP START
+typedef enum f2a_short_reason {
+    F2A_SHORT_REASON_RING_TX_RX,    //>> F2A short due to Ring Tx, Rx request
+    F2A_SHORT_REASON_A2F_RESP,      //>> F2A Short in resp of A2F assert
+    F2A_SHORT_REASON_TWT_SP_START,  //>> F2A Short because of TWT SP START
 } f2a_short_reason_t;
 
 /*-------------------------------------------------------------------------

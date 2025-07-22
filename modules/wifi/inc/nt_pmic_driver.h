@@ -1,40 +1,29 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ */
 
 #ifndef CORE_SYSTEM_INC_NT_PMIC_DRIVER_H_
 #define CORE_SYSTEM_INC_NT_PMIC_DRIVER_H_
 
 #include <stdint.h>
 
-#define NT_PMIC_SMPS2_RRAM_ADDR          ( 0x80218 ) //RRAM OTP address to store SMPS2 configurations
-										/* This address in RRAM OTP will contain the configuration data needed to be done for SMPS2,
-										 * which should be written after cold-boot.
-										 * */
+#define NT_PMIC_SMPS2_RRAM_ADDR (0x80218)  // RRAM OTP address to store SMPS2 configurations
+/* This address in RRAM OTP will contain the configuration data needed to be done for SMPS2,
+ * which should be written after cold-boot.
+ * */
 /*-----------------------------------------------TYPEDEFS-----------------------------------------------------------*/
 
-typedef enum nt_pmic_cal_type_e
-{   NT_PMIC_CAL_SMPS1 = 0,
-	NT_PMIC_CAL_SMPS2,
-	NT_PMIC_CAL_AONLDO
-} nt_pmic_cal_type_t;
+typedef enum nt_pmic_cal_type_e { NT_PMIC_CAL_SMPS1 = 0, NT_PMIC_CAL_SMPS2, NT_PMIC_CAL_AONLDO } nt_pmic_cal_type_t;
 
-typedef enum nt_pmic_options_e
-{
-	NT_PMIC_OPT_CAL = 0,
-	NT_PMIC_OPT_AONSRC,
-	NT_PMIC_OPT_AONMODE,
-	NT_PMIC_OPT_STATE
+typedef enum nt_pmic_options_e {
+    NT_PMIC_OPT_CAL = 0,
+    NT_PMIC_OPT_AONSRC,
+    NT_PMIC_OPT_AONMODE,
+    NT_PMIC_OPT_STATE
 } nt_pmic_options_t;
 
-typedef enum nt_pmic_voltage_control_e
-{
-	NT_PMIC_VCTL_PWM = 0,
-	NT_PMIC_VCTL_PFM
-} nt_pmic_voltage_control_t;
-
+typedef enum nt_pmic_voltage_control_e { NT_PMIC_VCTL_PWM = 0, NT_PMIC_VCTL_PFM } nt_pmic_voltage_control_t;
 
 /*----------------------------------------------------------------------------------------------------------------*/
 
@@ -49,11 +38,11 @@ void nt_pmic_init(void);
 /**
  * <!-- nt_pmic_set -->
  *
- * @brief Set PMIC registers(cal value(smps1,smps2,aonldo), switching between vbatt and smps and switching between PFM and PWM mode)
- *        from CLI
+ * @brief Set PMIC registers(cal value(smps1,smps2,aonldo), switching between vbatt and smps and switching between PFM
+ * and PWM mode) from CLI
  * @return void
  */
-void nt_pmic_set(uint8_t option,uint8_t type, uint32_t value);
+void nt_pmic_set(uint8_t option, uint8_t type, uint32_t value);
 
 /**
  * <!-- nt_pmic_get -->
@@ -61,7 +50,7 @@ void nt_pmic_set(uint8_t option,uint8_t type, uint32_t value);
  * @brief To read and print the calibration values of smps1,smps2 and aonldo based on the request from CLI
  * @return void
  */
-void nt_pmic_get(uint8_t option,uint8_t type);
+void nt_pmic_get(uint8_t option, uint8_t type);
 
 /**
  * <!-- nt_pmic_set_smps_cal -->
@@ -119,6 +108,5 @@ void nt_pmic_post_sleep_config(void);
  * @return void
  */
 void nt_pmic_smps2_rram_cfg(uint32_t data);
-
 
 #endif /* CORE_SYSTEM_INC_NT_PMIC_DRIVER_H_ */

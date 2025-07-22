@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #ifndef FERMION_PHYREG_H
 #define FERMION_PHYREG_H
@@ -33,6 +33,5 @@
 //#include "mbias_seq_hwioreg.h"
 //#include "wl_synth_bs_seq_hwioreg.h"
 #include "seq_hwio.h"
-
 
 #endif /*FERMION_PHYREG_H*/

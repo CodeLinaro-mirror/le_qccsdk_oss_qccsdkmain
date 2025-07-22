@@ -1,8 +1,7 @@
 /*
-* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-* SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 /*
  * AWS IoT Device SDK for Embedded C 202211.00
@@ -43,7 +42,7 @@
 #ifndef _MQTT_CLIENT_DEMO_H_
 #define _MQTT_CLIENT_DEMO_H_
 
-     /* MQTT API header. */
+/* MQTT API header. */
 #include "core_mqtt.h"
 
 #include "transport_mbedtls.h"
@@ -62,43 +61,40 @@
  *-----------------------------------------------------------------------*/
 
 /**
-* @brief The length of the incoming publish records array used by the coreMQTT
-* library to track QoS > 0 packet ACKS for incoming publishes.
-*/
-#define INCOMING_PUBLISH_RECORD_LEN         ( 10U )
-
+ * @brief The length of the incoming publish records array used by the coreMQTT
+ * library to track QoS > 0 packet ACKS for incoming publishes.
+ */
+#define INCOMING_PUBLISH_RECORD_LEN (10U)
 
 /**
-* @brief The length of the outgoing publish records array used by the coreMQTT
-* library to track QoS > 0 packet ACKS for outgoing publishes.
-*/
-#define OUTGOING_PUBLISH_RECORD_LEN         ( 10U )
+ * @brief The length of the outgoing publish records array used by the coreMQTT
+ * library to track QoS > 0 packet ACKS for outgoing publishes.
+ */
+#define OUTGOING_PUBLISH_RECORD_LEN (10U)
 
 /**
  * @brief Maximum number of outgoing publishes maintained in the application
  * until an ack is received from the broker.
  */
-#define MAX_OUTGOING_PUBLISHES                   ( 5U )
+#define MAX_OUTGOING_PUBLISHES (5U)
 
 /**
  * @brief Size of the network buffer for MQTT packets.
  */
-#define NETWORK_BUFFER_SIZE    ( 1500U )
+#define NETWORK_BUFFER_SIZE (1500U)
 
-
-#define MQTT_DEMO_SESSION_NUM          (2U)
-
+#define MQTT_DEMO_SESSION_NUM (2U)
 
 /**
  * @brief Invalid packet identifier for the MQTT packets. Zero is always an
  * invalid packet identifier as per MQTT 3.1.1 spec.
  */
-#define MQTT_PACKET_ID_INVALID                   ( ( uint16_t ) 0U )
+#define MQTT_PACKET_ID_INVALID ((uint16_t)0U)
 
 /**
  * @brief Timeout for MQTT_ProcessLoop function in milliseconds.
  */
-#define MQTT_PROCESS_LOOP_TIMEOUT_MS             ( 500U )
+#define MQTT_PROCESS_LOOP_TIMEOUT_MS (500U)
 
 /**
  * @brief The maximum time interval in seconds which is allowed to elapse
@@ -109,78 +105,75 @@
  *  absence of sending any other Control Packets, the Client MUST send a
  *  PINGREQ Packet.
  */
-#define MQTT_KEEP_ALIVE_INTERVAL_SECONDS    ( 60U )
+#define MQTT_KEEP_ALIVE_INTERVAL_SECONDS (60U)
 
 /**
-* @brief The maximum number of retries for connecting to server.
-*/
-#define CONNECTION_RETRY_MAX_ATTEMPTS            ( 3U )
+ * @brief The maximum number of retries for connecting to server.
+ */
+#define CONNECTION_RETRY_MAX_ATTEMPTS (3U)
 
 /**
  * @brief The maximum back-off delay (in milliseconds) for retrying connection to server.
  */
-#define CONNECTION_RETRY_MAX_BACKOFF_DELAY_MS    ( 20000U )
+#define CONNECTION_RETRY_MAX_BACKOFF_DELAY_MS (20000U)
 
 /**
  * @brief The base back-off delay (in milliseconds) to use for connection retry attempts.
  */
-#define CONNECTION_RETRY_BACKOFF_BASE_MS         ( 10000U )
+#define CONNECTION_RETRY_BACKOFF_BASE_MS (10000U)
 
 /**
  * @brief Timeout for receiving CONNACK packet in milli seconds.
  */
-#define CONNACK_RECV_TIMEOUT_MS                  ( 5000U )
+#define CONNACK_RECV_TIMEOUT_MS (5000U)
 
-#define CLIENT_IDENTIFIER                           ( "testclient" )                                           /**< @brief Client identifier. */
-#define CLIENT_IDENTIFIER_LENGTH                    ( ( uint16_t ) ( sizeof( CLIENT_IDENTIFIER ) - 1 ) ) /**< @brief Length of client identifier. */
+#define CLIENT_IDENTIFIER        ("testclient")                              /**< @brief Client identifier. */
+#define CLIENT_IDENTIFIER_LENGTH ((uint16_t)(sizeof(CLIENT_IDENTIFIER) - 1)) /**< @brief Length of client identifier. \
+                                                                              */
 
-
-#define MQTT_EXAMPLE_TOPIC                  "example/topic"
+#define MQTT_EXAMPLE_TOPIC "example/topic"
 
 /**
  * @brief Length of client MQTT topic.
  */
-#define MQTT_EXAMPLE_TOPIC_LENGTH           ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_TOPIC ) - 1 ) )
+#define MQTT_EXAMPLE_TOPIC_LENGTH ((uint16_t)(sizeof(MQTT_EXAMPLE_TOPIC) - 1))
 
 /**
  * @brief The MQTT message published in this example.
  */
-#define MQTT_EXAMPLE_MESSAGE                "Hello World!"
+#define MQTT_EXAMPLE_MESSAGE "Hello World!"
 
 /**
  * @brief The length of the MQTT message published in this example.
  */
-#define MQTT_EXAMPLE_MESSAGE_LENGTH         ( ( uint16_t ) ( sizeof( MQTT_EXAMPLE_MESSAGE ) - 1 ) )
-
+#define MQTT_EXAMPLE_MESSAGE_LENGTH ((uint16_t)(sizeof(MQTT_EXAMPLE_MESSAGE) - 1))
 
 /* Check that transport timeout for transport send and receive is defined. */
-#define TRANSPORT_SEND_RECV_TIMEOUT_MS    ( 10 )
+#define TRANSPORT_SEND_RECV_TIMEOUT_MS (10)
 
 /* Ping response timeout max time, otherwise will reconnect*/
-#define MQTT_PING_RESP_TIMEOUT_MAX_TIMES    (3)
+#define MQTT_PING_RESP_TIMEOUT_MAX_TIMES (3)
 
 /* Ping response timeout max time, otherwise will reconnect*/
-#define MQTT_SUB_TOPIC_PER_SESSION_MAX    (10)
+#define MQTT_SUB_TOPIC_PER_SESSION_MAX (10)
 
 typedef enum {
     MQTT_OVER_TCP,
-	MQTT_OVER_SSL,	
-}MQTT_TRANSPORT_TYPE_E;
+    MQTT_OVER_SSL,
+} MQTT_TRANSPORT_TYPE_E;
 
 typedef enum {
     MQTT_INIT,
-	MQTT_CONNECTED,
-	MQTT_DISCONNECT,
-	MQTT_FORCE_DISCONNECT,
-}MQTT_STATE_E;
-
+    MQTT_CONNECTED,
+    MQTT_DISCONNECT,
+    MQTT_FORCE_DISCONNECT,
+} MQTT_STATE_E;
 
 /**
  * @brief Structure to keep the MQTT publish packets until an ack is received
  * for QoS2 publishes.
  */
-typedef struct PublishPackets
-{
+typedef struct PublishPackets {
     /**
      * @brief Packet identifier of the publish packet.
      */
@@ -192,9 +185,7 @@ typedef struct PublishPackets
     MQTTPublishInfo_t pubInfo;
 } PublishPackets_t;
 
-
-typedef struct MQTTClientSession
-{
+typedef struct MQTTClientSession {
     uint32_t sessionIndex;
     MQTTContext_t mqttContext;
     NetworkContext_t networkContext;
@@ -202,11 +193,11 @@ typedef struct MQTTClientSession
     TlsTransportParams_t tlsContext;
     NetworkCredentials_t tlsCredentials;
     MQTT_TRANSPORT_TYPE_E mqttTransportScheme;
-    ServerInfo_t serverInfo; 
+    ServerInfo_t serverInfo;
     MQTTSubscribeInfo_t subscribeInfo[MQTT_SUB_TOPIC_PER_SESSION_MAX];
     MQTTConnectInfo_t connectInfo;
     MQTTPublishInfo_t lwtInfo;
-    
+
     /**
      * @brief Array to track the incoming publish records for incoming publishes
      * with QoS > 0.
@@ -214,7 +205,7 @@ typedef struct MQTTClientSession
      * This is passed into #MQTT_InitStatefulQoS to allow for QoS > 0.
      *
      */
-    MQTTPubAckInfo_t pIncomingPublishRecords[ INCOMING_PUBLISH_RECORD_LEN ];
+    MQTTPubAckInfo_t pIncomingPublishRecords[INCOMING_PUBLISH_RECORD_LEN];
 
     /**
      * @brief Array to track the outgoing publish records for outgoing publishes
@@ -223,11 +214,10 @@ typedef struct MQTTClientSession
      * This is passed into #MQTT_InitStatefulQoS to allow for QoS > 0.
      *
      */
-    MQTTPubAckInfo_t pOutgoingPublishRecords[ OUTGOING_PUBLISH_RECORD_LEN ];
+    MQTTPubAckInfo_t pOutgoingPublishRecords[OUTGOING_PUBLISH_RECORD_LEN];
     uint8_t buffer[NETWORK_BUFFER_SIZE];
     MQTT_STATE_E mqttState;
     uint32_t mqttPingRespCount;
-
 
     /**
      * @brief Packet Identifier updated when an ACK packet is received.
@@ -235,13 +225,13 @@ typedef struct MQTTClientSession
      * It is used to match an expected ACK for a transmitted packet.
      */
     uint16_t ackPacketIdentifier;
-    
+
     /**
      * @brief Packet Identifier generated when Subscribe request was sent to the broker;
      * it is used to match received Subscribe ACK to the transmitted subscribe.
      */
     uint16_t subscribePacketIdentifier;
-    
+
     /**
      * @brief Packet Identifier generated when Unsubscribe request was sent to the broker;
      * it is used to match received Unsubscribe ACK to the transmitted unsubscribe
@@ -262,38 +252,34 @@ typedef struct MQTTClientSession
      */
     MQTTSubAckStatus_t subAckStatus;
 
-    
     /**
      * @brief Array to keep the outgoing publish messages.
      * These stored outgoing publish messages are kept until a successful ack
      * is received.
      */
-    PublishPackets_t outgoingPublishPackets[ MAX_OUTGOING_PUBLISHES ];
+    PublishPackets_t outgoingPublishPackets[MAX_OUTGOING_PUBLISHES];
 
 } MQTTClientSession_t;
 
-
 typedef enum {
     MQTT_CMD_NONE,
-	MQTT_CMD_SUB,
+    MQTT_CMD_SUB,
     MQTT_CMD_UNSUB,
-	MQTT_CMD_PUB,
-	MQTT_CMD_DISC,	
-}MQTT_CMD_TYPE_E;
+    MQTT_CMD_PUB,
+    MQTT_CMD_DISC,
+} MQTT_CMD_TYPE_E;
 
-typedef struct MQTTClientCMD
-{
+typedef struct MQTTClientCMD {
     MQTT_CMD_TYPE_E cmd_type;
     union {
         MQTTPublishInfo_t publish;
         MQTTSubscribeInfo_t subscribe;
         MQTTSubscribeInfo_t unsubscribe;
-    }mqtt_cmd;
+    } mqtt_cmd;
 } MQTTClientCMD_t;
 
-typedef struct MQTTTaskCtrl
-{
-    qurt_signal_t  mqtt_client_signal;
+typedef struct MQTTTaskCtrl {
+    qurt_signal_t mqtt_client_signal;
     nt_osal_timer_handle_t mqtt_keepalive_timer;
     bool mqtt_keepalive_created;
     bool mqtt_signal_created;
@@ -310,7 +296,7 @@ qapi_Status_t mqttc_subscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t
 qapi_Status_t mqttc_unsubscribe(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 qapi_Status_t mqttc_publish(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 qapi_Status_t mqttc_publishRaw_Cache(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
-qapi_Status_t mqttc_publishRaw_Block(uint32_t len, char* block_buf);
+qapi_Status_t mqttc_publishRaw_Block(uint32_t len, char *block_buf);
 qapi_Status_t mqttc_disconnect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List);
 qapi_Status_t mqttc_destroy(uint32_t sessionIndex);
 qapi_Status_t mqttc_connect_info_query(void);

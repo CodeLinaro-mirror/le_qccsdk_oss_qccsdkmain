@@ -42,34 +42,29 @@ extern "C" {
  *        operation destroys existing data on a target device.
  */
 struct fs_file_system_t {
-	/* File operations */
-	int (*open)(struct fs_file_t *filp, const char *fs_path,
-		    fs_mode_t flags);
-	int32_t (*read)(struct fs_file_t *filp, void *dest, size_t nbytes);
-	int32_t (*write)(struct fs_file_t *filp,
-					const void *src, size_t nbytes);
-	int (*lseek)(struct fs_file_t *filp, int32_t off, int whence);
-	off_t (*tell)(struct fs_file_t *filp);
-	int (*truncate)(struct fs_file_t *filp, off_t length);
-	int (*sync)(struct fs_file_t *filp);
-	int (*close)(struct fs_file_t *filp);
-	/* Directory operations */
-	int (*opendir)(struct fs_dir_t *dirp, const char *fs_path);
-	int (*readdir)(struct fs_dir_t *dirp, struct fs_dirent *entry);
-	int (*closedir)(struct fs_dir_t *dirp);
-	/* File system level operations */
-	int (*mount)(struct fs_mount_t *mountp);
-	int (*unmount)(struct fs_mount_t *mountp);
-	int (*unlink)(struct fs_mount_t *mountp, const char *name);
-	int (*rename)(struct fs_mount_t *mountp, const char *from,
-					const char *to);
-	int (*mkdir)(struct fs_mount_t *mountp, const char *name);
-	int (*stat)(struct fs_mount_t *mountp, const char *path,
-					struct fs_dirent *entry);
-	int (*statvfs)(struct fs_mount_t *mountp, const char *path,
-					struct fs_statvfs *stat);
+    /* File operations */
+    int (*open)(struct fs_file_t *filp, const char *fs_path, fs_mode_t flags);
+    int32_t (*read)(struct fs_file_t *filp, void *dest, size_t nbytes);
+    int32_t (*write)(struct fs_file_t *filp, const void *src, size_t nbytes);
+    int (*lseek)(struct fs_file_t *filp, int32_t off, int whence);
+    off_t (*tell)(struct fs_file_t *filp);
+    int (*truncate)(struct fs_file_t *filp, off_t length);
+    int (*sync)(struct fs_file_t *filp);
+    int (*close)(struct fs_file_t *filp);
+    /* Directory operations */
+    int (*opendir)(struct fs_dir_t *dirp, const char *fs_path);
+    int (*readdir)(struct fs_dir_t *dirp, struct fs_dirent *entry);
+    int (*closedir)(struct fs_dir_t *dirp);
+    /* File system level operations */
+    int (*mount)(struct fs_mount_t *mountp);
+    int (*unmount)(struct fs_mount_t *mountp);
+    int (*unlink)(struct fs_mount_t *mountp, const char *name);
+    int (*rename)(struct fs_mount_t *mountp, const char *from, const char *to);
+    int (*mkdir)(struct fs_mount_t *mountp, const char *name);
+    int (*stat)(struct fs_mount_t *mountp, const char *path, struct fs_dirent *entry);
+    int (*statvfs)(struct fs_mount_t *mountp, const char *path, struct fs_statvfs *stat);
 #if defined(CONFIG_FILE_SYSTEM_MKFS)
-	int (*mkfs)(uintptr_t dev_id, void *cfg, int flags);
+    int (*mkfs)(uintptr_t dev_id, void *cfg, int flags);
 #endif
 };
 

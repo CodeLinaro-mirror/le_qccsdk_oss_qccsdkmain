@@ -3,7 +3,6 @@ Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
-
 #ifndef _NT_TWT_AP_H_
 #define _NT_TWT_AP_H_
 #include "wifi_cmn.h"
@@ -16,7 +15,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #if defined(NT_FN_TWT) && defined(SUPPORT_TWT_AP)
 
-#define NT_TWT_AP_SP_END_MARGIN_US  (1000)
+#define NT_TWT_AP_SP_END_MARGIN_US (1000)
 
 /**
  * @brief Timeout handler for sp start, This function is called when sp starts
@@ -62,4 +61,3 @@ void nt_twt_delete_ap_timers(PM_STRUCT *pPmStruct);
 #endif /* NT_FN_TWT */
 
 #endif /* CORE_WIFI_SME_INC_NT_TWT_POWER_SAVE_H_ */
-

@@ -34,11 +34,11 @@
 
 /* Logging configuration for the MQTT library. */
 #ifndef LIBRARY_LOG_NAME
-    #define LIBRARY_LOG_NAME    "MQTT"
+#define LIBRARY_LOG_NAME "MQTT"
 #endif
 
 #ifndef LIBRARY_LOG_LEVEL
-    #define LIBRARY_LOG_LEVEL    LOG_NONE
+#define LIBRARY_LOG_LEVEL LOG_NONE
 #endif
 
 #include "logging_stack.h"
@@ -47,9 +47,8 @@
  * Because these utilities are shared by both plaintext and TLS demos,
  * we must define pParams as void *. */
 
-struct NetworkContext
-{
-    void * pParams;
+struct NetworkContext {
+    void *pParams;
 };
 
 /**
@@ -67,7 +66,7 @@ struct NetworkContext
  * @note This definition must exist in order to compile. 10U is a typical value
  * used in the MQTT demos.
  */
-#define MQTT_STATE_ARRAY_MAX_COUNT              ( 10U )
+#define MQTT_STATE_ARRAY_MAX_COUNT (10U)
 
 /**
  * @brief Retry count for reading CONNACK from network.
@@ -78,7 +77,7 @@ struct NetworkContext
  * times before timing out. A value of 0 for this config will cause the
  * transport receive for CONNACK  to be invoked only once.
  */
-#define MQTT_MAX_CONNACK_RECEIVE_RETRY_COUNT    ( 2U )
+#define MQTT_MAX_CONNACK_RECEIVE_RETRY_COUNT (2U)
 
 /**
  * @brief Number of milliseconds to wait for a ping response to a ping
@@ -87,7 +86,7 @@ struct NetworkContext
  * If a ping response is not received before this timeout, then
  * #MQTT_ProcessLoop will return #MQTTKeepAliveTimeout.
  */
-#define MQTT_PINGRESP_TIMEOUT_MS                ( 5000U )
+#define MQTT_PINGRESP_TIMEOUT_MS (5000U)
 
 /**
  * @brief The maximum duration of receiving no data over network when
@@ -105,7 +104,7 @@ struct NetworkContext
  * receive stub. There is no added value, in proving memory safety, to repeat
  * the logic that checks if the polling timeout is reached.
  */
-#define MQTT_RECV_POLLING_TIMEOUT_MS            ( 1U )
+#define MQTT_RECV_POLLING_TIMEOUT_MS (1U)
 
 /**
  * @brief Maximum number of milliseconds of TX inactivity to wait
@@ -117,7 +116,7 @@ struct NetworkContext
  * <b>Possible values:</b> Any positive integer up to SIZE_MAX. <br>
  * <b>Default value:</b> '120000'
  */
-#define PACKET_TX_TIMEOUT_MS    ( 120000U )
+#define PACKET_TX_TIMEOUT_MS (120000U)
 /**
  * @brief Maximum number of milliseconds of RX inactivity to wait
  * before initiating a PINGREQ
@@ -126,6 +125,6 @@ struct NetworkContext
  * <b>Default value:</b> '120000'
  *
  */
-#define PACKET_RX_TIMEOUT_MS    ( 120000U )
+#define PACKET_RX_TIMEOUT_MS (120000U)
 
 #endif /* ifndef CORE_MQTT_CONFIG_H_ */

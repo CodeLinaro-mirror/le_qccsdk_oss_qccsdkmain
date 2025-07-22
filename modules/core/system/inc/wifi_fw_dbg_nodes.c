@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*------------------------------------------------------------------------
  * @file    wifi_fw_dbg_nodes.c
  * @brief   Power Debug Infrastructure related code
@@ -11,25 +11,24 @@
 #include "fdi.h"
 
 #ifdef FEATURE_FDI
- /*--------------------------------------------------------------------------
-  * Callback Declare
-  --------------------------------------------------------------------------*/
- static void pow_post_ins_cb(fdi_node_ins_t* p_fdi_ins);
+/*--------------------------------------------------------------------------
+ * Callback Declare
+ --------------------------------------------------------------------------*/
+static void pow_post_ins_cb(fdi_node_ins_t *p_fdi_ins);
 
- /*--------------------------------------------------------------------------
-  * Global Variables
-  --------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------
+ * Global Variables
+ --------------------------------------------------------------------------*/
 fdi_interface_t g_ferm_dbg_nodes[FDI_DBG_MAX];
 
- /****************************************************************
+/****************************************************************
  * @brief Node registration insertion list
  *
  * @note: To insert node NODE_LIST_INS(Node_id_enum, node_enable,
  *                                     DEBUG/PROD, module_bitmap,
  *                                     post_insertion callback)
  *****************************************************************/
-static FDI_PS_DATA const fdi_nodes_t node_list[] =
-{
+static FDI_PS_DATA const fdi_nodes_t node_list[] = {
     /* Power Nodes */
     NODE_LIST_INS(FDI_DBG_PWR_UNIT_TEST_NODE, FDI_SET, LOG_LEVEL_DEBUG, FDI_MOD_BMAP_PWR, pow_post_ins_cb),
     NODE_LIST_INS(FDI_DBG_PWR_S2W_WARM_BOOT_CB, FDI_RESET, LOG_LEVEL_DEBUG, FDI_MOD_BMAP_PWR, NULL),
@@ -71,27 +70,21 @@ static FDI_PS_DATA const fdi_nodes_t node_list[] =
     NODE_LIST_INS(FDI_DBG_PWR_EVT_WMAC_SLEEP_ABORT, FDI_SET, LOG_LEVEL_DEBUG, FDI_MOD_BMAP_PWR, pow_post_ins_cb),
 };
 
-static size_t len_node_list = sizeof(node_list)/sizeof(fdi_nodes_t);
+static size_t len_node_list = sizeof(node_list) / sizeof(fdi_nodes_t);
 /*--------------------------------------------------------------------------
  * Function Definations
  --------------------------------------------------------------------------*/
- /******************************************************************
+/******************************************************************
  * @brief Register all Debug Nodes in node list
  *
  *****************************************************************/
 void fdi_reg_all_nodes(void)
 {
     fdi_ret_t fdi_ret;
-    for (size_t id = FDI_RESET; id < len_node_list; id++)
-    {
-        fdi_ret = fdi_reg_node(
-            node_list[id].id,
-            node_list[id].attributes,
-            node_list[id].p_cb,
-            &(g_ferm_dbg_nodes[node_list[id].id])
-        );
-        if (fdi_ret != FDI_RET_SUCCESS)
-        {
+    for (size_t id = FDI_RESET; id < len_node_list; id++) {
+        fdi_ret = fdi_reg_node(node_list[id].id, node_list[id].attributes, node_list[id].p_cb,
+                               &(g_ferm_dbg_nodes[node_list[id].id]));
+        if (fdi_ret != FDI_RET_SUCCESS) {
             NT_LOG_PRINT(COMMON, ERR, "ERR: %u", (unsigned int)fdi_ret);
         }
     }
@@ -100,17 +93,15 @@ void fdi_reg_all_nodes(void)
 /*--------------------------------------------------------------------------
  * Function Definations
  --------------------------------------------------------------------------*/
- /******************************************************************
+/******************************************************************
  * @brief Power post insertion callback
  *
  * @param p_fdi_ins
  *****************************************************************/
-static void pow_post_ins_cb(fdi_node_ins_t* p_fdi_ins)
+static void pow_post_ins_cb(fdi_node_ins_t *p_fdi_ins)
 {
-    if (((p_fdi_ins->attr >> FDI_INS_ATTR_TICK_TYPE_OFFSET) & 0x01) == TICK_TYPE_STOP_TICK)
-    {
-        switch (p_fdi_ins->attr & FDI_NODE_ATTR_ID_MASK)
-        {
+    if (((p_fdi_ins->attr >> FDI_INS_ATTR_TICK_TYPE_OFFSET) & 0x01) == TICK_TYPE_STOP_TICK) {
+        switch (p_fdi_ins->attr & FDI_NODE_ATTR_ID_MASK) {
             case FDI_DBG_PWR_UNIT_TEST_NODE:
 #if FDI_DBG == FDI_SET
                 NT_LOG_PRINT(COMMON, ERR, "FDI_DBG_PWR_UNIT_TEST_NODE inserted!");

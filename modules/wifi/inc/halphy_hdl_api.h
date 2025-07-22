@@ -46,8 +46,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
  * Type Declarations
  * ----------------------------------------------------------------------*/
 
-typedef struct phyrf_tx_start_input_s
-{
+typedef struct phyrf_tx_start_input_s {
     mpi_rate_t rate;
     mpi_guard_interval_t short_guard;
     uint16_t n_packets;
@@ -57,18 +56,17 @@ typedef struct phyrf_tx_start_input_s
     uint32_t rf_warmup;
 } phyrf_tx_start_input_t;
 
-typedef struct phyrf_tx_stop_output_s
-{
+typedef struct phyrf_tx_stop_output_s {
     uint16_t packets_sent;
 } phyrf_tx_stop_output_t;
 
 typedef struct crx_param_s {
-      uint8_t    crx_enable; /* 0 disable 1 enable */
-      uint8_t    lnaPwrMode; /* 0:LP, 1:HP */
-      uint8_t    glut_sel;   /* 0 to 5 */
-      uint16_t   bt_rssi_lower_threshold;
-      uint16_t   bt_rssi_upper_threshold;
-}crx_param_t;
+    uint8_t crx_enable; /* 0 disable 1 enable */
+    uint8_t lnaPwrMode; /* 0:LP, 1:HP */
+    uint8_t glut_sel;   /* 0 to 5 */
+    uint16_t bt_rssi_lower_threshold;
+    uint16_t bt_rssi_upper_threshold;
+} crx_param_t;
 
 /*------------------------------------------------------------------------
  * Function Declarations and Documentation

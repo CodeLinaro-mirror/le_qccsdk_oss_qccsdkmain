@@ -25,7 +25,7 @@
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
  *-----------------------------------------------------------------------*/
- /* Flash XiP support if needed */
+/* Flash XiP support if needed */
 //#define FLASH_XIP_SUPPORT
 
 /* If need, do power up operation before flash init for some flash */
@@ -37,87 +37,87 @@
 /* Read/Write flash registers */
 #define FLASH_ACCESS_REG_SUPPORT
 
-#define QSPI_TRANS_MODE          QSPI_PIO_MODE_E
+#define QSPI_TRANS_MODE QSPI_PIO_MODE_E
 
-#define WRITE_STATUS_POLLING_USEC         100
-#define WRITE_TIMEOUT                     5000000  /**< Time unit is usec. */
-#define ERASE_STATUS_POLLING_MSEC         5
-#define ERASE_TIMEOUT                     5000000  /**< Time unit is usec. */
-#define READ_STATUS_POLLING_USEC          20
-#define READ_STATUS_TIMEOUT               5000000  /**< Time unit is usec. */
-#define CHIP_ERASE_STATUS_POLLING_MSEC    1000
-#define CHIP_ERASE_TIMEOUT                500000000 /**< Time unit is usec. */
+#define WRITE_STATUS_POLLING_USEC      100
+#define WRITE_TIMEOUT                  5000000 /**< Time unit is usec. */
+#define ERASE_STATUS_POLLING_MSEC      5
+#define ERASE_TIMEOUT                  5000000 /**< Time unit is usec. */
+#define READ_STATUS_POLLING_USEC       20
+#define READ_STATUS_TIMEOUT            5000000 /**< Time unit is usec. */
+#define CHIP_ERASE_STATUS_POLLING_MSEC 1000
+#define CHIP_ERASE_TIMEOUT             500000000 /**< Time unit is usec. */
 
-#define WRITE_ENABLE_CMD                  0x06
-#define READ_STATUS_CMD                   0x05
-#define READ_STATUS_2_CMD                 0x3F
-#define READ_CFG_REG_CMD                  0x15
-#define READ_CFG1_CMD                     0x35
-#define WRITE_STATUS_CMD                  0x01
-#define ENTER_4B_ADDR_CMD                 0xB7
-#define WRITE_STATUS_2_CMD                0x3E
-#define READ_IDENTIFICATION_CMD           0x9F
+#define WRITE_ENABLE_CMD        0x06
+#define READ_STATUS_CMD         0x05
+#define READ_STATUS_2_CMD       0x3F
+#define READ_CFG_REG_CMD        0x15
+#define READ_CFG1_CMD           0x35
+#define WRITE_STATUS_CMD        0x01
+#define ENTER_4B_ADDR_CMD       0xB7
+#define WRITE_STATUS_2_CMD      0x3E
+#define READ_IDENTIFICATION_CMD 0x9F
 
-#define STATUS_WR_EN_MASK                 0x02
-#define PROG_ERASE_WRITE_BUSY_BMSK        0x01
-#define READ_STATUS_BUSY_MASK             0x01
+#define STATUS_WR_EN_MASK          0x02
+#define PROG_ERASE_WRITE_BUSY_BMSK 0x01
+#define READ_STATUS_BUSY_MASK      0x01
 
-#define FLASH_PID2VID(__pid__)            ((uint8_t)(__pid__))
+#define FLASH_PID2VID(__pid__) ((uint8_t)(__pid__))
 
 /* Flash Manufacturer ID, from the lowest byte of device id */
-#define MANUFACTURER_ID_MACRONIX          0xC2     /**< Macronix. */
-#define MANUFACTURER_ID_WINBOND           0xEF     /**< Winbond. */
-#define MANUFACTURER_ID_ISSI              0x9D     /**< ISSI. */
-#define MANUFACTURER_ID_GD                0xC8     /**< GD. */
-#define MANUFACTURER_ID_GT                0xC4     /**< GT. */
+#define MANUFACTURER_ID_MACRONIX 0xC2 /**< Macronix. */
+#define MANUFACTURER_ID_WINBOND  0xEF /**< Winbond. */
+#define MANUFACTURER_ID_ISSI     0x9D /**< ISSI. */
+#define MANUFACTURER_ID_GD       0xC8 /**< GD. */
+#define MANUFACTURER_ID_GT       0xC4 /**< GT. */
 
 /* Winbond SPI Command */
-#define WINBOND_READ_STATUS_2_CMD         0x35
-#define WINBOND_READ_STATUS_3_CMD         0x15
-#define WINBOND_WRITE_STATUS_2_CMD        0x31
-#define WINBOND_WRITE_STATUS_3_CMD        0x11
+#define WINBOND_READ_STATUS_2_CMD  0x35
+#define WINBOND_READ_STATUS_3_CMD  0x15
+#define WINBOND_WRITE_STATUS_2_CMD 0x31
+#define WINBOND_WRITE_STATUS_3_CMD 0x11
 
 #if CONFIG_BOARD_QCC730_QSPI_V2_QUAD_MODE
 /* Quad enable mode. */
-#define ENABLE_QUAD_MODE_0                0x0
-#define ENABLE_QUAD_MODE_1                0x1
-#define ENABLE_QUAD_MODE_2                0x2
-#define ENABLE_QUAD_MODE_3                0x3
-#define ENABLE_QUAD_MODE_4                0x4
-#define ENABLE_QUAD_MODE_5                0x5
+#define ENABLE_QUAD_MODE_0 0x0
+#define ENABLE_QUAD_MODE_1 0x1
+#define ENABLE_QUAD_MODE_2 0x2
+#define ENABLE_QUAD_MODE_3 0x3
+#define ENABLE_QUAD_MODE_4 0x4
+#define ENABLE_QUAD_MODE_5 0x5
 #endif
 
-#define BIT_1                             0x2
-#define BIT_6                             0x40
-#define BIT_7                             0x80
+#define BIT_1 0x2
+#define BIT_6 0x40
+#define BIT_7 0x80
 
-#define WRITE_OPERATION                   0x0
-#define ERASE_OPERATION                   0x1
-#define OTHER_OPERATION                   0x2
+#define WRITE_OPERATION 0x0
+#define ERASE_OPERATION 0x1
+#define OTHER_OPERATION 0x2
 
 /* Flash state. */
-#define FLASH_STATE_WRITE                 0x1
-#define FLASH_STATE_READ                  0x2
-#define FLASH_STATE_ERASE                 0x4
-#define FLASH_STATE_WRITE_REG             0x8
-#define FLASH_STATE_READ_REG              0x10
-#define FLASH_STATE_NON_BLOCKING          0x80
+#define FLASH_STATE_WRITE        0x1
+#define FLASH_STATE_READ         0x2
+#define FLASH_STATE_ERASE        0x4
+#define FLASH_STATE_WRITE_REG    0x8
+#define FLASH_STATE_READ_REG     0x10
+#define FLASH_STATE_NON_BLOCKING 0x80
 
 /* Flash operation task event. */
-#define FLASH_TSK_EVENT_TRANSFER_DONE     ((uint32_t)(1 << 0))
-#define FLASH_TSK_EVENT_OPERATE_DONE      ((uint32_t)(1 << 1))
-#define FLASH_TSK_EVENT_OPERATE_ERROR     ((uint32_t)(1 << 2))
+#define FLASH_TSK_EVENT_TRANSFER_DONE ((uint32_t)(1 << 0))
+#define FLASH_TSK_EVENT_OPERATE_DONE  ((uint32_t)(1 << 1))
+#define FLASH_TSK_EVENT_OPERATE_ERROR ((uint32_t)(1 << 2))
 
-#define FLASH_TSK_SHORT_WAIT              1  /**< Short wait of 1ms incase of polling timer started fail. */
-#define NO_TIMER_COMPARATOR               0xFF
+#define FLASH_TSK_SHORT_WAIT 1 /**< Short wait of 1ms incase of polling timer started fail. */
+#define NO_TIMER_COMPARATOR  0xFF
 
-#define DIFF_TIME(__x__, __y__)           ((__x__) - (__y__))
+#define DIFF_TIME(__x__, __y__) ((__x__) - (__y__))
 
-#define VALID_RW_MODE(__mode__)           (((__mode__) >= FLASH_RW_MODE_SDR_SINGLE && \
-                                           (__mode__) <= FLASH_RW_MODE_SDR_QUAD) || \
-                                           ((__mode__) == FLASH_RW_MODE_DDR_QUAD))
+#define VALID_RW_MODE(__mode__)                                                          \
+    (((__mode__) >= FLASH_RW_MODE_SDR_SINGLE && (__mode__) <= FLASH_RW_MODE_SDR_QUAD) || \
+     ((__mode__) == FLASH_RW_MODE_DDR_QUAD))
 
-#define IS_QUAD_MODE(__mode__)            (((__mode__) & 0x3) == 0x3)
+#define IS_QUAD_MODE(__mode__) (((__mode__)&0x3) == 0x3)
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -126,36 +126,34 @@
 /**
    Structure representing flash non-blocking operation parameters.
 */
-typedef struct flash_operation_param_s
-{
+typedef struct flash_operation_param_s {
     flash_operation_cb_t operation_cb; /**< The callback function for non-blocking flash operation. */
-    void                     *user_param;   /**< The user specified parameter for the callback function. */
-    qspi_cmd_t                qspi_cmd;     /**< The qspi cmd for read/writ/erase. */
-    uint32_t                  address;     /**< The start address for read/writ/erase. */
-    uint32_t                  byte_cnt;     /**< The total number of data for read/write/erase. */
-    uint32_t                  tried_cnt;    /**< The number of data tried to read/write/erase in last operation. */
-    uint8_t                  *buffer;      /**< The buffer pointer for read/write. */
+    void *user_param;                  /**< The user specified parameter for the callback function. */
+    qspi_cmd_t qspi_cmd;               /**< The qspi cmd for read/writ/erase. */
+    uint32_t address;                  /**< The start address for read/writ/erase. */
+    uint32_t byte_cnt;                 /**< The total number of data for read/write/erase. */
+    uint32_t tried_cnt;                /**< The number of data tried to read/write/erase in last operation. */
+    uint8_t *buffer;                   /**< The buffer pointer for read/write. */
 } flash_operation_param_t;
 
 /**
    Structure representing context for flash module.
 */
-typedef struct flash_context_s
-{
-    uint8_t                 state;           /**< Flash state. */
-    flash_config_data_t    *config;          /**< Flash specific configurations. */
-    TaskHandle_t       operation_task;   /**< Flash operation task. */
-    flash_operation_param_t *operation_param;  /**< Flash operation parameters. */
-    uint8_t                 timer_comparator; /**< Flash timer comparator. */
-    uint64_t                polling_start;    /**< Record the start time of polling flash operation status. */
+typedef struct flash_context_s {
+    uint8_t state;                            /**< Flash state. */
+    flash_config_data_t *config;              /**< Flash specific configurations. */
+    TaskHandle_t operation_task;              /**< Flash operation task. */
+    flash_operation_param_t *operation_param; /**< Flash operation parameters. */
+    uint8_t timer_comparator;                 /**< Flash timer comparator. */
+    uint64_t polling_start;                   /**< Record the start time of polling flash operation status. */
 } flash_context_t;
 
 /*-------------------------------------------------------------------------
  * Variables
  *-----------------------------------------------------------------------*/
 
-static flash_context_t  flash_context;
-static bool             flash_init_done = false;
+static flash_context_t flash_context;
+static bool flash_init_done = false;
 /* Mutex to prevent concurrent accesses to the hardware */
 #ifndef CONFIG_NON_OS
 qurt_mutex_t flash_mutex;
@@ -189,26 +187,25 @@ static FLASH_STATUS drv_flash_read_reg_internal(uint8_t reg_opcode, uint8_t len,
         return FLASH_DEVICE_INVALID_PARAMETER;
     }
 #ifdef FLASH_XIP_SUPPORT
-		if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-			drv_qspi_disable_xip_mode();
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+        drv_qspi_disable_xip_mode();
 #endif
 
-    (void)drv_qspi_prepare_cmd(&qspi_read_reg, reg_opcode, 0, 0,
-                      QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, false);
+    (void)drv_qspi_prepare_cmd(&qspi_read_reg, reg_opcode, 0, 0, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E,
+                               false);
 
     if (drv_qspi_run_cmd(&qspi_read_reg, 0, reg_value, len, QSPI_TRANS_MODE)) {
 #ifdef FLASH_XIP_SUPPORT
-    	if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-        	drv_qspi_restore_xip_mode();
+        if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+            drv_qspi_restore_xip_mode();
 #endif
         return FLASH_DEVICE_DONE;
-    }
-    else {
+    } else {
 #ifdef FLASH_XIP_SUPPORT
-		if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-			drv_qspi_restore_xip_mode();
+        if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+            drv_qspi_restore_xip_mode();
 #endif
-		
+
         return FLASH_DEVICE_FAIL;
     }
 }
@@ -223,9 +220,9 @@ static FLASH_STATUS drv_flash_read_reg_internal(uint8_t reg_opcode, uint8_t len,
 */
 static FLASH_STATUS drv_flash_check_error(uint8_t operation_type)
 {
-    uint8_t       status_mask = 0;
-    uint8_t       err_status_register = 0;
-    uint8_t       qspi_status = 0;
+    uint8_t status_mask = 0;
+    uint8_t err_status_register = 0;
+    uint8_t qspi_status = 0;
     FLASH_STATUS status = FLASH_DEVICE_DONE;
 
     switch (operation_type) {
@@ -257,16 +254,15 @@ static FLASH_STATUS drv_flash_check_error(uint8_t operation_type)
 
 #ifdef CONFIG_NON_OS
 /**
-* @brief delay function in usec
-* @param time: Delay time in usec
-* @return: void
-*/
+ * @brief delay function in usec
+ * @param time: Delay time in usec
+ * @return: void
+ */
 void nop_us_delay(uint32_t time)
 {
     volatile uint32_t idx;
-    volatile uint32_t sum = time*4;
-    for(idx = 0 ; idx < sum ; idx++)
-    {
+    volatile uint32_t sum = time * 4;
+    for (idx = 0; idx < sum; idx++) {
         __asm volatile("nop");
     }
 }
@@ -283,17 +279,16 @@ void nop_us_delay(uint32_t time)
 
    @return FLASH_DEVICE_DONE on success or an error code on failure.
 */
-static FLASH_STATUS drv_flash_wait_operation_done(uint32_t timeout, uint32_t status_polling_usec,
-                                             uint8_t operation, uint8_t bmask, uint8_t status_value)
+static FLASH_STATUS drv_flash_wait_operation_done(uint32_t timeout, uint32_t status_polling_usec, uint8_t operation,
+                                                  uint8_t bmask, uint8_t status_value)
 {
     FLASH_STATUS status = FLASH_DEVICE_FAIL;
-    uint8_t       result = 0;
+    uint8_t result = 0;
 
     while (timeout) {
         (void)drv_flash_read_reg_internal(READ_STATUS_CMD, 1, &result);
 
-        if ((result & bmask) == status_value)
-        {
+        if ((result & bmask) == status_value) {
             status = drv_flash_check_error(operation);
             break;
         }
@@ -304,7 +299,7 @@ static FLASH_STATUS drv_flash_wait_operation_done(uint32_t timeout, uint32_t sta
 #endif
         timeout -= status_polling_usec;
     }
-    return status ;
+    return status;
 }
 
 /**
@@ -314,17 +309,17 @@ static FLASH_STATUS drv_flash_wait_operation_done(uint32_t timeout, uint32_t sta
 */
 static FLASH_STATUS drv_flash_write_enable()
 {
-    FLASH_STATUS status ;
-    qspi_cmd_t    qspi_write_enable;
+    FLASH_STATUS status;
+    qspi_cmd_t qspi_write_enable;
 
-    (void)drv_qspi_prepare_cmd(&qspi_write_enable, WRITE_ENABLE_CMD, 0, 0,
-                      QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, false);
+    (void)drv_qspi_prepare_cmd(&qspi_write_enable, WRITE_ENABLE_CMD, 0, 0, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E,
+                               QSPI_SDR_1BIT_E, false);
 
     drv_qspi_run_cmd(&qspi_write_enable, 0, NULL, 0, QSPI_TRANS_MODE);
 
-    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC,
-                                     OTHER_OPERATION, STATUS_WR_EN_MASK, STATUS_WR_EN_MASK);
-    return status ;
+    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC, OTHER_OPERATION,
+                                           STATUS_WR_EN_MASK, STATUS_WR_EN_MASK);
+    return status;
 }
 
 /**
@@ -338,25 +333,24 @@ static FLASH_STATUS drv_flash_write_enable()
 */
 static FLASH_STATUS drv_flash_write_reg_internal(uint8_t reg_opcode, uint8_t len, uint8_t *reg_value)
 {
-    FLASH_STATUS status ;
-    qspi_cmd_t    qspi_write_reg;
+    FLASH_STATUS status;
+    qspi_cmd_t qspi_write_reg;
 
     if (len > 0 && reg_value == NULL) {
         return FLASH_DEVICE_INVALID_PARAMETER;
     }
 
-    (void)drv_qspi_prepare_cmd(&qspi_write_reg, reg_opcode, 0, 0,
-                      QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, true);
+    (void)drv_qspi_prepare_cmd(&qspi_write_reg, reg_opcode, 0, 0, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E,
+                               true);
 
     status = drv_flash_write_enable();
     if (status != FLASH_DEVICE_DONE) {
-        return status ;
+        return status;
     }
 
     if (drv_qspi_run_cmd(&qspi_write_reg, 0, reg_value, len, QSPI_TRANS_MODE)) {
         return FLASH_DEVICE_DONE;
-    }
-    else {
+    } else {
         return FLASH_DEVICE_FAIL;
     }
 }
@@ -368,7 +362,7 @@ static FLASH_STATUS drv_flash_write_reg_internal(uint8_t reg_opcode, uint8_t len
    Some flash support "Deep power down" mode, this function release flash from
    power down if it has entered into such mode.
 */
-#define POWERUP_OPCODE 0xAB
+#define POWERUP_OPCODE   0xAB
 #define DEEPSLEEP_OPCODE 0xB9
 
 #define POWERUP_DELAY_100US 0x8
@@ -376,8 +370,8 @@ static void drv_flash_power_up()
 {
     qspi_cmd_t qspi_power_up;
 
-    (void)drv_qspi_prepare_cmd(&qspi_power_up, POWERUP_OPCODE, 0, 0,
-                      QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, false);
+    (void)drv_qspi_prepare_cmd(&qspi_power_up, POWERUP_OPCODE, 0, 0, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E,
+                               false);
 
     drv_qspi_run_cmd(&qspi_power_up, 0, NULL, 0, QSPI_TRANS_MODE);
 }
@@ -386,8 +380,8 @@ static void drv_flash_deep_sleep()
 {
     qspi_cmd_t qspi_power_sleep;
 
-    (void)drv_qspi_prepare_cmd(&qspi_power_sleep, DEEPSLEEP_OPCODE, 0, 0,
-                      QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, false);
+    (void)drv_qspi_prepare_cmd(&qspi_power_sleep, DEEPSLEEP_OPCODE, 0, 0, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E,
+                               QSPI_SDR_1BIT_E, false);
 
     drv_qspi_run_cmd(&qspi_power_sleep, 0, NULL, 0, QSPI_TRANS_MODE);
 }
@@ -402,10 +396,10 @@ static void drv_flash_deep_sleep()
 */
 static FLASH_STATUS drv_flash_set_high_performance()
 {
-    FLASH_STATUS status ;
-    uint8_t       temp[3];
+    FLASH_STATUS status;
+    uint8_t temp[3];
 
-    memset(&temp[0], 0 , sizeof(temp));
+    memset(&temp[0], 0, sizeof(temp));
     drv_flash_read_reg_internal(READ_STATUS_CMD, 1, &temp[0]);
     drv_flash_read_reg_internal(READ_CFG_REG_CMD, 2, &temp[1]);
 
@@ -413,13 +407,13 @@ static FLASH_STATUS drv_flash_set_high_performance()
 
     status = drv_flash_write_reg_internal(WRITE_STATUS_CMD, 3, &temp[0]);
     if (status != FLASH_DEVICE_DONE) {
-        return status ;
+        return status;
     }
 
-    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC,
-                                     OTHER_OPERATION, READ_STATUS_BUSY_MASK, 0);
+    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC, OTHER_OPERATION,
+                                           READ_STATUS_BUSY_MASK, 0);
 
-    return status ;
+    return status;
 }
 #else
 /**
@@ -459,23 +453,22 @@ static FLASH_STATUS drv_flash_set_high_performance()
 static FLASH_STATUS drv_flash_enable_quad_mode145()
 {
     FLASH_STATUS status = FLASH_DEVICE_DONE;
-    uint8_t       status_reg1 = 0;
-    uint8_t       status_reg2 = 0;
-    uint8_t       temp[2];
-
+    uint8_t status_reg1 = 0;
+    uint8_t status_reg2 = 0;
+    uint8_t temp[2];
 
     status = drv_flash_read_reg_internal(READ_STATUS_CMD, 1, &status_reg1);
     if (status != FLASH_DEVICE_DONE) {
-        return status ;
+        return status;
     }
 
     status = drv_flash_read_reg_internal(READ_CFG1_CMD, 1, &status_reg2);
     if (status != FLASH_DEVICE_DONE) {
-        return status ;
+        return status;
     }
 
     if (status_reg2 & BIT_1) {
-        return status ;
+        return status;
     }
 
     status_reg2 |= BIT_1;
@@ -484,13 +477,13 @@ static FLASH_STATUS drv_flash_enable_quad_mode145()
 
     status = drv_flash_write_reg_internal(WRITE_STATUS_CMD, 2, &temp[0]);
     if (status != FLASH_DEVICE_DONE) {
-        return status ;
+        return status;
     }
 
-    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC,
-                                     OTHER_OPERATION, READ_STATUS_BUSY_MASK, 0);
+    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC, OTHER_OPERATION,
+                                           READ_STATUS_BUSY_MASK, 0);
 
-    return status ;
+    return status;
 }
 
 /**
@@ -505,28 +498,28 @@ static FLASH_STATUS drv_flash_enable_quad_mode145()
 static FLASH_STATUS drv_flash_enable_quad_mode2()
 {
     FLASH_STATUS status = FLASH_DEVICE_DONE;
-    uint8_t       status_reg = 0;
+    uint8_t status_reg = 0;
 
     status = drv_flash_read_reg_internal(READ_STATUS_CMD, 1, &status_reg);
     if (status != FLASH_DEVICE_DONE) {
-        return status ;
+        return status;
     }
 
     /* In mode 2, Bit 6 of status register is used to enable Quad mode */
     if (status_reg & BIT_6) {
-        return status ;
+        return status;
     }
 
     status_reg |= BIT_6;
     status = drv_flash_write_reg_internal(WRITE_STATUS_CMD, 1, &status_reg);
     if (status != FLASH_DEVICE_DONE) {
-        return status ;
+        return status;
     }
 
-    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC,
-                                     OTHER_OPERATION, READ_STATUS_BUSY_MASK, 0);
+    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC, OTHER_OPERATION,
+                                           READ_STATUS_BUSY_MASK, 0);
 
-    return status ;
+    return status;
 }
 
 /**
@@ -542,29 +535,29 @@ static FLASH_STATUS drv_flash_enable_quad_mode2()
 static FLASH_STATUS drv_flash_enable_quad_mode3()
 {
     FLASH_STATUS status = FLASH_DEVICE_DONE;
-    uint8_t       status2_reg = 0;
+    uint8_t status2_reg = 0;
 
     /* Read 1 byte status  2 register with instruction 3Fh */
     status = drv_flash_read_reg_internal(READ_STATUS_2_CMD, 1, &status2_reg);
     if (status != FLASH_DEVICE_DONE) {
-        return status ;
+        return status;
     }
 
     /* In mode 3, Bit 7 of status 2 register is used to enable Quad mode. */
     if (status2_reg & BIT_7) {
-        return status ;
+        return status;
     }
 
     status2_reg |= BIT_7;
     status = drv_flash_write_reg_internal(WRITE_STATUS_2_CMD, 1, &status2_reg);
     if (status != FLASH_DEVICE_DONE) {
-        return status ;
+        return status;
     }
 
-    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC,
-                                     OTHER_OPERATION, READ_STATUS_BUSY_MASK, 0);
+    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC, OTHER_OPERATION,
+                                           READ_STATUS_BUSY_MASK, 0);
 
-    return status ;
+    return status;
 }
 
 /**
@@ -601,11 +594,11 @@ static FLASH_STATUS drv_flash_enable_quad_mode(uint8_t quad_mode)
             break;
 
         default:
-              status = FLASH_DEVICE_FAIL;
-              break;
+            status = FLASH_DEVICE_FAIL;
+            break;
     }
 
-    return status ;
+    return status;
 }
 #endif
 /**
@@ -619,41 +612,41 @@ static FLASH_STATUS drv_flash_enable_quad_mode(uint8_t quad_mode)
 */
 static FLASH_STATUS drv_flash_clear_spi_bits(uint8_t reg_read_opcode, uint8_t reg_write_opcode, uint8_t bits_mask)
 {
-    uint8_t       read_ret = 0;
-    uint8_t       read_back = 0;
+    uint8_t read_ret = 0;
+    uint8_t read_back = 0;
     FLASH_STATUS status = FLASH_DEVICE_DONE;
 
-    if(!bits_mask) {
-        return status ;  /* Not set bits_mask, skip */
+    if (!bits_mask) {
+        return status; /* Not set bits_mask, skip */
     }
 
     /* Get value and check */
     status = drv_flash_read_reg_internal(reg_read_opcode, 1, &read_ret);
-    if((!(read_ret & bits_mask)) || status != FLASH_DEVICE_DONE) {
-        return status ;  /* Bits are cleared already, skip */
+    if ((!(read_ret & bits_mask)) || status != FLASH_DEVICE_DONE) {
+        return status; /* Bits are cleared already, skip */
     }
 
     /* Clear bits_mask of value */
     read_ret &= ~bits_mask;
     status = drv_flash_write_reg_internal(reg_write_opcode, 1, &read_ret);
-    if(status != FLASH_DEVICE_DONE) {
-        return status ;
+    if (status != FLASH_DEVICE_DONE) {
+        return status;
     }
 
     /* Delay till complete */
-    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC,
-                                     OTHER_OPERATION, READ_STATUS_BUSY_MASK, 0);
-    if(status != FLASH_DEVICE_DONE) {
-      return status ;
+    status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC, OTHER_OPERATION,
+                                           READ_STATUS_BUSY_MASK, 0);
+    if (status != FLASH_DEVICE_DONE) {
+        return status;
     }
 
     /* Verify the result */
     status = drv_flash_read_reg_internal(reg_read_opcode, 1, &read_back);
     if ((read_back & bits_mask) || (status != FLASH_DEVICE_DONE)) {
-        return FLASH_DEVICE_FAIL;  /* Bits are not cleared yet, return fail */
+        return FLASH_DEVICE_FAIL; /* Bits are not cleared yet, return fail */
     }
 
-    return status ;
+    return status;
 }
 
 /**
@@ -666,20 +659,20 @@ static FLASH_STATUS drv_flash_clear_spi_bits(uint8_t reg_read_opcode, uint8_t re
 
    @return FLASH_DEVICE_DONE on success or an error code on failure.
 */
-static FLASH_STATUS drv_flash_clear_spi_bits_list(const uint8_t* reg_read_opcodes, const uint8_t* reg_write_opcode,
-                                            const uint8_t* bits_masks, uint8_t cnt)
+static FLASH_STATUS drv_flash_clear_spi_bits_list(const uint8_t *reg_read_opcodes, const uint8_t *reg_write_opcode,
+                                                  const uint8_t *bits_masks, uint8_t cnt)
 {
-    uint8_t       i = 0;
+    uint8_t i = 0;
     FLASH_STATUS status = FLASH_DEVICE_DONE;
 
-    for(i = 0; i < cnt; i++) {
+    for (i = 0; i < cnt; i++) {
         status = drv_flash_clear_spi_bits(reg_read_opcodes[i], reg_write_opcode[i], bits_masks[i]);
-        if(status != FLASH_DEVICE_DONE) {
-            return status ;
+        if (status != FLASH_DEVICE_DONE) {
+            return status;
         }
     }
 
-    return status ;
+    return status;
 }
 
 /**
@@ -692,13 +685,11 @@ static FLASH_STATUS drv_flash_clear_spi_bits_list(const uint8_t* reg_read_opcode
 */
 static FLASH_STATUS drv_flash_clear_write_protection()
 {
-    uint8_t       flash_vid = FLASH_PID2VID(flash_context.config->device_id);
-    uint32_t      wp_mask = flash_context.config->write_protect_bmask;
+    uint8_t flash_vid = FLASH_PID2VID(flash_context.config->device_id);
+    uint32_t wp_mask = flash_context.config->write_protect_bmask;
     FLASH_STATUS status = FLASH_DEVICE_DONE;
- 
-    if(MANUFACTURER_ID_WINBOND == flash_vid
-        || MANUFACTURER_ID_GD == flash_vid
-        || MANUFACTURER_ID_GT == flash_vid) {
+
+    if (MANUFACTURER_ID_WINBOND == flash_vid || MANUFACTURER_ID_GD == flash_vid || MANUFACTURER_ID_GT == flash_vid) {
         /* status  Register Format is as described below for Winbond Flash part.
            Winbond or GD
            status -1 Register Format:
@@ -717,13 +708,12 @@ static FLASH_STATUS drv_flash_clear_write_protection()
                     protect)                                        lock)
 
            Expect WriteProtectBmask has {0xFC, 0x41, 0x04} for W25Q32JVZPIQ */
-        uint8_t wb_wp_bits[] = {(uint8_t)(wp_mask), (uint8_t)(wp_mask>>8), (uint8_t)(wp_mask>>16)};
+        uint8_t wb_wp_bits[] = {(uint8_t)(wp_mask), (uint8_t)(wp_mask >> 8), (uint8_t)(wp_mask >> 16)};
         uint8_t wb_read_cmd_list[] = {READ_STATUS_CMD, WINBOND_READ_STATUS_2_CMD, WINBOND_READ_STATUS_3_CMD};
         uint8_t wb_write_cmd_list[] = {WRITE_STATUS_CMD, WINBOND_WRITE_STATUS_2_CMD, WINBOND_WRITE_STATUS_3_CMD};
-        status = drv_flash_clear_spi_bits_list((const uint8_t*)wb_read_cmd_list, (const uint8_t*)wb_write_cmd_list,
-                                        (const uint8_t*)wb_wp_bits, sizeof(wb_wp_bits));
-    }
-    else if(MANUFACTURER_ID_MACRONIX == flash_vid || MANUFACTURER_ID_ISSI == flash_vid) {
+        status = drv_flash_clear_spi_bits_list((const uint8_t *)wb_read_cmd_list, (const uint8_t *)wb_write_cmd_list,
+                                               (const uint8_t *)wb_wp_bits, sizeof(wb_wp_bits));
+    } else if (MANUFACTURER_ID_MACRONIX == flash_vid || MANUFACTURER_ID_ISSI == flash_vid) {
         /* WORKAROUND: On some Macronix parts, the block write protection,
            non-volatile bits of status register i.e. BP3-BP0 (bit5-bit2) are
            spuriously set thereby causing erase/write operation on Flash to fail.
@@ -757,7 +747,7 @@ static FLASH_STATUS drv_flash_clear_write_protection()
            Expect reserved_3 has {0xBC, 0x00, 0x00} for MX25 */
         status = drv_flash_clear_spi_bits(READ_STATUS_CMD, WRITE_STATUS_CMD, (uint8_t)(wp_mask));
     }
-    return status ;
+    return status;
 }
 
 /**
@@ -796,26 +786,25 @@ static FLASH_STATUS drv_flash_info_init(uint32_t device_id)
     uint32_t total_flash_products = flash_get_config_entries_count();
     flash_config_data_t *pflash_device_config = flash_get_config_entries_struct();
 
-    for (i = 0; i < total_flash_products; i++)
-    {
+    for (i = 0; i < total_flash_products; i++) {
         if (device_id == pflash_device_config[i].device_id) {
-            NT_LOG_PRINT(SYSTEM,INFO,"found device %x\n", device_id);
+            NT_LOG_PRINT(SYSTEM, INFO, "found device %x\n", device_id);
             break;
         }
     }
-    if(i == total_flash_products) {
-        NT_LOG_PRINT(SYSTEM,ERR,"Didn't found any configured device:%x\n", device_id);
+    if (i == total_flash_products) {
+        NT_LOG_PRINT(SYSTEM, ERR, "Didn't found any configured device:%x\n", device_id);
         return FLASH_DEVICE_NOT_FOUND;
     }
 
     memset(&flash_context, 0, sizeof(flash_context_t));
-    flash_context.config = pflash_device_config+i;
+    flash_context.config = pflash_device_config + i;
     if (flash_context.config == NULL) {
         return FLASH_DEVICE_NOT_FOUND;
     }
 
     /* check the clock in the configure */
-    if(flash_context.config->clk_freq != default_qspi_clock ) {
+    if (flash_context.config->clk_freq != default_qspi_clock) {
         default_qspi_clock = flash_context.config->clk_freq;
         drv_flash_controller_init();
     }
@@ -831,14 +820,14 @@ static FLASH_STATUS drv_flash_info_init(uint32_t device_id)
     }
 #endif
     memset(flash_context.operation_param, 0, sizeof(flash_operation_param_t));
-//TODO...
+// TODO...
 #ifdef FLASH_NONEBLOCKING
     /* Create operation task. */
 
 #endif
-    flash_context.timer_comparator= NO_TIMER_COMPARATOR;
+    flash_context.timer_comparator = NO_TIMER_COMPARATOR;
 
-    return status ;
+    return status;
 }
 
 #if defined FEATURE_FPCI && !defined CONFIG_NON_OS
@@ -861,7 +850,6 @@ void flash_power_state_change_cb(uint8_t evt, void *p_args)
 }
 #endif /* FEATURE_FPCI */
 
-
 /**
    @brief Initialize the flash module.
 
@@ -874,8 +862,8 @@ void flash_power_state_change_cb(uint8_t evt, void *p_args)
 */
 FLASH_STATUS drv_flash_init()
 {
-    FLASH_STATUS status   = FLASH_DEVICE_DONE;
-    uint32_t      device_id = 0;
+    FLASH_STATUS status = FLASH_DEVICE_DONE;
+    uint32_t device_id = 0;
 
     if (flash_init_done) {
         return FLASH_DEVICE_DONE;
@@ -929,7 +917,8 @@ FLASH_STATUS drv_flash_init()
     /* Check rw mode. */
     if (!VALID_RW_MODE(flash_context.config->read_cmd_mode) || !VALID_RW_MODE(flash_context.config->read_addr_mode) ||
         !VALID_RW_MODE(flash_context.config->read_data_mode) || !VALID_RW_MODE(flash_context.config->write_cmd_mode) ||
-        !VALID_RW_MODE(flash_context.config->write_addr_mode) || !VALID_RW_MODE(flash_context.config->write_data_mode)) {
+        !VALID_RW_MODE(flash_context.config->write_addr_mode) ||
+        !VALID_RW_MODE(flash_context.config->write_data_mode)) {
         status = FLASH_DEVICE_INVALID_PARAMETER;
         goto FLASH_INIT_END;
     }
@@ -955,24 +944,24 @@ FLASH_STATUS drv_flash_init()
     }
 #if defined FEATURE_FPCI && !defined CONFIG_NON_OS
     fpci_evt_cb_reg((ps_evt_cb_t)&flash_power_state_change_cb,
-        PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, 10, NULL);
+                    PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, 10, NULL);
 #endif
 
     flash_init_done = true;
 
- FLASH_INIT_END:
+FLASH_INIT_END:
 #ifndef CONFIG_NON_OS
     /* If there is an error, free the memory. */
     if (status != FLASH_DEVICE_DONE) {
         if (flash_context.operation_param != NULL) {
-           nt_osal_free_memory(flash_context.operation_param);
+            nt_osal_free_memory(flash_context.operation_param);
         }
     }
 
     qurt_mutex_unlock(&flash_mutex);
 #endif
 
-    return status ;
+    return status;
 }
 
 /**
@@ -988,8 +977,8 @@ FLASH_STATUS drv_flash_deinit(uint32_t dereg)
     return FLASH_DEVICE_DONE;
 #endif
 
-    if(!flash_init_done)
-       return FLASH_DEVICE_DONE;
+    if (!flash_init_done)
+        return FLASH_DEVICE_DONE;
 
 #ifdef FLASH_POWER_UP_SUPPORT
     /*
@@ -1009,8 +998,9 @@ FLASH_STATUS drv_flash_deinit(uint32_t dereg)
 #endif
 
 #if defined FEATURE_FPCI && !defined CONFIG_NON_OS
-    if(dereg)
-        fpci_evt_cb_dereg((ps_evt_cb_t)&flash_power_state_change_cb, PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT);
+    if (dereg)
+        fpci_evt_cb_dereg((ps_evt_cb_t)&flash_power_state_change_cb,
+                          PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT);
 #endif
 
     flash_init_done = 0;
@@ -1048,10 +1038,11 @@ FLASH_STATUS drv_flash_deinit(uint32_t dereg)
    FLASH_DEVICE_DONE -- If a blocking read completed successfully, or a negative value if there was an error.
    FLASH_DEVICE_PENDING -- Indicating a non-blocking read is ongoing.
 */
-FLASH_STATUS drv_flash_read(uint32_t address, uint32_t byte_cnt, uint8_t *buffer, flash_operation_cb_t read_cb, void *user_param)
+FLASH_STATUS drv_flash_read(uint32_t address, uint32_t byte_cnt, uint8_t *buffer, flash_operation_cb_t read_cb,
+                            void *user_param)
 {
     FLASH_STATUS status = FLASH_DEVICE_DONE;
-    qspi_cmd_t    qspi_read_cmd;
+    qspi_cmd_t qspi_read_cmd;
     (void)user_param;
     if (!flash_init_done) {
         return FLASH_DEVICE_FAIL;
@@ -1066,7 +1057,7 @@ FLASH_STATUS drv_flash_read(uint32_t address, uint32_t byte_cnt, uint8_t *buffer
 #endif
 
 #ifdef FLASH_XIP_SUPPORT
-    if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
         drv_qspi_disable_xip_mode();
 #endif
     flash_context.state = FLASH_STATE_READ;
@@ -1077,25 +1068,26 @@ FLASH_STATUS drv_flash_read(uint32_t address, uint32_t byte_cnt, uint8_t *buffer
         goto FLASH_READ_END;
     }
 
-    (void)drv_qspi_prepare_cmd(&qspi_read_cmd, flash_context.config->read_opcode, flash_context.config->addr_bytes, flash_context.config->read_wait_state,
-                      (qspi_mode_t)flash_context.config->read_cmd_mode, (qspi_mode_t)flash_context.config->read_addr_mode,
-                      (qspi_mode_t)flash_context.config->read_data_mode, false);
-  
+    (void)drv_qspi_prepare_cmd(&qspi_read_cmd, flash_context.config->read_opcode, flash_context.config->addr_bytes,
+                               flash_context.config->read_wait_state, (qspi_mode_t)flash_context.config->read_cmd_mode,
+                               (qspi_mode_t)flash_context.config->read_addr_mode,
+                               (qspi_mode_t)flash_context.config->read_data_mode, false);
+
     if (read_cb == NULL) {
         if (!drv_qspi_run_cmd(&qspi_read_cmd, address, buffer, byte_cnt, QSPI_TRANS_MODE)) {
             status = FLASH_DEVICE_FAIL;
         }
     }
 #ifdef FLASH_NONEBLOCKING
-        else {
-        //TODO
-        }
+    else {
+        // TODO
+    }
 #endif
 
 FLASH_READ_END:
 #ifdef FLASH_XIP_SUPPORT
-        if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-            drv_qspi_restore_xip_mode();
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+        drv_qspi_restore_xip_mode();
 #endif
 
     flash_context.state = 0;
@@ -1104,7 +1096,7 @@ FLASH_READ_END:
     qurt_mutex_unlock(&flash_mutex);
 #endif
 
-    return status ;
+    return status;
 }
 
 /**
@@ -1134,12 +1126,13 @@ FLASH_READ_END:
    FLASH_DEVICE_DONE -- If blocking write completed successfully, or a negative value if there was an error.
    FLASH_DEVICE_PENDING -- Indicating a non-blocking write is ongoing.
 */
-FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffer, flash_operation_cb_t write_cb, void *user_param)
+FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffer, flash_operation_cb_t write_cb,
+                             void *user_param)
 {
     FLASH_STATUS status = FLASH_DEVICE_DONE;
-    qspi_cmd_t    qspi_page_write_cmd;
-    uint32_t      transfer_size = 0;
-    uint32_t      limit = PAGE_SIZE_IN_BYTES;
+    qspi_cmd_t qspi_page_write_cmd;
+    uint32_t transfer_size = 0;
+    uint32_t limit = PAGE_SIZE_IN_BYTES;
     (void)user_param;
 
     if (!flash_init_done) {
@@ -1155,8 +1148,8 @@ FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffe
 #endif
 
 #ifdef FLASH_XIP_SUPPORT
-        if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-            drv_qspi_disable_xip_mode();
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+        drv_qspi_disable_xip_mode();
 #endif
 
     flash_context.state = FLASH_STATE_WRITE;
@@ -1167,23 +1160,23 @@ FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffe
         goto FLASH_WRITE_END;
     }
 
-    (void)drv_qspi_prepare_cmd(&qspi_page_write_cmd, flash_context.config->write_opcode, flash_context.config->addr_bytes, 0,
-                      (qspi_mode_t)flash_context.config->write_cmd_mode, (qspi_mode_t)flash_context.config->write_addr_mode,
-                      (qspi_mode_t)flash_context.config->write_data_mode, true);
+    (void)drv_qspi_prepare_cmd(&qspi_page_write_cmd, flash_context.config->write_opcode,
+                               flash_context.config->addr_bytes, 0, (qspi_mode_t)flash_context.config->write_cmd_mode,
+                               (qspi_mode_t)flash_context.config->write_addr_mode,
+                               (qspi_mode_t)flash_context.config->write_data_mode, true);
 
 #ifdef FLASH_NONEBLOCKING
     if (write_cb != NULL) {
-        //TODO
+        // TODO
     }
 #endif
 #ifdef FLASH_XIP_SUPPORT
     /* Signle the HW write operation is ongoing. Needed for XIP. */
     if (flash_context.config->suspend_program_opcode > 0 && flash_context.config->resume_program_opcode > 0) {
         (void)drv_qspi_xip_set_pe_state(true);
-        (void)drv_qspi_xip_config_suspend_resume(flash_context.config->suspend_program_delay_in_us,
-                                           flash_context.config->suspend_program_opcode,
-                                           flash_context.config->resume_program_delay_in_us,
-                                           flash_context.config->resume_program_opcode);
+        (void)drv_qspi_xip_config_suspend_resume(
+            flash_context.config->suspend_program_delay_in_us, flash_context.config->suspend_program_opcode,
+            flash_context.config->resume_program_delay_in_us, flash_context.config->resume_program_opcode);
     }
 #endif
 
@@ -1193,8 +1186,7 @@ FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffe
             if (transfer_size > byte_cnt) {
                 transfer_size = byte_cnt;
             }
-        }
-        else {
+        } else {
             transfer_size = (byte_cnt > limit) ? (limit) : (byte_cnt);
         }
 
@@ -1208,11 +1200,11 @@ FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffe
         }
 #ifdef FLASH_NONEBLOCKING
         else {
-            //TODO
+            // TODO
         }
 #endif
-        status = drv_flash_wait_operation_done(WRITE_TIMEOUT, WRITE_STATUS_POLLING_USEC,
-                                         WRITE_OPERATION, PROG_ERASE_WRITE_BUSY_BMSK, 0);
+        status = drv_flash_wait_operation_done(WRITE_TIMEOUT, WRITE_STATUS_POLLING_USEC, WRITE_OPERATION,
+                                               PROG_ERASE_WRITE_BUSY_BMSK, 0);
         if (status != FLASH_DEVICE_DONE) {
             goto FLASH_WRITE_END;
         }
@@ -1225,7 +1217,7 @@ FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffe
 FLASH_WRITE_END:
 #ifdef FLASH_XIP_SUPPORT
     (void)drv_qspi_xip_set_pe_state(false);
-    if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
         drv_qspi_restore_xip_mode();
 #endif
     flash_context.state = 0;
@@ -1234,7 +1226,7 @@ FLASH_WRITE_END:
     qurt_mutex_unlock(&flash_mutex);
 #endif
 
-    return status ;
+    return status;
 }
 
 /**
@@ -1268,16 +1260,17 @@ FLASH_WRITE_END:
    FLASH_DEVICE_DONE -- If blocking erase completed successfully, or a negative value if there was an error.
    FLASH_DEVICE_PENDING -- Indicating a non-blocking erase is ongoing.
 */
-FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint32_t cnt, flash_operation_cb_t erase_cb, void *user_param)
+FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint32_t cnt, flash_operation_cb_t erase_cb,
+                             void *user_param)
 {
     FLASH_STATUS status = FLASH_DEVICE_DONE;
-    qspi_cmd_t    qspi_erase_cmd;
-    uint32_t      address;
-    uint32_t      size = 0;
-    uint32_t      erase_timeout = ERASE_TIMEOUT;
-    uint32_t      erase_polling = ERASE_STATUS_POLLING_MSEC;
-    uint8_t       opcode;
-    uint8_t       addr_bytes = flash_context.config->addr_bytes;
+    qspi_cmd_t qspi_erase_cmd;
+    uint32_t address;
+    uint32_t size = 0;
+    uint32_t erase_timeout = ERASE_TIMEOUT;
+    uint32_t erase_polling = ERASE_STATUS_POLLING_MSEC;
+    uint8_t opcode;
+    uint8_t addr_bytes = flash_context.config->addr_bytes;
     (void)user_param;
     (void)erase_cb;
 
@@ -1294,8 +1287,8 @@ FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint
 #endif
 
 #ifdef FLASH_XIP_SUPPORT
-        if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-            drv_qspi_disable_xip_mode();
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+        drv_qspi_disable_xip_mode();
 #endif
 
     flash_context.state = FLASH_STATE_ERASE;
@@ -1307,16 +1300,14 @@ FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint
         }
         size = BLOCK_SIZE_IN_BYTES;
         opcode = flash_context.config->erase_4kb_opcode;
-    }
-    else if (erase_type == FLASH_BULK_ERASE_E) {
+    } else if (erase_type == FLASH_BULK_ERASE_E) {
         if (flash_context.config->bulk_erase_size_4kb == 0 || flash_context.config->bulk_erase_opcode == 0) {
             status = FLASH_DEVICE_INVALID_PARAMETER;
             goto FLASH_ERASE_END;
         }
         size = flash_context.config->bulk_erase_size_4kb * BLOCK_SIZE_IN_BYTES;
         opcode = flash_context.config->bulk_erase_opcode;
-    }
-    else if (erase_type == FLASH_CHIP_ERASE_E) {
+    } else if (erase_type == FLASH_CHIP_ERASE_E) {
         if (flash_context.config->chip_erase_opcode == 0) {
             status = FLASH_DEVICE_INVALID_PARAMETER;
             goto FLASH_ERASE_END;
@@ -1326,8 +1317,7 @@ FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint
         addr_bytes = 0;
         erase_timeout = CHIP_ERASE_TIMEOUT;
         erase_polling = CHIP_ERASE_STATUS_POLLING_MSEC;
-    }
-    else {
+    } else {
         status = FLASH_DEVICE_INVALID_PARAMETER;
         goto FLASH_ERASE_END;
     }
@@ -1339,16 +1329,15 @@ FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint
         goto FLASH_ERASE_END;
     }
 
-    (void)drv_qspi_prepare_cmd(&qspi_erase_cmd, opcode, addr_bytes, 0,
-                      QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E, false);
+    (void)drv_qspi_prepare_cmd(&qspi_erase_cmd, opcode, addr_bytes, 0, QSPI_SDR_1BIT_E, QSPI_SDR_1BIT_E,
+                               QSPI_SDR_1BIT_E, false);
 #ifdef FLASH_XIP_SUPPORT
     /* Signle the HW write operation is ongoing. Needed for XIP. */
     if (flash_context.config->suspend_erase_opcode > 0 && flash_context.config->resume_erase_opcode > 0) {
         (void)drv_qspi_xip_set_pe_state(true);
-        (void)drv_qspi_xip_config_suspend_resume(flash_context.config->suspend_erase_delay_in_us,
-                                           flash_context.config->suspend_erase_opcode,
-                                           flash_context.config->resume_erase_delay_in_us,
-                                           flash_context.config->resume_erase_opcode);
+        (void)drv_qspi_xip_config_suspend_resume(
+            flash_context.config->suspend_erase_delay_in_us, flash_context.config->suspend_erase_opcode,
+            flash_context.config->resume_erase_delay_in_us, flash_context.config->resume_erase_opcode);
     }
 #endif
 
@@ -1361,11 +1350,11 @@ FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint
         drv_qspi_run_cmd(&qspi_erase_cmd, address, NULL, 0, QSPI_TRANS_MODE);
 #ifdef FLASH_NONEBLOCKING
         if (erase_cb != NULL) {
-            //TODO
+            // TODO
         }
 #endif
-        status = drv_flash_wait_operation_done(erase_timeout, erase_polling * 1000,
-                                         ERASE_OPERATION, PROG_ERASE_WRITE_BUSY_BMSK, 0);
+        status = drv_flash_wait_operation_done(erase_timeout, erase_polling * 1000, ERASE_OPERATION,
+                                               PROG_ERASE_WRITE_BUSY_BMSK, 0);
         if (status != FLASH_DEVICE_DONE) {
             goto FLASH_ERASE_END;
         }
@@ -1377,7 +1366,7 @@ FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint
 FLASH_ERASE_END:
 #ifdef FLASH_XIP_SUPPORT
     (void)drv_qspi_xip_set_pe_state(false);
-    if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
         drv_qspi_restore_xip_mode();
 #endif
 
@@ -1387,7 +1376,7 @@ FLASH_ERASE_END:
     qurt_mutex_unlock(&flash_mutex);
 #endif
 
-    return status ;
+    return status;
 }
 
 /**
@@ -1402,7 +1391,7 @@ flash_config_data_t *drv_flash_get_config(void)
         return NULL;
     }
     return flash_context.config;
- }
+}
 
 #ifdef FLASH_ACCESS_REG_SUPPORT
 /**
@@ -1417,7 +1406,7 @@ flash_config_data_t *drv_flash_get_config(void)
 */
 FLASH_STATUS drv_flash_read_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_value)
 {
-    FLASH_STATUS status ;
+    FLASH_STATUS status;
 
     if (!flash_init_done) {
         return FLASH_DEVICE_FAIL;
@@ -1432,8 +1421,8 @@ FLASH_STATUS drv_flash_read_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_va
 #endif
 
 #ifdef FLASH_XIP_SUPPORT
-        if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-            drv_qspi_disable_xip_mode();
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+        drv_qspi_disable_xip_mode();
 #endif
 
     flash_context.state = FLASH_STATE_READ_REG;
@@ -1442,15 +1431,15 @@ FLASH_STATUS drv_flash_read_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_va
 
     flash_context.state = 0;
 #ifdef FLASH_XIP_SUPPORT
-        if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-            drv_qspi_restore_xip_mode();
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+        drv_qspi_restore_xip_mode();
 #endif
 
 #ifndef CONFIG_NON_OS
     qurt_mutex_unlock(&flash_mutex);
 #endif
 
-    return status ;
+    return status;
 }
 
 /**
@@ -1478,9 +1467,10 @@ FLASH_STATUS drv_flash_read_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_va
    FLASH_DEVICE_DONE -- If blocking writereg completed successfully, or a negative value if there was an error.
    FLASH_DEVICE_PENDING -- Indicating non-blocking writereg is ongoing.
 */
-FLASH_STATUS drv_flash_write_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_value, flash_operation_cb_t write_cb, void *user_param)
+FLASH_STATUS drv_flash_write_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_value, flash_operation_cb_t write_cb,
+                                 void *user_param)
 {
-    FLASH_STATUS status ;
+    FLASH_STATUS status;
     (void)user_param;
 
     if (!flash_init_done) {
@@ -1496,8 +1486,8 @@ FLASH_STATUS drv_flash_write_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_v
 #endif
 
 #ifdef FLASH_XIP_SUPPORT
-        if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-            drv_qspi_disable_xip_mode();
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+        drv_qspi_disable_xip_mode();
 #endif
 
     flash_context.state = FLASH_STATE_WRITE_REG;
@@ -1508,27 +1498,26 @@ FLASH_STATUS drv_flash_write_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_v
     }
 
     if (write_cb == NULL) {
-        status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC,
-                                         OTHER_OPERATION, READ_STATUS_BUSY_MASK, 0);
+        status = drv_flash_wait_operation_done(READ_STATUS_TIMEOUT, READ_STATUS_POLLING_USEC, OTHER_OPERATION,
+                                               READ_STATUS_BUSY_MASK, 0);
     }
 #ifdef FLASH_NONEBLOCKING
-    else
-    {
-        //TODO
+    else {
+        // TODO
     }
 #endif
 FLASH_WRITEREG_END:
     flash_context.state = 0;
 #ifdef FLASH_XIP_SUPPORT
-        if(QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
-            drv_qspi_restore_xip_mode();
+    if (QSPI_TRANS_MODE == QSPI_PIO_MODE_E)
+        drv_qspi_restore_xip_mode();
 #endif
 
 #ifndef CONFIG_NON_OS
     qurt_mutex_unlock(&flash_mutex);
 #endif
 
-    return status ;
+    return status;
 }
 #else
 /**
@@ -1537,17 +1526,17 @@ FLASH_WRITEREG_END:
 */
 FLASH_STATUS drv_flash_read_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_value)
 {
-
     return FLASH_DEVICE_FAIL;
 }
 
 /**
    @brief Stub function for Write flash registers.
 */
-FLASH_STATUS drv_flash_write_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_value, flash_operation_cb_t write_cb, void *user_param)
+FLASH_STATUS drv_flash_write_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_value, flash_operation_cb_t write_cb,
+                                 void *user_param)
 {
     return FLASH_DEVICE_FAIL;
 }
 #endif
 
-#endif //FERMION_QSPIM_SUPPORT
+#endif  // FERMION_QSPIM_SUPPORT

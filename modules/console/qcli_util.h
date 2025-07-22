@@ -1,10 +1,10 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
+ * SPDX-License-Identifier:
+ * BSD-3-Clause-Clear
 */
 
-
-#ifndef __QCLI_UTIL_H__ // [
+#ifndef __QCLI_UTIL_H__  // [
 #define __QCLI_UTIL_H__
 
 /*-------------------------------------------------------------------------
@@ -15,7 +15,6 @@
 #include "qapi_types.h"
 #include "qapi_status.h"
 #include "qcli_api.h"
-
 
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -135,7 +134,8 @@ qbool_t QCLI_Verify_Integer_Parameter(QAPI_Console_Parameter_t *Parameter, int32
     - true  if the parameter is valid.
     - false if the parameter is not valid.
 */
-qbool_t QCLI_Verify_Unsigned_Integer_Parameter(QAPI_Console_Parameter_t *Parameter, uint32_t MinValue, uint32_t MaxValue);
+qbool_t QCLI_Verify_Unsigned_Integer_Parameter(QAPI_Console_Parameter_t *Parameter, uint32_t MinValue,
+                                               uint32_t MaxValue);
 
 /**
    @brief Displays a message indicating the status result of a function.
@@ -158,7 +158,7 @@ void QCLI_Display_Function_Status(QAPI_Console_Group_Handle_t QCLI_Handle, char 
    @param[in] Length        Length of the data to be displayed.
    @param[in] Buffer        Buffer containing the data to be displayed.
 */
-void QCLI_Dump_Data(QAPI_Console_Group_Handle_t QCLI_Handle, const char *Prefix, uint16_t Length, const uint8_t *Buffer);
+void QCLI_Dump_Data(QAPI_Console_Group_Handle_t QCLI_Handle, const char *Prefix, uint16_t Length,
+                    const uint8_t *Buffer);
 
-#endif // ] #ifndef __QCLI_UTIL_H__
-
+#endif  // ] #ifndef __QCLI_UTIL_H__

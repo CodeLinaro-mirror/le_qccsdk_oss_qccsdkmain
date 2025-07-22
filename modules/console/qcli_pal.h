@@ -1,8 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ */
 
 #ifndef __QCLI_PAL_H__
 #define __QCLI_PAL_H__
@@ -17,11 +16,11 @@
 #include <stddef.h>
 
 #ifdef CONFIG_MATTER_ENABLE
-#define configUART_COMMAND_CONSOLE_STACK_SIZE		( 2048 )
+#define configUART_COMMAND_CONSOLE_STACK_SIZE (2048)
 #else
-#define configUART_COMMAND_CONSOLE_STACK_SIZE		( 1024 )
+#define configUART_COMMAND_CONSOLE_STACK_SIZE (1024)
 #endif
-#define configUART_COMMAND_CONSOLE_TASK_PRIORITY	( 7U )
+#define configUART_COMMAND_CONSOLE_TASK_PRIORITY (7U)
 
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -30,12 +29,12 @@
 /**
    Character that is inpretted as an end of line for inputs from the console.
 */
-#define PAL_INPUT_END_OF_LINE_CHARACTER                     ('\r')
+#define PAL_INPUT_END_OF_LINE_CHARACTER ('\r')
 
 /**
    String that is used as the end of line for outputs to the console.
 */
-#define PAL_OUTPUT_END_OF_LINE_STRING                       ("\r\n")
+#define PAL_OUTPUT_END_OF_LINE_STRING ("\r\n")
 
 /**
    @brief Writes a buffer to the console.
@@ -83,4 +82,3 @@ qbool_t PAL_Take_Lock(void);
 void PAL_Release_Lock(void);
 
 #endif
-

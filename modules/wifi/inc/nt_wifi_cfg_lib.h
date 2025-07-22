@@ -1,14 +1,12 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*
  * nt_wifi_cfg_lib.h
  *
  *  Created on: 06-Dec-2022
  */
-
-
 
 #ifndef APPS_WIFI_APP_INC_NT_WIFI_CFG_LIB_H_
 #define APPS_WIFI_APP_INC_NT_WIFI_CFG_LIB_H_
@@ -17,8 +15,6 @@
 #include "iot_wifi.h"
 #include "fwconfig_cmn.h"
 #include "nt_flags.h"
-
-
 
 /**
  * brief : parses the network details received from the commissioning
@@ -29,7 +25,6 @@
  * @return : TRUE if the asked profile is found in the message else FALSE
  */
 uint8_t nt_parse_profile_information();
-
 
 /**
  * @brief read dev_config
@@ -70,7 +65,5 @@ uint8_t read_updated_cfg();
  *  Read stored configs in wifi_config / wifi_config_debug
  */
 uint8_t nt_app_update_cfg();
-
-
 
 #endif /* APPS_WIFI_APP_INC_NT_WIFI_CFG_LIB_H_ */

@@ -1,12 +1,11 @@
 /*
-*Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*SPDX-License-Identifier: BSD-3-Clause-Clear
+ *Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*-------------------------------------------------------------------------
  * Include Files
  *-----------------------------------------------------------------------*/
-
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -29,9 +28,9 @@
  * Preprocessor Definitions and Constants
  *-----------------------------------------------------------------------*/
 #define BLOCK_SIZE_IN_BYTES 4096
-#define MAX_READ_WAIT 0x20000
-#define MAX_WRITE_WAIT 0x2000
-#define INT_TO_PTR(__x__)                 ((void *)(uint32_t)(__x__))
+#define MAX_READ_WAIT       0x20000
+#define MAX_WRITE_WAIT      0x2000
+#define INT_TO_PTR(__x__)   ((void *)(uint32_t)(__x__))
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -40,32 +39,30 @@
 /**
    Enumeration of QSPI transfer direction.
 */
-typedef enum
-{
-    QSPI_MASTER_READ_E,    /**< QSPI read. */
-    QSPI_MASTER_WRITE_E    /**< QSPI write. */
+typedef enum {
+    QSPI_MASTER_READ_E, /**< QSPI read. */
+    QSPI_MASTER_WRITE_E /**< QSPI write. */
 } qspi_transfer_dir_t;
 
 /**
    Structur representing the QSPI descriptors.
 */
-typedef struct qspi_descriptor_s
-{
-    uint32_t data_address;         /**< Descriptor offset  0 = data address[ 7: 0],
-                                       descriptor offset  1 = data address[15: 8],
-                                       descriptor offset  2 = data address[23:16],
-                                       descriptor offset  3 = data address[31:24]. */
-    uint32_t next_descriptor;      /**< Descriptor offset  4 = next descriptor[ 7: 0],
-                                       descriptor offset  5 = next descriptor[15: 8],
-                                       descriptor offset  6 = next descriptor[23:16],
-                                       descriptor offset  7 = next descriptor[31:24]. */
-    uint32_t direction:1;         /**< Descriptor offset  8 = mode/dir. */
-    uint32_t multi_io_mode:3;
-    uint32_t reserved1:4;
-    uint32_t fragment:1;          /**< Descriptor offset  9 = fragment. */
-    uint32_t reserved2:7;
-    uint32_t length:16;           /**< Descriptor offset 10 = transfer length[ 7:0],
-                                       descriptor offset 11 = transfer length[15:8]. */
+typedef struct qspi_descriptor_s {
+    uint32_t data_address;    /**< Descriptor offset  0 = data address[ 7: 0],
+                                  descriptor offset  1 = data address[15: 8],
+                                  descriptor offset  2 = data address[23:16],
+                                  descriptor offset  3 = data address[31:24]. */
+    uint32_t next_descriptor; /**< Descriptor offset  4 = next descriptor[ 7: 0],
+                                  descriptor offset  5 = next descriptor[15: 8],
+                                  descriptor offset  6 = next descriptor[23:16],
+                                  descriptor offset  7 = next descriptor[31:24]. */
+    uint32_t direction : 1;   /**< Descriptor offset  8 = mode/dir. */
+    uint32_t multi_io_mode : 3;
+    uint32_t reserved1 : 4;
+    uint32_t fragment : 1; /**< Descriptor offset  9 = fragment. */
+    uint32_t reserved2 : 7;
+    uint32_t length : 16; /**< Descriptor offset 10 = transfer length[ 7:0],
+                               descriptor offset 11 = transfer length[15:8]. */
     uint32_t bounce_src;
     uint32_t bounce_dst;
     uint32_t bounce_length;
@@ -75,13 +72,12 @@ typedef struct qspi_descriptor_s
 /**
    Structur representing context for QSPI module.
 */
-typedef struct qspi_context_s
-{
-    qspi_hal *hal;	/**< qspi hal layer handler */
-    qspi_transfer_mode_t transfer_mode;/**< Record transfer mode. */
-    uint8_t *free_ptr;  /**< Dma free buffer pointer. */
-    qspi_isr_cb_t isr_cb;       /**< User registered isr callback. */
-    void *user_param;   /**< User specified parameter for the callback function. */
+typedef struct qspi_context_s {
+    qspi_hal *hal;                      /**< qspi hal layer handler */
+    qspi_transfer_mode_t transfer_mode; /**< Record transfer mode. */
+    uint8_t *free_ptr;                  /**< Dma free buffer pointer. */
+    qspi_isr_cb_t isr_cb;               /**< User registered isr callback. */
+    void *user_param;                   /**< User specified parameter for the callback function. */
 } qspi_context_t;
 
 /*-------------------------------------------------------------------------
@@ -89,7 +85,7 @@ typedef struct qspi_context_s
  *-----------------------------------------------------------------------*/
 
 static qspi_descriptor_t qspi_descriptors[8] __attribute__((aligned(32)));
-static uint8_t qspi_transfer_buffer[32*4] __attribute__((aligned(32)));
+static uint8_t qspi_transfer_buffer[32 * 4] __attribute__((aligned(32)));
 static qspi_descriptor_t *qspi_transfer_chain = NULL;
 static qspi_context_t qspi_context;
 
@@ -117,13 +113,13 @@ static uint32_t drv_qspi_service_rxfifo(uint8_t *ptr, uint32_t num_bytes)
     uint32_t words_to_read;
     uint32_t bytes_to_read;
     uint32_t word_value;
-    uint32_t i=0;
+    uint32_t i = 0;
 
     bytes_in_fifo = hal_qspi_get_pio_rd_fifo_wrcnts(qspi_context.hal);
     words_in_fifo = bytes_in_fifo >> 2;
 
     words_to_read = (words_in_fifo < full_words) ? (words_in_fifo) : (full_words);
-    bytes_to_read = (bytes_in_fifo < num_bytes)  ? (0) : (prtial_bytes);
+    bytes_to_read = (bytes_in_fifo < num_bytes) ? (0) : (prtial_bytes);
 
     for (i = 0; i < words_to_read; i++) {
         word_value = hal_qspi_get_pio_rd_fifo(qspi_context.hal, i);
@@ -138,7 +134,7 @@ static uint32_t drv_qspi_service_rxfifo(uint8_t *ptr, uint32_t num_bytes)
         }
     }
 
-    return(words_to_read * 4 + bytes_to_read);
+    return (words_to_read * 4 + bytes_to_read);
 }
 
 /**
@@ -153,7 +149,7 @@ static uint32_t drv_qspi_service_txfifo(uint8_t *ptr, uint32_t num_bytes)
 {
     uint32_t full_words = num_bytes >> 2;
     uint32_t partial_bytes = num_bytes & 0x03;
-    //uint32_t pio_wrfifo_status;
+    // uint32_t pio_wrfifo_status;
     uint32_t room_in_bytes;
     uint32_t room_in_words;
     uint32_t words_to_send;
@@ -174,11 +170,11 @@ static uint32_t drv_qspi_service_txfifo(uint8_t *ptr, uint32_t num_bytes)
     }
 
     for (i = 0; i < bytes_to_send; i++) {
-        hal_qspi_pio_write_1bytes(qspi_context.hal,*ptr);
+        hal_qspi_pio_write_1bytes(qspi_context.hal, *ptr);
         ptr++;
     }
 
-    return(words_to_send * 4 + bytes_to_send);
+    return (words_to_send * 4 + bytes_to_send);
 }
 
 /**
@@ -193,9 +189,9 @@ static void drv_qspi_pio_read(uint8_t *buffer, uint32_t num_bytes, uint8_t write
     uint8_t *ptr = buffer;
     uint32_t bytes_left = num_bytes;
     uint32_t bytes_read;
-    uint32_t retry=0;
+    uint32_t retry = 0;
 
-	hal_qspi_set_pio_config(qspi_context.hal, write,io_mode,fragment);
+    hal_qspi_set_pio_config(qspi_context.hal, write, io_mode, fragment);
     hal_qspi_set_pio_transfer_control_request_count(qspi_context.hal, num_bytes);
 
     /* Poll until all data has been read from the RX FIFO. */
@@ -204,8 +200,8 @@ static void drv_qspi_pio_read(uint8_t *buffer, uint32_t num_bytes, uint8_t write
         bytes_left -= bytes_read;
         ptr += bytes_read;
     }
-    if(retry == MAX_READ_WAIT)
-        NT_LOG_PRINT(SYSTEM,ERR,"rx timeout");
+    if (retry == MAX_READ_WAIT)
+        NT_LOG_PRINT(SYSTEM, ERR, "rx timeout");
 }
 
 /**
@@ -220,12 +216,12 @@ static void drv_qspi_pio_write(uint8_t *buffer, uint32_t num_bytes, uint8_t writ
     uint8_t *ptr = buffer;
     uint32_t bytes_left = num_bytes;
     uint32_t bytes_written;
-//    uint32_t value;
-    uint32_t retry=0;
+    //    uint32_t value;
+    uint32_t retry = 0;
 
     /* Clear latched status bits. */
-	hal_qspi_clear_isr_status(qspi_context.hal);
-	hal_qspi_set_pio_config(qspi_context.hal, write,io_mode,fragment);
+    hal_qspi_clear_isr_status(qspi_context.hal);
+    hal_qspi_set_pio_config(qspi_context.hal, write, io_mode, fragment);
     hal_qspi_set_pio_transfer_control_request_count(qspi_context.hal, num_bytes);
 
     /* Poll until all data has been written to the TX FIFO. */
@@ -235,13 +231,13 @@ static void drv_qspi_pio_write(uint8_t *buffer, uint32_t num_bytes, uint8_t writ
         ptr += bytes_written;
     }
 
-    while(1) {
-        if(hal_qspi_check_pio_transaction_done(qspi_context.hal) ||retry++ >= MAX_WRITE_WAIT)
+    while (1) {
+        if (hal_qspi_check_pio_transaction_done(qspi_context.hal) || retry++ >= MAX_WRITE_WAIT)
             break;
     }
 
-    if(retry == MAX_WRITE_WAIT)
-        NT_LOG_PRINT(SYSTEM,ERR,"tx timeout");
+    if (retry == MAX_WRITE_WAIT)
+        NT_LOG_PRINT(SYSTEM, ERR, "tx timeout");
 }
 
 /**
@@ -262,10 +258,9 @@ static void drv_qspi_pio_transfer_chain(qspi_descriptor_t *pchain)
         num_bytes = pdesc->length;
 
         if (write) {
-            drv_qspi_pio_write(buffer, num_bytes, write,pdesc->multi_io_mode, pdesc->fragment);
-        }
-        else {
-            drv_qspi_pio_read(buffer, num_bytes, write,pdesc->multi_io_mode, pdesc->fragment);
+            drv_qspi_pio_write(buffer, num_bytes, write, pdesc->multi_io_mode, pdesc->fragment);
+        } else {
+            drv_qspi_pio_read(buffer, num_bytes, write, pdesc->multi_io_mode, pdesc->fragment);
         }
 
         pdesc = INT_TO_PTR(pdesc->next_descriptor);
@@ -279,7 +274,7 @@ static void drv_qspi_pio_transfer_chain(qspi_descriptor_t *pchain)
 */
 static void drv_qspi_flush_chain(qspi_transfer_mode_t transfer_mode)
 {
-    qspi_descriptor_t *pdesc= qspi_transfer_chain;
+    qspi_descriptor_t *pdesc = qspi_transfer_chain;
     uint8_t *psrc;
     uint8_t *pdst;
     uint32_t i;
@@ -314,7 +309,7 @@ static void drv_qspi_flush_chain(qspi_transfer_mode_t transfer_mode)
 */
 static qspi_descriptor_t *drv_qspi_get_last_descriptor()
 {
-    qspi_descriptor_t *pdesc= qspi_transfer_chain;
+    qspi_descriptor_t *pdesc = qspi_transfer_chain;
 
     if (pdesc) {
         while (pdesc->next_descriptor) {
@@ -347,14 +342,13 @@ static qspi_descriptor_t *drv_qspi_alloc_descriptor(uint32_t bytes_needed, qspi_
 
     alignment = (transfer_mode != QSPI_PIO_MODE_E) ? 32 : 4;
     free_ptr = qspi_context.free_ptr;
-    free_ptr = (uint8_t *)(((uint32_t)free_ptr + alignment -1) & (~(alignment - 1)));
+    free_ptr = (uint8_t *)(((uint32_t)free_ptr + alignment - 1) & (~(alignment - 1)));
     room = qspi_transfer_buffer + sizeof(qspi_transfer_buffer) - free_ptr;
 
     current = drv_qspi_get_last_descriptor();
     if (current) {
         next = current + 1;
-    }
-    else {
+    } else {
         next = &qspi_descriptors[0];
     }
 
@@ -379,8 +373,7 @@ static qspi_descriptor_t *drv_qspi_alloc_descriptor(uint32_t bytes_needed, qspi_
 
     if (current) {
         current->next_descriptor = (uint32_t)next;
-    }
-    else {
+    } else {
         qspi_transfer_chain = next;
     }
 
@@ -416,8 +409,8 @@ static uint32_t drv_qspi_get_available_room(qspi_descriptor_t *last)
    @param[in] direction  Transfer direction.
    @param[in] transfer_mode    QSPI transfer mode.
 */
-static void drv_qspi_set_descriptor(uint8_t *data, uint32_t data_bytes, qspi_mode_t mode,
-                    qspi_transfer_dir_t direction, qspi_transfer_mode_t transfer_mode)
+static void drv_qspi_set_descriptor(uint8_t *data, uint32_t data_bytes, qspi_mode_t mode, qspi_transfer_dir_t direction,
+                                    qspi_transfer_mode_t transfer_mode)
 {
     qspi_descriptor_t *pdesc;
     uint8_t *ptr;
@@ -430,9 +423,7 @@ static void drv_qspi_set_descriptor(uint8_t *data, uint32_t data_bytes, qspi_mod
     pdesc = drv_qspi_get_last_descriptor();
 
     /* Check if we can add to the last descriptor else allocate a new one */
-    if ((pdesc == NULL) ||
-        (pdesc->direction != direction) ||
-        (pdesc->multi_io_mode != mode) ||
+    if ((pdesc == NULL) || (pdesc->direction != direction) || (pdesc->multi_io_mode != mode) ||
         (drv_qspi_get_available_room(pdesc) < data_bytes)) {
         pdesc = drv_qspi_alloc_descriptor(data_bytes, transfer_mode);
         pdesc->direction = direction;
@@ -441,13 +432,11 @@ static void drv_qspi_set_descriptor(uint8_t *data, uint32_t data_bytes, qspi_mod
 
     ptr = INT_TO_PTR(pdesc->data_address + pdesc->length);
 
-    if (direction == QSPI_MASTER_WRITE_E)
-    {
-        for (i = 0; i < data_bytes; i ++) {
+    if (direction == QSPI_MASTER_WRITE_E) {
+        for (i = 0; i < data_bytes; i++) {
             ptr[i] = data[i];
         }
-    }
-    else {
+    } else {
         pdesc->bounce_src = (uint32_t)ptr;
         pdesc->bounce_dst = (uint32_t)data;
         pdesc->bounce_length = data_bytes;
@@ -477,7 +466,8 @@ static void drv_qspi_queue_opcode(uint8_t opcode, qspi_mode_t cmd_mode, qspi_tra
    @param[in] addr_mode   The address mode.
    @param[in] transfer_mode    QSPI transfer mode.
 */
-static void drv_qspi_queue_addr(uint32_t addr, uint8_t addr_bytes, qspi_mode_t addr_mode, qspi_transfer_mode_t transfer_mode)
+static void drv_qspi_queue_addr(uint32_t addr, uint8_t addr_bytes, qspi_mode_t addr_mode,
+                                qspi_transfer_mode_t transfer_mode)
 {
     uint8_t write_addr[4];
     uint8_t i;
@@ -487,7 +477,7 @@ static void drv_qspi_queue_addr(uint32_t addr, uint8_t addr_bytes, qspi_mode_t a
     }
 
     for (i = addr_bytes; i > 0; i--) {
-        write_addr[addr_bytes - i] = (uint8_t)(addr >> (i - 1) *8);
+        write_addr[addr_bytes - i] = (uint8_t)(addr >> (i - 1) * 8);
     }
 
     drv_qspi_set_descriptor(write_addr, (uint32_t)addr_bytes, addr_mode, QSPI_MASTER_WRITE_E, transfer_mode);
@@ -516,8 +506,7 @@ static void drv_qspi_queue_dummy(uint8_t dummy_clocks, qspi_transfer_mode_t tran
 
     /* Check if we can add to the last descriptor else allocate a new one */
     if (pdesc && pdesc->direction == QSPI_MASTER_WRITE_E) {
-        switch (pdesc->multi_io_mode)
-        {
+        switch (pdesc->multi_io_mode) {
             case QSPI_SDR_1BIT_E:
                 clocks_per_bytes = 8;
                 break;
@@ -554,8 +543,8 @@ static void drv_qspi_queue_dummy(uint8_t dummy_clocks, qspi_transfer_mode_t tran
         }
     }
     if (ptr == NULL) {
-        NT_LOG_PRINT(SYSTEM,ERR," dummy:%x",dummy_clocks);
-        dummy_bytes = dummy_clocks/2;
+        NT_LOG_PRINT(SYSTEM, ERR, " dummy:%x", dummy_clocks);
+        dummy_bytes = dummy_clocks / 2;
         pdesc = drv_qspi_alloc_descriptor(dummy_bytes, transfer_mode);
         pdesc->direction = QSPI_MASTER_WRITE_E;
         pdesc->multi_io_mode = QSPI_SDR_4BIT_E;
@@ -581,8 +570,8 @@ static void drv_qspi_queue_dummy(uint8_t dummy_clocks, qspi_transfer_mode_t tran
    @param[in] write      Write or read, true: write, false: read.
    @param[in] transfer_mode    QSPI transfer mode.
 */
-static void drv_qspi_queue_data_direct(uint8_t *data, uint32_t data_bytes, qspi_mode_t data_mode,
-                        bool write, qspi_transfer_mode_t transfer_mode)
+static void drv_qspi_queue_data_direct(uint8_t *data, uint32_t data_bytes, qspi_mode_t data_mode, bool write,
+                                       qspi_transfer_mode_t transfer_mode)
 {
     qspi_descriptor_t *pdesc;
     uint32_t chunk_size;
@@ -620,8 +609,8 @@ static void drv_qspi_queue_data_direct(uint8_t *data, uint32_t data_bytes, qspi_
    @param[in] write      Write or read, true: write, false: read.
    @param[in] transfer_mode    QSPI transfer mode.
 */
-static void drv_qspi_queue_data(uint8_t *data, uint32_t data_bytes, qspi_mode_t data_mode,
-                    bool write, qspi_transfer_mode_t transfer_mode)
+static void drv_qspi_queue_data(uint8_t *data, uint32_t data_bytes, qspi_mode_t data_mode, bool write,
+                                qspi_transfer_mode_t transfer_mode)
 {
     uint32_t alignment;
     uint8_t *aligned_ptr;
@@ -635,7 +624,7 @@ static void drv_qspi_queue_data(uint8_t *data, uint32_t data_bytes, qspi_mode_t 
     }
 
     alignment = (transfer_mode != QSPI_PIO_MODE_E) ? 32 : 4;
-    aligned_ptr = (uint8_t *)(((uint32_t)data + alignment -1) & (~(alignment - 1)));
+    aligned_ptr = (uint8_t *)(((uint32_t)data + alignment - 1) & (~(alignment - 1)));
     prolog_bytes = ((uint32_t)(aligned_ptr - data) > data_bytes) ? (data_bytes) : (uint32_t)(aligned_ptr - data);
     epilog_bytes = ((transfer_mode != QSPI_PIO_MODE_E) && !write) ? ((data_bytes - prolog_bytes) & 0x3) : 0;
     aligned_bytes = data_bytes - prolog_bytes - epilog_bytes;
@@ -661,14 +650,14 @@ static void drv_qspi_queue_data(uint8_t *data, uint32_t data_bytes, qspi_mode_t 
 
 bool drv_qspi_init(qspi_master_config_t *config)
 {
-    uint8_t enable = 1; /* enable qspi function if needed */
+    uint8_t enable = 1;      /* enable qspi function if needed */
     uint8_t pads_option = 0; /* qspi pads mode*/
     memset(&qspi_context, 0, sizeof(qspi_context_t));
 
 #if CONFIG_SOC_QCC730V1
-    qspi_context.hal = (qspi_hal*)QCC730V1_QSPI_BASE_BASE;
+    qspi_context.hal = (qspi_hal *)QCC730V1_QSPI_BASE_BASE;
 #elif CONFIG_SOC_QCC730V2
-    qspi_context.hal = (qspi_hal*)QCC730V2_QSPI_BASE_BASE;
+    qspi_context.hal = (qspi_hal *)QCC730V2_QSPI_BASE_BASE;
 #endif
 
     qspi_context.transfer_mode = QSPI_PIO_MODE_E;
@@ -686,28 +675,28 @@ bool drv_qspi_init(qspi_master_config_t *config)
     hal_qspi_mcu_enable_qspi();
 
 #ifndef CONFIG_NON_OS
-    if( !hal_qspi_is_qspi_active()) {
+    if (!hal_qspi_is_qspi_active()) {
 #endif
-        NT_LOG_PRINT(SYSTEM,INFO,"do qspi init...\n");
+        NT_LOG_PRINT(SYSTEM, INFO, "do qspi init...\n");
         hal_qspi_enable_qspi(enable, pads_option);
         hal_qspi_set_clock((uint8_t)config->clk_freq);
 
         /* wait for QSPI to be powered up */
         hal_qspi_qspi_gdscr_config();
-        while(!hal_qspi_gdscr_pwr_ready());
+        while (!hal_qspi_gdscr_pwr_ready())
+            ;
 
         /* disable clock gating */
         hal_qspi_enable_clock_gating(0);
 
-    hal_qspi_set_master_config_wpn(qspi_context.hal,1);
-    hal_qspi_set_master_config_holdn(qspi_context.hal,1);
+        hal_qspi_set_master_config_wpn(qspi_context.hal, 1);
+        hal_qspi_set_master_config_holdn(qspi_context.hal, 1);
 
-		if(!hal_qspi_xip_is_enabled(qspi_context.hal))
-		{
-	        /* reset registers */
-			/* TODO: if XIP is enabled in bootloader, we need a careful reset, now use default value.*/
-	        hal_qspi_master_status_reset(qspi_context.hal);
-		}
+        if (!hal_qspi_xip_is_enabled(qspi_context.hal)) {
+            /* reset registers */
+            /* TODO: if XIP is enabled in bootloader, we need a careful reset, now use default value.*/
+            hal_qspi_master_status_reset(qspi_context.hal);
+        }
 #ifndef CONFIG_NON_OS
     }
 #endif
@@ -741,7 +730,6 @@ bool drv_qspi_deinit()
     return true;
 }
 
-
 /**
    @brief Set QSPI command parameters.
 
@@ -757,13 +745,13 @@ bool drv_qspi_deinit()
    @return TRUE on success or FALSE on failure.
 */
 bool drv_qspi_prepare_cmd(qspi_cmd_t *cmd, uint8_t opcode, uint8_t addr_bytes, uint8_t dummy_clocks,
-            qspi_mode_t cmd_mode, qspi_mode_t addr_mode, qspi_mode_t data_mode, bool write)
+                          qspi_mode_t cmd_mode, qspi_mode_t addr_mode, qspi_mode_t data_mode, bool write)
 {
     if (cmd == NULL) {
         return false;
     }
 
-    memset (cmd, 0, sizeof(qspi_cmd_t));
+    memset(cmd, 0, sizeof(qspi_cmd_t));
     cmd->opcode = opcode;
     cmd->addr_bytes = addr_bytes;
     cmd->dummy_clocks = dummy_clocks;
@@ -788,8 +776,8 @@ bool drv_qspi_prepare_cmd(qspi_cmd_t *cmd, uint8_t opcode, uint8_t addr_bytes, u
 
    @return TRUE on success or FALSE on failure.
 */
-bool drv_qspi_run_cmd(qspi_cmd_t *cmd, uint32_t addr, uint8_t *data,
-                uint32_t data_bytes, qspi_transfer_mode_t transfer_mode)
+bool drv_qspi_run_cmd(qspi_cmd_t *cmd, uint32_t addr, uint8_t *data, uint32_t data_bytes,
+                      qspi_transfer_mode_t transfer_mode)
 {
     qspi_descriptor_t *last;
 
@@ -816,12 +804,12 @@ bool drv_qspi_run_cmd(qspi_cmd_t *cmd, uint32_t addr, uint8_t *data,
  */
 bool drv_qspi_disable_xip_mode()
 {
-    if(!hal_qspi_xip_is_enabled(qspi_context.hal))
+    if (!hal_qspi_xip_is_enabled(qspi_context.hal))
         return true;
 
     hal_qspi_xip_enable(qspi_context.hal, 0);
-    while(1){
-        if(!hal_qspi_get_xip_is_active(qspi_context.hal))
+    while (1) {
+        if (!hal_qspi_get_xip_is_active(qspi_context.hal))
             break;
     }
     return true;
@@ -837,9 +825,9 @@ bool drv_qspi_disable_xip_mode()
  */
 bool drv_qspi_restore_xip_mode()
 {
-    if(!hal_qspi_xip_is_enabled(qspi_context.hal)) {
-        while(1) {
-            if(hal_qspi_check_pio_transaction_done(qspi_context.hal))
+    if (!hal_qspi_xip_is_enabled(qspi_context.hal)) {
+        while (1) {
+            if (hal_qspi_check_pio_transaction_done(qspi_context.hal))
                 break;
         }
         hal_qspi_xip_enable(qspi_context.hal, 1);
@@ -859,7 +847,7 @@ bool drv_qspi_restore_xip_mode()
  */
 bool drv_qspi_xip_set_pe_state(uint8_t enable)
 {
-	hal_qspi_xip_enable_program_erase_ongoing(qspi_context.hal, enable);
+    hal_qspi_xip_enable_program_erase_ongoing(qspi_context.hal, enable);
     return true;
 }
 
@@ -874,8 +862,8 @@ bool drv_qspi_xip_set_pe_state(uint8_t enable)
 
     @return true on success or false on failure.
  */
-bool drv_qspi_xip_config_suspend_resume (uint16_t suspend_delay, uint8_t suspend_opcode,
-                                              uint16_t resume_delay, uint8_t resume_opcode)
+bool drv_qspi_xip_config_suspend_resume(uint16_t suspend_delay, uint8_t suspend_opcode, uint16_t resume_delay,
+                                        uint8_t resume_opcode)
 {
     /*
         Because Fermion uses PIO mode, and disable XiP when do PIO operations.
@@ -884,45 +872,43 @@ bool drv_qspi_xip_config_suspend_resume (uint16_t suspend_delay, uint8_t suspend
     */
 
     hal_qspi_xip_set_suspend_delay(qspi_context.hal, suspend_delay);
-	hal_qspi_xip_set_resume_opcode(qspi_context.hal, suspend_opcode);
-	/*QWLAN_QSPI_R_QSPI_XIP_SUSPEND_PH_CONFIG_SUSPEND_ENABLE_MASK*/
-	hal_qspi_xip_enable_suspend(qspi_context.hal, 1);
-	
-	hal_qspi_xip_set_resume_opcode(qspi_context.hal, resume_opcode);
-	hal_qspi_xip_set_resume_delay(qspi_context.hal, resume_delay);
-	hal_qspi_xip_resume_suspend(qspi_context.hal, 1);
-	return true;
+    hal_qspi_xip_set_resume_opcode(qspi_context.hal, suspend_opcode);
+    /*QWLAN_QSPI_R_QSPI_XIP_SUSPEND_PH_CONFIG_SUSPEND_ENABLE_MASK*/
+    hal_qspi_xip_enable_suspend(qspi_context.hal, 1);
+
+    hal_qspi_xip_set_resume_opcode(qspi_context.hal, resume_opcode);
+    hal_qspi_xip_set_resume_delay(qspi_context.hal, resume_delay);
+    hal_qspi_xip_resume_suspend(qspi_context.hal, 1);
+    return true;
 }
 
 int32_t drv_qspi_xip_config(qspi_xip_flash_region region_id, uint32_t region_size, uint32_t regigon_addr)
 {
     static bool xip_init_done = FALSE;
 
-    if (xip_init_done == TRUE)
-    {
+    if (xip_init_done == TRUE) {
         return 0;
     }
 
     /* only region #3 is supported */
-    if (QSPI_XIP_FLASH_REGION_3 != region_id)
-    {
+    if (QSPI_XIP_FLASH_REGION_3 != region_id) {
         return -1;
     }
 
     xip_init_done = TRUE;
 
     /* Configure INST_PH
-    * linear burst opcode: 0x03=normal read 0x0B=fast read 0xEB=Quad I/O read
-    * wrap burst opcode 0x0C : burst read
-    * only support SDR and single mode
-    * dummy is 0 for CMD 0x03
-    */
+     * linear burst opcode: 0x03=normal read 0x0B=fast read 0xEB=Quad I/O read
+     * wrap burst opcode 0x0C : burst read
+     * only support SDR and single mode
+     * dummy is 0 for CMD 0x03
+     */
     hal_qspi_xip_ph_config(qspi_context.hal, 0x03, 0);
 
     /*
-      * 4K bytes/block
-      */
-    hal_qspi_xip_region_config(qspi_context.hal, region_id, region_size, (regigon_addr/BLOCK_SIZE_IN_BYTES));
+     * 4K bytes/block
+     */
+    hal_qspi_xip_region_config(qspi_context.hal, region_id, region_size, (regigon_addr / BLOCK_SIZE_IN_BYTES));
 
     hal_qspi_xip_master_config(qspi_context.hal);
 

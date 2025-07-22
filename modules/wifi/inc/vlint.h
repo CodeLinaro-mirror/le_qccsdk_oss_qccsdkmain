@@ -1,12 +1,11 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*========================================================================
-* @file vlint.h
-* @brief vlint header file
-*========================================================================*/
-
+ * @file vlint.h
+ * @brief vlint header file
+ *========================================================================*/
 
 #ifndef VLINT_H
 #define VLINT_H
@@ -15,7 +14,6 @@
  * Include files
  * ----------------------------------------------------------------------*/
 
-
 #include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
@@ -23,38 +21,36 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-
 /*-------------------------------------------------------------------------
  *Preprocessor Definitions and Constants
  * ----------------------------------------------------------------------*/
-#define MAXINT8VLINTLEN         (1U + 1U)
-#define MAXUINT8VLINTLEN        (1U + 1U + 1U)
-#define MAXINT16VLINTLEN        (1U + 2U)
-#define MAXUINT16VLINTLEN       (1U + 2U + 1U)
-#define MAXINT32VLINTLEN        (1U + 4U)
-#define MAXUINT32VLINTLEN       (1U + 4U + 1U)
-#define MAXINT48VLINTLEN        (1U + 6U)
-#define MAXUINT48VLINTLEN       (1U + 6U + 1U)
-#define MAXINT64VLINTLEN        (1U + 8U)
-#define MAXUINT64VLINTLEN       (1U + 8U + 1U)
+#define MAXINT8VLINTLEN   (1U + 1U)
+#define MAXUINT8VLINTLEN  (1U + 1U + 1U)
+#define MAXINT16VLINTLEN  (1U + 2U)
+#define MAXUINT16VLINTLEN (1U + 2U + 1U)
+#define MAXINT32VLINTLEN  (1U + 4U)
+#define MAXUINT32VLINTLEN (1U + 4U + 1U)
+#define MAXINT48VLINTLEN  (1U + 6U)
+#define MAXUINT48VLINTLEN (1U + 6U + 1U)
+#define MAXINT64VLINTLEN  (1U + 8U)
+#define MAXUINT64VLINTLEN (1U + 8U + 1U)
 
-#define MAXVLINTLEN             (MAXUINT64VLINTLEN)
+#define MAXVLINTLEN (MAXUINT64VLINTLEN)
 
 /** Minimum VLINT length. */
-#define MINVLINTLEN             (1U)
+#define MINVLINTLEN (1U)
 
 /*-------------------------------------------------------------------------
  * Type Declarations
-* ----------------------------------------------------------------------*/
+ * ----------------------------------------------------------------------*/
 
 /** A VLINT is really an array of uint8s. */
 
-typedef uint8_t   VLINT;
+typedef uint8_t VLINT;
 
 /*-------------------------------------------------------------------------
-* Function Declarations and Documentation
-* ----------------------------------------------------------------------*/
-
+ * Function Declarations and Documentation
+ * ----------------------------------------------------------------------*/
 
 /* Maximum VLINT lengths for given data types == (1 + number_of_octets).
 Need extra octet for unsigned numbers. */
@@ -69,7 +65,6 @@ Need extra octet for unsigned numbers. */
  * function raises a fault_diatribe().
  */
 extern uint16_t vlint_length(const VLINT *vl);
-
 
 /**
  * number of data octets in a vlint
@@ -92,7 +87,6 @@ extern uint16_t vlint_length(const VLINT *vl);
  */
 extern uint16_t vlint_data_length(const VLINT *vl);
 
-
 /**
  * copy variable length integers
  *
@@ -102,8 +96,7 @@ extern uint16_t vlint_data_length(const VLINT *vl);
  * \returns
  *   The length of "src" - identical to \c vlint_length(src).
  */
-//extern uint16 vlint_copy(VLINT *dst, const VLINT *src);
-
+// extern uint16 vlint_copy(VLINT *dst, const VLINT *src);
 
 /**
  * compare variable length integers
@@ -115,8 +108,7 @@ extern uint16_t vlint_data_length(const VLINT *vl);
  *   0  if a == b
  *   1  if a > b
  */
-//extern int16 vlint_cmp(const VLINT *a, const VLINT *b);
-
+// extern int16 vlint_cmp(const VLINT *a, const VLINT *b);
 
 /**
  * determine the sign of a vlint
@@ -126,23 +118,20 @@ extern uint16_t vlint_data_length(const VLINT *vl);
  */
 extern bool vlint_negative(const VLINT *a);
 
-
 /**
  * has a vlint the value of zero
  *
  * \returns
  *   TRUE if "a" holds the value zero, else FALSE.
  */
-//extern bool vlint_is_zero(const VLINT *a);
-
+// extern bool vlint_is_zero(const VLINT *a);
 
 /**
  * set a vlint to zero
  *
  *  Sets the value of "a" to zero.
  */
-//extern void vlint_clear(VLINT *a);
-
+// extern void vlint_clear(VLINT *a);
 
 /**
  * Write an int16 into a vlint
@@ -161,7 +150,7 @@ extern bool vlint_negative(const VLINT *a);
  * \returns
  *    The number of octets in \p vl used to hold \p i.
  */
-//extern uint16 vlint_from_int16(VLINT *vl, int16 i);
+// extern uint16 vlint_from_int16(VLINT *vl, int16 i);
 
 /**
  * Write a  uint16 into a vlint
@@ -171,7 +160,7 @@ extern bool vlint_negative(const VLINT *a);
  * \returns
  *    The number of octets in \p vl used to hold \p i.
  */
-//extern uint16 vlint_from_uint16(VLINT *vl, uint16 i);
+// extern uint16 vlint_from_uint16(VLINT *vl, uint16 i);
 
 /**
  * Write an int32 into a vlint
@@ -181,7 +170,7 @@ extern bool vlint_negative(const VLINT *a);
  * \returns
  *    The number of octets in \p vl used to hold \p i.
  */
-//extern uint16 vlint_from_int32(VLINT *vl, int32 i);
+// extern uint16 vlint_from_int32(VLINT *vl, int32 i);
 
 /**
  * Write a uint32 into a vlint
@@ -191,7 +180,7 @@ extern bool vlint_negative(const VLINT *a);
  * \returns
  *    The number of octets in \p vl used to hold \p i.
  */
-//extern uint16 vlint_from_uint32(VLINT *vl, uint32 i);
+// extern uint16 vlint_from_uint32(VLINT *vl, uint32 i);
 
 /**
  * Write an int64 into a vlint
@@ -201,7 +190,7 @@ extern bool vlint_negative(const VLINT *a);
  * \returns
  *    The number of octets in \p vl used to hold \p i.
  */
-//extern uint16 vlint_from_int64(VLINT *vl, int64 i);
+// extern uint16 vlint_from_int64(VLINT *vl, int64 i);
 
 /**
  * Write a uint64 into a vlint
@@ -211,7 +200,7 @@ extern bool vlint_negative(const VLINT *a);
  * \returns
  *    The number of octets in \p vl used to hold \p i.
  */
-//extern uint16 vlint_from_uint64(VLINT *vl, uint64 i);
+// extern uint16 vlint_from_uint64(VLINT *vl, uint64 i);
 
 /**
  * Write a data address into a vlint
@@ -221,9 +210,7 @@ extern bool vlint_negative(const VLINT *a);
  * \returns
  *    The number of octets in \p vl used to hold \p i.
  */
-//extern uint16 vlint_from_daddr(VLINT *vl, unsigned *d);
-
-
+// extern uint16 vlint_from_daddr(VLINT *vl, unsigned *d);
 
 /**
  *  read an int16 from a vlint
@@ -236,14 +223,14 @@ extern int16_t vlint_to_int16(const VLINT *vl);
  * read a uint16 from a vlint
  *
  * \returns The value coded in the (octet array at) "vl".
-*/
+ */
 extern uint16_t vlint_to_uint16(const VLINT *vl);
 
 /**
  * read an int32 from a vlint
  *
  * \returns The value coded in the (octet array at) "vl".
-*/
+ */
 extern int32_t vlint_to_int32(const VLINT *vl);
 
 /**
@@ -257,24 +244,23 @@ extern uint32_t vlint_to_uint32(const VLINT *vl);
  *  read an int64 from a vlint
  *
  * \returns The value coded in the (octet array at) "vl".
-*/
+ */
 
-//extern int64 vlint_to_int64(const VLINT *vl);
+// extern int64 vlint_to_int64(const VLINT *vl);
 
 /**
  * read a uint64 from a vlint
  *
  * \returns The value coded in the (octet array at) "vl".
  */
-//extern uint64 vlint_to_uint64(const VLINT *vl);
+// extern uint64 vlint_to_uint64(const VLINT *vl);
 
 /**
  * read a data address from a vlint
  *
  * \returns The value coded in the (octet array at) "vl".
  */
-//extern unsigned *vlint_to_daddr(const VLINT *vl);
-
+// extern unsigned *vlint_to_daddr(const VLINT *vl);
 
 /**
  * write an octet array into a vlint
@@ -323,7 +309,6 @@ extern uint16_t vlint_from_octet_array(VLINT *vl, const uint8_t *oa, uint16_t oa
  */
 extern uint16_t vlint_to_octet_array(const VLINT *vl, uint8_t *oa, uint16_t oa_size);
 
-
 /**
  * sign extend an integer in an octet array
  *
@@ -348,8 +333,7 @@ extern uint16_t vlint_to_octet_array(const VLINT *vl, uint8_t *oa, uint16_t oa_s
  *
  *   then \c buf is returned as {0xff, 0xff, 0x80, 0x11, 0x22}.
  */
-//void vlint_shift_octet_array(uint8 *buf, uint16 noctets, uint16 shift);
-
+// void vlint_shift_octet_array(uint8 *buf, uint16 noctets, uint16 shift);
 
 /**
  * read a vlint from a bmsg
@@ -360,9 +344,8 @@ extern uint16_t vlint_to_octet_array(const VLINT *vl, uint8_t *oa, uint16_t oa_s
  * The storage at \c val is presumed to be large enough to hold the VLINT.
  *
  * \returns TRUE if a valid VLINT was copied from \c bmsg to \c val, else FALSE.
-*/
-//extern bool vlint_read_from_bmsg(VLINT *val, BMSG *bmsg);
+ */
+// extern bool vlint_read_from_bmsg(VLINT *val, BMSG *bmsg);
 
-
-#endif //FERMION_CONFIG_HCF
-#endif /* VLINT_H */
+#endif  // FERMION_CONFIG_HCF
+#endif  /* VLINT_H */

@@ -53,25 +53,25 @@ typedef struct {
     /* For storing last callback parameters */
     struct {
         const char *at;
-        size_t      length;
+        size_t length;
     } last;
 
     /* State variables */
-    bool   paused;          /*!< Parser is paused */
-    size_t pre_parsed;      /*!< Length of data to be skipped while parsing */
-    size_t raw_datalen;     /*!< Full length of the raw data in scratch buffer */
+    bool paused;        /*!< Parser is paused */
+    size_t pre_parsed;  /*!< Length of data to be skipped while parsing */
+    size_t raw_datalen; /*!< Full length of the raw data in scratch buffer */
 } parser_data_t;
 
-static esp_err_t verify_url (http_parser *parser)
+static esp_err_t verify_url(http_parser *parser)
 {
-    parser_data_t *parser_data  = (parser_data_t *) parser->data;
-    struct httpd_req *r         = parser_data->req;
-    struct httpd_req_aux *ra    = r->aux;
+    parser_data_t *parser_data = (parser_data_t *)parser->data;
+    struct httpd_req *r = parser_data->req;
+    struct httpd_req_aux *ra = r->aux;
     struct http_parser_url *res = &ra->url_parse_res;
 
     /* Get previous values of the parser callback arguments */
     const char *at = parser_data->last.at;
-    size_t  length = parser_data->last.length;
+    size_t length = parser_data->last.length;
 
     r->method = parser->method;
     if (r->method < 0) {
@@ -81,7 +81,9 @@ static esp_err_t verify_url (http_parser *parser)
     }
 
     if (sizeof(r->uri) < (length + 1)) {
-        ESP_LOGW(TAG, LOG_FMT("URI length (%"NEWLIB_NANO_COMPAT_FORMAT") greater than supported (%"NEWLIB_NANO_COMPAT_FORMAT")"),
+        ESP_LOGW(TAG,
+                 LOG_FMT("URI length (%" NEWLIB_NANO_COMPAT_FORMAT
+                         ") greater than supported (%" NEWLIB_NANO_COMPAT_FORMAT ")"),
                  NEWLIB_NANO_COMPAT_CAST(length), NEWLIB_NANO_COMPAT_CAST(sizeof(r->uri)));
         parser_data->error = HTTPD_414_URI_TOO_LONG;
         return ESP_FAIL;
@@ -95,18 +97,15 @@ static esp_err_t verify_url (http_parser *parser)
 
     /* Make sure version is HTTP/1.1 or HTTP/1.0 (legacy compliance purpose) */
     if (!((parser->http_major == 1) && ((parser->http_minor == 0) || (parser->http_minor == 1)))) {
-        ESP_LOGW(TAG, LOG_FMT("unsupported HTTP version = %d.%d"),
-                 parser->http_major, parser->http_minor);
+        ESP_LOGW(TAG, LOG_FMT("unsupported HTTP version = %d.%d"), parser->http_major, parser->http_minor);
         parser_data->error = HTTPD_505_VERSION_NOT_SUPPORTED;
         return ESP_FAIL;
     }
 
     /* Parse URL and keep result for later */
     http_parser_url_init(res);
-    if (http_parser_parse_url(r->uri, strlen(r->uri),
-                              r->method == HTTP_CONNECT, res)) {
-        ESP_LOGW(TAG, LOG_FMT("http_parser_parse_url failed with errno = %d"),
-                              parser->http_errno);
+    if (http_parser_parse_url(r->uri, strlen(r->uri), r->method == HTTP_CONNECT, res)) {
+        ESP_LOGW(TAG, LOG_FMT("http_parser_parse_url failed with errno = %d"), parser->http_errno);
         parser_data->error = HTTPD_400_BAD_REQUEST;
         return ESP_FAIL;
     }
@@ -116,18 +115,17 @@ static esp_err_t verify_url (http_parser *parser)
 /* http_parser callback on finding url in HTTP request
  * Will be invoked AT LEAST once every packet
  */
-static esp_err_t cb_url(http_parser *parser,
-                        const char *at, size_t length)
+static esp_err_t cb_url(http_parser *parser, const char *at, size_t length)
 {
-    parser_data_t *parser_data = (parser_data_t *) parser->data;
+    parser_data_t *parser_data = (parser_data_t *)parser->data;
 
     if (parser_data->status == PARSING_IDLE) {
         ESP_LOGD(TAG, LOG_FMT("message begin"));
 
         /* Store current values of the parser callback arguments */
-        parser_data->last.at     = at;
+        parser_data->last.at = at;
         parser_data->last.length = 0;
-        parser_data->status      = PARSING_URL;
+        parser_data->status = PARSING_URL;
     } else if (parser_data->status != PARSING_URL) {
         ESP_LOGE(TAG, LOG_FMT("unexpected state transition"));
         parser_data->error = HTTPD_500_INTERNAL_SERVER_ERROR;
@@ -139,7 +137,7 @@ static esp_err_t cb_url(http_parser *parser,
 
     /* Update length of URL string */
     if ((parser_data->last.length += length) > HTTPD_MAX_URI_LEN) {
-        ESP_LOGW(TAG, LOG_FMT("URI length (%"NEWLIB_NANO_COMPAT_FORMAT") greater than supported (%d)"),
+        ESP_LOGW(TAG, LOG_FMT("URI length (%" NEWLIB_NANO_COMPAT_FORMAT ") greater than supported (%d)"),
                  NEWLIB_NANO_COMPAT_CAST(parser_data->last.length), HTTPD_MAX_URI_LEN);
         parser_data->error = HTTPD_414_URI_TOO_LONG;
         parser_data->status = PARSING_FAILED;
@@ -148,11 +146,11 @@ static esp_err_t cb_url(http_parser *parser,
     return ESP_OK;
 }
 
-static esp_err_t pause_parsing(http_parser *parser, const char* at)
+static esp_err_t pause_parsing(http_parser *parser, const char *at)
 {
-    parser_data_t *parser_data = (parser_data_t *) parser->data;
-    struct httpd_req *r        = parser_data->req;
-    struct httpd_req_aux *ra   = r->aux;
+    parser_data_t *parser_data = (parser_data_t *)parser->data;
+    struct httpd_req *r = parser_data->req;
+    struct httpd_req_aux *ra = r->aux;
 
     /* The length of data that was not parsed due to interruption
      * and hence needs to be read again later for parsing */
@@ -184,13 +182,14 @@ static esp_err_t pause_parsing(http_parser *parser, const char* at)
 
 static size_t continue_parsing(http_parser *parser, size_t length)
 {
-    parser_data_t *data = (parser_data_t *) parser->data;
+    parser_data_t *data = (parser_data_t *)parser->data;
 
     /* Part of the received data may have been parsed earlier
      * so we must skip that before parsing resumes */
     length = MIN(length, data->pre_parsed);
     data->pre_parsed -= length;
-    ESP_LOGD(TAG, LOG_FMT("skip pre-parsed data of size = %"NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST(length));
+    ESP_LOGD(TAG, LOG_FMT("skip pre-parsed data of size = %" NEWLIB_NANO_COMPAT_FORMAT),
+             NEWLIB_NANO_COMPAT_CAST(length));
 
     http_parser_pause(parser, 0);
     data->paused = false;
@@ -203,9 +202,9 @@ static size_t continue_parsing(http_parser *parser, size_t length)
  */
 static esp_err_t cb_header_field(http_parser *parser, const char *at, size_t length)
 {
-    parser_data_t *parser_data = (parser_data_t *) parser->data;
-    struct httpd_req *r        = parser_data->req;
-    struct httpd_req_aux *ra   = r->aux;
+    parser_data_t *parser_data = (parser_data_t *)parser->data;
+    struct httpd_req *r = parser_data->req;
+    struct httpd_req_aux *ra = r->aux;
 
     /* Check previous status */
     if (parser_data->status == PARSING_URL) {
@@ -220,9 +219,9 @@ static esp_err_t cb_header_field(http_parser *parser, const char *at, size_t len
         ESP_LOGD(TAG, LOG_FMT("headers begin"));
         /* Last at is set to start of scratch where headers
          * will be received next */
-        parser_data->last.at     = ra->scratch;
+        parser_data->last.at = ra->scratch;
         parser_data->last.length = 0;
-        parser_data->status      = PARSING_HDR_FIELD;
+        parser_data->status = PARSING_HDR_FIELD;
 
         /* Stop parsing for now and give control to process */
         if (pause_parsing(parser, at) != ESP_OK) {
@@ -237,9 +236,9 @@ static esp_err_t cb_header_field(http_parser *parser, const char *at, size_t len
         memset(term_start, '\0', at - term_start);
 
         /* Store current values of the parser callback arguments */
-        parser_data->last.at     = at;
+        parser_data->last.at = at;
         parser_data->last.length = 0;
-        parser_data->status      = PARSING_HDR_FIELD;
+        parser_data->status = PARSING_HDR_FIELD;
 
         /* Increment header count */
         ra->req_hdrs_count++;
@@ -262,14 +261,14 @@ static esp_err_t cb_header_field(http_parser *parser, const char *at, size_t len
  */
 static esp_err_t cb_header_value(http_parser *parser, const char *at, size_t length)
 {
-    parser_data_t *parser_data = (parser_data_t *) parser->data;
+    parser_data_t *parser_data = (parser_data_t *)parser->data;
 
     /* Check previous status */
     if (parser_data->status == PARSING_HDR_FIELD) {
         /* Store current values of the parser callback arguments */
-        parser_data->last.at     = at;
+        parser_data->last.at = at;
         parser_data->last.length = 0;
-        parser_data->status      = PARSING_HDR_VALUE;
+        parser_data->status = PARSING_HDR_VALUE;
 
         if (length == 0) {
             /* As per behavior of http_parser, when length > 0,
@@ -281,9 +280,11 @@ static esp_err_t cb_header_value(http_parser *parser, const char *at, size_t len
              * needs to be adjusted by the right offset */
             char *at_adj = (char *)parser_data->last.at;
             /* Find the end of header field string */
-            while (*(--at_adj) != ':');
+            while (*(--at_adj) != ':')
+                ;
             /* Now skip leading spaces' */
-            while (*(++at_adj) == ' ');
+            while (*(++at_adj) == ' ')
+                ;
             /* Now we are at the right position */
             parser_data->last.at = at_adj;
         }
@@ -306,9 +307,9 @@ static esp_err_t cb_header_value(http_parser *parser, const char *at, size_t len
  */
 static esp_err_t cb_headers_complete(http_parser *parser)
 {
-    parser_data_t *parser_data = (parser_data_t *) parser->data;
-    struct httpd_req *r        = parser_data->req;
-    struct httpd_req_aux *ra   = r->aux;
+    parser_data_t *parser_data = (parser_data_t *)parser->data;
+    struct httpd_req *r = parser_data->req;
+    struct httpd_req_aux *ra = r->aux;
 
     /* Check previous status */
     if (parser_data->status == PARSING_URL) {
@@ -371,11 +372,10 @@ static esp_err_t cb_headers_complete(http_parser *parser)
     }
 
     /* In absence of body/chunked encoding, http_parser sets content_len to -1 */
-    r->content_len = ((int)parser->content_length != -1 ?
-                      parser->content_length : 0);
+    r->content_len = ((int)parser->content_length != -1 ? parser->content_length : 0);
 
-    ESP_LOGD(TAG, LOG_FMT("bytes read     = %" PRId32 ""),  parser->nread);
-    ESP_LOGD(TAG, LOG_FMT("content length = %"NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST(r->content_len));
+    ESP_LOGD(TAG, LOG_FMT("bytes read     = %" PRId32 ""), parser->nread);
+    ESP_LOGD(TAG, LOG_FMT("content length = %" NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST(r->content_len));
 
     /* Handle upgrade requests - only WebSocket is supported for now */
     if (parser->upgrade) {
@@ -420,7 +420,7 @@ static esp_err_t cb_headers_complete(http_parser *parser)
  */
 static esp_err_t cb_on_body(http_parser *parser, const char *at, size_t length)
 {
-    parser_data_t *parser_data = (parser_data_t *) parser->data;
+    parser_data_t *parser_data = (parser_data_t *)parser->data;
 
     /* Check previous status */
     if (parser_data->status != PARSING_BODY) {
@@ -440,9 +440,9 @@ static esp_err_t cb_on_body(http_parser *parser, const char *at, size_t length)
         return ESP_FAIL;
     }
 
-    parser_data->last.at     = 0;
+    parser_data->last.at = 0;
     parser_data->last.length = 0;
-    parser_data->status      = PARSING_COMPLETE;
+    parser_data->status = PARSING_COMPLETE;
     ESP_LOGD(TAG, LOG_FMT("body begins"));
     return ESP_OK;
 }
@@ -452,7 +452,7 @@ static esp_err_t cb_on_body(http_parser *parser, const char *at, size_t length)
  */
 static esp_err_t cb_no_body(http_parser *parser)
 {
-    parser_data_t *parser_data = (parser_data_t *) parser->data;
+    parser_data_t *parser_data = (parser_data_t *)parser->data;
 
     /* Check previous status */
     if (parser_data->status == PARSING_URL) {
@@ -481,16 +481,16 @@ static esp_err_t cb_no_body(http_parser *parser)
         return ESP_FAIL;
     }
 
-    parser_data->last.at     = 0;
+    parser_data->last.at = 0;
     parser_data->last.length = 0;
-    parser_data->status      = PARSING_COMPLETE;
+    parser_data->status = PARSING_COMPLETE;
     ESP_LOGD(TAG, LOG_FMT("message complete"));
     return ESP_OK;
 }
 
 static int read_block(httpd_req_t *req, size_t offset, size_t length)
 {
-    struct httpd_req_aux *raux  = req->aux;
+    struct httpd_req_aux *raux = req->aux;
 
     /* Limits the read to scratch buffer size */
     ssize_t buf_len = MIN(length, (sizeof(raux->scratch) - offset));
@@ -510,8 +510,8 @@ static int read_block(httpd_req_t *req, size_t offset, size_t length)
             /* Invoke error handler which may return ESP_OK
              * to signal for retrying call to recv(), else it may
              * return ESP_FAIL to signal for closure of socket */
-            return (httpd_req_handle_err(req, HTTPD_408_REQ_TIMEOUT) == ESP_OK) ?
-                    HTTPD_SOCK_ERR_TIMEOUT : HTTPD_SOCK_ERR_FAIL;
+            return (httpd_req_handle_err(req, HTTPD_408_REQ_TIMEOUT) == ESP_OK) ? HTTPD_SOCK_ERR_TIMEOUT
+                                                                                : HTTPD_SOCK_ERR_FAIL;
         }
         /* Some socket error occurred. Return failure
          * to force closure of underlying socket.
@@ -531,9 +531,9 @@ static int read_block(httpd_req_t *req, size_t offset, size_t length)
 
 static int parse_block(http_parser *parser, size_t offset, size_t length)
 {
-    parser_data_t        *data  = (parser_data_t *)(parser->data);
-    httpd_req_t          *req   = data->req;
-    struct httpd_req_aux *raux  = req->aux;
+    parser_data_t *data = (parser_data_t *)(parser->data);
+    httpd_req_t *req = data->req;
+    struct httpd_req_aux *raux = req->aux;
     size_t nparsed = 0;
 
     if (!length) {
@@ -570,8 +570,7 @@ static int parse_block(http_parser *parser, size_t offset, size_t length)
     }
 
     /* Execute http_parser */
-    nparsed = http_parser_execute(parser, &data->settings,
-                                  raux->scratch + offset, length);
+    nparsed = http_parser_execute(parser, &data->settings, raux->scratch + offset, length);
 
     /* Check state */
     if (data->status == PARSING_FAILED) {
@@ -589,16 +588,19 @@ static int parse_block(http_parser *parser, size_t offset, size_t length)
         return 0;
     } else if (nparsed != length) {
         /* http_parser error */
-        data->error  = HTTPD_400_BAD_REQUEST;
+        data->error = HTTPD_400_BAD_REQUEST;
         data->status = PARSING_FAILED;
-        ESP_LOGW(TAG, LOG_FMT("incomplete (%"NEWLIB_NANO_COMPAT_FORMAT"/%"NEWLIB_NANO_COMPAT_FORMAT") with parser error = %d"),
+        ESP_LOGW(TAG,
+                 LOG_FMT("incomplete (%" NEWLIB_NANO_COMPAT_FORMAT "/%" NEWLIB_NANO_COMPAT_FORMAT
+                         ") with parser error = %d"),
                  NEWLIB_NANO_COMPAT_CAST(nparsed), NEWLIB_NANO_COMPAT_CAST(length), parser->http_errno);
         return -1;
     }
 
     /* Return with the total length of the request packet
      * that has been parsed till now */
-    ESP_LOGD(TAG, LOG_FMT("parsed block size = %"NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST((offset + nparsed)));
+    ESP_LOGD(TAG, LOG_FMT("parsed block size = %" NEWLIB_NANO_COMPAT_FORMAT),
+             NEWLIB_NANO_COMPAT_CAST((offset + nparsed)));
     return offset + nparsed;
 }
 
@@ -616,11 +618,11 @@ static void parse_init(httpd_req_t *r, http_parser *parser, parser_data_t *data)
     http_parser_settings_init(&data->settings);
 
     /* Set parser callbacks */
-    data->settings.on_url              = cb_url;
-    data->settings.on_header_field     = cb_header_field;
-    data->settings.on_header_value     = cb_header_value;
+    data->settings.on_url = cb_url;
+    data->settings.on_header_field = cb_header_field;
+    data->settings.on_header_value = cb_header_value;
     data->settings.on_headers_complete = cb_headers_complete;
-    data->settings.on_body             = cb_on_body;
+    data->settings.on_body = cb_on_body;
     data->settings.on_message_complete = cb_no_body;
 }
 
@@ -629,8 +631,8 @@ static void parse_init(httpd_req_t *r, http_parser *parser, parser_data_t *data)
 static esp_err_t httpd_parse_req(struct httpd_data *hd)
 {
     httpd_req_t *r = &hd->hd_req;
-    int blk_len,  offset;
-    http_parser   parser = {};
+    int blk_len, offset;
+    http_parser parser = {};
     parser_data_t parser_data = {};
 
     /* Initialize parser */
@@ -675,7 +677,7 @@ static void init_req(httpd_req_t *r, httpd_config_t *config)
 {
     r->handle = 0;
     r->method = 0;
-    memset((char*)r->uri, 0, sizeof(r->uri));
+    memset((char *)r->uri, 0, sizeof(r->uri));
     r->content_len = 0;
     r->aux = 0;
     r->user_ctx = 0;
@@ -761,9 +763,7 @@ esp_err_t httpd_req_new(struct httpd_data *hd, struct sock_db *sd)
     r->user_ctx = sd->ws_user_ctx;
     /* Handle WebSocket */
     ESP_LOGD(TAG, LOG_FMT("New request, has WS? %s, sd->ws_handler valid? %s, sd->ws_close? %s"),
-             sd->ws_handshake_done ? "Yes" : "No",
-             sd->ws_handler != NULL ? "Yes" : "No",
-             sd->ws_close ? "Yes" : "No");
+             sd->ws_handshake_done ? "Yes" : "No", sd->ws_handler != NULL ? "Yes" : "No", sd->ws_close ? "Yes" : "No");
     if (sd->ws_handshake_done && sd->ws_handler != NULL) {
         if (sd->ws_close == true) {
             /* WS was marked as close state, do not deal with this socket */
@@ -783,8 +783,7 @@ esp_err_t httpd_req_new(struct httpd_data *hd, struct sock_db *sd)
         }
 
         /* Call handler if it's a non-control frame (or if handler requests control frames, as well) */
-        if (ret == ESP_OK &&
-            (ra->ws_type < HTTPD_WS_TYPE_CLOSE || sd->ws_control_frames)) {
+        if (ret == ESP_OK && (ra->ws_type < HTTPD_WS_TYPE_CLOSE || sd->ws_control_frames)) {
             ret = sd->ws_handler(r);
         }
 
@@ -844,7 +843,7 @@ esp_err_t httpd_req_delete(struct httpd_data *hd)
 bool httpd_validate_req_ptr(httpd_req_t *r)
 {
     if (r) {
-        struct httpd_data *hd = (struct httpd_data *) r->handle;
+        struct httpd_data *hd = (struct httpd_data *)r->handle;
         if (hd) {
             /* Check if this function is running in the context of
              * the correct httpd server thread */
@@ -863,8 +862,8 @@ esp_err_t httpd_query_key_value(const char *qry_str, const char *key, char *val,
         return ESP_ERR_INVALID_ARG;
     }
 
-    const char   *qry_ptr = qry_str;
-    const size_t  buf_len = val_size;
+    const char *qry_ptr = qry_str;
+    const size_t buf_len = val_size;
 
     while (strlen(qry_ptr)) {
         /* Search for the '=' character. Else, it would mean
@@ -878,8 +877,7 @@ esp_err_t httpd_query_key_value(const char *qry_str, const char *key, char *val,
         /* If the key, does not match, continue searching.
          * Compare lengths first as key from url is not
          * null terminated (has '=' in the end) */
-        if ((offset != strlen(key)) ||
-            (strncasecmp(qry_ptr, key, offset))) {
+        if ((offset != strlen(key)) || (strncasecmp(qry_ptr, key, offset))) {
             /* Get the name=val string. Multiple name=value pairs
              * are separated by '&' */
             qry_ptr = strchr(val_ptr, '&');
@@ -924,7 +922,7 @@ size_t httpd_req_get_url_query_len(httpd_req_t *r)
         return 0;
     }
 
-    struct httpd_req_aux   *ra  = r->aux;
+    struct httpd_req_aux *ra = r->aux;
     struct http_parser_url *res = &ra->url_parse_res;
 
     /* Check if query field is present in the URL */
@@ -944,7 +942,7 @@ esp_err_t httpd_req_get_url_query_str(httpd_req_t *r, char *buf, size_t buf_len)
         return ESP_ERR_HTTPD_INVALID_REQ;
     }
 
-    struct httpd_req_aux   *ra  = r->aux;
+    struct httpd_req_aux *ra = r->aux;
     struct http_parser_url *res = &ra->url_parse_res;
 
     /* Check if query field is present in the URL */
@@ -976,8 +974,8 @@ size_t httpd_req_get_hdr_value_len(httpd_req_t *r, const char *field)
     }
 
     struct httpd_req_aux *ra = r->aux;
-    const char   *hdr_ptr = ra->scratch;         /*!< Request headers are kept in scratch buffer */
-    unsigned      count   = ra->req_hdrs_count;  /*!< Count set during parsing  */
+    const char *hdr_ptr = ra->scratch;   /*!< Request headers are kept in scratch buffer */
+    unsigned count = ra->req_hdrs_count; /*!< Count set during parsing  */
 
     while (count--) {
         /* Search for the ':' character. Else, it would mean
@@ -992,8 +990,7 @@ size_t httpd_req_get_hdr_value_len(httpd_req_t *r, const char *field)
          * Compare lengths first as field from header is not
          * null terminated (has ':' in the end).
          */
-        if ((val_ptr - hdr_ptr != strlen(field)) ||
-            (strncasecmp(hdr_ptr, field, strlen(field)))) {
+        if ((val_ptr - hdr_ptr != strlen(field)) || (strncasecmp(hdr_ptr, field, strlen(field)))) {
             if (count) {
                 /* Jump to end of header field-value string */
                 hdr_ptr = 1 + strchr(hdr_ptr, '\0');
@@ -1031,9 +1028,9 @@ esp_err_t httpd_req_get_hdr_value_str(httpd_req_t *r, const char *field, char *v
     }
 
     struct httpd_req_aux *ra = r->aux;
-    const char   *hdr_ptr = ra->scratch;         /*!< Request headers are kept in scratch buffer */
-    unsigned     count    = ra->req_hdrs_count;  /*!< Count set during parsing  */
-    const size_t buf_len  = val_size;
+    const char *hdr_ptr = ra->scratch;   /*!< Request headers are kept in scratch buffer */
+    unsigned count = ra->req_hdrs_count; /*!< Count set during parsing  */
+    const size_t buf_len = val_size;
 
     while (count--) {
         /* Search for the ':' character. Else, it would mean
@@ -1048,8 +1045,7 @@ esp_err_t httpd_req_get_hdr_value_str(httpd_req_t *r, const char *field, char *v
          * Compare lengths first as field from header is not
          * null terminated (has ':' in the end).
          */
-        if ((val_ptr - hdr_ptr != strlen(field)) ||
-            (strncasecmp(hdr_ptr, field, strlen(field)))) {
+        if ((val_ptr - hdr_ptr != strlen(field)) || (strncasecmp(hdr_ptr, field, strlen(field)))) {
             if (count) {
                 /* Jump to end of header field-value string */
                 hdr_ptr = 1 + strchr(hdr_ptr, '\0');
@@ -1172,5 +1168,4 @@ esp_err_t httpd_req_get_cookie_val(httpd_req_t *req, const char *cookie_name, ch
     ret = httpd_cookie_key_value(cookie_str, cookie_name, val, val_size);
     free(cookie_str);
     return ret;
-
 }

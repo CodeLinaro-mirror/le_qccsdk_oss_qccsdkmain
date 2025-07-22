@@ -1,11 +1,11 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
-#ifndef  _HAL_INT_INTERRUPT_H_
+#ifndef _HAL_INT_INTERRUPT_H_
 
-#define  _HAL_INT_INTERRUPT_H_
+#define _HAL_INT_INTERRUPT_H_
 
 #include <stdint.h>
 
@@ -26,11 +26,11 @@ extern void (*mic_error_interrupt_cb)(void);
 extern void (*bad_decrypt_error_interrupt_cb)(void);
 extern void (*eosp_interrupt_cb)(uint8_t tid, uint8_t more_bit, uint8_t staid);
 extern void (*more_bit_interrupt_cb)(void);
-extern void(*nt_rtt_t4_capture_interrupt_cb)();
-extern void(*nt_rtt_t2_capture_interrupt_cb)();
+extern void (*nt_rtt_t4_capture_interrupt_cb)();
+extern void (*nt_rtt_t2_capture_interrupt_cb)();
 
-extern void(*tx_bd_complete_interrupt_cb)();
-extern  void (*bmu_error_interrupt_cb)(void);
+extern void (*tx_bd_complete_interrupt_cb)();
+extern void (*bmu_error_interrupt_cb)(void);
 extern void (*rpe_error_interrupt_cb)(void);
 extern void (*phy_hif_fiq_interrupt_cb)(void);
 extern void (*phy_fiq_irq_interrupt_cb)(void);
@@ -68,4 +68,4 @@ extern void (*wur_beacon_miss_interrupt_cb)();
 extern void (*wur_crc_packet_error_interrupt_cb)();
 #endif
 
-#endif //_HAL_INT_INTERRUPT_H_
+#endif  //_HAL_INT_INTERRUPT_H_

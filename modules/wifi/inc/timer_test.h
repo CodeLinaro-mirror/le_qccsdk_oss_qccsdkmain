@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*========================================================================
 
 * @file timer_test.h
@@ -10,8 +10,8 @@
 #ifndef TIMER_TEST_H
 #define TIMER_TEST_H
 /*------------------------------------------------------------------------
-* Include Files
-* ----------------------------------------------------------------------*/
+ * Include Files
+ * ----------------------------------------------------------------------*/
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -21,9 +21,9 @@
 
 #if (defined(SUPPORT_HIGH_RES_TIMER) && defined(HRES_TIMER_UNIT_TEST))
 /*-------------------------------------------------------------------------
-* Preprocessor Definitions and Constants
-* ----------------------------------------------------------------------*/
-#define TMR_TEST_CMD_QUEUE_LEN         10   /* unit test command queue */
+ * Preprocessor Definitions and Constants
+ * ----------------------------------------------------------------------*/
+#define TMR_TEST_CMD_QUEUE_LEN 10 /* unit test command queue */
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -33,13 +33,12 @@ typedef enum {
     TMR_MSG_ID_UNTIMEOUT,
 } tmr_msg_id_t;
 
-typedef struct
-{
-    bool                reload;
-    uint8_t             msg_id; /* tmr_msg_id_t */
-    time_unit_type      unit;
-    timer_ptr_type      p_handle;
-    time_timetick_type  time;
+typedef struct {
+    bool reload;
+    uint8_t msg_id; /* tmr_msg_id_t */
+    time_unit_type unit;
+    timer_ptr_type p_handle;
+    time_timetick_type time;
 } tmr_test_msg_t;
 
 /*-------------------------------------------------------------------------

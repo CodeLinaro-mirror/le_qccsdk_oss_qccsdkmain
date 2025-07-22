@@ -26,8 +26,8 @@
 
 #ifdef CONFIG_HTTPD_WS_SUPPORT
 
-#define WS_SEND_OK      (1 << 0)
-#define WS_SEND_FAILED  (1 << 1)
+#define WS_SEND_OK     (1 << 0)
+#define WS_SEND_FAILED (1 << 1)
 
 typedef struct {
     httpd_ws_frame_t frame;
@@ -39,17 +39,17 @@ typedef struct {
     EventGroupHandle_t transfer_done;
 } async_transfer_t;
 
-static const char *TAG="httpd_ws";
+static const char *TAG = "httpd_ws";
 
 /*
  * Bit masks for WebSocket frames.
  * Please refer to RFC6455 Section 5.2 for more details.
  */
-#define HTTPD_WS_CONTINUE       0x00U
-#define HTTPD_WS_FIN_BIT        0x80U
-#define HTTPD_WS_OPCODE_BITS    0x0fU
-#define HTTPD_WS_MASK_BIT       0x80U
-#define HTTPD_WS_LENGTH_BITS    0x7fU
+#define HTTPD_WS_CONTINUE    0x00U
+#define HTTPD_WS_FIN_BIT     0x80U
+#define HTTPD_WS_OPCODE_BITS 0x0fU
+#define HTTPD_WS_MASK_BIT    0x80U
+#define HTTPD_WS_LENGTH_BITS 0x7fU
 
 /*
  * The magic GUID string used for handshake
@@ -60,7 +60,7 @@ static const char ws_magic_uuid[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 /* Checks if any subprotocols from the comma seperated list matches the supported one
  *
  * Returns true if the response should contain a protocol field
-*/
+ */
 
 /**
  * @brief Checks if any subprotocols from the comma seperated list matches the supported one
@@ -93,11 +93,11 @@ static bool httpd_ws_get_response_subprotocol(const char *supported_subprotocol,
         }
     } while ((s = strtok_r(NULL, ", ", &rest)) != NULL);
 
-    ESP_LOGW(TAG, "Sec-WebSocket-Protocol %s not supported, supported subprotocol is %s", subprotocol, supported_subprotocol);
+    ESP_LOGW(TAG, "Sec-WebSocket-Protocol %s not supported, supported subprotocol is %s", subprotocol,
+             supported_subprotocol);
 
     /* No matches */
     return false;
-
 }
 
 esp_err_t httpd_ws_respond_server_handshake(httpd_req_t *req, const char *supported_subprotocol)
@@ -116,7 +116,7 @@ esp_err_t httpd_ws_respond_server_handshake(httpd_req_t *req, const char *suppor
     }
 
     /* Detect WS version existence */
-    char version_val[3] = { '\0' };
+    char version_val[3] = {'\0'};
     if (httpd_req_get_hdr_value_str(req, "Sec-WebSocket-Version", version_val, sizeof(version_val)) != ESP_OK) {
         ESP_LOGW(TAG, LOG_FMT("\"Sec-WebSocket-Version\" is not found"));
         return ESP_ERR_NOT_FOUND;
@@ -131,16 +131,16 @@ esp_err_t httpd_ws_respond_server_handshake(httpd_req_t *req, const char *suppor
 
     /* Grab Sec-WebSocket-Key (client key) from the header */
     /* Size of base64 coded string is equal '((input_size * 4) / 3) + (input_size / 96) + 6' including Z-term */
-    char sec_key_encoded[28] = { '\0' };
+    char sec_key_encoded[28] = {'\0'};
     if (httpd_req_get_hdr_value_str(req, "Sec-WebSocket-Key", sec_key_encoded, sizeof(sec_key_encoded)) != ESP_OK) {
         ESP_LOGW(TAG, LOG_FMT("Cannot find client key"));
         return ESP_ERR_NOT_FOUND;
     }
 
     /* Prepare server key (Sec-WebSocket-Accept), concat the string */
-    char server_key_encoded[33] = { '\0' };
-    uint8_t server_key_hash[20] = { 0 };
-    char server_raw_text[sizeof(sec_key_encoded) + sizeof(ws_magic_uuid) + 1] = { '\0' };
+    char server_key_encoded[33] = {'\0'};
+    uint8_t server_key_hash[20] = {0};
+    char server_raw_text[sizeof(sec_key_encoded) + sizeof(ws_magic_uuid) + 1] = {'\0'};
 
     strlcpy(server_raw_text, sec_key_encoded, strlen(sec_key_encoded));
     strlcat(server_raw_text, ws_magic_uuid, strlen(ws_magic_uuid));
@@ -152,58 +152,72 @@ esp_err_t httpd_ws_respond_server_handshake(httpd_req_t *req, const char *suppor
     mbedtls_sha1((uint8_t *)server_raw_text, key_len, server_key_hash);
 
     size_t encoded_len = 0;
-    mbedtls_base64_encode((uint8_t *)server_key_encoded, sizeof(server_key_encoded), &encoded_len,
-                          server_key_hash, sizeof(server_key_hash));
+    mbedtls_base64_encode((uint8_t *)server_key_encoded, sizeof(server_key_encoded), &encoded_len, server_key_hash,
+                          sizeof(server_key_hash));
 
     ESP_LOGD(TAG, LOG_FMT("Generated server key: %s"), server_key_encoded);
 
-    char subprotocol[50] = { '\0' };
-    if (httpd_req_get_hdr_value_str(req, "Sec-WebSocket-Protocol", subprotocol, sizeof(subprotocol) - 1) == ESP_ERR_HTTPD_RESULT_TRUNC) {
-        ESP_LOGW(TAG, "Sec-WebSocket-Protocol length exceeded buffer size of %"NEWLIB_NANO_COMPAT_FORMAT", was trunctated", NEWLIB_NANO_COMPAT_CAST(sizeof(subprotocol)));
+    char subprotocol[50] = {'\0'};
+    if (httpd_req_get_hdr_value_str(req, "Sec-WebSocket-Protocol", subprotocol, sizeof(subprotocol) - 1) ==
+        ESP_ERR_HTTPD_RESULT_TRUNC) {
+        ESP_LOGW(TAG,
+                 "Sec-WebSocket-Protocol length exceeded buffer size of %" NEWLIB_NANO_COMPAT_FORMAT ", was trunctated",
+                 NEWLIB_NANO_COMPAT_CAST(sizeof(subprotocol)));
     }
 
-
     /* Prepare the Switching Protocol response */
-    char tx_buf[192] = { '\0' };
+    char tx_buf[192] = {'\0'};
     int fmt_len = snprintf(tx_buf, sizeof(tx_buf),
                            "HTTP/1.1 101 Switching Protocols\r\n"
                            "Upgrade: websocket\r\n"
                            "Connection: Upgrade\r\n"
-                           "Sec-WebSocket-Accept: %s\r\n", server_key_encoded);
+                           "Sec-WebSocket-Accept: %s\r\n",
+                           server_key_encoded);
 
     if (fmt_len < 0 || fmt_len > sizeof(tx_buf)) {
         ESP_LOGW(TAG, LOG_FMT("Failed to prepare Tx buffer"));
         return ESP_FAIL;
     }
 
-    if ( httpd_ws_get_response_subprotocol(supported_subprotocol, subprotocol, sizeof(subprotocol))) {
+    if (httpd_ws_get_response_subprotocol(supported_subprotocol, subprotocol, sizeof(subprotocol))) {
         ESP_LOGD(TAG, "subprotocol: %s", subprotocol);
-        int r = snprintf(tx_buf + fmt_len, sizeof(tx_buf) - fmt_len, "Sec-WebSocket-Protocol: %s\r\n", supported_subprotocol);
+        int r = snprintf(tx_buf + fmt_len, sizeof(tx_buf) - fmt_len, "Sec-WebSocket-Protocol: %s\r\n",
+                         supported_subprotocol);
         if (r <= 0) {
-            ESP_LOGE(TAG, "Error in response generation"
-                          "(snprintf of subprotocol returned %d, buffer size: %"NEWLIB_NANO_COMPAT_FORMAT, r, NEWLIB_NANO_COMPAT_CAST(sizeof(tx_buf)));
+            ESP_LOGE(TAG,
+                     "Error in response generation"
+                     "(snprintf of subprotocol returned %d, buffer size: %" NEWLIB_NANO_COMPAT_FORMAT,
+                     r, NEWLIB_NANO_COMPAT_CAST(sizeof(tx_buf)));
             return ESP_FAIL;
         }
 
         fmt_len += r;
 
         if (fmt_len >= sizeof(tx_buf)) {
-            ESP_LOGE(TAG, "Error in response generation"
-                          "(snprintf of subprotocol returned %d, desired response len: %d, buffer size: %"NEWLIB_NANO_COMPAT_FORMAT, r, fmt_len, NEWLIB_NANO_COMPAT_CAST(sizeof(tx_buf)));
+            ESP_LOGE(TAG,
+                     "Error in response generation"
+                     "(snprintf of subprotocol returned %d, desired response len: %d, buffer size: "
+                     "%" NEWLIB_NANO_COMPAT_FORMAT,
+                     r, fmt_len, NEWLIB_NANO_COMPAT_CAST(sizeof(tx_buf)));
             return ESP_FAIL;
         }
     }
 
     int r = snprintf(tx_buf + fmt_len, sizeof(tx_buf) - fmt_len, "\r\n");
     if (r <= 0) {
-        ESP_LOGE(TAG, "Error in response generation"
-                        "(snprintf of subprotocol returned %d, buffer size: %"NEWLIB_NANO_COMPAT_FORMAT, r, NEWLIB_NANO_COMPAT_CAST(sizeof(tx_buf)));
+        ESP_LOGE(TAG,
+                 "Error in response generation"
+                 "(snprintf of subprotocol returned %d, buffer size: %" NEWLIB_NANO_COMPAT_FORMAT,
+                 r, NEWLIB_NANO_COMPAT_CAST(sizeof(tx_buf)));
         return ESP_FAIL;
     }
     fmt_len += r;
     if (fmt_len >= sizeof(tx_buf)) {
-        ESP_LOGE(TAG, "Error in response generation"
-                       "(snprintf of header terminal returned %d, desired response len: %d, buffer size: %"NEWLIB_NANO_COMPAT_FORMAT, r, fmt_len, NEWLIB_NANO_COMPAT_CAST(sizeof(tx_buf)));
+        ESP_LOGE(TAG,
+                 "Error in response generation"
+                 "(snprintf of header terminal returned %d, desired response len: %d, buffer size: "
+                 "%" NEWLIB_NANO_COMPAT_FORMAT,
+                 r, fmt_len, NEWLIB_NANO_COMPAT_CAST(sizeof(tx_buf)));
         return ESP_FAIL;
     }
 
@@ -265,7 +279,8 @@ esp_err_t httpd_ws_recv_frame(httpd_req_t *req, httpd_ws_frame_t *frame, size_t 
         ESP_LOGW(TAG, LOG_FMT("Frame pointer is invalid"));
         return ESP_ERR_INVALID_ARG;
     }
-    /* If frame len is 0, will get frame len from req. Otherwise regard frame len already achieved by calling httpd_ws_recv_frame before */
+    /* If frame len is 0, will get frame len from req. Otherwise regard frame len already achieved by calling
+     * httpd_ws_recv_frame before */
     if (frame->len == 0) {
         /* Assign the frame info from the previous reading */
         frame->type = aux->ws_type;
@@ -289,7 +304,7 @@ esp_err_t httpd_ws_recv_frame(httpd_req_t *req, httpd_ws_frame_t *frame, size_t 
             frame->len = init_len;
         } else if (init_len == 126) {
             /* Case 2: If length byte is 126, then this frame's length bit is 16 bits */
-            uint8_t length_bytes[2] = { 0 };
+            uint8_t length_bytes[2] = {0};
             if (httpd_recv_with_opt(req, (char *)length_bytes, sizeof(length_bytes), false) <= 0) {
                 ESP_LOGW(TAG, LOG_FMT("Failed to receive 2 bytes length"));
                 return ESP_FAIL;
@@ -298,20 +313,16 @@ esp_err_t httpd_ws_recv_frame(httpd_req_t *req, httpd_ws_frame_t *frame, size_t 
             frame->len = ((uint32_t)(length_bytes[0] << 8U) | (length_bytes[1]));
         } else if (init_len == 127) {
             /* Case 3: If length is byte 127, then this frame's length bit is 64 bits */
-            uint8_t length_bytes[8] = { 0 };
+            uint8_t length_bytes[8] = {0};
             if (httpd_recv_with_opt(req, (char *)length_bytes, sizeof(length_bytes), false) <= 0) {
                 ESP_LOGW(TAG, LOG_FMT("Failed to receive 2 bytes length"));
                 return ESP_FAIL;
             }
 
-            frame->len = (((uint64_t)length_bytes[0] << 56U) |
-                    ((uint64_t)length_bytes[1] << 48U) |
-                    ((uint64_t)length_bytes[2] << 40U) |
-                    ((uint64_t)length_bytes[3] << 32U) |
-                    ((uint64_t)length_bytes[4] << 24U) |
-                    ((uint64_t)length_bytes[5] << 16U) |
-                    ((uint64_t)length_bytes[6] <<  8U) |
-                    ((uint64_t)length_bytes[7]));
+            frame->len = (((uint64_t)length_bytes[0] << 56U) | ((uint64_t)length_bytes[1] << 48U) |
+                          ((uint64_t)length_bytes[2] << 40U) | ((uint64_t)length_bytes[3] << 32U) |
+                          ((uint64_t)length_bytes[4] << 24U) | ((uint64_t)length_bytes[5] << 16U) |
+                          ((uint64_t)length_bytes[6] << 8U) | ((uint64_t)length_bytes[7]));
         }
         /* If this frame is masked, dump the mask as well */
         if (masked) {
@@ -360,7 +371,8 @@ esp_err_t httpd_ws_recv_frame(httpd_req_t *req, httpd_ws_frame_t *frame, size_t 
         offset += read_len;
         left_len -= read_len;
 
-        ESP_LOGD(TAG, "Frame length: %"NEWLIB_NANO_COMPAT_FORMAT", Bytes Read: %"NEWLIB_NANO_COMPAT_FORMAT, NEWLIB_NANO_COMPAT_CAST(frame->len), NEWLIB_NANO_COMPAT_CAST(offset));
+        ESP_LOGD(TAG, "Frame length: %" NEWLIB_NANO_COMPAT_FORMAT ", Bytes Read: %" NEWLIB_NANO_COMPAT_FORMAT,
+                 NEWLIB_NANO_COMPAT_CAST(frame->len), NEWLIB_NANO_COMPAT_CAST(offset));
     }
 
     /* Unmask payload */
@@ -387,24 +399,24 @@ esp_err_t httpd_ws_send_frame_async(httpd_handle_t hd, int fd, httpd_ws_frame_t 
 
     /* Prepare Tx buffer - maximum length is 14, which includes 2 bytes header, 8 bytes length, 4 bytes mask key */
     uint8_t tx_len = 0;
-    uint8_t header_buf[10] = {0 };
+    uint8_t header_buf[10] = {0};
     /* Set the `FIN` bit by default if message is not fragmented. Else, set it as per the `final` field */
-    header_buf[0] |= (!frame->fragmented) ? HTTPD_WS_FIN_BIT : (frame->final? HTTPD_WS_FIN_BIT: HTTPD_WS_CONTINUE);
+    header_buf[0] |= (!frame->fragmented) ? HTTPD_WS_FIN_BIT : (frame->final ? HTTPD_WS_FIN_BIT : HTTPD_WS_CONTINUE);
     header_buf[0] |= frame->type; /* Type (opcode): 4 bits */
 
     if (frame->len <= 125) {
         header_buf[1] = frame->len & 0x7fU; /* Length for 7 bits */
         tx_len = 2;
     } else if (frame->len > 125 && frame->len < UINT16_MAX) {
-        header_buf[1] = 126;                /* Length for 16 bits */
+        header_buf[1] = 126; /* Length for 16 bits */
         header_buf[2] = (frame->len >> 8U) & 0xffU;
         header_buf[3] = frame->len & 0xffU;
         tx_len = 4;
     } else {
-        header_buf[1] = 127;                /* Length for 64 bits */
+        header_buf[1] = 127;                      /* Length for 64 bits */
         uint8_t shift_idx = sizeof(uint64_t) - 1; /* Shift index starts at 7 */
-        uint64_t len64 = frame->len; /* Raise variable size to make sure we won't shift by more bits
-                                      * than the length has (to avoid undefined behaviour) */
+        uint64_t len64 = frame->len;              /* Raise variable size to make sure we won't shift by more bits
+                                                   * than the length has (to avoid undefined behaviour) */
         for (int8_t idx = 2; idx <= 9; idx++) {
             /* Now do shifting (be careful of endianness, i.e. when buffer index is 2, frame length shift index is 7) */
             header_buf[idx] = (len64 >> (shift_idx * 8)) & 0xffU;
@@ -428,7 +440,7 @@ esp_err_t httpd_ws_send_frame_async(httpd_handle_t hd, int fd, httpd_ws_frame_t 
     }
 
     /* Send off payload */
-    if(frame->len > 0 && frame->payload != NULL) {
+    if (frame->len > 0 && frame->payload != NULL) {
         if (sess->send_fn(hd, fd, (const char *)frame->payload, frame->len, 0) < 0) {
             ESP_LOGW(TAG, LOG_FMT("Failed to send WS payload"));
             return ESP_FAIL;
@@ -486,7 +498,7 @@ esp_err_t httpd_ws_get_frame_type(httpd_req_t *req)
             /* Read the rest of the PING frame, for PONG to reply back. */
             /* Please refer to RFC6455 Section 5.5.2 for more details */
             httpd_ws_frame_t frame;
-            uint8_t frame_buf[128] = { 0 };
+            uint8_t frame_buf[128] = {0};
             memset(&frame, 0, sizeof(httpd_ws_frame_t));
             frame.payload = frame_buf;
 
@@ -504,7 +516,7 @@ esp_err_t httpd_ws_get_frame_type(httpd_req_t *req)
             /* Read the rest of the CLOSE frame and response */
             /* Please refer to RFC6455 Section 5.5.1 for more details */
             httpd_ws_frame_t frame;
-            uint8_t frame_buf[128] = { 0 };
+            uint8_t frame_buf[128] = {0};
             memset(&frame, 0, sizeof(httpd_ws_frame_t));
             frame.payload = frame_buf;
 
@@ -574,8 +586,8 @@ esp_err_t httpd_ws_send_data(httpd_handle_t handle, int socket, httpd_ws_frame_t
         return err;
     }
 
-    EventBits_t status = xEventGroupWaitBits(transfer_done, WS_SEND_OK | WS_SEND_FAILED,
-                                             pdTRUE, pdFALSE, portMAX_DELAY);
+    EventBits_t status =
+        xEventGroupWaitBits(transfer_done, WS_SEND_OK | WS_SEND_FAILED, pdTRUE, pdFALSE, portMAX_DELAY);
 
     vEventGroupDelete(transfer_done);
 

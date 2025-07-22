@@ -1,5 +1,5 @@
 /*
-*/
+ */
 /*
  */
 
@@ -111,39 +111,28 @@ enum wps_attribute {
     ATTR_REQUESTED_DEV_TYPE = 0x106a
 };
 #ifdef NT_FN_WPS
-int wps_build_manufacturer(WPS_DEVICE_INFO *dev,
-        struct wpsbuf *msg);
-int wps_build_model_name(WPS_DEVICE_INFO *dev,
-        struct wpsbuf *msg);
-int wps_build_model_number(WPS_DEVICE_INFO *dev,
-        struct wpsbuf *msg);
-int wps_build_serial_number(WPS_DEVICE_INFO *dev,
-        struct wpsbuf *msg);
+int wps_build_manufacturer(WPS_DEVICE_INFO *dev, struct wpsbuf *msg);
+int wps_build_model_name(WPS_DEVICE_INFO *dev, struct wpsbuf *msg);
+int wps_build_model_number(WPS_DEVICE_INFO *dev, struct wpsbuf *msg);
+int wps_build_serial_number(WPS_DEVICE_INFO *dev, struct wpsbuf *msg);
 
 int wps_build_secondary_dev_type(WPS_DEVICE_INFO *dev, struct wpsbuf *msg);
 
-int wps_build_req_dev_type(WPS_DEVICE_INFO *dev, struct wpsbuf *msg,
-                unsigned int num_req_dev_types, const uint8_t *req_dev_types);
+int wps_build_req_dev_type(WPS_DEVICE_INFO *dev, struct wpsbuf *msg, unsigned int num_req_dev_types,
+                           const uint8_t *req_dev_types);
 
 int wps_build_device_attrs(WPS_DEVICE_INFO *dev, struct wpsbuf *msg);
 int wps_build_os_version(WPS_DEVICE_INFO *dev, struct wpsbuf *msg);
 
-int wps_process_manufacturer(WPS_DEVICE_INFO *dev, const uint8_t *str,
-        size_t str_len);
-int wps_process_model_name(WPS_DEVICE_INFO *dev, const uint8_t *str,
-        size_t str_len);
-int wps_process_model_number(WPS_DEVICE_INFO *dev,
-        const uint8_t *str, size_t str_len);
-int wps_process_serial_number(WPS_DEVICE_INFO *dev,
-        const uint8_t *str, size_t str_len);
-int wps_process_dev_name(WPS_DEVICE_INFO *dev, const uint8_t *str,
-        size_t str_len);
-int wps_process_primary_dev_type(WPS_DEVICE_INFO *dev,
-        const uint8_t *dev_type);
-int wps_process_device_attrs(WPS_DEVICE_INFO *dev,
-        WPS_PARSE_ATTR *attr);
+int wps_process_manufacturer(WPS_DEVICE_INFO *dev, const uint8_t *str, size_t str_len);
+int wps_process_model_name(WPS_DEVICE_INFO *dev, const uint8_t *str, size_t str_len);
+int wps_process_model_number(WPS_DEVICE_INFO *dev, const uint8_t *str, size_t str_len);
+int wps_process_serial_number(WPS_DEVICE_INFO *dev, const uint8_t *str, size_t str_len);
+int wps_process_dev_name(WPS_DEVICE_INFO *dev, const uint8_t *str, size_t str_len);
+int wps_process_primary_dev_type(WPS_DEVICE_INFO *dev, const uint8_t *dev_type);
+int wps_process_device_attrs(WPS_DEVICE_INFO *dev, WPS_PARSE_ATTR *attr);
 
 int wps_process_os_version(WPS_DEVICE_INFO *dev, const uint8_t *ver);
-#endif//NT_FN_WPS
+#endif  // NT_FN_WPS
 
 #endif /* WPS_DEV_ATTR_H */

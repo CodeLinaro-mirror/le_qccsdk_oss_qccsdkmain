@@ -1,12 +1,12 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*========================================================================
-*
-* @file qtmr.h
-* @brief QTMR param and struct definitions
-*========================================================================*/
+ *
+ * @file qtmr.h
+ * @brief QTMR param and struct definitions
+ *========================================================================*/
 #ifndef QTMR_H
 #define QTMR_H
 
@@ -21,11 +21,11 @@
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
  * ----------------------------------------------------------------------*/
-#define QTMR_0_INT      (4) /* IRQn for Qtmr frame 0 */
-#define QTMR_1_INT      (5) /* IRQn for Qtmr frame 1 */
-#define QTMR_2_INT      (6) /* IRQn for Qtmr frame 2 */
-#define QTMR_3_INT      (7) /* IRQn for Qtmr frame 3 */
-#define QTMR_4_INT      (8) /* IRQn for Qtmr frame 4 */
+#define QTMR_0_INT (4) /* IRQn for Qtmr frame 0 */
+#define QTMR_1_INT (5) /* IRQn for Qtmr frame 1 */
+#define QTMR_2_INT (6) /* IRQn for Qtmr frame 2 */
+#define QTMR_3_INT (7) /* IRQn for Qtmr frame 3 */
+#define QTMR_4_INT (8) /* IRQn for Qtmr frame 4 */
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -33,13 +33,12 @@
 /**
  * Qtimer frame type
  */
-typedef enum
-{
-    QTMR_FRAME_PHYSICAL_0,      /**< Qtimer Physical Frame-0 */
-    QTMR_FRAME_PHYSICAL_1,      /**< Qtimer Physical Frame-1 */
-    QTMR_FRAME_PHYSICAL_2,      /**< Qtimer Physical Frame-2 */
-    QTMR_FRAME_PHYSICAL_3,      /**< Qtimer Physical Frame-3 */
-    QTMR_FRAME_PHYSICAL_4,      /**< Qtimer Physical Frame-4 */
+typedef enum {
+    QTMR_FRAME_PHYSICAL_0, /**< Qtimer Physical Frame-0 */
+    QTMR_FRAME_PHYSICAL_1, /**< Qtimer Physical Frame-1 */
+    QTMR_FRAME_PHYSICAL_2, /**< Qtimer Physical Frame-2 */
+    QTMR_FRAME_PHYSICAL_3, /**< Qtimer Physical Frame-3 */
+    QTMR_FRAME_PHYSICAL_4, /**< Qtimer Physical Frame-4 */
 } qtmr_frame_t;
 
 /*-------------------------------------------------------------------------
@@ -110,4 +109,3 @@ void qtmr_set_rootclk(bool set_val);
 void qtmr_print_sync_data(void);
 
 #endif /* #ifndef QTMR_H */
-

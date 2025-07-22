@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*============================================================================
 @file unpa_client.c
 
@@ -11,7 +11,7 @@ Client routines in the UNPA framework
 ============================================================================*/
 
 #include "unpa_internal.h"
-#include "nt_osal.h" // added for replacing malloc with nt_osal_allocate_memory
+#include "nt_osal.h"  // added for replacing malloc with nt_osal_allocate_memory
 /*----------------------------------------------------------------------------
  * Functions
  * -------------------------------------------------------------------------*/
@@ -32,64 +32,56 @@ Client routines in the UNPA framework
  *
  * @return If successful, a pointer to a unpa_client structure; else, NULL
  */
-unpa_client* unpa_create_client( const char *client_name, uint32_t client_type,
-                                 const char *resource_name )
+unpa_client *unpa_create_client(const char *client_name, uint32_t client_type, const char *resource_name)
 {
-  unpa_resource *resource;
-  unpa_client *client;
-  uint32_t supported_types;
+    unpa_resource *resource;
+    unpa_client *client;
+    uint32_t supported_types;
 
-  CORE_VERIFY_PTR( client_name );
-  CORE_VERIFY_PTR( resource_name );
-  CORE_VERIFY( strlen( client_name ) < UNPA_MAX_NAME_LEN );
+    CORE_VERIFY_PTR(client_name);
+    CORE_VERIFY_PTR(resource_name);
+    CORE_VERIFY(strlen(client_name) < UNPA_MAX_NAME_LEN);
 
-  resource = unpa_get_resource( resource_name );
-  if ( !resource )
-  {
-    return NULL;
-  }
+    resource = unpa_get_resource(resource_name);
+    if (!resource) {
+        return NULL;
+    }
 
-  supported_types = resource->definition->client_types;
-  if ( supported_types == UNPA_UPDATE_CLIENT_TYPES )
-  {
-    supported_types =
-      unpa_get_supported_client_types( resource->definition->update_fcn );
-    CORE_VERIFY( supported_types != 0x0 );
-  }
+    supported_types = resource->definition->client_types;
+    if (supported_types == UNPA_UPDATE_CLIENT_TYPES) {
+        supported_types = unpa_get_supported_client_types(resource->definition->update_fcn);
+        CORE_VERIFY(supported_types != 0x0);
+    }
 
-  if ( !( supported_types & client_type ) )
-  {
-    /* The resource does not support clients of the given type */
-    return NULL;
-  }
+    if (!(supported_types & client_type)) {
+        /* The resource does not support clients of the given type */
+        return NULL;
+    }
 
-  client = (unpa_client *) nt_osal_calloc(1, sizeof(unpa_client) );
-  if (client == NULL) {
-  	return NULL;
-  }
-  CORE_VERIFY_PTR( client );
+    client = (unpa_client *)nt_osal_calloc(1, sizeof(unpa_client));
+    if (client == NULL) {
+        return NULL;
+    }
+    CORE_VERIFY_PTR(client);
 
+    client->name = client_name;
+    client->type = (unsigned char)client_type;
+    client->resource = resource;
+    client->request_attr = UNPA_REQUEST_DEFAULT;
 
-  client->name = client_name;
-  client->type = (unsigned char)client_type;
-  client->resource = resource;
-  client->request_attr = UNPA_REQUEST_DEFAULT;
+    qurt_mutex_lock(&resource->lock);
 
-  qurt_mutex_lock( &resource->lock );
+    client->next = resource->clients;
+    resource->clients = client;
 
-  client->next = resource->clients;
-  resource->clients = client;
+    if (unpa_resource_has_attribute(resource, UNPA_RESOURCE_CLIENT_CHANGE_NOTIFY)) {
+        client->request_attr = UNPA_REQUEST_ADD_CLIENT;
+        resource->definition->driver_fcn(resource, client, 0);
+    }
 
-  if ( unpa_resource_has_attribute( resource,
-                                    UNPA_RESOURCE_CLIENT_CHANGE_NOTIFY ) )
-  {
-    client->request_attr = UNPA_REQUEST_ADD_CLIENT;
-    resource->definition->driver_fcn( resource, client, 0 );
-  }
+    qurt_mutex_unlock(&resource->lock);
 
-  qurt_mutex_unlock( &resource->lock );
-
-  return client;
+    return client;
 }
 
 /**
@@ -98,51 +90,43 @@ unpa_client* unpa_create_client( const char *client_name, uint32_t client_type,
  *
  * @param client: Pointer to the unpa_client to destroy.
  */
-void unpa_destroy_client( unpa_client *client )
+void unpa_destroy_client(unpa_client *client)
 {
-  unpa_client *c, *prevc;
-  unpa_resource *resource;
+    unpa_client *c, *prevc;
+    unpa_resource *resource;
 
-  CORE_VERIFY_PTR( client );
-  CORE_VERIFY_PTR( resource = client->resource );
+    CORE_VERIFY_PTR(client);
+    CORE_VERIFY_PTR(resource = client->resource);
 
-  /* Cancel any active request from client */
-  unpa_cancel_request( client );
+    /* Cancel any active request from client */
+    unpa_cancel_request(client);
 
-  qurt_mutex_lock( &resource->lock );
+    qurt_mutex_lock(&resource->lock);
 
-  for ( prevc = NULL, c = client->resource->clients; c != NULL;
-        prevc = c, c = c->next )
-  {
-    if ( c == client )
-    {
-      if ( prevc == NULL )
-      {
-        client->resource->clients = c->next;
-      }
-      else
-      {
-        prevc->next = c->next;
-      }
-      break;
+    for (prevc = NULL, c = client->resource->clients; c != NULL; prevc = c, c = c->next) {
+        if (c == client) {
+            if (prevc == NULL) {
+                client->resource->clients = c->next;
+            } else {
+                prevc->next = c->next;
+            }
+            break;
+        }
     }
-  }
 
-  /* Verify that the client was indeed associated with resource
-     and is now unlinked */
-  CORE_VERIFY( c != NULL );
+    /* Verify that the client was indeed associated with resource
+       and is now unlinked */
+    CORE_VERIFY(c != NULL);
 
-  if ( unpa_resource_has_attribute( resource,
-                                    UNPA_RESOURCE_CLIENT_CHANGE_NOTIFY ) )
-  {
-    client->request_attr = UNPA_REQUEST_REMOVE_CLIENT;
-    resource->definition->driver_fcn( resource, client, 0 );
-  }
+    if (unpa_resource_has_attribute(resource, UNPA_RESOURCE_CLIENT_CHANGE_NOTIFY)) {
+        client->request_attr = UNPA_REQUEST_REMOVE_CLIENT;
+        resource->definition->driver_fcn(resource, client, 0);
+    }
 
-  qurt_mutex_unlock( &resource->lock );
+    qurt_mutex_unlock(&resource->lock);
 
-  memset( client, 0, sizeof(unpa_client) );
-  free( client );
+    memset(client, 0, sizeof(unpa_client));
+    free(client);
 }
 
 /**
@@ -152,28 +136,26 @@ void unpa_destroy_client( unpa_client *client )
  * issue_required_request or issue_suppressible_request macros, depending on
  * the type of client you are issuing with.
  */
-void unpa_issue_request( unpa_client* client, unpa_resource_state request )
+void unpa_issue_request(unpa_client *client, unpa_resource_state request)
 {
-  CORE_VERIFY_PTR( client );
-  CORE_VERIFY_PTR( client->resource );
+    CORE_VERIFY_PTR(client);
+    CORE_VERIFY_PTR(client->resource);
 
-  if ( request != client->active_request.val )
-  {
-    //UNPA_LOG( &unpa.log, "issue_request (client: XXX) (type: XXX) (resource: XXX) (request: XXX) (req_attr: XXX)" );
+    if (request != client->active_request.val) {
+        // UNPA_LOG( &unpa.log, "issue_request (client: XXX) (type: XXX) (resource: XXX) (request: XXX) (req_attr: XXX)"
+        // );
 
-    qurt_mutex_lock( &client->resource->lock );
+        qurt_mutex_lock(&client->resource->lock);
 
-    client->pending_request.val = request;
+        client->pending_request.val = request;
 
-    unpa_update_resource( client );
-    /* Resource is unlocked in above routine */
-  }
-  else
-  {
-    //UNPA_LOG( &unpa.log, "redundant_request (client: XXX) (request: XXX)" );
-  }
+        unpa_update_resource(client);
+        /* Resource is unlocked in above routine */
+    } else {
+        // UNPA_LOG( &unpa.log, "redundant_request (client: XXX) (request: XXX)" );
+    }
 
-  client->request_attr = UNPA_REQUEST_DEFAULT;
+    client->request_attr = UNPA_REQUEST_DEFAULT;
 }
 
 /**
@@ -185,10 +167,10 @@ void unpa_issue_request( unpa_client* client, unpa_resource_state request )
  *
  * @param client: The client
  */
-void unpa_cancel_request( unpa_client* client )
+void unpa_cancel_request(unpa_client *client)
 {
-  client->request_attr |= UNPA_REQUEST_DROP_VOTE;
-  unpa_issue_request( client, 0 );
+    client->request_attr |= UNPA_REQUEST_DROP_VOTE;
+    unpa_issue_request(client, 0);
 }
 
 /**
@@ -200,33 +182,29 @@ void unpa_cancel_request( unpa_client* client )
  * Attempts to issue a request using a try_lock on the resource; if the lock
  * succeeds, processes the request and returns 0. Else, returns -1.
  */
-int32_t unpa_try_issue_request( unpa_client* client,
-                                unpa_resource_state request )
+int32_t unpa_try_issue_request(unpa_client *client, unpa_resource_state request)
 {
-  int err = 0;
-  CORE_VERIFY_PTR( client );
-  CORE_VERIFY_PTR( client->resource );
+    int err = 0;
+    CORE_VERIFY_PTR(client);
+    CORE_VERIFY_PTR(client->resource);
 
-  if ( request != client->active_request.val )
-  {
-    client->pending_request.val = request;
+    if (request != client->active_request.val) {
+        client->pending_request.val = request;
 
-    //UNPA_LOG( &unpa.log, "try_issue_request (client: XXX) (type: XXX) (resource: XXX) (request: XXX) (req_attr: XXX)" );
+        // UNPA_LOG( &unpa.log, "try_issue_request (client: XXX) (type: XXX) (resource: XXX) (request: XXX) (req_attr:
+        // XXX)" );
 
-    err = qurt_mutex_try_lock( &client->resource->lock );
-    if ( err == 0 )
-    {
-      unpa_update_resource( client );
-      /* Resource is unlocked in above routine */
+        err = qurt_mutex_try_lock(&client->resource->lock);
+        if (err == 0) {
+            unpa_update_resource(client);
+            /* Resource is unlocked in above routine */
+        }
+    } else {
+        // UNPA_LOG( &unpa.log, "redundant_request (client: XXX) (request: XXX)" );
     }
-  }
-  else
-  {
-    //UNPA_LOG( &unpa.log, "redundant_request (client: XXX) (request: XXX)" );
-  }
 
-  client->request_attr = UNPA_REQUEST_DEFAULT;
-  return err;
+    client->request_attr = UNPA_REQUEST_DEFAULT;
+    return err;
 }
 
 /**
@@ -240,8 +218,8 @@ int32_t unpa_try_issue_request( unpa_client* client,
  *
  * @param client: The client
  */
-int32_t unpa_try_cancel_request( unpa_client* client )
+int32_t unpa_try_cancel_request(unpa_client *client)
 {
-  client->request_attr |= UNPA_REQUEST_DROP_VOTE;
-  return unpa_try_issue_request( client, 0 );
+    client->request_attr |= UNPA_REQUEST_DROP_VOTE;
+    return unpa_try_issue_request(client, 0);
 }

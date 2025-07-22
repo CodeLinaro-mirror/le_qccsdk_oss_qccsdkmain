@@ -30,47 +30,47 @@ extern "C" {
 #endif
 
 #if CONFIG_NEWLIB_NANO_FORMAT
-#define NEWLIB_NANO_COMPAT_FORMAT            PRIu32
-#define NEWLIB_NANO_COMPAT_CAST(size_t_var)  (uint32_t)size_t_var
+#define NEWLIB_NANO_COMPAT_FORMAT           PRIu32
+#define NEWLIB_NANO_COMPAT_CAST(size_t_var) (uint32_t) size_t_var
 #else
-#define NEWLIB_NANO_COMPAT_FORMAT            "zu"
-#define NEWLIB_NANO_COMPAT_CAST(size_t_var)  size_t_var
+#define NEWLIB_NANO_COMPAT_FORMAT           "zu"
+#define NEWLIB_NANO_COMPAT_CAST(size_t_var) size_t_var
 #endif
 
 /* Size of request data block/chunk (not to be confused with chunked encoded data)
  * that is received and parsed in one turn of the parsing process. This should not
  * exceed the scratch buffer size and should at least be 8 bytes */
-#define PARSER_BLOCK_SIZE  128
+#define PARSER_BLOCK_SIZE 128
 
 /* Calculate the maximum size needed for the scratch buffer */
-#define HTTPD_SCRATCH_BUF  MAX(HTTPD_MAX_REQ_HDR_LEN, HTTPD_MAX_URI_LEN)
+#define HTTPD_SCRATCH_BUF MAX(HTTPD_MAX_REQ_HDR_LEN, HTTPD_MAX_URI_LEN)
 
 /* Formats a log string to prepend context function name */
-#define LOG_FMT(x)      "%s: " x, __func__
+#define LOG_FMT(x) "%s: " x, __func__
 
 /**
  * @brief Thread related data for internal use
  */
 struct thread_data {
-    othread_t handle;   /*!< Handle to thread/task */
+    othread_t handle; /*!< Handle to thread/task */
     enum {
         THREAD_IDLE = 0,
         THREAD_RUNNING,
         THREAD_STOPPING,
         THREAD_STOPPED,
-    } status;           /*!< State of the thread */
+    } status; /*!< State of the thread */
 };
 
 /**
  * @brief A database of all the open sockets in the system.
  */
 struct sock_db {
-    int fd;                                 /*!< The file descriptor for this socket */
-    void *ctx;                              /*!< A custom context for this socket */
-    bool ignore_sess_ctx_changes;           /*!< Flag indicating if session context changes should be ignored */
-    void *transport_ctx;                    /*!< A custom 'transport' context for this socket, to be used by send/recv/pending */
-    httpd_handle_t handle;                  /*!< Server handle */
-    httpd_free_ctx_fn_t free_ctx;      /*!< Function for freeing the context */
+    int fd;                       /*!< The file descriptor for this socket */
+    void *ctx;                    /*!< A custom context for this socket */
+    bool ignore_sess_ctx_changes; /*!< Flag indicating if session context changes should be ignored */
+    void *transport_ctx;          /*!< A custom 'transport' context for this socket, to be used by send/recv/pending */
+    httpd_handle_t handle;        /*!< Server handle */
+    httpd_free_ctx_fn_t free_ctx; /*!< Function for freeing the context */
     httpd_free_ctx_fn_t free_transport_ctx; /*!< Function for freeing the 'transport' context */
     httpd_send_func_t send_fn;              /*!< Send function for this socket */
     httpd_recv_func_t recv_fn;              /*!< Receive function for this socket */
@@ -81,11 +81,11 @@ struct sock_db {
     size_t pending_len;                     /*!< Length of pending data to be received */
     bool for_async_req;                     /*!< If true, the socket will not be LRU purged */
 #ifdef CONFIG_HTTPD_WS_SUPPORT
-    bool ws_handshake_done;                 /*!< True if it has done WebSocket handshake (if this socket is a valid WS) */
-    bool ws_close;                          /*!< Set to true to close the socket later (when WS Close frame received) */
-    esp_err_t (*ws_handler)(httpd_req_t *r);   /*!< WebSocket handler, leave to null if it's not WebSocket */
-    bool ws_control_frames;                         /*!< WebSocket flag indicating that control frames should be passed to user handlers */
-    void *ws_user_ctx;                         /*!< Pointer to user context data which will be available to handler for websocket*/
+    bool ws_handshake_done; /*!< True if it has done WebSocket handshake (if this socket is a valid WS) */
+    bool ws_close;          /*!< Set to true to close the socket later (when WS Close frame received) */
+    esp_err_t (*ws_handler)(httpd_req_t *r); /*!< WebSocket handler, leave to null if it's not WebSocket */
+    bool ws_control_frames; /*!< WebSocket flag indicating that control frames should be passed to user handlers */
+    void *ws_user_ctx;      /*!< Pointer to user context data which will be available to handler for websocket*/
 #endif
 };
 
@@ -94,24 +94,24 @@ struct sock_db {
  *          of requests and temporarily keeping responses
  */
 struct httpd_req_aux {
-    struct sock_db *sd;                             /*!< Pointer to socket database */
-    char            scratch[HTTPD_SCRATCH_BUF + 1]; /*!< Temporary buffer for our operations (1 byte extra for null termination) */
-    size_t          remaining_len;                  /*!< Amount of data remaining to be fetched */
-    char           *status;                         /*!< HTTP response's status code */
-    char           *content_type;                   /*!< HTTP response's content type */
-    bool            first_chunk_sent;               /*!< Used to indicate if first chunk sent */
-    unsigned        req_hdrs_count;                 /*!< Count of total headers in request packet */
-    unsigned        resp_hdrs_count;                /*!< Count of additional headers in response packet */
+    struct sock_db *sd;                  /*!< Pointer to socket database */
+    char scratch[HTTPD_SCRATCH_BUF + 1]; /*!< Temporary buffer for our operations (1 byte extra for null termination) */
+    size_t remaining_len;                /*!< Amount of data remaining to be fetched */
+    char *status;                        /*!< HTTP response's status code */
+    char *content_type;                  /*!< HTTP response's content type */
+    bool first_chunk_sent;               /*!< Used to indicate if first chunk sent */
+    unsigned req_hdrs_count;             /*!< Count of total headers in request packet */
+    unsigned resp_hdrs_count;            /*!< Count of additional headers in response packet */
     struct resp_hdr {
         const char *field;
         const char *value;
-    } *resp_hdrs;                                   /*!< Additional headers in response packet */
-    struct http_parser_url url_parse_res;           /*!< URL parsing result, used for retrieving URL elements */
+    } * resp_hdrs;                        /*!< Additional headers in response packet */
+    struct http_parser_url url_parse_res; /*!< URL parsing result, used for retrieving URL elements */
 #ifdef CONFIG_HTTPD_WS_SUPPORT
-    bool ws_handshake_detect;                       /*!< WebSocket handshake detection flag */
-    httpd_ws_type_t ws_type;                        /*!< WebSocket frame type */
-    bool ws_final;                                  /*!< WebSocket FIN bit (final frame or not) */
-    uint8_t mask_key[4];                            /*!< WebSocket mask key for this payload */
+    bool ws_handshake_detect; /*!< WebSocket handshake detection flag */
+    httpd_ws_type_t ws_type;  /*!< WebSocket frame type */
+    bool ws_final;            /*!< WebSocket FIN bit (final frame or not) */
+    uint8_t mask_key[4];      /*!< WebSocket mask key for this payload */
 #endif
 };
 
@@ -120,20 +120,20 @@ struct httpd_req_aux {
  *          httpd_handle_t but internal structure/members are kept private.
  */
 struct httpd_data {
-    httpd_config_t config;                  /*!< HTTPD server configuration */
-    int listen_fd;                          /*!< Server listener FD */
-    int ctrl_fd;                            /*!< Ctrl message receiver FD */
+    httpd_config_t config; /*!< HTTPD server configuration */
+    int listen_fd;         /*!< Server listener FD */
+    int ctrl_fd;           /*!< Ctrl message receiver FD */
 #if CONFIG_HTTPD_QUEUE_WORK_BLOCKING
-    SemaphoreHandle_t ctrl_sock_semaphore;  /*!< Ctrl socket semaphore */
+    SemaphoreHandle_t ctrl_sock_semaphore; /*!< Ctrl socket semaphore */
 #endif
-    int msg_fd;                             /*!< Ctrl message sender FD */
-    struct thread_data hd_td;               /*!< Information for the HTTPD thread */
-    struct sock_db *hd_sd;                  /*!< The socket database */
-    int hd_sd_active_count;                 /*!< The number of the active sockets */
-    httpd_uri_t **hd_calls;                 /*!< Registered URI handlers */
-    struct httpd_req hd_req;                /*!< The current HTTPD request */
-    struct httpd_req_aux hd_req_aux;        /*!< Additional data about the HTTPD request kept unexposed */
-    uint64_t lru_counter;                   /*!< LRU counter */
+    int msg_fd;                      /*!< Ctrl message sender FD */
+    struct thread_data hd_td;        /*!< Information for the HTTPD thread */
+    struct sock_db *hd_sd;           /*!< The socket database */
+    int hd_sd_active_count;          /*!< The number of the active sockets */
+    httpd_uri_t **hd_calls;          /*!< Registered URI handlers */
+    struct httpd_req hd_req;         /*!< The current HTTPD request */
+    struct httpd_req_aux hd_req_aux; /*!< Additional data about the HTTPD request kept unexposed */
+    uint64_t lru_counter;            /*!< LRU counter */
 
     /* Array of registered error handler functions */
     httpd_err_handler_func_t *err_handler_fns;
@@ -344,9 +344,9 @@ bool httpd_validate_req_ptr(httpd_req_t *r);
  * and is useful mostly for debugging, so it's preferable to disable
  * the check by default and enable it only if necessary */
 #ifdef CONFIG_HTTPD_VALIDATE_REQ
-#define httpd_valid_req(r)  httpd_validate_req_ptr(r)
+#define httpd_valid_req(r) httpd_validate_req_ptr(r)
 #else
-#define httpd_valid_req(r)  true
+#define httpd_valid_req(r) true
 #endif
 
 /** End of Group : URI Handling
@@ -510,7 +510,6 @@ int httpd_default_recv(httpd_handle_t hd, int sockfd, char *buf, size_t buf_len,
  * @{
  */
 
-
 /**
  * @brief   This function is for responding a WebSocket handshake
  *
@@ -570,7 +569,7 @@ esp_err_t httpd_sess_trigger_close_(httpd_handle_t handle, struct sock_db *sessi
  * @brief Function to dispatch events in default event loop
  *
  */
-void esp_http_server_dispatch_event(int32_t event_id, const void* event_data, size_t event_data_size);
+void esp_http_server_dispatch_event(int32_t event_id, const void *event_data, size_t event_data_size);
 
 #ifdef __cplusplus
 }

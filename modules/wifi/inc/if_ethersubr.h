@@ -1,5 +1,5 @@
 /*
-*/
+ */
 
 //-
 // Copyright (c) 2002-2004 Sam Leffler, Errno Consulting
@@ -40,48 +40,46 @@
 // $Id: //depot/sw/branches/olca/target/src/wlan/include/if_ethersubr.h#2 $
 //
 
-
 #ifndef _NET_IF_ETHERSUBR_H_
 #define _NET_IF_ETHERSUBR_H_
 
 #include <stdint.h>
 #include "neutrino_startpack.h"
 
-#define	ETHER_ADDR_LEN		6	/* length of an Ethernet address */
-#define	ETHER_TYPE_LEN		2	/* length of the Ethernet type field */
-#define	ETHER_CRC_LEN		4	/* length of the Ethernet CRC */
-#define	ETHER_HDR_LEN		(ETHER_ADDR_LEN*2+ETHER_TYPE_LEN)
-#define	ETHER_MAX_LEN		1518
+#define ETHER_ADDR_LEN 6 /* length of an Ethernet address */
+#define ETHER_TYPE_LEN 2 /* length of the Ethernet type field */
+#define ETHER_CRC_LEN  4 /* length of the Ethernet CRC */
+#define ETHER_HDR_LEN  (ETHER_ADDR_LEN * 2 + ETHER_TYPE_LEN)
+#define ETHER_MAX_LEN  1518
 
-#define	ETHERMTU	(ETHER_MAX_LEN-ETHER_HDR_LEN-ETHER_CRC_LEN)
+#define ETHERMTU (ETHER_MAX_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN)
 
 /*
  * Structure of a 10Mb/s Ethernet header.
  */
-struct	ether_header {
-	uint8_t	    ether_dhost[ETHER_ADDR_LEN];
-	uint8_t	    ether_shost[ETHER_ADDR_LEN];
-	uint16_t    ether_type;
+struct ether_header {
+    uint8_t ether_dhost[ETHER_ADDR_LEN];
+    uint8_t ether_shost[ETHER_ADDR_LEN];
+    uint16_t ether_type;
 } __ATTRIB_PACK;
 
 #ifndef ETHERTYPE_PAE
-#define	ETHERTYPE_PAE	0x888e		/* EAPOL PAE/802.1x */
+#define ETHERTYPE_PAE 0x888e /* EAPOL PAE/802.1x */
 #endif
 #ifndef ETHERTYPE_IP
-#define	ETHERTYPE_IP	0x0800		/* IP protocol */
+#define ETHERTYPE_IP 0x0800 /* IP protocol */
 #endif
 
 /*
  * Structure of a 48-bit Ethernet address.
  */
-struct	ether_addr {
-	unsigned char octet[ETHER_ADDR_LEN];
+struct ether_addr {
+    unsigned char octet[ETHER_ADDR_LEN];
 } __ATTRIB_PACK;
 
-#define	ETHER_IS_MULTICAST(addr) (*(addr) & 0x01) /* is address mcast/bcast? */
+#define ETHER_IS_MULTICAST(addr) (*(addr)&0x01) /* is address mcast/bcast? */
 
-#define VLAN_PRI_SHIFT	13		/* Shift to find VLAN user priority */
-#define VLAN_PRI_MASK	7		/* Mask for user priority bits in VLAN */
-
+#define VLAN_PRI_SHIFT 13 /* Shift to find VLAN user priority */
+#define VLAN_PRI_MASK  7  /* Mask for user priority bits in VLAN */
 
 #endif /* _NET_IF_ETHERSUBR_H_ */

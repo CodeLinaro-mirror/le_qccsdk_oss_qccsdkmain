@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
+ * SPDX-License-Identifier:
+ * BSD-3-Clause-Clear
 */
 
 #ifndef _HALPHY_WFM_H_
@@ -11,8 +12,8 @@
 #include "phyCalUtils.h"
 
 typedef struct s_iq_samples {
-    int16_t i;   //ADC sample of PHY_I_RAIL
-    int16_t q;   //ADC sample of PHY_Q_RAIL
+    int16_t i;  // ADC sample of PHY_I_RAIL
+    int16_t q;  // ADC sample of PHY_Q_RAIL
 } iq_samples_t;
 
 #ifdef WFM_OPTIMIZE_STACK
@@ -21,7 +22,7 @@ typedef struct s_wfm_desc {
     void *info;
 } wfm_desc_t;
 
-typedef void (wfm_sample_func)(wfm_desc_t*, iq_samples_t*);
+typedef void(wfm_sample_func)(wfm_desc_t *, iq_samples_t *);
 
 typedef struct s_tone_desc {
     iq_samples_t *p_dc_offset;
@@ -35,7 +36,7 @@ void tone_sample(wfm_desc_t *wfm_d, iq_samples_t *iq);
 void phy_load_waveform(wfm_desc_t *wfm_d, wfm_sample_func *sample_fn, dac_rate_t dac_rate);
 #else
 void phy_load_waveform(const iq_samples_t *p_wave, uint16_t num_samples, iq_samples_t *p_dc_offset,
-        dac_rate_t dac_rate);
+                       dac_rate_t dac_rate);
 #endif /* WFM_OPTIMIZE_STACK */
 
 int phy_wfm_start_tone(uint8_t tone, uint16_t amp, iq_samples_t *p_dc_offset, dac_rate_t dac_rate);

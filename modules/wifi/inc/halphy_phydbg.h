@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*========================================================================
 
  * @file halphy_phydbg.h
@@ -24,15 +24,14 @@
  * Type Declarations
  * ----------------------------------------------------------------------*/
 typedef enum phydbg_mem_select_e {
-    phydbg_mem_select_cmem = 0, // Select cMem
-    phydbg_mem_select_internal = 1 // Select PHYDBG internal memory
+    phydbg_mem_select_cmem = 0,     // Select cMem
+    phydbg_mem_select_internal = 1  // Select PHYDBG internal memory
 } phydbg_mem_select_t;
 
 typedef enum phydbg_mem_cfg_e {
-    phydbg_mem_cfg_full = 0, // Select full memory access
-    phydbg_mem_cfg_shared = 1 // Select shared memory for simultaneous playback/capture
+    phydbg_mem_cfg_full = 0,   // Select full memory access
+    phydbg_mem_cfg_shared = 1  // Select shared memory for simultaneous playback/capture
 } phydbg_mem_cfg_t;
-
 
 #if 0
 typedef enum phydbg_status_rdstate_e {

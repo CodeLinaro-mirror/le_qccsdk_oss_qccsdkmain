@@ -1,12 +1,12 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*========================================================================
-*
-* @file wifi_fw_internal_api.h
-* @brief Declarations related to Fermion specific features
-*========================================================================*/
+ *
+ * @file wifi_fw_internal_api.h
+ * @brief Declarations related to Fermion specific features
+ *========================================================================*/
 
 #ifndef WIFI_FW_INTERNAL_API_H
 #define WIFI_FW_INTERNAL_API_H
@@ -19,9 +19,9 @@
 #include "wifi_fw_table_api.h"
 #endif
 /*------------------------------------------------------------------------
-* Preprocessor Definitions and Constants
-* ----------------------------------------------------------------------*/
-#define FERM_INIT_LOG_ERR(...)    NT_LOG_PRINT(COMMON, ERR, __VA_ARGS__)
+ * Preprocessor Definitions and Constants
+ * ----------------------------------------------------------------------*/
+#define FERM_INIT_LOG_ERR(...) NT_LOG_PRINT(COMMON, ERR, __VA_ARGS__)
 #define FERM_INIT_LOG_INFO(...)
 
 /*-------------------------------------------------------------------------
@@ -29,10 +29,10 @@
  * ----------------------------------------------------------------------*/
 
 /* Function to initialize Fermion specific modules */
-void wifi_fw_module_init (void);
+void wifi_fw_module_init(void);
 
 /* Function to set specific GPIOs for Fermion */
-void wifi_fw_gpio_init (bool);
+void wifi_fw_gpio_init(bool);
 
 /* Function to send update interrupt from Fermion to Apps */
 #ifndef FIRMWARE_APPS_INFORMED_WAKE

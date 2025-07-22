@@ -8,12 +8,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #include "nt_osal.h"
 
-
-#define NT_MAX_QUEUE_SIZE 			100
-#define NT_MAX_QUEUE_WAIT_TIME 		portMAX_DELAY
-#define NT_MAX_SEMAPHORE_WAIT_TIME  3000
-
-
+#define NT_MAX_QUEUE_SIZE          100
+#define NT_MAX_QUEUE_WAIT_TIME     portMAX_DELAY
+#define NT_MAX_SEMAPHORE_WAIT_TIME 3000
 
 extern qurt_pipe_t msg_wfm_wmi_id;
 void nt_devcfg_prot_wifi_app();

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*
  * nt_lfs.h
  *
@@ -19,14 +19,14 @@
 
 extern lfs_t lfs_init;
 
-#define nt_uart_app_printf  printf
+#define nt_uart_app_printf printf
 
 #ifdef SUPPORT_FERMION_LOGGER
-#define nt_uartprints_app(ptr, n)   DBG_STR_PRINT("", ptr, n)
-#endif//SUPPORT_FERMION_LOGGER
+#define nt_uartprints_app(ptr, n) DBG_STR_PRINT("", ptr, n)
+#endif  // SUPPORT_FERMION_LOGGER
 
-int nt_lfs_init( void );
-void nt_lfs_deinit( struct lfs_config deint );
+int nt_lfs_init(void);
+void nt_lfs_deinit(struct lfs_config deint);
 /**
  * @FUNCTION : nt_lfs_pbl_logs ()
  * @brief    :
@@ -51,10 +51,10 @@ void nt_lfs_deinit( struct lfs_config deint );
  *             return 0 on success.
  *             return negative error code on failure
  */
-int nt_lfs_pbl_logs( void );
+int nt_lfs_pbl_logs(void);
 
-uint32_t nt_find_filesize( const char *file );
-int32_t nt_factory_reset( void );
+uint32_t nt_find_filesize(const char *file);
+int32_t nt_factory_reset(void);
 #endif
 
 #endif /* CORE_SYSTEM_INC_NT_LFS_H_ */

@@ -1,19 +1,18 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*
-*
-* @file unit_test.h
-* @brief Unit Test command params and definitions
-*========================================================================*/
+ *
+ * @file unit_test.h
+ * @brief Unit Test command params and definitions
+ *========================================================================*/
 
 #ifndef UNIT_TEST_H
 #define UNIT_TEST_H
 
-
 //#ifdef SUPPORT_UNIT_TEST_CMD
-typedef enum UNIT_TEST_MODULE_ID{
+typedef enum UNIT_TEST_MODULE_ID {
     WLAN_MODULE_CMN = 0,
     WLAN_MODULE_RINGIF = 1,
     WLAN_MODULE_OTP = 2,
@@ -35,7 +34,7 @@ typedef enum UNIT_TEST_MODULE_ID{
     WLAN_MODULE_RCLI = 18,
     WLAN_MODULE_RRAM = 19,
     WLAN_MODULE_CONFIG_INI = 20,
-    WLAN_MODULE_TPC =  21,
+    WLAN_MODULE_TPC = 21,
     WLAN_MODULE_DPM = 22,
     WLAN_MODULE_SLP_DEBUG = 23,
     WLAN_MODULE_SW_MD = 24,
@@ -45,29 +44,27 @@ typedef enum UNIT_TEST_MODULE_ID{
     WLAN_MODULE_SLP_CLK_CAL = 28,
     WLAN_MODULE_WPM = 29,
     /* add new module ID here */
-}WLAN_MODULE_ID;
+} WLAN_MODULE_ID;
 
-typedef enum ut_fdi
-{
-    UT_FDI_START_NODE_NULL  = 0,
-    UT_FDI_STOP_NODE_NULL   = 1,
-    UT_FDI_START_NODE_ID    = 2,
-    UT_FDI_STOP_NODE_ID     = 3,
-    UT_FDI_EN_MODULE_BMAP   = 4,
-    UT_FDI_EN_NODE          = 5,
-    UT_FDI_PRINT_LOGS       = 6,
-    UT_FDI_POST_PROC_TRIG   = 7,
-	UT_FDI_SET_WM 			= 8,
-	UT_FPCI_DEBUG_TOGGLE	= 9,
-}ut_fdi_t;
-
+typedef enum ut_fdi {
+    UT_FDI_START_NODE_NULL = 0,
+    UT_FDI_STOP_NODE_NULL = 1,
+    UT_FDI_START_NODE_ID = 2,
+    UT_FDI_STOP_NODE_ID = 3,
+    UT_FDI_EN_MODULE_BMAP = 4,
+    UT_FDI_EN_NODE = 5,
+    UT_FDI_PRINT_LOGS = 6,
+    UT_FDI_POST_PROC_TRIG = 7,
+    UT_FDI_SET_WM = 8,
+    UT_FPCI_DEBUG_TOGGLE = 9,
+} ut_fdi_t;
 
 /*-----------------------------------------------------------------------------
   * test_handler_t:
   *    Function pointer type for functions that handle unit test cases.
   *    These functions are implemented by the respective modules
 -----------------------------------------------------------------------------*/
-typedef NT_BOOL (*test_handler_t) (WMI_UNIT_TEST_CMD *cmd);
+typedef NT_BOOL (*test_handler_t)(WMI_UNIT_TEST_CMD *cmd);
 
 /*-----------------------------------------------------------------------------
   * unit_test_func_tbl_t:
@@ -82,4 +79,3 @@ typedef struct unit_test_func_tbl {
 void wmi_unit_test_cmd_handler(WMI_UNIT_TEST_CMD *cmd);
 //#endif /* SUPPORT_UNIT_TEST_CMD */
 #endif /* UNIT_TEST_H */
-

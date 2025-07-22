@@ -57,7 +57,6 @@
 #include "nt_crypto.h"
 #include "hal_int_sys.h"
 
-
 #define QCC 1
 
 
@@ -911,8 +910,6 @@ int32_t aes256_ctr_known_answer_piomode()
 
    HAL_REG_WR(QCC_CRYPTO_GOPROC, 1 << HWIO_QCC_CRYPTO_GOPROC_GO_SHFT);
 
-
-
 #endif
 
 
@@ -1263,12 +1260,6 @@ int32_t aes128_ctr_dma_known_answer()
    HAL_REG_WR(QCC_CRYPTO_ENCR_CNTR_MASK0, mask[1]);
    HAL_REG_WR(QCC_CRYPTO_ENCR_CNTR_MASK1, mask[2]);
    HAL_REG_WR(QCC_CRYPTO_ENCR_CNTR_MASK2, mask[3]);
-
-
-
-
-
-
 
 #endif
 

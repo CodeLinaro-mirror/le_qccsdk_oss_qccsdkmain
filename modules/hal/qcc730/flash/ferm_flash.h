@@ -4,8 +4,8 @@
  */
 
 /** @file ferm_flash.h
-   @brief Flash Services Interface definition.   
-   This module provides flash operation APIs.   
+   @brief Flash Services Interface definition.
+   This module provides flash operation APIs.
 */
 
 /** @addtogroup peripherals_flash
@@ -37,22 +37,21 @@
 #include "FreeRTOS.h"
 #include "ferm_flash_config.h"
 
-#define FLASH_DEVICE_DONE                 0 /**< Operation passed */
-#define FLASH_DEVICE_FAIL                (1) /**< Operation failed */
-#define FLASH_DEVICE_NOT_SUPPORTED       (2) /**< Device/operation not supported */
-#define FLASH_DEVICE_INVALID_PARAMETER   (3) /**< API parameters invalid */
-#define FLASH_DEVICE_IMAGE_NOT_FOUND     (4) /**< FW Image ID not found */
-#define FLASH_DEVICE_NOT_FOUND           (5) /**< Device not found on supported device list */
-#define FLASH_DEVICE_PENDING             (6) /** Flash non-blocking operation is ongoing. */
-#define FLASH_DEVICE_NO_MEMORY           (7) /**alloc memory failed */
-#define FLASH_DEVICE_BUSY                (8) /** flash device busy */
+#define FLASH_DEVICE_DONE              0   /**< Operation passed */
+#define FLASH_DEVICE_FAIL              (1) /**< Operation failed */
+#define FLASH_DEVICE_NOT_SUPPORTED     (2) /**< Device/operation not supported */
+#define FLASH_DEVICE_INVALID_PARAMETER (3) /**< API parameters invalid */
+#define FLASH_DEVICE_IMAGE_NOT_FOUND   (4) /**< FW Image ID not found */
+#define FLASH_DEVICE_NOT_FOUND         (5) /**< Device not found on supported device list */
+#define FLASH_DEVICE_PENDING           (6) /** Flash non-blocking operation is ongoing. */
+#define FLASH_DEVICE_NO_MEMORY         (7) /**alloc memory failed */
+#define FLASH_DEVICE_BUSY              (8) /** flash device busy */
 
-#define PAGE_SIZE_IN_BYTES                256
-#define BLOCK_SIZE_IN_BYTES               4096
-#define FLASH_16MB_IN_BYTES               0x1000000
+#define PAGE_SIZE_IN_BYTES  256
+#define BLOCK_SIZE_IN_BYTES 4096
+#define FLASH_16MB_IN_BYTES 0x1000000
 
-typedef int FLASH_STATUS;                     /**< Error status values used in FLASH driver */
-
+typedef int FLASH_STATUS; /**< Error status values used in FLASH driver */
 
 /** @addtogroup qapi_peripherals_flash
 @{ */
@@ -61,17 +60,16 @@ typedef int FLASH_STATUS;                     /**< Error status values used in F
  * Preprocessor Definitions and Constants
  *-----------------------------------------------------------------------*/
 /** Flash read/write mode: SDR, single mode. */
-#define FLASH_RW_MODE_SDR_SINGLE     1
+#define FLASH_RW_MODE_SDR_SINGLE 1
 
 /** Flash read/write mode: SDR, dual mode. */
-#define FLASH_RW_MODE_SDR_DUAL      2
+#define FLASH_RW_MODE_SDR_DUAL 2
 
 /** Flash read/write mode: SDR, quad mode. */
-#define FLASH_RW_MODE_SDR_QUAD       3
+#define FLASH_RW_MODE_SDR_QUAD 3
 
 /** Flash read/write mode: DDR, quad mode. */
-#define FLASH_RW_MODE_DDR_QUAD       7
-
+#define FLASH_RW_MODE_DDR_QUAD 7
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -80,8 +78,7 @@ typedef int FLASH_STATUS;                     /**< Error status values used in F
 /**
    Enumeration of flash erase types.
 */
-typedef enum
-{
+typedef enum {
     FLASH_BLOCK_ERASE_E, /**< Block erase. Block size is 4KB. */
     FLASH_BULK_ERASE_E,  /**< Bulk erase. A bulk size is 64KB.
                                    It depends on the specific flash type. */
@@ -118,7 +115,8 @@ FLASH_STATUS drv_flash_init();
 /**
    @brief deInitialize the flash module.
 
-   @param[in]  dereg    Deregister the sleep callback function if set to 1.
+   @param[in]  dereg    Deregister the sleep callback function if set
+ * to 1.
 
    @return
    FLASH_DEVICE_DONE -- On success, or an error code on failure.
@@ -155,7 +153,8 @@ FLASH_STATUS drv_flash_deinit(uint32_t dereg);
    FLASH_STATUS_PENDING -- Indicating a non-blocking read is ongoing. \n
    Negative value -- If there is an error.
 */
-FLASH_STATUS drv_flash_read(uint32_t address, uint32_t byte_cnt, uint8_t *buffer, flash_operation_cb_t read_cb, void *user_param);
+FLASH_STATUS drv_flash_read(uint32_t address, uint32_t byte_cnt, uint8_t *buffer, flash_operation_cb_t read_cb,
+                            void *user_param);
 
 /**
    @brief Write data to the flash.
@@ -186,7 +185,8 @@ FLASH_STATUS drv_flash_read(uint32_t address, uint32_t byte_cnt, uint8_t *buffer
    FLASH_STATUS_PENDING -- Indicating a non-blocking write is ongoing. \n
    Negative value -- If there is an error.
 */
-FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffer, flash_operation_cb_t write_cb, void *user_param);
+FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffer, flash_operation_cb_t write_cb,
+                             void *user_param);
 
 /**
    @brief Erase the given flash blocks or bulks, or the whole chip.
@@ -221,7 +221,8 @@ FLASH_STATUS drv_flash_write(uint32_t address, uint32_t byte_cnt, uint8_t *buffe
    FLASH_STATUS_PENDING -- Indicating a non-blocking erase is ongoing. \n
    Negative value -- If there was an error.
 */
-FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint32_t cnt, flash_operation_cb_t erase_cb, void *user_param);
+FLASH_STATUS drv_flash_erase(flash_erase_type_t erase_type, uint32_t start, uint32_t cnt, flash_operation_cb_t erase_cb,
+                             void *user_param);
 
 /**
    @brief Get current flash configuration.
@@ -272,9 +273,9 @@ FLASH_STATUS drv_flash_read_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_va
    FLASH_STATUS_PENDING -- Indicating non-blocking writereg is ongoing. \n
    Negative value -- If there was an error.
 */
-FLASH_STATUS drv_flash_write_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_value, flash_operation_cb_t write_cb, void *user_param);
+FLASH_STATUS drv_flash_write_reg(uint8_t reg_opcode, uint8_t len, uint8_t *reg_value, flash_operation_cb_t write_cb,
+                                 void *user_param);
 
 /** @} */ /* end_addtogroup peripherals_flash */
 
 #endif
-

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /******************************************************************************
  * @file    fdi.h
  * @brief   Interface for using Fermion Debug Infra
@@ -21,9 +21,9 @@
 #include "nt_common.h"
 
 /* To Enable FDI DBG Codes*/
-#define FDI_DBG                  (FDI_RESET)
+#define FDI_DBG (FDI_RESET)
 
- /****************************************
+/****************************************
  * @brief Register all debug Nodes
  *
  ***************************************/
@@ -31,7 +31,7 @@ void fdi_reg_all_nodes(void);
 
 #endif /* FEATURE_FDI */
 
-#define FDI_PS_TXT               __attribute__((section(".__sect_ps_txt")))
-#define FDI_PS_DATA              __attribute__((section(".__sect_ps_data")))
+#define FDI_PS_TXT  __attribute__((section(".__sect_ps_txt")))
+#define FDI_PS_DATA __attribute__((section(".__sect_ps_data")))
 
 #endif /* _FDI_H_ */

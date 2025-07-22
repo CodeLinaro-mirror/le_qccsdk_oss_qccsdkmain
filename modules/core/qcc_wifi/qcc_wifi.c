@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 #include "autoconf.h"
 #include "fwconfig_cmn.h"
 #include "nt_flags.h"
@@ -10,7 +10,7 @@
 #include "nt_wfm_wmi_interface.h"
 #include <stdint.h>
 
-struct libwifi_kconfig_t{
+struct libwifi_kconfig_t {
     uint32_t hc_11a_0_2g;
     uint32_t hc_11a_1_2g;
     uint32_t hc_11n_2g;
@@ -20,7 +20,7 @@ struct libwifi_kconfig_t{
     uint8_t srrc_band_edge_enable;
 };
 
-struct libwifi_qos_null_kconfig_t{
+struct libwifi_qos_null_kconfig_t {
     uint8_t enable;
     uint8_t retry_count;
     uint16_t socmp_nop_delay;
@@ -28,7 +28,6 @@ struct libwifi_qos_null_kconfig_t{
 
 struct libwifi_kconfig_t g_libwifi_kconfig;
 struct libwifi_qos_null_kconfig_t g_libwifi_qos_null_kconfig_t;
-
 
 void libwifi_kconfig_install(void)
 {
@@ -67,12 +66,12 @@ void libwifi_kconfig_install(void)
 #endif
 }
 
-NT_BOOL wmi_pdev_utf_cmd(wmi_msg_struct_t* msg)
+NT_BOOL wmi_pdev_utf_cmd(wmi_msg_struct_t *msg)
 {
 #ifdef CONFIG_FTM_MODE
     extern uint8_t ftm_parse_tlv_cmd(uint8_t * buf, uint32_t dataLength);
-    ftm_parse_tlv_cmd((uint8_t*)msg->msg_struct.vo_data, msg->msg_struct.vo_data_len);
-#else /* CONFIG_FTM_MODE */
+    ftm_parse_tlv_cmd((uint8_t *)msg->msg_struct.vo_data, msg->msg_struct.vo_data_len);
+#else  /* CONFIG_FTM_MODE */
     (void)msg;
 #endif /* CONFIG_FTM_MODE */
     return TRUE;
@@ -80,9 +79,9 @@ NT_BOOL wmi_pdev_utf_cmd(wmi_msg_struct_t* msg)
 void wmi_unit_test_cmd_handler(WMI_UNIT_TEST_CMD *cmd)
 {
 #ifdef UNIT_TEST_SUPPORT
-    extern void wmi_unit_test_internal_cmd_handler(WMI_UNIT_TEST_CMD *cmd);
+    extern void wmi_unit_test_internal_cmd_handler(WMI_UNIT_TEST_CMD * cmd);
     wmi_unit_test_internal_cmd_handler(cmd);
-#else /* UNIT_TEST_SUPPORT */
+#else  /* UNIT_TEST_SUPPORT */
     (void)cmd;
 #endif /* UNIT_TEST_SUPPORT */
     return;

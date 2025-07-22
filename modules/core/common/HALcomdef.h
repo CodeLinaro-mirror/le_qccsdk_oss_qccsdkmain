@@ -1,8 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ */
 
 #ifndef HAL_COMDEF_H
 #define HAL_COMDEF_H
@@ -17,7 +16,9 @@ DESCRIPTION:
 
                              Edit History
 
-$Header: //depot/ip/athr/wifi/helium/verif/helium_top/native/vi/eos_soc_top/perf_pwr_offload/drivers/include/AR900B/hw/HALcomdef.h#1 $
+$Header:
+//depot/ip/athr/wifi/helium/verif/helium_top/native/vi/eos_soc_top/perf_pwr_offload/drivers/include/AR900B/hw/HALcomdef.h#1
+$
 
 when       who     what, where, why
 --------   ---     -----------------------------------------------------------
@@ -28,7 +29,6 @@ when       who     what, where, why
 01/08/07   hxw     Created
 
 */
-
 
 /*
  * Assembly wrapper
@@ -54,7 +54,7 @@ extern "C" {
  * bool32  - boolean, 32 bit (TRUE or FALSE)
  */
 #ifndef _BOOL32_DEFINED
-typedef  unsigned long int  bool32;
+typedef unsigned long int bool32;
 #define _BOOL32_DEFINED
 #endif
 
@@ -97,17 +97,17 @@ SIDE EFFECTS
 
 ===========================================================================*/
 
-  /* ARM based targets use memory mapped i/o, so the inp/outp calls are
-  ** macroized to access memory directly
-  */
+/* ARM based targets use memory mapped i/o, so the inp/outp calls are
+** macroized to access memory directly
+*/
 
-  #define inp(port)         (*((volatile byte *) (port)))
-  #define inpw(port)        (*((volatile word *) (port)))
-  #define inpdw(port)       (*((volatile dword *)(port)))
+#define inp(port)   (*((volatile byte *)(port)))
+#define inpw(port)  (*((volatile word *)(port)))
+#define inpdw(port) (*((volatile dword *)(port)))
 
-  #define outp(port, val)   (*((volatile byte *) (port)) = ((byte) (val)))
-  #define outpw(port, val)  (*((volatile word *) (port)) = ((word) (val)))
-  #define outpdw(port, val) (*((volatile dword *) (port)) = ((dword) (val)))
+#define outp(port, val)   (*((volatile byte *)(port)) = ((byte)(val)))
+#define outpw(port, val)  (*((volatile word *)(port)) = ((word)(val)))
+#define outpdw(port, val) (*((volatile dword *)(port)) = ((dword)(val)))
 
 #ifdef __cplusplus
 }
@@ -116,4 +116,3 @@ SIDE EFFECTS
 #endif /* !_ARM_ASM_ */
 
 #endif /* HAL_COMDEF_H */
-

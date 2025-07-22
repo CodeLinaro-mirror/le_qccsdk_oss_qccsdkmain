@@ -3,32 +3,29 @@ Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
-
-#ifndef  __ECSA_H__
-#define  __ECSA_H__
+#ifndef __ECSA_H__
+#define __ECSA_H__
 
 #include "fwconfig_wlan.h"
 #include "nt_flags.h"
 #include "wlan_mlme.h"
 #if defined(FEATURE_STA_ECSA) || defined(FEATURE_AP_ECSA)
 
-#define ECSA_TSF_OFFSET                   0
-#define CS_MODE_CONTINUE_TRAFFIC          0
-#define CS_MODE_STOP_TRAFFIC              1
-#define VENDOR_IE_TARGET_TSF_OFFSET       6
-#define START_6G_HE_OPERATING_CLASS     131
-#define START_6G_HE160_OPERATING_CLASS  134
+#define ECSA_TSF_OFFSET                0
+#define CS_MODE_CONTINUE_TRAFFIC       0
+#define CS_MODE_STOP_TRAFFIC           1
+#define VENDOR_IE_TARGET_TSF_OFFSET    6
+#define START_6G_HE_OPERATING_CLASS    131
+#define START_6G_HE160_OPERATING_CLASS 134
 
-typedef enum
-{
-    ECSA_STOP,          //0 ECSA request has not been recieved or has been fulfilled
-    ECSA_PENDING,       //1 ECSA request is getting processed and channel change isnt complete
-    ECSA_START,         //2 ECSA request is recieved 
-    ECSA_PENDING_TWT,   //3 ECSA request when twt is active
-    ECSA_PENDING_PTSM,  //4 ECSA request when periodic traffic is active
-    ECSA_CHANNEL_CHANGE,//5 ECSA channel change
+typedef enum {
+    ECSA_STOP,            // 0 ECSA request has not been recieved or has been fulfilled
+    ECSA_PENDING,         // 1 ECSA request is getting processed and channel change isnt complete
+    ECSA_START,           // 2 ECSA request is recieved
+    ECSA_PENDING_TWT,     // 3 ECSA request when twt is active
+    ECSA_PENDING_PTSM,    // 4 ECSA request when periodic traffic is active
+    ECSA_CHANNEL_CHANGE,  // 5 ECSA channel change
 } ecsa_state_t;
-
 
 /*===============================================================
     * This enum is used to handle DFS channel specific ECSA requirement *
@@ -37,8 +34,7 @@ typedef enum
     * some AP send disassoc so post disconnect reset the CSA flags.
     * some AP does CAC so we hot BMISS counter so disconnect and reset the CSA flags.
 =================================================================*/
-typedef enum 
-{
+typedef enum {
     ECSA_NON_DFS_CH,
     ECSA_DFS_CH,
     ECSA_DFS_CS_COMP,
@@ -49,35 +45,35 @@ typedef enum
    * FUNCTION:  ecsa_init(devh_t *dev)
    *
    * DESCRIPTION:
-   * This function initialize the ECSA context member of device 
+   * This function initialize the ECSA context member of device
    * PARAMETERS:
    * 1. devh_t *dev - device pointer
 ============================================================================*/
-void ecsa_init(devh_t* dev);
+void ecsa_init(devh_t *dev);
 
 /*==========================================================================
    * FUNCTION:  ecsa_deinit(devh_t *dev)
    *
    * DESCRIPTION:
-   * This function de-initialize the ECSA context member of device 
+   * This function de-initialize the ECSA context member of device
    * PARAMETERS:
    * 1. devh_t *dev - device pointer
 ============================================================================*/
-void ecsa_deinit(devh_t* dev);
+void ecsa_deinit(devh_t *dev);
 
 /*==========================================================================
    * FUNCTION:  is_channel_valid(devh_t* dev, uint16_t freq)
    *
    * DESCRIPTION:
-   * This function check the channel frequency is support by device 
+   * This function check the channel frequency is support by device
    * PARAMETERS:
    * 1. devh_t *dev - device pointer
    * 2. uint16_t freq - channel frequency
    * RETURN VALUE:
-   * NT_BOOL TRUE or FALSE   
+   * NT_BOOL TRUE or FALSE
 ============================================================================*/
 
-NT_BOOL is_channel_valid(devh_t* dev, uint16_t freq);
+NT_BOOL is_channel_valid(devh_t *dev, uint16_t freq);
 
 /*==========================================================================
    * FUNCTION:  ecsa_active_with_blocking_traffic()
@@ -121,7 +117,6 @@ NT_BOOL is_ecsa_state_start(devh_t *dev);
 
 void ecsa_channel_change(devh_t *dev);
 
-
 /*==========================================================================
    * FUNCTION:  ecsa_data_available(uint8_t __unused status)
    *
@@ -157,9 +152,6 @@ void ecsa_data_stop_start_cb(uint8_t __unused status);
 
 void ecsa_state_stop(devh_t *dev);
 
-
-
-
 /*==========================================================================
    * FUNCTION:  ecsa_send_completed_event()
    *
@@ -180,8 +172,8 @@ void ecsa_send_completed_event(devh_t *dev, uint16_t freq);
    * FUNCTION:  ecsa_sta_timer_cb()
    *
    * DESCRIPTION:
-   * This function is a callback after target tsf timer runs out. 
-   * It is invoked in non TWT case. 
+   * This function is a callback after target tsf timer runs out.
+   * It is invoked in non TWT case.
    * It calls function to change channel
 
 ============================================================================*/
@@ -193,10 +185,10 @@ void ecsa_sta_timer_cb();
    *
    * DESCRIPTION:
    * This api parses the data recieved in ECSA frame and stores it in ecsa_ctx
-   * Depending on whether STA is in TWT mode or non TWT mode, changes channel 
+   * Depending on whether STA is in TWT mode or non TWT mode, changes channel
    * PARAMETERS:
    * 1. dev - device pointer
-   * 2. ecsa_ie - frame pointer 
+   * 2. ecsa_ie - frame pointer
    * RETURN VALUE:
    * MLME_SM_STATUS - MLME_SM_OK or MLME_SM_ERR
 
@@ -209,10 +201,10 @@ MLME_SM_STATUS nt_recv_ecsa_ie(devh_t *dev, uint8_t *ecsa_ie);
    *
    * DESCRIPTION:
    * This api parses the data recieved in CSA frame and stores it in ecsa_ctx
-   * Depending on whether STA is in TWT mode or non TWT mode, changes channel 
+   * Depending on whether STA is in TWT mode or non TWT mode, changes channel
    * PARAMETERS:
    * 1. dev - device pointer
-   * 2. csa_ie - frame pointer 
+   * 2. csa_ie - frame pointer
    * RETURN VALUE:
    * MLME_SM_STATUS - MLME_SM_OK or MLME_SM_ERR
 ============================================================================*/
@@ -224,7 +216,7 @@ MLME_SM_STATUS nt_recv_csa_ie(devh_t *dev, uint8_t *csa_ie);
    *
    * DESCRIPTION:
    * This api parses the data recieved in ECSA frame and stores it in ecsa_ctx
-   * Depending on whether STA is in TWT mode or non TWT mode, changes channel 
+   * Depending on whether STA is in TWT mode or non TWT mode, changes channel
    * PARAMETERS:
    * 1. dev - device pointer
    * RETURN VALUE:
@@ -232,7 +224,7 @@ MLME_SM_STATUS nt_recv_csa_ie(devh_t *dev, uint8_t *csa_ie);
 
 ============================================================================*/
 
-MLME_SM_STATUS ecsa_sta_state_start(devh_t * dev, uint32_t period);
+MLME_SM_STATUS ecsa_sta_state_start(devh_t *dev, uint32_t period);
 
 /*==========================================================================
    * FUNCTION:  ecsa_sp_check()
@@ -251,7 +243,7 @@ MLME_SM_STATUS ecsa_sta_state_start(devh_t * dev, uint32_t period);
 
 void ecsa_sp_check(devh_t *dev, uint64_t next_tbtt);
 
-#endif //FEATURE_STA_ECSA
+#endif  // FEATURE_STA_ECSA
 #if defined(FEATURE_AP_ECSA)
 /*==========================================================================
    * FUNCTION:  ecsa_set_type(int type)
@@ -278,7 +270,7 @@ void ecsa_set_type(int type);
    * RETURN VALUE:
    * uint8_t - 0 channel switch success, else fail
 ============================================================================*/
-uint8_t ecsa_ap_chan_switch(uint8_t mode,uint8_t count,uint8_t ch_no,uint8_t is_6g);
+uint8_t ecsa_ap_chan_switch(uint8_t mode, uint8_t count, uint8_t ch_no, uint8_t is_6g);
 
 /*==========================================================================
    * FUNCTION:  ieee80211_add_ecsa_ie(uint8_t *frm, ecsa_ctx_t *ecsa_ctx)
@@ -308,4 +300,4 @@ uint16_t ieee80211_add_ecsa_action(uint8_t *frm, ecsa_ctx_t *ecsa_ctx, uint8_t t
 #endif
 
 #endif
-#endif	// __ECSA_H__
+#endif  // __ECSA_H__

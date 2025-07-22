@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*============================================================================
 @file unpa.h
 
@@ -17,7 +17,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-//peter @to-do find appropriate gcc options #pragma anon_unions
+// peter @to-do find appropriate gcc options #pragma anon_unions
 
 /*----------------------------------------------------------------------------
  * Defines/Enums
@@ -28,7 +28,6 @@ extern "C" {
 
 /* Max possible state of a resource */
 #define UNPA_MAX_STATE 0xFFFFFFFF
-
 
 /* Client types. We use #defines, rather than an enum to enable bit fields
    in unpa_client */
@@ -41,7 +40,6 @@ extern "C" {
 
 /* Request only applies to the sleep set (or equivalent) */
 #define UNPA_CLIENT_SLEEP 0x4
-
 
 /* Request attributes are one-time flags that may be set by OR-ing
  * one or more of the below into unpa_client->request_attr before issuing
@@ -59,71 +57,64 @@ extern "C" {
 
 typedef uint32_t unpa_resource_state;
 
-typedef union unpa_request
-{
-  unpa_resource_state val;
+typedef union unpa_request {
+    unpa_resource_state val;
 } unpa_request;
 
-typedef struct unpa_client
-{
-  /* Name is limited to UNPA_MAX_NAME_LEN chars, including the '\0' */
-  const char *name;
+typedef struct unpa_client {
+    /* Name is limited to UNPA_MAX_NAME_LEN chars, including the '\0' */
+    const char *name;
 
-  /* Client type */
-  uint32_t type : 8;
+    /* Client type */
+    uint32_t type : 8;
 
-  /* Request attributes */
-  uint32_t request_attr : 24;
+    /* Request attributes */
+    uint32_t request_attr : 24;
 
-  /* Active request from client */
-  unpa_request active_request;
+    /* Active request from client */
+    unpa_request active_request;
 
-  /* Pending request from client (=active_request, if the last request from
-     client was processed. Not, if we are in the midst of processing it) */
-  unpa_request pending_request;
+    /* Pending request from client (=active_request, if the last request from
+       client was processed. Not, if we are in the midst of processing it) */
+    unpa_request pending_request;
 
-  /* Resource to which this client is a client to; will be set by UNPA
-     during register */
-  struct unpa_resource *resource;
+    /* Resource to which this client is a client to; will be set by UNPA
+       during register */
+    struct unpa_resource *resource;
 
-  /* Client-specific resource data; allows resource authors to associate
-     client-specific data to this structure */
-  void *resource_data;
+    /* Client-specific resource data; allows resource authors to associate
+       client-specific data to this structure */
+    void *resource_data;
 
-  /* Pointer to the next client to "resource" */
-  struct unpa_client *next;
+    /* Pointer to the next client to "resource" */
+    struct unpa_client *next;
 } unpa_client;
 
-
-typedef void* unpa_query_handle;
+typedef void *unpa_query_handle;
 
 /* Supported query ids */
-typedef enum
-{
-  /* With a query handle created using unpa_get_query_handle */
-  UNPA_QUERY_ACTIVE_STATE,
-  UNPA_QUERY_SLEEP_STATE,
-  UNPA_QUERY_ACTIVE_MAX,
+typedef enum {
+    /* With a query handle created using unpa_get_query_handle */
+    UNPA_QUERY_ACTIVE_STATE,
+    UNPA_QUERY_SLEEP_STATE,
+    UNPA_QUERY_ACTIVE_MAX,
 
-  /* With a query handle created using unpa_get_client_query_handle */
-  UNPA_QUERY_ACTIVE_REQUEST,
+    /* With a query handle created using unpa_get_client_query_handle */
+    UNPA_QUERY_ACTIVE_REQUEST,
 } unpa_query_id;
 
 /* Possible query return values */
-typedef enum
-{
-  UNPA_QUERY_SUCCESS = 0,
-  UNPA_QUERY_UNSUPPORTED,
+typedef enum {
+    UNPA_QUERY_SUCCESS = 0,
+    UNPA_QUERY_UNSUPPORTED,
 } unpa_query_status;
 
 /* The result of a query. Content is valid only if the query
    returned UNPA_QUERY_SUCCESS */
-typedef struct unpa_query_result
-{
-  union
-  {
-    unpa_resource_state val;
-  };
+typedef struct unpa_query_result {
+    union {
+        unpa_resource_state val;
+    };
 } unpa_query_result;
 
 /*----------------------------------------------------------------------------
@@ -135,7 +126,7 @@ typedef struct unpa_query_result
  * @brief Initializes the uNPA framework.
  */
 
-void unpa_init( void );
+void unpa_init(void);
 /**
  * <!-- unpa_create_client -->
  *
@@ -152,8 +143,7 @@ void unpa_init( void );
  *
  * @return If successful, a pointer to a unpa_client structure; else, NULL
  */
-unpa_client* unpa_create_client( const char *client_name, uint32_t client_type,
-                                 const char *resource_name );
+unpa_client *unpa_create_client(const char *client_name, uint32_t client_type, const char *resource_name);
 
 /**
  * <!-- unpa_destroy_client -->
@@ -161,7 +151,7 @@ unpa_client* unpa_create_client( const char *client_name, uint32_t client_type,
  *
  * @param client: Pointer to the unpa_client to destroy.
  */
-void unpa_destroy_client( unpa_client *client );
+void unpa_destroy_client(unpa_client *client);
 
 /**
  * <!-- unpa_issue_request -->
@@ -171,7 +161,7 @@ void unpa_destroy_client( unpa_client *client );
  * For readability, use one of the below, issue_required_request or
  * issue_suppressible_request macros, depending on your client type.
  */
-void unpa_issue_request( unpa_client* client, unpa_resource_state request );
+void unpa_issue_request(unpa_client *client, unpa_resource_state request);
 
 /**
  * <!-- unpa_issue_required_request -->
@@ -202,9 +192,7 @@ void unpa_issue_request( unpa_client* client, unpa_resource_state request );
  * For readability, use one of the below, try_issue_required_request or
  * try_issue_suppressible_request macros, depending on your client type.
  */
-int32_t unpa_try_issue_request( unpa_client* client,
-                                unpa_resource_state request );
-
+int32_t unpa_try_issue_request(unpa_client *client, unpa_resource_state request);
 
 /**
  * <!-- unpa_try_issue_required_request -->
@@ -237,7 +225,7 @@ int32_t unpa_try_issue_request( unpa_client* client,
  *
  * @param client: The client
  */
-void unpa_cancel_request( unpa_client* client );
+void unpa_cancel_request(unpa_client *client);
 
 /**
  * <!-- unpa_complete_request -->
@@ -261,7 +249,7 @@ void unpa_cancel_request( unpa_client* client );
  *
  * @param client: The client
  */
-int32_t unpa_try_cancel_request( unpa_client* client );
+int32_t unpa_try_cancel_request(unpa_client *client);
 
 /**
  * <!-- unpa_try_complete_request -->
@@ -285,7 +273,7 @@ int32_t unpa_try_cancel_request( unpa_client* client );
  * @return A query handle to the resource or NULL, if the resource was
  * not (yet) defined.
  */
-unpa_query_handle unpa_get_query_handle( const char *resource_name );
+unpa_query_handle unpa_get_query_handle(const char *resource_name);
 
 /**
  * <!-- unpa_get_client_query_handle -->
@@ -298,8 +286,7 @@ unpa_query_handle unpa_get_query_handle( const char *resource_name );
  *
  * @return A query handle to the client or NULL, if the client doesn't exist.
  */
-unpa_query_handle unpa_get_client_query_handle( const char *client_name,
-                                                const char *resource_name );
+unpa_query_handle unpa_get_client_query_handle(const char *client_name, const char *resource_name);
 
 /**
  * <!-- unpa_query -->
@@ -316,10 +303,7 @@ unpa_query_handle unpa_get_client_query_handle( const char *client_name,
  * @return UNPA_QUERY_SUCCESS if successful; else, one of the other
  * unpa_query_status enums.
  */
-unpa_query_status
-unpa_query( unpa_query_handle handle, unpa_query_id id,
-            unpa_query_result *result );
-
+unpa_query_status unpa_query(unpa_query_handle handle, unpa_query_id id, unpa_query_result *result);
 
 #ifdef __cplusplus
 }

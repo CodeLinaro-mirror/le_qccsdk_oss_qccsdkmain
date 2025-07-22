@@ -7,10 +7,8 @@
 #ifndef __QAT_UART_H__
 #define __QAT_UART_H__
 
-#define UART_HTC_INSTANCE QAPI_UART_INST_0	
+#define UART_HTC_INSTANCE QAPI_UART_INST_0
 
 void Initialize_Uart(void);
 
 #endif
-
-

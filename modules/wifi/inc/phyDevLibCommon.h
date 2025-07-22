@@ -1,8 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ */
 
 #ifndef _PHYDEVLIB_COMMON_H_
 #define _PHYDEVLIB_COMMON_H_
@@ -24,7 +23,7 @@
 #endif
 
 #ifdef __GNUC__
-#define __ATTRIB_PACK __attribute__ ((packed))
+#define __ATTRIB_PACK    __attribute__((packed))
 #define phyLog(fmt, ...) NT_LOG_PRINT(HALPHY, INFO, fmt, ##__VA_ARGS__)
 
 #ifndef A_ASSERT
@@ -35,10 +34,11 @@
 
 #ifdef _WIN32
 #define __ATTRIB_PACK
-#define phyLog(format, ...)    {\
-                                printf(format, __VA_ARGS__); \
-                                printf("\n");\
-                                }
+#define phyLog(format, ...)          \
+    {                                \
+        printf(format, __VA_ARGS__); \
+        printf("\n");                \
+    }
 #endif
 
 #endif /* _PHYDEVLIB_COMMON_H_ */

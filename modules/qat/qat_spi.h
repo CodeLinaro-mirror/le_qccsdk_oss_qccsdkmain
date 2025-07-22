@@ -6,10 +6,6 @@
 #ifndef __QAT_SPI_H__
 #define __QAT_SPI_H__
 
-
 int QAT_SPI_Output(uint32_t Length, const char *Buffer);
 
-
 #endif
-
-

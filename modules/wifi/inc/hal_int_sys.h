@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #ifndef _HAL_INT_SYS_H_
 #define _HAL_INT_SYS_H_
@@ -14,10 +14,11 @@
 #endif
 
 #ifdef HAL_CFG_INC_DBG_PRINT
-	void hal_sys_dbg_print(const char *s, const uint32_t a1, const uint32_t a2, const uint32_t a3, const char *fn, const uint32_t ln);
-	#define HAL_DBG_PRINT(str,a1,a2,a3) hal_sys_dbg_print(str, a1, a2, a3, __func__, __LINE__)
+void hal_sys_dbg_print(const char *s, const uint32_t a1, const uint32_t a2, const uint32_t a3, const char *fn,
+                       const uint32_t ln);
+#define HAL_DBG_PRINT(str, a1, a2, a3) hal_sys_dbg_print(str, a1, a2, a3, __func__, __LINE__)
 #else
-	#define HAL_DBG_PRINT(str,a1,a2,a3)
+#define HAL_DBG_PRINT(str, a1, a2, a3)
 #endif
 /**
  * @brief calculates the time difference between input time and MTU current time
@@ -35,34 +36,34 @@ NT_BOOL nt_hal_is_warm_boot();
 
 void hal_rx_disable(void);
 void hal_rx_enable(void);
-#define HAL_ROUNDUP(x, y)     ((((x) + ((y) - 1)) / (y)) * (y))
+#define HAL_ROUNDUP(x, y) ((((x) + ((y)-1)) / (y)) * (y))
 
 /*
-* @brief	: Read CCA Counter0/1/2 Register
-* @param  	: CCA Reg number, Reg read value
-* @return 	: nt_status_t
-*/
-nt_status_t nt_hal_get_cca_counter(uint8_t cca_counter_num, uint32_t* reg_read);
+ * @brief	: Read CCA Counter0/1/2 Register
+ * @param  	: CCA Reg number, Reg read value
+ * @return 	: nt_status_t
+ */
+nt_status_t nt_hal_get_cca_counter(uint8_t cca_counter_num, uint32_t *reg_read);
 
 /*
-* @brief	: Write to CCA Counter0/1/2 Register
-* @param  	: CCA Reg number, value
-* @return 	: nt_status_t
-*/
+ * @brief	: Write to CCA Counter0/1/2 Register
+ * @param  	: CCA Reg number, value
+ * @return 	: nt_status_t
+ */
 nt_status_t nt_hal_set_cca_counter(uint8_t cca_counter_num, uint32_t val);
 
 /*
-* @brief	: Get CCA control reg 0/2 value
-* @param  	: Reg number, Reg read value
-* @return 	: nt_status_t
-*/
-nt_status_t nt_hal_get_cca_control_reg(uint8_t reg_num, uint32_t* reg_read);
+ * @brief	: Get CCA control reg 0/2 value
+ * @param  	: Reg number, Reg read value
+ * @return 	: nt_status_t
+ */
+nt_status_t nt_hal_get_cca_control_reg(uint8_t reg_num, uint32_t *reg_read);
 
 /*
-* @brief	: Set CCA control reg 0/2 value
-* @param  	: Reg number, Reg write value
-* @return 	: nt_status_t
-*/
+ * @brief	: Set CCA control reg 0/2 value
+ * @param  	: Reg number, Reg write value
+ * @return 	: nt_status_t
+ */
 nt_status_t nt_hal_set_cca_control_reg(uint8_t reg_num, uint32_t reg_val);
 
-#endif // _HAL_INT_SYS_H_
+#endif  // _HAL_INT_SYS_H_

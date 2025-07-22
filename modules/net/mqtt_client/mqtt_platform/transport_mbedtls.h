@@ -43,7 +43,6 @@
 #include "mbedtls/error.h"
 #include "mbedtls/net_sockets.h"
 
-
 /**************************************************/
 /******* DO NOT CHANGE the following order ********/
 /**************************************************/
@@ -57,15 +56,14 @@
 /* Include header that defines log levels. */
 #include "logging_levels.h"
 
-
 #include "core_mqtt_config.h"
 
 /* Logging configuration for the Sockets. */
 #ifndef LIBRARY_LOG_NAME
-    #define LIBRARY_LOG_NAME     "TlsTransport"
+#define LIBRARY_LOG_NAME "TlsTransport"
 #endif
 #ifndef LIBRARY_LOG_LEVEL
-    #define LIBRARY_LOG_LEVEL    LOG_DEBUG
+#define LIBRARY_LOG_LEVEL LOG_DEBUG
 #endif
 
 /** @brief Prototype for the function used to print to console on Windows
@@ -73,13 +71,12 @@
  *
  * @note The function prints to the console before the network is connected;
  * then a UDP port after the network has connected. */
-extern void vLoggingPrintf( const char * pcFormatString,
-                            ... );
+extern void vLoggingPrintf(const char *pcFormatString, ...);
 
 /* Map the SdkLog macro to the logging function to enable logging
  * on Windows simulator. */
 #ifndef SdkLog
-    #define SdkLog( message )    vLoggingPrintf message
+#define SdkLog(message) vLoggingPrintf message
 #endif
 
 #include "logging_stack.h"
@@ -89,15 +86,13 @@ extern void vLoggingPrintf( const char * pcFormatString,
 /* Transport interface include. */
 #include "transport_interface.h"
 
-
-#define MQTT_ALPN_LIST_SIZE  1
-#define SSL_TLS_HANDSHAKE_TIMEOUT  5000
+#define MQTT_ALPN_LIST_SIZE       1
+#define SSL_TLS_HANDSHAKE_TIMEOUT 5000
 
 /**
  * @brief Secured connection context.
  */
-typedef struct SSLContext
-{
+typedef struct SSLContext {
     mbedtls_ssl_config config;               /**< @brief SSL connection configuration. */
     mbedtls_ssl_context context;             /**< @brief SSL connection context */
     mbedtls_x509_crt_profile certProfile;    /**< @brief Certificate security profile for this connection. */
@@ -112,8 +107,7 @@ typedef struct SSLContext
  * @brief Parameters for the network context of the transport interface
  * implementation that uses mbedTLS and FreeRTOS+TCP sockets.
  */
-typedef struct TlsTransportParams
-{
+typedef struct TlsTransportParams {
     mbedtls_net_context tcpSocket;
     SSLContext_t sslContext;
 } TlsTransportParams_t;
@@ -121,8 +115,7 @@ typedef struct TlsTransportParams
 /**
  * @brief Contains the credentials necessary for tls connection setup.
  */
-typedef struct NetworkCredentials
-{
+typedef struct NetworkCredentials {
     /**
      * @brief To use ALPN, set this to a NULL-terminated list of supported
      * protocols in decreasing order of preference.
@@ -131,27 +124,26 @@ typedef struct NetworkCredentials
      * (https://aws.amazon.com/blogs/iot/mqtt-with-tls-client-authentication-on-port-443-why-it-is-useful-and-how-it-works/)
      * for more information.
      */
-    const char ** pAlpnProtos;
-    const char * pcAlpnProtocols[MQTT_ALPN_LIST_SIZE] ;
+    const char **pAlpnProtos;
+    const char *pcAlpnProtocols[MQTT_ALPN_LIST_SIZE];
 
     /**
      * @brief Disable server name indication (SNI) for a TLS session.
      */
     BaseType_t disableSni;
 
-    const uint8_t * pRootCa;     /**< @brief String representing a trusted server root certificate. */
-    size_t rootCaSize;           /**< @brief Size associated with #NetworkCredentials.pRootCa. */
-    const uint8_t * pClientCert; /**< @brief String representing the client certificate. */
-    size_t clientCertSize;       /**< @brief Size associated with #NetworkCredentials.pClientCert. */
-    const uint8_t * pPrivateKey; /**< @brief String representing the client certificate's private key. */
-    size_t privateKeySize;       /**< @brief Size associated with #NetworkCredentials.pPrivateKey. */
+    const uint8_t *pRootCa;     /**< @brief String representing a trusted server root certificate. */
+    size_t rootCaSize;          /**< @brief Size associated with #NetworkCredentials.pRootCa. */
+    const uint8_t *pClientCert; /**< @brief String representing the client certificate. */
+    size_t clientCertSize;      /**< @brief Size associated with #NetworkCredentials.pClientCert. */
+    const uint8_t *pPrivateKey; /**< @brief String representing the client certificate's private key. */
+    size_t privateKeySize;      /**< @brief Size associated with #NetworkCredentials.pPrivateKey. */
 } NetworkCredentials_t;
 
 /**
  * @brief TLS Connect / Disconnect return status.
  */
-typedef enum TlsTransportStatus
-{
+typedef enum TlsTransportStatus {
     TLS_TRANSPORT_SUCCESS = 0,         /**< Function successfully completed. */
     TLS_TRANSPORT_INVALID_PARAMETER,   /**< At least one parameter was invalid. */
     TLS_TRANSPORT_INSUFFICIENT_MEMORY, /**< Insufficient memory required to establish connection. */
@@ -174,18 +166,15 @@ typedef enum TlsTransportStatus
  * @return #TLS_TRANSPORT_SUCCESS, #TLS_TRANSPORT_INSUFFICIENT_MEMORY, #TLS_TRANSPORT_INVALID_CREDENTIALS,
  * #TLS_TRANSPORT_HANDSHAKE_FAILED, #TLS_TRANSPORT_INTERNAL_ERROR, or #TLS_TRANSPORT_CONNECT_FAILURE.
  */
-TlsTransportStatus_t TLS_FreeRTOS_Connect( NetworkContext_t * pNetworkContext,
-                                           const char * pHostName,
-                                           uint16_t port,
-                                           const NetworkCredentials_t * pNetworkCredentials,
-                                           uint32_t receiveTimeoutMs );
+TlsTransportStatus_t TLS_FreeRTOS_Connect(NetworkContext_t *pNetworkContext, const char *pHostName, uint16_t port,
+                                          const NetworkCredentials_t *pNetworkCredentials, uint32_t receiveTimeoutMs);
 
 /**
  * @brief Gracefully disconnect an established TLS connection.
  *
  * @param[in] pNetworkContext Network context.
  */
-void TLS_FreeRTOS_Disconnect( NetworkContext_t * pNetworkContext );
+void TLS_FreeRTOS_Disconnect(NetworkContext_t *pNetworkContext);
 
 /**
  * @brief Receives data from an established TLS connection.
@@ -201,9 +190,7 @@ void TLS_FreeRTOS_Disconnect( NetworkContext_t * pNetworkContext );
  * 0 if the socket times out without reading any bytes;
  * negative value on error.
  */
-int32_t TLS_FreeRTOS_recv( NetworkContext_t * pNetworkContext,
-                           void * pBuffer,
-                           size_t bytesToRecv );
+int32_t TLS_FreeRTOS_recv(NetworkContext_t *pNetworkContext, void *pBuffer, size_t bytesToRecv);
 
 /**
  * @brief Sends data over an established TLS connection.
@@ -219,10 +206,7 @@ int32_t TLS_FreeRTOS_recv( NetworkContext_t * pNetworkContext,
  * 0 if the socket times out without sending any bytes;
  * else a negative value to represent error.
  */
-int32_t TLS_FreeRTOS_send( NetworkContext_t * pNetworkContext,
-                           const void * pBuffer,
-                           size_t bytesToSend );
-
+int32_t TLS_FreeRTOS_send(NetworkContext_t *pNetworkContext, const void *pBuffer, size_t bytesToSend);
 
 #ifdef MBEDTLS_DEBUG_C
 
@@ -237,11 +221,7 @@ int32_t TLS_FreeRTOS_send( NetworkContext_t * pNetworkContext,
  *
  * @return void
  */
-    void mbedtls_string_printf( void * sslContext,
-                                int level,
-                                const char * file,
-                                int line,
-                                const char * str );
+void mbedtls_string_printf(void *sslContext, int level, const char *file, int line, const char *str);
 #endif /* MBEDTLS_DEBUG_C */
 
 #endif /* ifndef USING_MBEDTLS */

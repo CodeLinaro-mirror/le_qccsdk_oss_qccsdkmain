@@ -1,12 +1,11 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ */
 
 #include "nt_cc_batt_mng.h"
 
-#include<stdlib.h>
+#include <stdlib.h>
 #include "string.h"
 #include "nt_hw.h"
 #include "nt_common.h"
@@ -24,9 +23,9 @@
  */
 void nt_lookup_table_init()
 {
-	uint32_t value;
-	value = (uint32_t)malloc(sizeof(battery_measurements_t));
-    (void)memset((uint32_t*)value,0x0, sizeof(value));
+    uint32_t value;
+    value = (uint32_t)malloc(sizeof(battery_measurements_t));
+    (void)memset((uint32_t *)value, 0x0, sizeof(value));
 }
 
 /**
@@ -38,12 +37,10 @@ void nt_lookup_table_init()
  */
 void nt_vbatt_callback_reg(uint32_t volt_threshold)
 {
-
-	uint32_t value;
-	NT_REG_WR(QWLAN_PMU_CFG_TEMP_MON_TH_REG,volt_threshold);
-	value = ( 1 << QWLAN_PMU_CFG_VABT_TEMP_MON_INT_EN_CFG_TEMP_PANIC_HIGH_HIT_INT_EN_OFFSET);
-	NT_REG_WR(QWLAN_PMU_CFG_VABT_TEMP_MON_INT_EN_REG,value);
-
+    uint32_t value;
+    NT_REG_WR(QWLAN_PMU_CFG_TEMP_MON_TH_REG, volt_threshold);
+    value = (1 << QWLAN_PMU_CFG_VABT_TEMP_MON_INT_EN_CFG_TEMP_PANIC_HIGH_HIT_INT_EN_OFFSET);
+    NT_REG_WR(QWLAN_PMU_CFG_VABT_TEMP_MON_INT_EN_REG, value);
 }
 
 /**
@@ -53,14 +50,12 @@ void nt_vbatt_callback_reg(uint32_t volt_threshold)
  * @param threshold : temperature
  * @return: void
  */
-void nt_temp_callback_reg( uint32_t temp_threshold)
+void nt_temp_callback_reg(uint32_t temp_threshold)
 {
-	uint32_t value;
-	NT_REG_WR(QWLAN_PMU_CFG_VABT_MON_TH_REG,temp_threshold);
-	value = ((1 << QWLAN_PMU_CFG_VABT_TEMP_MON_INT_EN_CFG_VBAT_LOW_HIT_INT_EN_OFFSET));
-	NT_REG_WR(QWLAN_PMU_CFG_VABT_TEMP_MON_INT_EN_REG,value);
-
+    uint32_t value;
+    NT_REG_WR(QWLAN_PMU_CFG_VABT_MON_TH_REG, temp_threshold);
+    value = ((1 << QWLAN_PMU_CFG_VABT_TEMP_MON_INT_EN_CFG_VBAT_LOW_HIT_INT_EN_OFFSET));
+    NT_REG_WR(QWLAN_PMU_CFG_VABT_TEMP_MON_INT_EN_REG, value);
 }
 
-
-#endif // NT_FN_CC_MGMT && NT_HOSTLESS_SDK
+#endif  // NT_FN_CC_MGMT && NT_HOSTLESS_SDK

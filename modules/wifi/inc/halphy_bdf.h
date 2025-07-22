@@ -37,24 +37,20 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #define pEeprom ((BDF_STRUCT *)pEeprom_p)
 
-typedef enum nv_sections_e
-{
-    NV_IOT_RX_GAIN_TABLES = 0,
-    NV_IOT_TPC_DATA = 1
-} nv_sections_e;
+typedef enum nv_sections_e { NV_IOT_RX_GAIN_TABLES = 0, NV_IOT_TPC_DATA = 1 } nv_sections_e;
 
 #ifdef PLATFORM_FERMION
 typedef struct halphy_rssi_correction_s {
-    int8_t  rssi_range_0;
-    int8_t  rssi_range_1;
-    int8_t  rssi_range_2;
-    int8_t  rssi_range_3;
-    int8_t  rssi_correction_0;
-    int8_t  rssi_correction_1;
-    int8_t  rssi_correction_2;
-    int8_t  rssi_correction_3;
-    int8_t  rssi_correction_4;
-    int8_t  rssi_temp_correction;
+    int8_t rssi_range_0;
+    int8_t rssi_range_1;
+    int8_t rssi_range_2;
+    int8_t rssi_range_3;
+    int8_t rssi_correction_0;
+    int8_t rssi_correction_1;
+    int8_t rssi_correction_2;
+    int8_t rssi_correction_3;
+    int8_t rssi_correction_4;
+    int8_t rssi_temp_correction;
 } halphy_rssi_correction_t;
 #endif /* PLATFORM_FERMION */
 
@@ -86,7 +82,8 @@ void halphy_bdf_update_capin_capout(uint8_t capin, uint8_t capout);
 
 #ifdef PLATFORM_FERMION
 void halphy_bdf_get_rssi_correction_value(halphy_rssi_correction_t *rssi_corr, uint8_t band);
-void halphy_update_rssi_temp_correction_value(halphy_rssi_correction_t *rssi_corr, uint8_t curr_band, int16_t curr_temp);
+void halphy_update_rssi_temp_correction_value(halphy_rssi_correction_t *rssi_corr, uint8_t curr_band,
+                                              int16_t curr_temp);
 int8_t halphy_bdf_get_crx_rssi_correction(void);
 #endif /* PLATFORM_FERMION */
 uint32_t halphy_bdf_get_configAddr(void);

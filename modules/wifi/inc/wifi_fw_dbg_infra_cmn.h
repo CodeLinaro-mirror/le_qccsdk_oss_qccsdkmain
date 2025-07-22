@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /******************************************************************************
  * @file    wifi_fw_dbg_infra_common.h
  * @brief   Placeholder for debug nodes enum register
@@ -11,48 +11,40 @@
 #ifndef _WIFI_FW_DEBUG_INFRA_COMMON_H_
 #define _WIFI_FW_DEBUG_INFRA_COMMON_H_
 
-#define NODE_LIST_INS(_id, _node_en, _log_lvl, _mod_bmap, _cb)       {\
-        .id                     = _id,      \
-        .p_cb                   = _cb,      \
-        .attributes.Enable      = _node_en, \
-        .attributes.log_level   = _log_lvl, \
-        .attributes.module_bmap = _mod_bmap \
+#define NODE_LIST_INS(_id, _node_en, _log_lvl, _mod_bmap, _cb)                                   \
+    {                                                                                            \
+        .id = _id, .p_cb = _cb, .attributes.Enable = _node_en, .attributes.log_level = _log_lvl, \
+        .attributes.module_bmap = _mod_bmap                                                      \
     }
 
- /*************************
+/*************************
  * Configs
  **************************/
-#define FDI_MAX_NODE                        (FDI_DBG_MAX)
+#define FDI_MAX_NODE (FDI_DBG_MAX)
 
- /** @brief Length of Log FIFO */
-#define FDI_MAX_LOG                         (128)
+/** @brief Length of Log FIFO */
+#define FDI_MAX_LOG (128)
 
- /** @brief Enable On Target post processing */
-#define FDI_EN_POST_PROCESS                 (0)
+/** @brief Enable On Target post processing */
+#define FDI_EN_POST_PROCESS (0)
 
- /**
-  * @brief: Print only on Unit Test Command.
-  * @note: 0 For the logs to be printed directly
-  */
-#define FDI_PRINT_ON_UT                     (0)
+/**
+ * @brief: Print only on Unit Test Command.
+ * @note: 0 For the logs to be printed directly
+ */
+#define FDI_PRINT_ON_UT (0)
 
 /**
  * @brief Add FDI Modules bitmaps here
  */
-#define FDI_MOD_BMAP_PWR                    (1 << FDI_MOD_PWR)
-#define FDI_MOD_BMAP_COEX                   (1 << FDI_MOD_COEX)
-#define FDI_MOD_BMAP_HALPHY                 (1 << FDI_MOD_HALPHY)
+#define FDI_MOD_BMAP_PWR    (1 << FDI_MOD_PWR)
+#define FDI_MOD_BMAP_COEX   (1 << FDI_MOD_COEX)
+#define FDI_MOD_BMAP_HALPHY (1 << FDI_MOD_HALPHY)
 
 /**
  * @brief Add FDI Modules here
  */
-typedef enum fdi_mod
-{
-    FDI_MOD_PWR = 1,
-    FDI_MOD_COEX,
-    FDI_MOD_HALPHY,
-    FDI_MOD_MAX
-}fdi_mod_t;
+typedef enum fdi_mod { FDI_MOD_PWR = 1, FDI_MOD_COEX, FDI_MOD_HALPHY, FDI_MOD_MAX } fdi_mod_t;
 
 /* Debug Enum Define
  * @note This enum is being used to parse in post process script. Please do not change the format of the same.
@@ -100,6 +92,6 @@ typedef enum dbg_node {
     FDI_DBG_PWR_EVT_PRE_IMPS_TRIGGER,
     /* Node END */
     FDI_DBG_MAX
-}fdi_dbg_node_t;
+} fdi_dbg_node_t;
 
 #endif /* _WIFI_FW_DEBUG_INFRA_COMMON_H_ */
