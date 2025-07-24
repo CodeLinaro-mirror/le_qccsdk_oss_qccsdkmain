@@ -329,10 +329,10 @@ void nt_dpm_network_init()
 #endif
 
 #if LWIP_IPV4
-    ip_addr_t staipaddr_2 = IPADDR4_INIT_BYTES(192, 168, 0, 1);     // IPV4_adderss for netif (STA)
+    ip_addr_t staipaddr_2 = IPADDR4_INIT_BYTES(127, 0, 0, 1);     // IPV4_adderss for netif (STA)
     ip_addr_t apipaddr_2 = IPADDR4_INIT_BYTES(192, 168, 0, 2);      // IPV4_adderss for netif (AP)
     ip_addr_t net_mask_ap = IPADDR4_INIT_BYTES(255, 255, 255, 0);   // IPV4_netmask adderss for netif (AP)
-    ip_addr_t net_mask_sta = IPADDR4_INIT_BYTES(255, 255, 255, 0);  // IPV4_netmask adderss for netif (STA)
+    ip_addr_t net_mask_sta = IPADDR4_INIT_BYTES(255, 0, 0, 0);  // IPV4_netmask adderss for netif (STA)
 #endif                                                              /* LWIP_IPV4 */
 
     dev = pnDpA->neutrino_device;
