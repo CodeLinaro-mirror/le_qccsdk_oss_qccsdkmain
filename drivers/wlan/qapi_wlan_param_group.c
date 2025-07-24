@@ -277,7 +277,7 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
                 break;
             case QAPI_WLAN_CRYPT_AES_CRYPT_E:
                 p_cmd->pairwiseCryptoType = AES_CRYPT;
-                p_cmd->groupCryptoType = AES_CRYPT;
+                p_cmd->groupCryptoType = TKIP_CRYPT | AES_CRYPT;
                 break;
             case QAPI_WLAN_CRYPT_AUTO:
                 p_cmd->pairwiseCryptoType = TKIP_CRYPT | AES_CRYPT;
