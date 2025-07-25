@@ -2513,7 +2513,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { Disable,         "Disable",               "",                      "Disables WLAN module"},
     { Info,            "Info",                  "",                      "Info on WLAN state"},
     { SetDevice,       "SetDevice",             "<device = 0:AP|GO, 1:STA|P2P client",    "Set the active device"},
-    { Scan,            "Scan",                  "<mode = 0: blocking| 1: non-blocking| 2:non-buffering> [ssid]",    "Scan for networks, using blocking/non-blocking/non-buffering modes. If ssid is provided, scan for specific ssid only."},
+    { Scan,            "Scan",                  "<mode = 1: blocking| 2: non-blocking> [ssid]",    "Scan for networks, using blocking/non-blocking modes. If ssid is provided, scan for specific ssid only."},
     { SetWpaPassphrase,"SetWpaPassphrase",      "<passphrase>",          "Set WPA passphrase"},
     { SetWpaParameters,"SetWpaParameters",      "<version=WPA|WPA2|WPACERT|WPA2CERT|SAE|SAE_WPA2|SAE_WPA2_WPA> <ucipher>(optional) <mcipher>(optional)",    "Set WPA specific parameters"},
     { Connect,         "Connect",               "<ssid> [bssid]",        "Connect to a given ssid and given bssid(bssid option applicable to STA mode only. if AP mode connect command shouldnt take BSSID)"},
