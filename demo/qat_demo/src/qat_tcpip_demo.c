@@ -114,7 +114,7 @@ static QAT_Command_t QAT_TCPIP_Command_List[] = {
 #define INVALID_LINKID               -1
 #define QAT_IP_PRINTF(...)           printf(__VA_ARGS__)
 #define MY_MAX_PORT                  65535
-#define MAX_WAIT_TIME                10000
+#define MAX_WAIT_TIME                2000
 
 /** ping identifier - must fit on a u16_t */
 #ifndef QAT_PING_ID
@@ -519,19 +519,19 @@ static bool isDhcpSucceed(struct netif *netif)
 {
     struct dhcp *dhcp = NULL;
 
-    int waited = 0;
+    int dhcp_time_started = xTaskGetTickCount();
+    bool is_bounded = FALSE;
 
     dhcp = netif_dhcp_data(netif);
-    while (dhcp->state != DHCP_STATE_BOUND && waited < MAX_WAIT_TIME) {
+    while (xTaskGetTickCount() - dhcp_time_started < MAX_WAIT_TIME) {
+        if (dhcp->state == DHCP_STATE_BOUND) {
+            is_bounded = TRUE;
+            break;
+        }
         qurt_thread_sleep(200);
-        waited += 200;
     }
 
-    if (dhcp->state != DHCP_STATE_BOUND) {
-        return false;
-    }
-
-    return TRUE;
+    return is_bounded;
 }
 
 static bool isDhcpReleased(struct netif *netif)
@@ -606,8 +606,10 @@ static QAT_Command_Status_t Extend_Command_DHCPv4c(uint32_t Op_Type, uint32_t Pa
                 if (isDhcpSucceed(netif)) {
                     offset += snprintf(buffer + offset, QAT_CMD_IP_BUFFER_LENGTH, "+CIPDHCPV4C:");
                     qat_net_show_info(netif, buffer, &offset);
+                    rc = QAT_Response_Str(QAT_RC_OK, buffer);
+                } else {
+                    rc = QAT_Response_Str(QAT_RC_OK, "+CIPDHCPV4C:DHCP client start success\r\n");
                 }
-                rc = QAT_Response_Str(QAT_RC_OK, "+CIPDHCPV4C:DHCP client start success\r\n");
             } else if (!memcmp(action, "release", 7)) {
                 status = dhcp_release(netif);
                 if (status != ERR_OK) {
