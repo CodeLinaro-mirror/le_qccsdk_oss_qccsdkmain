@@ -29,6 +29,7 @@ char *global_chunkdata = NULL;
 static int send_num = 0;
 qbool_t global_conn_enable = FALSE;
 qbool_t global_send_finish = FALSE;
+qbool_t conn_enable = FALSE;
 /*-------------------------------------------------------------------------
  * Function Definitions
  *-----------------------------------------------------------------------*/
@@ -254,11 +255,13 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
             }
 
             if (g_https_cfg.is_cache_data) {
-                // malloc buffer
-                if (!create_send_buffer(g_https_cfg.data_len)) {
-                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST: buffer malloc fail \r\n");
-                    rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-                    goto rlt;
+                if(!(g_https_cfg.is_keep_alive && conn_enable)) {
+                    // malloc buffer
+                    if (!create_send_buffer(g_https_cfg.data_len)) {
+                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST: buffer malloc fail \r\n");
+                        rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
+                        goto rlt;
+                    }
                 }
             }
 
@@ -2725,7 +2728,6 @@ endpiont:
     return rlt;
 }
 
-qbool_t conn_enable = FALSE;
 qapi_Status_t at_httpc_post(char *url, int32_t data_len, char *data)
 {
     qapi_Status_t rlt = QAPI_OK;
@@ -2733,7 +2735,7 @@ qapi_Status_t at_httpc_post(char *url, int32_t data_len, char *data)
     char path_url[HTTP_URL_STR_BUFFER_LENGTH] = {0};
     uint16 count = 0;
 
-    if ((g_https_cfg.is_keep_alive && conn_enable) == 0) {
+    if (!conn_enable) {
         // httpc stop
         rlt = at_httpc_stop();
         if (rlt != QAPI_OK) {
@@ -2932,6 +2934,7 @@ endpiont:
                     snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
                     QAT_Response_Str(QAT_RC_ERROR, buffer);
                 }
+                conn_enable = FALSE;
             }
 
             break;
@@ -2959,7 +2962,7 @@ endpiont:
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
             }
-
+            conn_enable = FALSE;
             break;
         }
     }
@@ -3657,9 +3660,11 @@ void reset_temp_resource()
     g_https_cfg.header_field_num = 0;
     g_https_cfg.buff_offset = 0;
 
-    if (g_https_cfg.send_buff != NULL) {
-        free(g_https_cfg.send_buff);
-        g_https_cfg.send_buff = NULL;
+    if(!g_https_cfg.is_keep_alive) {
+        if (g_https_cfg.send_buff != NULL) {
+            free(g_https_cfg.send_buff);
+            g_https_cfg.send_buff = NULL;
+        }
     }
 
     if (g_https_cfg.temp_url != NULL) {
