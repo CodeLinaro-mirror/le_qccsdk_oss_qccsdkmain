@@ -168,6 +168,10 @@ config GENERATE_MATTER_LIB
     bool "Whether generate the Matter lib"
     default y
 
+config SUPPORT_LWIP_RAW_SOCKET
+    bool "If need to treat IPPROTO_RAW/NETCONN_RAW as a raw socket"
+    default n
+
 choice MATTER_DEMO_NAME
     prompt "Choose the Matter demo to build"
     depends on MATTER_ENABLE

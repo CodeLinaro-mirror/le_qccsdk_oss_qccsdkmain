@@ -7,6 +7,7 @@
 #include <ctype.h>
 
 #include "net_shell.h"
+#include "if_ethersubr.h"
 #include "lwip/pbuf.h"
 #include "lwip/netif.h"
 #include "lwip/tcpip.h"
@@ -41,6 +42,14 @@
 #include "mqtt_client_demo.h"
 #endif
 
+#ifdef CONFIG_SUPPORT_LWIP_RAW_SOCKET
+#include "sockets.h"
+#include "ethernet.h"
+#include "data_path.h"
+#include "netif.h"
+#include "qapi_wlan_misc.h"
+#endif /*CONFIG_SUPPORT_LWIP_RAW_SOCKET*/
+
 #ifdef CONFIG_SNTP_CLIENT_DEMO
 #include "lwip/apps/sntp.h"
 #endif
@@ -51,6 +60,18 @@ extern uint8_t iperf_stream_count(void);
 static ip_addr_t default_ip_address[MAX_ROLE];
 static ip_addr_t default_netmask[MAX_ROLE];
 static ip_addr_t default_gw[MAX_ROLE];
+
+#ifdef CONFIG_SUPPORT_LWIP_RAW_SOCKET
+#define ETH_RAW_RX_BUFFER_SIZE  512
+#define HEX_BYTES_PER_LINE 16
+#define HEXDUMP(inbuf, inlen, ascii, addr)  app_hexdump_raw(inbuf, inlen, ascii, addr)
+static const char hexchar_net_shell[] = "0123456789ABCDEF";
+static uint16_t eth_raw_rx_protocol = 0x888e;
+static uint8_t eth_rx_quit;
+static void eth_help(void);
+uint8_t net_ascii_to_hex(char val);
+int32_t net_ether_aton(const char *orig, uint8_t *eth);
+#endif /*CONFIG_SUPPORT_LWIP_RAW_SOCKET*/
 
 #if NT_FN_DHCPS_V4 && LWIP_DHCP
 /**
@@ -1109,6 +1130,629 @@ static qapi_Status_t socketstat(uint32_t __attribute__((__unused__)) Parameter_C
     return QAPI_OK;
 }
 
+#ifdef CONFIG_SUPPORT_LWIP_RAW_SOCKET
+void app_hexdump_raw(void *inbuf, uint32_t inlen, int ascii, int addr)
+{
+    uint8_t *cp = (uint8_t *)inbuf;
+    uint8_t *ap = (uint8_t *)inbuf;
+    int len = (int)inlen;
+    int clen, alen, i;
+    char outbuf[96];
+    char *outp = &outbuf[0];
+    int  line = 0;
+
+    memset(outbuf, 0, sizeof(outbuf));
+    while (len > 0)
+    {
+        if (addr)
+            outp += snprintf(outp, sizeof(outbuf), "[%p] ", cp);
+
+        clen = alen = min(HEX_BYTES_PER_LINE, len);
+
+        /* display data in hex */
+        for (i = 0; i < HEX_BYTES_PER_LINE; i++)
+        {
+
+            if (--clen >= 0)
+            {
+                uint8_t uc = *cp++;
+
+                *outp++ = hexchar_net_shell[(uc >> 4) & 0x0f];
+                *outp++ = hexchar_net_shell[(uc) & 0x0f];
+                *outp++ = ' ';
+            }
+            else if (line != 0)
+            {
+                *outp++ = ' ';
+                *outp++ = ' ';
+                *outp++ = ' ';
+            }
+        }
+
+        if (ascii)
+        {
+            *outp++ = ' ';
+            *outp++ = ' ';
+
+            /* display data in ascii */
+            while (--alen >= 0)
+            {
+                uint8_t uc = *ap++;
+
+                *outp++ = ((uc >= 0x20) && (uc < 0x7f)) ? uc : '.';
+            }
+        }
+
+        /* output the line */
+        *outp++ = '\n';
+        //print_line(outbuf, outp - &outbuf[0]);
+        printf("%s\n", outbuf);
+
+        memset(outbuf, 0, sizeof(outbuf));
+        outp = &outbuf[0];
+        len -= HEX_BYTES_PER_LINE;
+        line++;
+    } /* while (len > 0) */
+    return;
+}
+
+int hex2byte(const char *hex)
+{
+	int a, b;
+
+	a = net_ascii_to_hex(*hex++);
+	if (a < 0)
+		return -1;
+
+	b = net_ascii_to_hex(*hex++);
+	if (b < 0)
+		return -1;
+
+	return (a << 4) | b;
+}
+
+int hexstr2bin(const char *hex, uint8_t *buf, size_t len)
+{
+	int a;
+	const char *ipos = hex;
+	uint8_t *opos = buf;
+
+    while ((ipos - hex) < len)
+    {
+        /* skip delimiter */
+        while (*ipos == ':' || *ipos == '.' || *ipos == '-' || *ipos == ' ')
+        {
+            ipos++;
+            if (ipos - hex >= len)
+            {
+                goto end;
+            }
+        }
+
+		a = hex2byte(ipos);
+		if (a < 0)
+			return -1;
+
+		*opos++ = a;
+		ipos += 2;
+	}
+
+end:
+	return (opos - buf);
+}
+
+int32_t net_ether_aton(const char *orig, uint8_t *eth)
+{
+  const char *bufp;
+  int i;
+
+  i = 0;
+  for(bufp = orig; *bufp != '\0'; ++bufp) {
+    unsigned int val;
+    unsigned char c = *bufp++;
+    if (isdigit(c)) val = c - '0';
+    else if (c >= 'a' && c <= 'f') val = c - 'a' + 10;
+    else if (c >= 'A' && c <= 'F') val = c - 'A' + 10;
+    else break;
+
+    val <<= 4;
+    c = *bufp++;
+    if (isdigit(c)) val |= c - '0';
+    else if (c >= 'a' && c <= 'f') val |= c - 'a' + 10;
+    else if (c >= 'A' && c <= 'F') val |= c - 'A' + 10;
+    else break;
+
+    eth[i] = (unsigned char) (val & 0377);
+    if(++i == 6) //MAC_LEN
+    {
+        /* That's it.  Any trailing junk? */
+        if (*bufp != '\0') {
+            //QCLI_Printf(qcli_wlan_group, "iw_ether_aton(%s): trailing junk!\r\n", orig);
+            return(-1);
+        }
+        return(0);
+    }
+    if (*bufp != ':')
+        break;
+  }
+  return(-1);
+}
+
+uint8_t net_ascii_to_hex(char val)
+{
+    if('0' <= val && '9' >= val)
+    {
+        return (uint8_t)(val - '0');
+    }
+    else if('a' <= val && 'f' >= val)
+    {
+        return (uint8_t)((val - 'a') + 0x0a);
+    }
+    else if('A' <= val && 'F' >= val)
+    {
+        return (uint8_t)((val - 'A') + 0x0a);
+    }
+    return 0xff;/* Error */
+}
+
+int hwaddr_pton(const char *txt, uint8_t *addr, size_t buflen)
+{
+    int i;
+    const char *pos = txt;
+
+    if (txt == NULL || addr == NULL || buflen < __QAPI_WLAN_MAC_LEN)
+    {
+        return -1;
+    }
+
+    for (i = 0; i < __QAPI_WLAN_MAC_LEN; i++)
+    {
+        int a, b;
+
+        while (*pos == ':' || *pos == '.' || *pos == '-')
+        {
+            pos++;
+        }
+
+        a = net_ascii_to_hex(*pos++);
+        if (a < 0)
+            return -1;
+        b = net_ascii_to_hex(*pos++);
+        if (b < 0)
+            return -1;
+        *addr++ = (a << 4) | b;
+    }
+
+    return 0;
+}
+
+void eth_rx_thread(void *arg)
+{
+    fd_set read_fd_set;
+	fd_set write_fd_set;
+	fd_set error_fd_set;
+	struct timeval time_out;
+	int max_fd = -1;
+	int msg_value = -1;
+    int ret_val = -1;
+    struct sockaddr_in from_addr;
+    int32_t fromlen;
+    int32_t received;
+    struct eth_hdr *ethhdr;
+    struct ip_hdr *iphdr;
+    struct netif *netif = NULL;
+    char *buf = NULL;
+    int sock = QAPI_ERROR;
+    uint8_t eth_proto = ETHPROTO_EAP;
+
+    netif = get_netif_by_device(STA_DEVICE);
+
+    buf = malloc(ETH_RAW_RX_BUFFER_SIZE);
+    if (buf == NULL)
+    {
+        printf("ERROR: No memory\n");
+        goto end;
+    }
+
+    if(eth_raw_rx_protocol == ETHTYPE_EAP){
+        eth_proto = ETHPROTO_EAP;
+    }
+    else if(eth_raw_rx_protocol == ETHTYPE_IP){
+        eth_proto = ETHPROTO_IP;
+    }
+    else{
+        printf("doesn't support for this ether type\n");
+        goto end;
+    }
+    /* Open an socket */
+    sock = socket(AF_PACKET, SOCK_RAW, eth_proto);
+    if (sock == QAPI_ERROR)
+    {
+        printf("ERROR: Failed to create socket\n");
+        goto end;
+    }
+    printf("****************************************************\n");
+    printf("Ethernet RX Test\n");
+    printf("****************************************************\n");
+    printf(" EtherType: 0x%04x\n", eth_raw_rx_protocol);
+    printf("Type \"eth rx -q\" to termintate test.\n");
+    printf("****************************************************\n");
+
+    memset(&from_addr, 0, sizeof(from_addr));
+    fromlen = sizeof(struct sockaddr_in);
+
+    /* Receive loop */
+    while (!eth_rx_quit)
+    {
+        max_fd = -1;
+        FD_ZERO(&read_fd_set);
+        FD_ZERO(&write_fd_set);
+        FD_ZERO(&error_fd_set);
+
+        /*???*/
+        if(sock >= 0)
+        {
+            FD_SET(sock, &read_fd_set);
+            max_fd = (sock > max_fd) ? sock : max_fd;
+        }
+
+        time_out.tv_sec = 0;
+        time_out.tv_usec = 100;
+        
+        ret_val = lwip_select(max_fd + 1, &read_fd_set, &write_fd_set, &error_fd_set, &time_out);
+
+        if (eth_rx_quit)
+        {
+            goto end;
+        }
+
+        if (ret_val > 0)
+        {
+            /*??????*/
+            if ((sock >= 0) && FD_ISSET(sock, &read_fd_set))
+            {
+                while(1)
+                {
+                    received = lwip_recvfrom(sock, buf, ETH_RAW_RX_BUFFER_SIZE, 0, (struct sockaddr *)&from_addr, &fromlen);
+                    //printf( "printf lwip_recvfrom lan msg\n");
+                    if (received > 0)
+                    {
+                        /*IPv4*/
+                        if(eth_raw_rx_protocol == ETHTYPE_IP){
+                            iphdr = (struct ip_hdr *)buf;
+                            ip_addr_t *ip_local_addr = (ip_addr_t *)netif_ip_addr4(netif);
+
+                            if (iphdr->dest.addr == ip_local_addr->u_addr.ip4.addr){
+                                info_printf("STA IPv4: %s, start to dump\n", ipaddr_ntoa(ip_local_addr));
+                                HEXDUMP((char *)buf, received, true, false);
+                            }
+                        }
+                        else{
+                            ethhdr = (struct eth_hdr *)buf;      
+                            printf("Received %d bytes from %02x:%02x:%02x:%02x:%02x:%02x\n", received,
+                                ethhdr->src.addr[0], ethhdr->src.addr[1], ethhdr->src.addr[2], ethhdr->src.addr[3], ethhdr->src.addr[4], ethhdr->src.addr[5]);
+                            HEXDUMP((char *)buf, received, true, false);
+                        }
+                    }
+                    break;
+                }
+            }
+        }	
+    }
+end:
+    if (buf)
+    {
+        free(buf);
+    }
+
+    if (sock != QAPI_ERROR)
+    {
+        closesocket(sock);
+    }
+
+    vTaskDelete(NULL);
+}
+static qapi_Status_t eth_rx(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+
+    int rc = QAPI_ERROR;
+    struct eth_hdr *eth;
+
+    int i = 0;
+    
+    uint32_t status = pdPASS;
+    TaskHandle_t eth_rx_task_handle;
+    eth_raw_rx_protocol = ETHTYPE_EAP; /*default to receive EAP*/
+
+    for (i = 1; i < Parameter_Count; i++)
+    {
+        if (Parameter_List[i].String_Value[0] == '-')
+        {
+            switch (Parameter_List[i].String_Value[1])
+            {
+                case 'p':   /* -p 0x888e */
+                    i++;
+                    if (!Parameter_List[i].Integer_Is_Valid ||
+                        (eth_raw_rx_protocol = Parameter_List[i].Integer_Value) < 0x600)
+                    {
+                        printf("ERROR: Invalid etherType: %s\n", Parameter_List[i].String_Value);
+                        goto end;
+                    }
+                    break;
+
+                case 'q':   /* -q */
+                    eth_rx_quit = true;
+                    rc = QAPI_OK;
+                    goto end;
+
+                default:
+                    printf("ERROR: Unknown option: %s\n", Parameter_List[i].String_Value);
+                    goto end;
+            }
+        }
+        else
+        {
+            printf("ERROR: Unknown option: %s\n", Parameter_List[i].String_Value);
+            goto end;
+        }
+
+        if (i == Parameter_Count)
+        {
+            printf("What is value of %s?\n", Parameter_List[i-1].String_Value);
+            goto end;
+        }
+    }   /* for */
+
+    status = (uint32_t)nt_qurt_thread_create(eth_rx_thread, "eth_rx_task", 1024, NULL, 6, &eth_rx_task_handle);
+    
+    if(status){
+        rc = QAPI_OK;
+        goto end;
+    }
+    /* Bind 
+    memset(&local_addr, 0, sizeof(local_addr));
+    local_addr.sll_family = AF_PACKET;
+    local_addr.sll_protocol = htons(protocol);
+    if (ifname)
+    {
+        local_addr.sll_ifindex = rc = qapi_Net_Interface_Get_Ifindex(ifname);
+        if (rc < 0)
+        {
+            PRINTF("ERROR: Failed to get ifIndex\n");
+            goto end;
+        }
+    }
+    
+    rc = qapi_bind(sock, (struct sockaddr *)&local_addr, sizeof(struct sockaddr_ll));
+    if (rc != QAPI_OK)
+    {
+        PRINTF("ERROR: Socket bind error.\n");
+        goto end;
+    }
+    */
+    /* ------ Start test.----------- */
+    
+end:
+    if (rc != QAPI_OK)
+    {
+        return QAPI_ERROR;
+    }
+
+    return QAPI_OK;
+}
+static qapi_Status_t eth_tx(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    char *ifname = NULL;
+    char *payload = NULL;
+    int sock = QAPI_ERROR;
+    int rc = QAPI_ERROR;
+    int i;
+    struct sockaddr_storage to;
+    struct netif *netif = NULL;
+    struct eth_hdr *eth;
+    char *da;
+    uint32_t mac_addr_len;
+    uint8_t *srcmac;
+    uint8_t eth_proto = ETHPROTO_EAP;
+    uint8_t eapol[] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* DA */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* SA */
+        0x88, 0x8e,                         /* EtherType */
+        0x01,           /* EAPOL protocol version */
+        0x00,           /* EAPOL type: EAPOL-Packet */ 
+        0x00, 0x05,     /* EAPOL payload length */
+        0x01,           /* EAP code: request */
+        0xaa,           /* EAP id */
+        0x00, 0x05,     /* EAP length */
+        0x01            /* EAP type: identity */
+    };
+    /* default to send EAPOL frame */
+    uint8_t *pkt = eapol;
+    int len = sizeof(eapol);
+    uint16_t protocol = ETHTYPE_EAP;
+    struct sockaddr_storage from;
+    netif = get_netif_by_device(STA_DEVICE);
+
+    if (Parameter_Count < 2)
+    {
+        eth_help();
+        goto end;
+    }
+
+    da = Parameter_List[1].String_Value;
+
+    for (i = 2; i < Parameter_Count; i++)
+    {
+        if (Parameter_List[i].String_Value[0] == '-')
+        {
+            switch (Parameter_List[i].String_Value[1])
+            {
+                case 'd':   /* -d "00 01 02 03" */
+                    i++;
+                    payload = Parameter_List[i].String_Value;
+                    break;
+
+                case 'p':   /* -p 0x888e */
+                    i++;
+                    if (!Parameter_List[i].Integer_Is_Valid ||
+                        (protocol = Parameter_List[i].Integer_Value) < 0x600)
+                    {
+                        printf("ERROR: Invalid etherType: %s\n", Parameter_List[i].String_Value);
+                        goto end;
+                    }
+                    break;
+
+                default:
+                    printf("ERROR: Unknown option: %s\n", Parameter_List[i].String_Value);
+                    goto end;
+            }
+        }
+        else
+        {
+            printf("ERROR: Unknown option: %s\n", Parameter_List[i].String_Value);
+            goto end;
+        }
+
+        if (i == Parameter_Count)
+        {
+            printf("What is value of %s?\n", Parameter_List[i-1].String_Value);
+            goto end;
+        }
+    }   /* for */
+
+    if (payload)
+    {
+        len = strlen(payload) + sizeof(struct eth_hdr);
+        pkt = (uint8_t*)malloc(len);
+        
+        if (pkt == NULL)
+        {
+            printf("ERROR: No memory\n");
+            goto end;
+        }
+
+        memset(pkt, 0 ,len);
+        
+        rc = hexstr2bin(payload, pkt + sizeof(struct eth_hdr), strlen(payload));
+        if (rc < 0)
+        {
+            printf("ERROR: Invalid data string: %s\n", payload);
+            goto end;
+        }
+        len = rc + sizeof(struct eth_hdr);
+    }
+    /*
+    
+    ip_addr_t *ip_local_addr = (ip_addr_t *)netif_ip_addr4(netif);
+
+    struct sockaddr_in *from4 = (struct sockaddr_in*)&from;
+    from4->sin_len = sizeof(struct sockaddr_in);
+    from4->sin_family = AF_INET;
+    from4->sin_port = htons(0);
+    inet_addr_from_ip4addr(&(from4->sin_addr), ip_2_ip4(ip_local_addr));
+    */
+    if(protocol == ETHTYPE_EAP){
+        eth_proto = ETHPROTO_EAP;
+    }
+    else if(protocol == ETHTYPE_IP){
+        eth_proto = ETHPROTO_IP;
+    }
+    else{
+        printf("not supported ether type\n");
+        goto end;
+    }
+    /* Open an socket*/
+    sock = socket(AF_PACKET, SOCK_RAW, eth_proto);
+    if (sock == QAPI_ERROR)
+    {
+        printf("ERROR: Failed to create socket\n");
+        goto end;
+    }
+    
+    eth = (struct eth_hdr *)pkt;
+
+    /* DA */
+    rc = net_ether_aton(da, eth->dest.addr);  
+    if (rc != QAPI_OK)
+    {
+        printf("ERROR: Invalid MAC address\n");
+        goto end;
+    }
+
+    /* SA */
+    memcpy(eth->src.addr, netif->hwaddr, 6);
+
+    eth->type = htons(protocol);
+    
+    /* send it */
+    rc = sendto(sock, pkt, len, 0, (struct sockaddr*)&to, sizeof(to));
+    if (rc < 0)
+    {
+        printf("ERROR: Failed to send (%d)\n", rc);
+        goto end;
+    }
+
+    printf("\nSent %d bytes to %s\n", rc, da); 
+    rc = QAPI_OK;
+
+end:
+    if (pkt && pkt != eapol)
+    {
+        free(pkt);
+    }
+
+    if (sock != QAPI_ERROR)
+    {
+        closesocket(sock);
+    }
+
+    if (rc != QAPI_OK)
+    {
+        return QAPI_ERROR;
+    }
+
+    return QAPI_OK;
+}
+static void eth_help(void)
+{
+    printf("eth tx <dest mac addr> [-d <data bytes>] [-p <etherType>]\n"); 
+    printf("eth rx [-p <etherType>] [-q]\n"); 
+    printf("Examples:\n");
+    printf(" eth tx 00:11:22:33:44:55 -p 0x888e -d \"01 06 12 05 01 ab 00 05 01\"\n");
+    printf(" eth rx -p 0x888e\n");
+    printf(" eth rx -q\n");
+}
+static qapi_Status_t eth(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_Status_t status;
+
+    if (Parameter_Count < 1)
+    {
+        eth_help();
+        return QAPI_ERROR;
+    }
+
+    eth_rx_quit = 0;
+
+    if (strncmp(Parameter_List[0].String_Value, "tx", 1) == 0)
+    {
+        status = eth_tx(Parameter_Count, Parameter_List);
+    }
+    else
+    if (strncmp(Parameter_List[0].String_Value, "rx", 1) == 0)
+    {
+        status = eth_rx(Parameter_Count, Parameter_List);
+    }
+    else
+    {
+        printf("ERROR: Unknown command: %s\n", Parameter_List[0].String_Value);
+        status = QAPI_ERROR;
+    }
+
+    return status;
+}
+#endif /*CONFIG_SUPPORT_LWIP_RAW_SOCKET*/
+
 const QAPI_Console_Command_t net_shell_cmds[] = {
     // cmd_function    cmd_string               usage_string             description
     {ifconfig, "ifconfig", "\n\nifconfig [interface] [ipv4addr] [subnetmask] [default_gateway]\n",
@@ -1175,6 +1819,16 @@ const QAPI_Console_Command_t net_shell_cmds[] = {
      "\nSNTP client start or stop, configure"},
 #endif
     {socketstat, "socketstat", "\n\nsocketstat\n", "\nShow the socket count in lwip stack"},
+#ifdef CONFIG_SUPPORT_LWIP_RAW_SOCKET
+    {eth,		"eth",	"\n\neth\n" \
+                            "eth tx <dest mac addr> [-d <data bytes>] [-p <etherType>]\n" \
+                            "eth rx [-p <etherType>] [-q] [-f <1|0, 1 for not consuming eth header for ip>]\n" \
+                            "Examples:\n" \
+                                " eth tx 00:11:22:33:44:55 -p 0x888e -d \"01 06 12 05 01 ab 00 05 01\"\n"\
+                                "eth rx -p 0x888e\n"\
+                                "eth rx -q",
+                                "\neth tx/rx demo"},
+#endif /* CONFIG_SUPPORT_LWIP_RAW_SOCKET */
 };
 
 const QAPI_Console_Command_Group_t net_shell_cmd_group = {
