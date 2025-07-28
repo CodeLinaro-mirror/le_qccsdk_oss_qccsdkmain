@@ -298,7 +298,12 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
     extern int nt_socpm_resume_f;
     uint32_t warm_boot_sts;
     uint32_t slp_tmr_sts;
-
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+    uint32_t compensation_hre =0;
+    time_timetick_type hres_tick_after_comp = 0;
+    uint32_t delta_aon =0;
+    uint32_t delta_glb= 0;
+#endif /* COMPENSATE_RC_DIVISION_ERROR_WAR */
     debug_sleep_min_enter_cnt++;
 #ifdef SOCPM_SLEEP_DEBUG
     socpm_log_timestamp(
@@ -347,6 +352,26 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
     }
 #endif /* NT_DEBUG */
     TIMER_INIT_HW();
+
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+    delta_aon = (uint32_t)nt_socpm_get_slp_tmr_us();
+    delta_glb = (uint32_t)((uint32_t)hres_timer_curr_time_us() - (uint32_t)  g_socpm_struct.glb_pre_sleep_time_us);
+
+    if(delta_glb > delta_aon)
+    {
+        compensation_hre = delta_glb - delta_aon ;
+        timer_cvt_to_tick64(compensation_hre, T_USEC, &hres_tick_after_comp);
+        NT_REG_WR(QWLAN_PMU_CFG_GLB_TMR_MSB_REG, (uint32_t)((hres_timer_timetick_get() - hres_tick_after_comp) >> 32));
+        NT_REG_WR(QWLAN_PMU_CFG_GLB_TMR_LSB_REG, (uint32_t)(hres_timer_timetick_get()-hres_tick_after_comp));  
+    }
+    else
+    {
+        compensation_hre = delta_aon - delta_glb;
+        timer_cvt_to_tick64(compensation_hre, T_USEC, &hres_tick_after_comp);
+        NT_REG_WR(QWLAN_PMU_CFG_GLB_TMR_MSB_REG, (uint32_t)((hres_timer_timetick_get() + hres_tick_after_comp) >> 32));
+        NT_REG_WR(QWLAN_PMU_CFG_GLB_TMR_LSB_REG, (uint32_t)(hres_timer_timetick_get()+ hres_tick_after_comp));  
+    }
+#endif /* COMPENSATE_RC_DIVISION_ERROR_WAR */
 
 #ifndef PLATFORM_NT
     /* Reset the PSS */
