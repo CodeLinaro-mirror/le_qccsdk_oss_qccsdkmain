@@ -1035,6 +1035,10 @@ void nt_socpm_slp_tmr_set(uint64_t sleep_time)  // in us
     NT_REG_WR(QWLAN_PMU_WLAN_SLP_TMR_EXP_LSB_REG, temp_1);
     __asm volatile("nop");
 
+#if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
+    g_socpm_struct.glb_pre_sleep_time_us = hres_timer_curr_time_us();
+#endif /* COMPENSATE_RC_DIVISION_ERROR_WAR */
+
     nt_clear_device_irq(AON_cmnss_wlan_slp_tmr_int);
 
 #ifdef SOCPM_SLEEP_DEBUG
