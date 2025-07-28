@@ -2515,7 +2515,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { SetDevice,       "SetDevice",             "<device = 0:AP|GO, 1:STA|P2P client",    "Set the active device"},
     { Scan,            "Scan",                  "<mode = 1: blocking| 2: non-blocking> [ssid]",    "Scan for networks, using blocking/non-blocking modes. If ssid is provided, scan for specific ssid only."},
     { SetWpaPassphrase,"SetWpaPassphrase",      "<passphrase>",          "Set WPA passphrase"},
-    { SetWpaParameters,"SetWpaParameters",      "<version=WPA|WPA2|WPACERT|WPA2CERT|SAE|SAE_WPA2|SAE_WPA2_WPA> <ucipher>(optional) <mcipher>(optional)",    "Set WPA specific parameters"},
+    { SetWpaParameters,"SetWpaParameters",      "<version=WPA|WPA2|WPACERT|WPA2CERT|SAE> <ucipher> <mcipher>\n    For mix mode, <version=SAE_WPA2|SAE_WPA2_WPA>, <ucipher> and <mcipher> are not required",  "Set WPA specific parameters"},
     { Connect,         "Connect",               "<ssid> [bssid]",        "Connect to a given ssid and given bssid(bssid option applicable to STA mode only. if AP mode connect command shouldnt take BSSID)"},
     { GetRssi,         "GetRssi",               "",                      "Get link quality indicator (SNR in dB) between AP and STA."},
     { Disconnect,      "Disconnect",            "",                      "Disconnect from AP or peer"},
