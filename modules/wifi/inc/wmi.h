@@ -1,7 +1,7 @@
-/*
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier:
- * BSD-3-Clause-Clear
+
+/* 
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 /*
@@ -30,13 +30,15 @@
 #include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
-#define WMI_MAX_KEY_LEN     32
-#define WMI_MAX_SSID_LEN    32
-#define WMI_PASSPHRASE_LEN  64
-#define WMI_PMK_LEN         32
-#define WMI_GMK_LEN         32
+#define WMI_MAC_LEN 6 /* length of mac in bytes */
+#define ATH_MAC_LEN 6
+#define WMI_MAX_KEY_LEN 32
+#define WMI_MAX_SSID_LEN 32
+#define WMI_PASSPHRASE_LEN 64
+#define WMI_PMK_LEN 32
+#define WMI_GMK_LEN 32
 #define WMI_CHANNEL_NUM_MAX TOT_MAX_CHANNEL_INDEX + 1
-#define WMI_MAX_APP_IE_LEN  64
+#define WMI_MAX_APP_IE_LEN 64
 
 typedef PREPACK struct {
     uint8_t *wur_buffer;
@@ -45,7 +47,26 @@ typedef PREPACK struct {
 
 #define WMI_MIN_KEY_INDEX 0
 #define WMI_MAX_KEY_INDEX 3
-#define WPS_UUID_LEN      16
+#define WPS_UUID_LEN 16
+#define WPS_MAX_DEVNAME_LEN 32
+
+#define WMI_P2P_FW_CONNECT_CMD WMI_P2P_FW_CONNECT_CMD_STRUCT
+
+/*
+ * Control Path
+ */
+typedef PREPACK struct {
+    uint16_t commandId;
+    /*
+     * info1 - 16 bits
+     * b03:b00 - id
+     * b15:b04 - unused
+     */
+    uint16_t info1;
+
+    uint16_t reserved;  /* For alignment */
+} POSTPACK WMI_CMD_HDR; /* used for commands and events */
+
 /*
  * List of Commnands
  */
@@ -59,7 +80,7 @@ typedef enum {
     WMI_GET_CHANNEL_LIST_CMDID,
     WMI_SET_CHANNEL_PARAMS_CMDID,
     WMI_SET_POWER_PARAMS_CMDID,
-    WMI_SET_POWERSAVE_TIMERS_POLICY_CMDID,  // 0x0A
+    WMI_SET_POWERSAVE_TIMERS_POLICY_CMDID, // 0x0A
     WMI_ADD_CIPHER_KEY_CMDID,
     WMI_SET_TKIP_COUNTERMEASURES_CMDID,
     WMI_RSSI_THRESHOLD_PARAMS_CMDID,
@@ -74,7 +95,7 @@ typedef enum {
      */
     WMI_AP_CONFIG_COMMIT_CMDID,
     WMI_AP_SET_MLME_CMDID,
-    WMI_AP_SET_COUNTRY_CMDID,  // 0x14=20
+    WMI_AP_SET_COUNTRY_CMDID, // 0x14=20
     WMI_AP_SET_DTIM_CMDID,
 
     WMI_ALLOW_AGGR_CMDID,
@@ -87,7 +108,7 @@ typedef enum {
     WMI_SET_PASSPHRASE_CMDID,
 
     WMI_AP_SET_APSD_CMDID,
-    WMI_AP_APSD_BUFFERED_TRAFFIC_CMDID,  // 0x1E=30
+    WMI_AP_APSD_BUFFERED_TRAFFIC_CMDID, // 0x1E=30
     /* 802.11w cmd */
     WMI_SET_RSN_CAP_CMDID,
     /*WPA IE enable*/
@@ -101,7 +122,7 @@ typedef enum {
 
     WMI_WNM_CONFIG_CMDID,
     WMI_WNM_MAX_IDLE_PERIOD_CMDID,
-    WMI_WNM_SLEEP_RESPONSE_CMDID,  // 0x28-40
+    WMI_WNM_SLEEP_RESPONSE_CMDID, // 0x28-40
 
     WMI_SET_STA_COUNTRY_CODE_CMDID,
 
@@ -115,7 +136,7 @@ typedef enum {
     WMI_WLAN_TARGET_RESET_CMDID,
     WMI_DPM_DATA_AVAIL_NOTIFICATION_CMDID,
     WMI_RX_MGMT_FRAME_CMDID,
-    WMI_RX_EAP_FRAME_CMDID,  // 0x32=50
+    WMI_RX_EAP_FRAME_CMDID, // 0x32=50
     WMI_PRE_BEACON_INTR_CMDID,
     WMI_MIC_ERROR_INTR_CMDID,
     WMI_BAD_DECRYPT_ERROR_INTR_CMDID,
@@ -125,7 +146,7 @@ typedef enum {
     WMI_GET_WLAN_80211_STAT_CMDID,
     WMI_GET_RETURN_STATUS_CMDID,
     WMI_SET_IP_PRECEDENCE_CMDID,
-    WMI_SET_CONFIG_CMDID,  // 0x3c=60
+    WMI_SET_CONFIG_CMDID, // 0x3c=60
     WMI_WUR_INFO_CMDID,
     WMI_WUR_TSF_MATCH,
     WMI_WUR_TSF_BEACON_MATCH,
@@ -137,20 +158,20 @@ typedef enum {
     WMI_GET_CONFIG_CMDID,
     WMI_NTENABLE_CMDID,
     WMI_RA_CFG_CMDID,
-    WMI_IMPS_CONFIG_CMDID,       // 0x46=70
-    WMI_POWER_SLEEP_MODE_CMDID,  // to select clockgated or mcu sleep
+    WMI_IMPS_CONFIG_CMDID,      // 0x46=70
+    WMI_POWER_SLEEP_MODE_CMDID, // to select clockgated or mcu sleep
     WMI_TIMEDOUT_HNDL_CMDID,
-    WMI_WUR_STATS_CMDID,                 ///< to dispaly wur statistics
-    WMI_WUR_ERROR_FRAME_RECEIVED_CMDID,  ///< to receive error frame
-    WMI_SET_BEACON_MISS_THRESHOLD,       /**< wmi id for setting beacon miss threshold*/
-    WMI_WUR_BEACON_MISS_CMDID,           ///< to handle beacon miss
+    WMI_WUR_STATS_CMDID,                ///< to dispaly wur statistics
+    WMI_WUR_ERROR_FRAME_RECEIVED_CMDID, ///< to receive error frame
+    WMI_SET_BEACON_MISS_THRESHOLD,      /**< wmi id for setting beacon miss threshold*/
+    WMI_WUR_BEACON_MISS_CMDID,          ///< to handle beacon miss
 
     //#ifdef NT_FN_FTM
     // FTM Support
     WMI_SET_LOCATION_ON,
     WMI_SET_LOCATION_OFF,
     WMI_SET_FTM_ON,
-    WMI_SET_FTM_OFF,  // 0x50=80
+    WMI_SET_FTM_OFF, // 0x50=80
     WMI_SEND_FTM_FRAME,
     WMI_SET_LOCATION_CONFIGURE,
     WMI_SET_RTT_CFG,
@@ -183,7 +204,7 @@ typedef enum {
     //#endif
     WMI_WPS_SET_CONFIG_CMDID,
     WMI_WPS_SET_CONFIG_STATE_CMDID,
-    WMI_ENABLE_XPA,  // 0x6e=110
+    WMI_ENABLE_XPA, // 0x6e=110
     WMI_ENABLE_AUTO_BA,
     WMI_SET_TWT_RESP_CMDID,   /**< Set sleep time interval for twt sta */
     WMI_SET_TWT_ENABLE_CMDID, /**< Set sleep time interval for wnm sta */
@@ -193,7 +214,7 @@ typedef enum {
     WMI_SET_CONFIGURE_TWT_CMDID,
     WMI_SET_TWT_ALIGNMENT_CMDID,
     WMI_SET_TWT_DTIM_STATE_CMDID,
-    WMI_PKT_THLD_NOTIFY_CMID,  // 0x78=120
+    WMI_PKT_THLD_NOTIFY_CMID, // 0x78=120
     WMI_SET_RATE,
     WMI_CFG_RATE_IDX,
     WMI_UNIT_TEST_CMDID,
@@ -203,7 +224,7 @@ typedef enum {
     WMI_PDEV_UTF_CMDID,
     WMI_MODE_CMDID,
     WMI_COEX_RRM_LO_THRESH_EVENT,
-    WMI_COEX_RRM_HI_THRESH_EVENT,  // 0x82=130
+    WMI_COEX_RRM_HI_THRESH_EVENT, // 0x82=130
     WMI_COEX_CRIT_PROTO_START,
     WMI_COEX_CRIT_PROTO_STOP,
     WMI_COEX_GPM_RX_EVENT,
@@ -213,7 +234,7 @@ typedef enum {
     WMI_TWT_TEARDOWN_CMDID,
     WMI_TWT_STATUS_CMDID,
     WMI_PHYDBGDUMP_CMD,
-    WMI_UPDATE_BI_CMDID,  // 0x8c=140
+    WMI_UPDATE_BI_CMDID, // 0x8c=140
     WMI_SET_RESET_WAKELOCK_CMDID,
     WMI_PERIODIC_TSF_SYNC_CMDID,
     WMI_HANDLE_ECSA_TIMER_CMDID,
@@ -235,7 +256,7 @@ typedef enum {
     WMI_BMPS_ENABLE_CMDID,
     WMI_BMPS_LOG_ENABLE_CMDID,
     WMI_BMPS_IGNORE_BCMC_CMDID,
-    WMI_BMPS_TIMING_CFG_CMDID,  // 0xa0=160
+    WMI_BMPS_TIMING_CFG_CMDID, // 0xa0=160
     WMI_BMPS_RX_FILTER_ENABLE_CMDID,
     WMI_IMPS_CFG_CMDID,
     WMI_GET_STATISTICS_CMDID,
@@ -252,6 +273,33 @@ typedef enum {
     WMI_GET_TX_POWER_CMDID,
     WMI_IMPS_SLEEP_EXIT_CMDID,
     WMI_IMPS_TIMEDOUT_HNDL_CMDID,
+
+    /* P2P CMDS */
+    WMI_P2P_SET_CONFIG_CMDID,
+    WMI_P2P_FIND_CMDID,
+    WMI_P2P_CONNECT_CMDID,
+    WMI_P2P_LISTEN_CMDID,
+    WMI_P2P_SET_CMDID,
+    WMI_P2P_FW_PROV_DISC_REQ_CMDID,
+    WMI_P2P_GET_NODE_LIST_CMDID,
+    WMI_P2P_AUTH_GO_NEG_CMDID,
+    WMI_P2P_INVITE_CMDID,
+    WMI_P2P_INVITE_REQ_RSP_CMDID,
+    WMI_P2P_SDPD_TX_CMDID,
+    WMI_P2P_STOP_SDPD_CMDID,
+    WMI_P2P_CANCEL_CMDID,
+    WMI_P2P_STOP_FIND_CMDID,
+    WMI_P2P_SET_JOIN_PROFILE_CMDID,
+    WMI_P2P_GRP_INIT_CMDID,
+
+    /* P2P FW GO PS Command */
+    WMI_P2P_FW_SET_NOA_CMDID,
+    WMI_P2P_FW_SET_OPPPS_CMDID,
+    WMI_P2P_SET_PROFILE_CMDID,
+    WMI_P2P_FW_GET_NOA_CMDID,
+    WMI_P2P_FW_GET_OPPPS_CMDID,
+    WMI_P2P_LIST_PERSISTENT_NETWORK_CMDID,
+
     WMI_CMD_MAX, /* Note: This cmd should be the last in the WMI_COMMAND_ID ENUM */
 } WMI_COMMAND_ID;
 
@@ -266,7 +314,7 @@ typedef enum {
     WMI_WIFI_SET_MODE_EVTID,
     WMI_SCAN_START_EVTID,
     WMI_SCAN_STOP_EVTID,
-    WMI_SCAN_COMP_EVTID,  // 0x0A
+    WMI_SCAN_COMP_EVTID, // 0x0A
     WMI_COEX_EVTID,
     WMI_TWT_SETUP_EVTID,
     WMI_TWT_TEARDOWN_EVTID,
@@ -276,7 +324,7 @@ typedef enum {
     WMI_IP_ADDR_READY_EVTID,
     WMI_IP_PING_EVTID,
     WMI_NETIF_ADD_EVTID,
-    WMI_SET_PARAM_EVENT_ID,  // 0x14
+    WMI_SET_PARAM_EVENT_ID, // 0x14
     WMI_REPORT_STATISTICS_EVTID,
     WMI_REGULATORY_EVTID,
     WMI_SET_RATE_EVTID,
@@ -287,6 +335,18 @@ typedef enum {
     WMI_MGMT_FRAME_FILTER_EVTID,
     WMI_GET_TX_POWER_EVTID,
     WMI_WPS_FAIL_EVTID,
+
+    WMI_P2P_LIST_PERSISTENT_NETWORK_EVENTID,
+    WMI_P2P_GO_NEG_RESULT_EVENTID,
+    WMI_P2P_NODE_LIST_EVENTID,
+    WMI_P2P_REQ_TO_AUTH_EVENTID,
+    WMI_P2P_PROV_DISC_RESP_EVENTID,
+    WMI_P2P_PROV_DISC_REQ_EVENTID,
+    WMI_P2P_INVITE_REQ_EVENTID,
+    WMI_P2P_INVITE_RCVD_RESULT_EVENTID,
+    WMI_P2P_INVITE_SENT_RESULT_EVENTID,
+    WMI_P2P_SDPD_RX_EVENTID,
+
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
 
@@ -348,7 +408,7 @@ typedef enum {
  * timeout handlers defined in wmi_timer_disp_hnd_t
  */
 
-typedef enum  //@Wmi generic timedout handler events
+typedef enum //@Wmi generic timedout handler events
 { cm_connect_timeout_evntid = 0x0,
   pm_prob_res_timout_evntid,
   dc_deterministic_scan_timeout_evntid,
@@ -356,7 +416,7 @@ typedef enum  //@Wmi generic timedout handler events
   ap_check_sta_inactivity_evntid,
 #ifdef NT_FN_AMPDU
   TXRXAddBaRespTimeout_evntid,
-#endif  // NT_FN_AMPDU
+#endif // NT_FN_AMPDU
   TXRX_reset_mic_err_cnt_timeout_handler_evntid,
   TXRX_enable_assoc_timeout_handler_evntid,
   wlan_beacon_bmiss_handler_evntid,
@@ -364,7 +424,7 @@ typedef enum  //@Wmi generic timedout handler events
   pmPspollTimeoutFunc_evntid,
 #ifdef NT_FN_RA
   ra_inspect_rates_evntid,
-#endif  // NT_FN_RA
+#endif // NT_FN_RA
 #if ((defined NT_FN_RMF) || (defined NT_FN_WPA3))
   mlme_assoc_comeback_timeout_handler_evntid,
 #endif
@@ -372,12 +432,12 @@ typedef enum  //@Wmi generic timedout handler events
   sec_tkip_cm_timeout_evntid,
   sec_timeout_evntid,
 #ifdef NT_FN_ROAMING
-  ro_periodic_search_timeout_evntid,  // Roaming periodic search timeout event
-#endif                                // NT_FN_ROAMING
+  ro_periodic_search_timeout_evntid, // Roaming periodic search timeout event
+#endif                               // NT_FN_ROAMING
 
 #ifdef NT_FN_WNM_POWERSAVE_MODE
-  nt_wnm_bss_idle_timeout_cb_evntid,  ///< bss idle timeout event id for wmi
-#endif                                /*  NT_FN_WNM_POWERSAVE_MODE */
+  nt_wnm_bss_idle_timeout_cb_evntid, ///< bss idle timeout event id for wmi
+#endif                               /*  NT_FN_WNM_POWERSAVE_MODE */
 #ifdef NT_FN_WMM_PS_STA
   nt_be_trigger_tmr_expiry_cb_evntid,
   nt_bk_trigger_tmr_expiry_cb_evntid,
@@ -387,17 +447,17 @@ typedef enum  //@Wmi generic timedout handler events
   nt_bk_eosp_tmr_expiry_cb_evntid,
   nt_vi_eosp_tmr_expiry_cb_evntid,
   nt_vo_eosp_tmr_expiry_cb_evntid,
-#endif  // NT_FN_WMM_PS_STA
+#endif // NT_FN_WMM_PS_STA
 #ifdef NT_FN_FTM_2016V
   nt_ftm_partial_tsf_bur_dur_rep_start_asap_cb_evntid,
   nt_ftm_partial_tsf_bur_start_non_asap_timeout_msg_cb_evntid,
   nt_ftm_tsf_corrected_burst_period_expiry_asap_cb_evntid,
   nt_ftm_burst_period_expiry_cb_evntid,
   nt_ftm_burst_duration_expiry_cb_evntid,
-#endif  // NT_FN_FTM_2016V
+#endif // NT_FN_FTM_2016V
 #ifdef NT_FN_FTM
   nt_ftm_min_delta_expiry_cb_evntid,
-#endif  // NT_FN_FTM
+#endif // NT_FN_FTM
 #ifdef CONFIG_CHANNEL_SCHEDULER
   co_op_dwell_timeout_eventid,
   co_scheduler_timeout_eventid,
@@ -424,6 +484,7 @@ typedef enum  //@Wmi generic timedout handler events
   twt_sta_twt_setup_timeout,
 #endif
 #ifdef FEATURE_PERIODIC_WAKE_SLEEP
+
   /*Periodic traffic idle timer timeout event*/
   periodicTrafficIdleTimer_eventid,
 #endif
@@ -434,11 +495,11 @@ typedef enum  //@Wmi generic timedout handler events
  * Connect Command
  */
 typedef enum {
-    INFRA_NETWORK = 0x01,  // STA Mode
-    AP_NETWORK = 0x10,     // AP Mode
+    INFRA_NETWORK = 0x01, // STA Mode
+    AP_NETWORK = 0x10,    // AP Mode
 #ifdef NT_FN_CONCURRENCY
-    AP_STA_NETWORK = 0x11,  // AP_STA Concurrency Mode
-#endif                      // NT_FN_CONCURRENCY
+    AP_STA_NETWORK = 0x11, // AP_STA Concurrency Mode
+#endif                     // NT_FN_CONCURRENCY
     NETWORK_CONNECTED_USING_WPS = 0x20
 } NETWORK_TYPE;
 
@@ -499,9 +560,9 @@ typedef PREPACK struct {
  * WMI_WNM_CONFIG_CMD
  */
 typedef PREPACK struct {
-    int8_t wnm_enable;           ///< wnm enable flag
-    uint16_t bss_max_idle_time;  ///< bss idle time
-    uint16_t sleep_interval;     ///< sleep time
+    int8_t wnm_enable;          ///< wnm enable flag
+    uint16_t bss_max_idle_time; ///< bss idle time
+    uint16_t sleep_interval;    ///< sleep time
     uint8_t wnm_dtim_enable_disable_auto;
 } POSTPACK WMI_WNM_CONFIG_CMD;
 
@@ -509,12 +570,12 @@ typedef PREPACK struct {
  * WMI_TWT_CONFIG_CMD
  */
 typedef struct {
-    uint16_t resp_type;              ///< response type of twt
-    uint8_t twt_type;                // individual/broadcast
-    uint64_t twt_wake_interval;      // span of time between first wake up and next wake up
-    uint32_t twt_min_wake_duration;  // span of time between point of wake up and point of sleep
-    uint8_t twt_wakeup_type;         // implicit/explicit
-    uint8_t twt_flow_type;           // announced /unannounced
+    uint16_t resp_type;             ///< response type of twt
+    uint8_t twt_type;               // individual/broadcast
+    uint64_t twt_wake_interval;     // span of time between first wake up and next wake up
+    uint32_t twt_min_wake_duration; // span of time between point of wake up and point of sleep
+    uint8_t twt_wakeup_type;        // implicit/explicit
+    uint8_t twt_flow_type;          // announced /unannounced
     uint16_t twt_alignment;
     uint8_t twt_dtim_enable_disable_auto;
 } WMI_TWT_CONFIG_CMD;
@@ -527,7 +588,7 @@ typedef PREPACK struct {
 
 //#ifdef SUPPORT_UNIT_TEST_CMD
 
-#define WMI_UNIT_TEST_ARGS_MAX (64 - 1)  // As control interface support 256 bytes, Hence 256/4 args
+#define WMI_UNIT_TEST_ARGS_MAX (64 - 1) // As control interface support 256 bytes, Hence 256/4 args
 
 typedef PREPACK struct {
     uint8_t vdev_id;
@@ -607,8 +668,8 @@ typedef PREPACK struct {
  */
 
 typedef enum {
-    WMI_LONG_SCAN = 0,  // scan all ssids
-    WMI_SHORT_SCAN = 1  // scan specific ssids
+    WMI_LONG_SCAN = 0, // scan all ssids
+    WMI_SHORT_SCAN = 1 // scan specific ssids
 } WMI_SCAN_TYPE;
 
 typedef PREPACK struct {
@@ -720,7 +781,14 @@ typedef PREPACK struct {
 /*
  * WMI_SET_CHANNEL_PARAMS_CMDID
  */
-typedef enum { WMI_11B_MODE = 0x1, WMI_11G_MODE = 0x2, WMI_11GN_MODE = 0x3, WMI_11GONLY_MODE = 0x4 } WMI_PHY_MODE;
+typedef enum {
+    WMI_11B_MODE = 0x1,
+    WMI_11G_MODE = 0x2,
+    WMI_11GN_MODE = 0x3,
+    WMI_11GONLY_MODE = 0x4,
+    WMI_11A_MODE = 0x5,
+    WMI_11AG_MODE = 0x6
+} WMI_PHY_MODE;
 
 typedef enum { WMI_IGNORE_BARKER_IN_ERP = 0, WMI_DONOT_IGNORE_BARKER_IN_ERP } WMI_PREAMBLE_POLICY;
 
@@ -763,6 +831,73 @@ typedef enum {
 } WMI_DISCONNECT_REASON;
 
 /*
+ * BSS Info Event.
+ * Mechanism used to inform host of the presence and characteristic of
+ * wireless networks present.  Consists of bss info header followed by
+ * the beacon or probe-response frame body.  The 802.11 header is not included.
+ */
+typedef enum { BEACON_FTYPE = 0x1, PROBERESP_FTYPE, ACTION_MGMT_FTYPE, PROBEREQ_FTYPE } WMI_BI_FTYPE;
+
+enum { BSS_ELEMID_CHANSWITCH = 0x01, BSS_ELEMID_ATHEROS = 0x02 };
+
+typedef PREPACK struct {
+    uint16_t channel;
+    uint8_t frameType; /* see WMI_BI_FTYPE */
+    uint8_t snr;
+    int16_t rssi;
+    uint8_t bssid[WMI_MAC_LEN];
+    uint32_t ieMask;
+} POSTPACK WMI_BSS_INFO_HDR;
+
+/*
+ * BSS INFO HDR version 2.0
+ * With 6 bytes HTC header and 6 bytes of WMI header
+ * WMI_BSS_INFO_HDR cannot be accomodated in the removed 802.11 management
+ * header space.
+ * - Reduce the ieMask to 2 bytes as only two bit flags are used
+ * - Remove rssi and compute it on the host. rssi = snr - 95
+ */
+typedef PREPACK struct {
+    uint16_t channel;
+    uint8_t frameType; /* see WMI_BI_FTYPE */
+    uint8_t snr;
+    uint8_t bssid[WMI_MAC_LEN];
+    uint16_t ieMask;
+} POSTPACK WMI_BSS_INFO_HDR2;
+
+typedef PREPACK struct {
+    uint8_t bssid[WMI_MAC_LEN];
+    uint8_t rssiCtl[3];
+    uint8_t rssiExt[3];
+} POSTPACK WMI_BSS_RSSI_INFO;
+
+typedef PREPACK struct {
+    uint8_t bssid[WMI_MAC_LEN];
+    uint8_t pin[8];
+} POSTPACK WMI_WPS_PIN_INFO;
+
+typedef PREPACK struct {
+    PREPACK union {
+        uint8_t ie[17];
+        int32_t wac_status;
+    } POSTPACK info;
+} POSTPACK WMI_GET_WAC_INFO;
+
+#define IEEE80211_NWID_LEN 32
+typedef PREPACK struct {
+    uint8_t bssid[WMI_MAC_LEN];
+    uint8_t ssid[IEEE80211_NWID_LEN];
+    uint8_t ssid_len;
+    uint8_t channel;
+    uint8_t snr;
+    uint8_t id;
+    uint8_t device_type;
+    uint8_t antenna_type;
+    int8_t threshold_offset1; /* offset for AP Tx power */
+    int8_t threshold_offset2; /* offset for antenna gain */
+} POSTPACK WMI_WAC_BSS_INFO_REPORT;
+
+/*
  * Connect Event
  */
 typedef enum {
@@ -778,7 +913,7 @@ typedef PREPACK struct {
     uint16_t atim_rx_failure_cnt;
     uint16_t bcn_rx_failure_cnt;
 } POSTPACK pm_stats_t;
-#endif  // NT_FN_DEBUG_STATS
+#endif // NT_FN_DEBUG_STATS
 
 #if defined(NT_FN_PRODUCTION_STATS) || defined(NT_FN_DEBUG_STATS)
 typedef struct {
@@ -789,7 +924,7 @@ typedef struct {
     uint16_t bmps_exit_due_to_sta_data_availablility;
     uint16_t bmps_exit_due_to_beacon_miss;
     uint16_t bmps_exit_due_to_broadcast_msg;
-#endif  // NT_FN_PRODUCTION_STATS
+#endif // NT_FN_PRODUCTION_STATS
 #ifdef NT_FN_DEBUG_STATS
     uint32_t bmps_count_minimal_code_entered;
     uint32_t bmps_count_minimal_code_sleep_immediate;
@@ -801,21 +936,21 @@ typedef struct {
     uint64_t min_awake_time;
     uint32_t max_sleep_time;
     uint32_t min_sleep_time;
-#endif  // NT_FN_DEBUG_STATS
+#endif // NT_FN_DEBUG_STATS
 } pm_statistics_t;
 
 typedef struct {
 #ifdef NT_FN_PRODUCTION_STATS
     uint16_t imps_enter_count;
     uint16_t imps_exit_count;
-#endif  // NT_FN_PRODUCTION_STATS
+#endif // NT_FN_PRODUCTION_STATS
 #ifdef NT_FN_DEBUG_STATS
     uint32_t total_awake_time;
     uint32_t total_sleep_time;
     uint32_t last_imps_exit_time;
     uint32_t last_imps_enter_time;
     uint32_t avg_connection_time;
-#endif  // NT_FN_DEBUG_STATS
+#endif // NT_FN_DEBUG_STATS
 } imps_stats_t;
 
 /* @struct	: wnm_ps_struct_stats_ap_t
@@ -823,15 +958,15 @@ typedef struct {
  * */
 typedef struct {
 #ifdef NT_FN_DEBUG_STATS
-    uint16_t wnm_power_save_enter_count;  ///< count for enter into wnm power save mode
-    uint16_t wnm_power_save_exit_count;   ///< count for exit from wnm power save mode
-#endif                                    // NT_FN_DEBUG_STATS
+    uint16_t wnm_power_save_enter_count; ///< count for enter into wnm power save mode
+    uint16_t wnm_power_save_exit_count;  ///< count for exit from wnm power save mode
+#endif                                   // NT_FN_DEBUG_STATS
 #ifdef NT_FN_PRODUCTION_STATS
-    uint16_t wnm_power_save_total_enter_sleep_mode_req_frame_recv;   ///< total enter sleep mode req recv
-    uint16_t wnm_power_save_total_enter_sleep_mode_resp_frame_sent;  ///< total enter sleep mode resp sent
-    uint16_t wnm_power_save_total_exit_sleep_mode_req_frame_recv;    ///< total exit sleep mode req recv
-    uint16_t wnm_power_save_total_exit_sleep_mode_resp_frame_sent;   ///< total exit sleep mode resp sent
-#endif                                                               // NT_FN_PRODUCTION_STATS
+    uint16_t wnm_power_save_total_enter_sleep_mode_req_frame_recv;  ///< total enter sleep mode req recv
+    uint16_t wnm_power_save_total_enter_sleep_mode_resp_frame_sent; ///< total enter sleep mode resp sent
+    uint16_t wnm_power_save_total_exit_sleep_mode_req_frame_recv;   ///< total exit sleep mode req recv
+    uint16_t wnm_power_save_total_exit_sleep_mode_resp_frame_sent;  ///< total exit sleep mode resp sent
+#endif                                                              // NT_FN_PRODUCTION_STATS
 } wnm_ps_struct_stats_ap_t;
 
 /* @struct	: wnm_ps_struct_stats_sta_t
@@ -839,17 +974,17 @@ typedef struct {
  * */
 typedef struct {
 #ifdef NT_FN_PRODUCTION_STATS
-    uint16_t wnm_power_save_enter_count;                    ///< count for enter into wnm power save mode
-    uint16_t wnm_power_save_exit_count_due_to_TIM_from_ap;  ///< count for exit from wnm mode due to tim update from ap
-    uint16_t wnm_power_save_exit_count_due_to_sta_data_avail;  ///< count for exit from wnm mode due to data
-                                                               ///< availability from sta
-#endif                                                         // NT_FN_PRODUCTION_STATS
+    uint16_t wnm_power_save_enter_count;                   ///< count for enter into wnm power save mode
+    uint16_t wnm_power_save_exit_count_due_to_TIM_from_ap; ///< count for exit from wnm mode due to tim update from ap
+    uint16_t wnm_power_save_exit_count_due_to_sta_data_avail; ///< count for exit from wnm mode due to data
+                                                              ///< availability from sta
+#endif                                                        // NT_FN_PRODUCTION_STATS
 #ifdef NT_FN_DEBUG_STATS
-    uint16_t wnm_power_save_total_enter_sleep_mode_req_frame_sent;       ///< total enter sleep mode req sent
-    uint16_t wnm_power_save_total_enter_sleep_mode_resp_frame_received;  ///< total enter sleep mode resp received
-    uint16_t wnm_power_save_total_exit_sleep_mode_req_frame_sent;        ///< total exit sleep mode req sent
-    uint16_t wnm_power_save_total_exit_sleep_mode_resp_frame_received;   ///< total exit sleep mode resp recv
-#endif                                                                   // NT_FN_DEBUG_STATS
+    uint16_t wnm_power_save_total_enter_sleep_mode_req_frame_sent;      ///< total enter sleep mode req sent
+    uint16_t wnm_power_save_total_enter_sleep_mode_resp_frame_received; ///< total enter sleep mode resp received
+    uint16_t wnm_power_save_total_exit_sleep_mode_req_frame_sent;       ///< total exit sleep mode req sent
+    uint16_t wnm_power_save_total_exit_sleep_mode_resp_frame_received;  ///< total exit sleep mode resp recv
+#endif                                                                  // NT_FN_DEBUG_STATS
 } wnm_ps_struct_stats_sta_t;
 
 /* @struct	: wur_struct_stats_sta_t
@@ -857,22 +992,22 @@ typedef struct {
  * */
 typedef struct {
 #ifdef NT_FN_PRODUCTION_STATS
-    uint16_t wur_enter_count;                            ///< count for enter into wur mode
-    uint16_t wur_exit_count;                             ///< count for exit from wur mode
-    uint16_t wur_wakeup_count_due_to_ap_wakeup_cmd;      ///< count for wur wakeup frame when ap send wakeup frame
-    uint16_t wur_wakeup_count_due_to_sta_wakeup_cmd;     ///< count for wur wakeup frame when sta send wakeup frame
-    uint16_t wur_wakeup_count_due_to_data_availability;  ///< count for wur wakeup if data available at sta side
+    uint16_t wur_enter_count;                           ///< count for enter into wur mode
+    uint16_t wur_exit_count;                            ///< count for exit from wur mode
+    uint16_t wur_wakeup_count_due_to_ap_wakeup_cmd;     ///< count for wur wakeup frame when ap send wakeup frame
+    uint16_t wur_wakeup_count_due_to_sta_wakeup_cmd;    ///< count for wur wakeup frame when sta send wakeup frame
+    uint16_t wur_wakeup_count_due_to_data_availability; ///< count for wur wakeup if data available at sta side
     uint16_t wur_wakeup_count_due_to_error_frame;
     uint16_t wur_wakeup_count_due_beacon_miss;
-#endif  // NT_FN_PRODUCTION_STATS
+#endif // NT_FN_PRODUCTION_STATS
 #ifdef NT_FN_DEBUG_STATS
-    uint16_t wur_vendor_count;                ///< count for received wur_vendor frame
-    uint16_t wur_mode_setup_req_tx_count;     ///< count for mode setup request
-    uint16_t wur_mode_setup_resp_rx_count;    ///< count for mode setup response
-    uint16_t wur_mode_suspend_req_tx_count;   ///< count for mode suspend request
-    uint16_t wur_mode_suspend_resp_rx_count;  ///< count for mode suspend response
-    uint16_t wur_mode_enter_req_tx_count;     ///< count for wur mode enter
-#endif                                        // NT_FN_DEBUG_STATS
+    uint16_t wur_vendor_count;               ///< count for received wur_vendor frame
+    uint16_t wur_mode_setup_req_tx_count;    ///< count for mode setup request
+    uint16_t wur_mode_setup_resp_rx_count;   ///< count for mode setup response
+    uint16_t wur_mode_suspend_req_tx_count;  ///< count for mode suspend request
+    uint16_t wur_mode_suspend_resp_rx_count; ///< count for mode suspend response
+    uint16_t wur_mode_enter_req_tx_count;    ///< count for wur mode enter
+#endif                                       // NT_FN_DEBUG_STATS
 } wur_struct_stats_sta_t;
 
 /* @struct	: wur_struct_stats_ap_t
@@ -880,19 +1015,19 @@ typedef struct {
  * */
 typedef struct {
 #ifdef NT_FN_PRODUCTION_STATS
-    uint16_t wur_wakeup_frame_sent_count;  ///< count for wur wakeup frame send from ap
-    uint16_t wur_mode_enter_req_rx_count;  ///< count for enter mode recv request
-#endif                                     // NT_FN_PRODUCTION_STATS
+    uint16_t wur_wakeup_frame_sent_count; ///< count for wur wakeup frame send from ap
+    uint16_t wur_mode_enter_req_rx_count; ///< count for enter mode recv request
+#endif                                    // NT_FN_PRODUCTION_STATS
 #ifdef NT_FN_DEBUG_STATS
-    uint16_t wur_vendor_frame_sent_count;     ///< count for wur vendor frame send from ap
-    uint16_t wur_mode_setup_req_rx_count;     ///< count for mode setup request receive
-    uint16_t wur_mode_setup_resp_tx_count;    ///< count for mode setup response sent
-    uint16_t wur_mode_suspend_req_rx_count;   ///< count for mode suspend request receive
-    uint16_t wur_mode_suspend_resp_tx_count;  ///< count for mode suspend response sent
-    uint16_t wur_beacon_frame_sent_count;     ///< count for wur beacon send from ap
+    uint16_t wur_vendor_frame_sent_count;    ///< count for wur vendor frame send from ap
+    uint16_t wur_mode_setup_req_rx_count;    ///< count for mode setup request receive
+    uint16_t wur_mode_setup_resp_tx_count;   ///< count for mode setup response sent
+    uint16_t wur_mode_suspend_req_rx_count;  ///< count for mode suspend request receive
+    uint16_t wur_mode_suspend_resp_tx_count; ///< count for mode suspend response sent
+    uint16_t wur_beacon_frame_sent_count;    ///< count for wur beacon send from ap
 #endif
 } wur_struct_stats_ap_t;
-#endif  // NT_FN_PRODUCTION_STATS || NT_FN_DEBUG_STATS
+#endif // NT_FN_PRODUCTION_STATS || NT_FN_DEBUG_STATS
 
 #ifdef NT_FN_WMM_PS_STA
 #if defined(NT_FN_DEBUG_STATS) || defined(NT_FN_PRODUCTION_STATS)
@@ -907,15 +1042,15 @@ typedef struct uapsd_stats_s {
     uint16_t eosp_tmr_expired_cnt_for_bk;
     uint16_t eosp_tmr_expired_cnt_for_be;
     uint16_t more_bits_set_cnt;
-#endif  // NT_FN_PRODUCTION_STATS
+#endif // NT_FN_PRODUCTION_STATS
 #ifdef NT_FN_DEBUG_STATS
     uint16_t total_trigger_timer_Cnt;
     uint16_t total_eosp_interrupts_raised;
     uint16_t received_qos_data_cnt;
-#endif  // NT_FN_DEBUG_STATS
+#endif // NT_FN_DEBUG_STATS
 } uapsd_stats_t;
-#endif  // defined(NT_FN_DEBUG_STATS) || defined(NT_FN_PRODUCTION_STATS)
-#endif  // NT_FN_WMM_PS_STA
+#endif // defined(NT_FN_DEBUG_STATS) || defined(NT_FN_PRODUCTION_STATS)
+#endif // NT_FN_WMM_PS_STA
 
 #ifdef NT_FN_PRODUCTION_STATS
 typedef PREPACK struct wlan_prod_stats_s {
@@ -924,16 +1059,16 @@ typedef PREPACK struct wlan_prod_stats_s {
 #ifdef NT_FN_WNM_POWERSAVE_MODE
     wnm_ps_struct_stats_ap_t wnm_stats_ap;
     wnm_ps_struct_stats_sta_t wnm_stats_sta;
-#endif  //#ifdef NT_FN_WNM_POWERSAVE_MODE
+#endif //#ifdef NT_FN_WNM_POWERSAVE_MODE
 #ifdef NT_FN_WMM_PS_STA
     uapsd_stats_t uapsd_sta;
-#endif  // NT_FN_WMM_PS_STA
+#endif // NT_FN_WMM_PS_STA
 #if (defined NT_FN_WUR_AP) || (defined NT_FN_WUR_STA)
     wur_struct_stats_sta_t wur_sta;
     wur_struct_stats_ap_t wur_ap;
-#endif  //#if (defined NT_FN_WUR_AP) || (defined NT_FN_WUR_STA)
+#endif //#if (defined NT_FN_WUR_AP) || (defined NT_FN_WUR_STA)
 } POSTPACK wlan_prod_stats_t;
-#endif  // NT_FN_PRODUCTION_STATS
+#endif // NT_FN_PRODUCTION_STATS
 
 #define MAX_REGULATORY_RULES 17
 
@@ -1008,7 +1143,7 @@ typedef PREPACK struct {
     uint8_t status;
     uint8_t ip_precedence[8];
 } POSTPACK WMI_SET_WMM_CMD;
-#endif  // NT_FN_WMM
+#endif // NT_FN_WMM
 
 typedef PREPACK struct {
     uint8_t status;
@@ -1025,12 +1160,12 @@ typedef PREPACK struct {
     NT_BOOL configured;
     uint8_t keepaliveInterval;
 } POSTPACK WMI_GET_KEEPALIVE_CMD;
-#endif  // ATH_KF
+#endif // ATH_KF
 
 /*
  * Add Application specified IE to a management frame
  */
-#define WMI_MAX_IE_LEN       255
+#define WMI_MAX_IE_LEN 255
 #define WMI_MAX_LARGE_IE_LEN 510
 
 typedef PREPACK struct {
@@ -1062,9 +1197,221 @@ typedef PREPACK struct {
 } POSTPACK WMI_SET_TX_POWER_CMD;
 
 /*
+ * WMI_P2P_SET_PROFILE_CMD
+ */
+typedef PREPACK struct {
+    uint8_t enable;
+} POSTPACK WMI_P2P_SET_PROFILE_CMD;
+
+#define P2P_PERSISTENT_FLAG 0x80
+/* P2P module commands */
+typedef PREPACK struct {
+    uint8_t ssidLength;
+    uint8_t ssid[WMI_MAX_SSID_LEN];
+} POSTPACK P2P_SSID;
+
+typedef PREPACK struct {
+    uint8_t go_intent;
+    uint8_t reserved[3]; /* Deprecated 'country' field */
+    uint8_t reg_class;
+    uint8_t listen_channel;
+    uint8_t op_reg_class;
+    uint8_t op_channel;
+    uint32_t node_age_to;
+    uint8_t max_node_count;
+} POSTPACK WMI_P2P_FW_SET_CONFIG_CMD;
+
+typedef PREPACK struct {
+    uint8_t go_intent;
+    uint8_t country[3];
+    uint8_t reg_class;
+    uint8_t listen_channel;
+    uint8_t op_reg_class;
+    uint8_t op_channel;
+    uint16_t config_methods;
+} POSTPACK WMI_P2P_SET_CONFIG_CMD;
+
+typedef PREPACK struct {
+    uint32_t timeout;
+    uint8_t type;
+} POSTPACK WMI_P2P_FIND_CMD;
+
+typedef PREPACK struct {
+    uint16_t go_oper_freq;
+    uint8_t dialog_token;
+    uint8_t peer_addr[WMI_MAC_LEN];
+    uint8_t own_interface_addr[WMI_MAC_LEN];
+    uint8_t go_dev_dialog_token;
+    P2P_SSID peer_go_ssid;
+    uint8_t wps_method;
+    uint8_t dev_capab;
+    uint8_t dev_auth;
+    uint8_t go_intent;
+} POSTPACK WMI_P2P_FW_CONNECT_CMD;
+
+typedef PREPACK struct {
+    uint16_t wps_method;
+    uint8_t dialog_token;
+    uint8_t peer[WMI_MAC_LEN];
+} POSTPACK WMI_P2P_FW_PROV_DISC_REQ_CMD;
+
+typedef PREPACK struct {
+    uint8_t role;
+    uint16_t listen_freq;
+    uint16_t force_freq;
+    uint8_t dialog_token;
+    uint8_t peer_addr[WMI_MAC_LEN];
+    uint8_t bssid[WMI_MAC_LEN];
+    uint8_t go_dev_addr[WMI_MAC_LEN];
+    P2P_SSID ssid;
+    uint8_t is_persistent;
+    uint8_t wps_method;
+} POSTPACK WMI_P2P_INVITE_CMD;
+
+typedef PREPACK struct {
+    uint8_t reg_class;
+    uint8_t listen_channel;
+} POSTPACK WMI_P2P_LISTEN_CHANNEL;
+
+typedef PREPACK struct {
+    uint8_t flag;
+} POSTPACK WMI_P2P_SET_CROSS_CONNECT;
+
+typedef PREPACK struct {
+    uint8_t ssid_postfix[WMI_MAX_SSID_LEN - 9];
+    uint8_t ssid_postfix_len;
+} POSTPACK WMI_P2P_SET_SSID_POSTFIX;
+
+typedef PREPACK struct {
+    uint8_t flag;
+} POSTPACK WMI_P2P_SET_INTRA_BSS;
+
+typedef PREPACK struct {
+    uint8_t flag;
+} POSTPACK WMI_P2P_SET_CONCURRENT_MODE;
+
+typedef PREPACK struct {
+    uint8_t value;
+} POSTPACK WMI_P2P_SET_GO_INTENT;
+
+typedef PREPACK struct {
+    uint8_t dev_name[WPS_MAX_DEVNAME_LEN];
+    uint8_t dev_name_len;
+} POSTPACK WMI_P2P_SET_DEV_NAME;
+
+typedef PREPACK struct {
+    uint8_t enable;
+} POSTPACK WMI_P2P_SET_CCK_RATES;
+
+typedef PREPACK struct {
+    uint8_t p2pmode;
+} POSTPACK WMI_P2P_SET_MODE;
+
+typedef PREPACK struct {
+    uint8_t enable;
+    uint8_t ctwin;
+} POSTPACK WMI_OPPPS_INFO;
+
+typedef PREPACK struct {
+    uint8_t enable;
+    uint8_t count;
+    uint8_t noas[1]; /* P2P_NOA_DESCRIPTOR */
+} POSTPACK WMI_NOA_INFO;
+
+typedef PREPACK struct {
+    uint8_t config_id; /* set to one of WMI_P2P_CONF_ID */
+    PREPACK union {
+        WMI_P2P_LISTEN_CHANNEL listen_ch;
+        WMI_P2P_SET_CROSS_CONNECT cross_conn;
+        WMI_P2P_SET_SSID_POSTFIX ssid_postfix;
+        WMI_P2P_SET_INTRA_BSS intra_bss;
+        WMI_P2P_SET_CONCURRENT_MODE concurrent_mode;
+        WMI_P2P_SET_GO_INTENT go_intent;
+        WMI_P2P_SET_DEV_NAME device_name;
+        WMI_P2P_SET_MODE mode;
+        WMI_P2P_SET_CCK_RATES cck_rates;
+    } POSTPACK val;
+} POSTPACK WMI_P2P_SET_CMD;
+
+// typedef PREPACK struct {
+//     A_UINT16    fg_start_period;        /* seconds */
+//     A_UINT16    fg_end_period;          /* seconds */
+//     A_UINT16    bg_period;              /* seconds */
+//     A_UINT16    maxact_chdwell_time;    /* msec */
+//     A_UINT16    pas_chdwell_time;       /* msec */
+//     uint8_t     shortScanRatio;         /* how many shorts scan for one long */
+//     uint8_t     scanCtrlFlags;
+//     A_UINT16    minact_chdwell_time;    /* msec */
+//     A_UINT16    maxact_scan_per_ssid;   /* max active scans per ssid */
+//     A_UINT32    max_dfsch_act_time;  /* msecs */
+// } POSTPACK WMI_SCAN_PARAMS_CMD;
+
+typedef enum {
+    WMI_P2P_CONFID_LISTEN_CHANNEL = 1,
+    WMI_P2P_CONFID_CROSS_CONNECT = 2,
+    WMI_P2P_CONFID_SSID_POSTFIX = 3,
+    WMI_P2P_CONFID_INTRA_BSS = 4,
+    WMI_P2P_CONFID_CONCURRENT_MODE = 5,
+    WMI_P2P_CONFID_GO_INTENT = 6,
+    WMI_P2P_CONFID_DEV_NAME = 7,
+    WMI_P2P_CONFID_P2P_OPMODE = 8,
+    WMI_P2P_CONFID_CCK_RATES = 9
+} WMI_P2P_CONF_ID;
+
+typedef PREPACK struct {
+    uint32_t duration;
+    uint32_t interval;
+    uint32_t start_or_offset;
+    uint8_t count_or_type;
+} POSTPACK P2P_NOA_DESCRIPTOR;
+
+/* P2P module events */
+typedef PREPACK struct {
+    uint8_t num_p2p_dev;
+    uint8_t data[1];
+} POSTPACK WMI_P2P_NODE_LIST_EVENT;
+
+typedef PREPACK struct {
+    uint8_t data[1];
+} POSTPACK WMI_P2P_PERSISTENT_LIST_NETWORK_EVENT;
+
+#define WMI_MAX_P2P_PASSPHRASE_STR_LEN 9
+typedef PREPACK struct {
+    uint16_t freq;
+    uint8_t status;
+    uint8_t role_go;
+    uint8_t ssid[WMI_MAX_SSID_LEN];
+    uint8_t ssid_len;
+    char pass_phrase[WMI_MAX_P2P_PASSPHRASE_STR_LEN];
+    uint8_t peer_device_addr[WMI_MAC_LEN];
+    uint8_t peer_interface_addr[WMI_MAC_LEN];
+    uint8_t wps_method;
+    uint8_t persistent_grp;
+    uint8_t passphrase_len;
+} POSTPACK WMI_P2P_GO_NEG_RESULT_EVENT;
+
+#define MAX_PASS_LEN 32
+typedef PREPACK struct {
+    uint8_t role;
+    uint8_t macaddr[WMI_MAC_LEN];
+    uint8_t ssid[WMI_MAX_SSID_LEN];
+    uint8_t passphrase[MAX_PASS_LEN];
+} POSTPACK WMI_PERSISTENT_MAC_LIST;
+
+/*
  * WMI_SET_PMKID_LIST_CMD
  */
 #define WMI_MAX_PMKID_CACHE 8
+
+/*
+ * WMI_SET_POWER_MODE_CMDID
+ */
+typedef enum { REC_POWER = 0x01, MAX_PERF_POWER } WMI_POWER_MODE;
+
+typedef PREPACK struct {
+    uint8_t persistent_group;
+    uint8_t group_formation;
+} POSTPACK WMI_P2P_GRP_INIT_CMD;
 
 typedef PREPACK struct {
     uint32_t numPMKID;
@@ -1095,9 +1442,9 @@ typedef PREPACK struct {
     uint8_t tid;
     uint8_t win_sz;
     uint16_t st_seq_no;
-    uint8_t status;        /* f/w response for ADDBA Req; OK(0) or failure(!=0) */
-    uint8_t sta_id;        // xerus
-    uint8_t amsdu_status;  // xerus
+    uint8_t status;       /* f/w response for ADDBA Req; OK(0) or failure(!=0) */
+    uint8_t sta_id;       // xerus
+    uint8_t amsdu_status; // xerus
 } POSTPACK WMI_ADDBA_REQ_EVENT;
 
 /* WMI_ADDBA_RESP_EVENTID */
@@ -1115,7 +1462,7 @@ typedef PREPACK struct {
     uint8_t tid;
     uint8_t is_peer_initiator;
     uint16_t reason_code;
-    uint8_t sta_id;  // xerus
+    uint8_t sta_id; // xerus
 } POSTPACK WMI_DELBA_EVENT;
 
 #ifdef ATH_KF
@@ -1127,7 +1474,7 @@ typedef PREPACK struct {
     uint16_t tx_allow_aggr; /* 16-bit mask to allow uplink ADDBA negotiation - bit position indicates tid*/
     uint16_t rx_allow_aggr; /* 16-bit mask to allow donwlink ADDBA negotiation - bit position indicates tid*/
 } POSTPACK WMI_ALLOW_AGGR_CMD;
-#endif  // ATH_KF
+#endif // ATH_KF
 
 /* WMI_ADDBA_REQ_CMDID
  * f/w starts performing ADDBA negotiations with peer
@@ -1151,12 +1498,12 @@ typedef PREPACK struct {
  * ------- AP Mode definitions --------------
  */
 
-#define MCAST_AID           0xFF /* Spl. AID used to set DTIM flag in the beacons */
+#define MCAST_AID 0xFF /* Spl. AID used to set DTIM flag in the beacons */
 #define DEF_AP_COUNTRY_CODE "US "
 
 /* AP mode disconnect reasons */
-#define AP_DISCONNECT_STA_LEFT     101
-#define AP_DISCONNECT_FROM_HOST    102
+#define AP_DISCONNECT_STA_LEFT 101
+#define AP_DISCONNECT_FROM_HOST 102
 #define AP_DISCONNECT_COMM_TIMEOUT 103
 
 /*
@@ -1167,10 +1514,10 @@ typedef PREPACK struct {
     uint16_t reason; /* 802.11 reason code */
     uint8_t cmd;     /* operation to perform */
 /* MLME Commands */
-#define WMI_AP_MLME_ASSOC       1 /* associate station */
-#define WMI_AP_DISASSOC         2 /* disassociate station */
-#define WMI_AP_DEAUTH           3 /* deauthenticate station */
-#define WMI_AP_MLME_AUTHORIZE   4 /* authorize station */
+#define WMI_AP_MLME_ASSOC 1       /* associate station */
+#define WMI_AP_DISASSOC 2         /* disassociate station */
+#define WMI_AP_DEAUTH 3           /* deauthenticate station */
+#define WMI_AP_MLME_AUTHORIZE 4   /* authorize station */
 #define WMI_AP_MLME_UNAUTHORIZE 5 /* unauthorize station */
 } POSTPACK WMI_AP_SET_MLME_CMD;
 
@@ -1188,13 +1535,13 @@ typedef struct {
  * Currently  5 bits are used for LDPC and STBC in u8 enable.
  * this is only for MDM9x25 project, rest is similar to old
  * */
-#define WMI_HTCAP_11N_ENABLE  (1 << 0)
+#define WMI_HTCAP_11N_ENABLE (1 << 0)
 #define WMI_HTCAP_LDPC_CODING (1 << 1)
 #define WMI_HTCAP_RX_STBC_1SS (1 << 2)
 #define WMI_HTCAP_RX_STBC_2SS (1 << 3)
 #define WMI_HTCAP_RX_STBC_3SS (1 << 4)
-#define WMI_HTCAP_TX_STBC     (1 << 5)
-#define WMI_REQUIRE_HT        (1 << 7)
+#define WMI_HTCAP_TX_STBC (1 << 5)
+#define WMI_REQUIRE_HT (1 << 7)
 
 typedef PREPACK struct {
     uint8_t band;   /* specifies which band to apply these values */
@@ -1212,15 +1559,15 @@ typedef PREPACK struct {
 } POSTPACK WMI_SET_HT_OP_CMD;
 
 typedef PREPACK struct {
-    uint8_t ch_index;  // Channel index */
-    uint8_t dev_id;    // AP or STA dev id for concurrency mode
+    uint8_t ch_index; // Channel index */
+    uint8_t dev_id;   // AP or STA dev id for concurrency mode
 } POSTPACK WMI_SET_CHANNEL_CMD;
 
 #ifdef NT_FN_XPA
 typedef PREPACK struct {
     uint8_t enable_xpa;
 } POSTPACK WMI_XPA_CMD;
-#endif  // NT_FN_XPA
+#endif // NT_FN_XPA
 
 #ifdef NT_FN_WPS
 typedef enum { WPS_EN = 0x1, WPS_EN_INT = 0x2 } WPS_CONFIG_METHODS;
@@ -1232,7 +1579,7 @@ typedef PREPACK struct {
     uint8_t ssid_len;
 } POSTPACK WPS_SCAN_LIST_ENTRY;
 
-#define WPS_PIN_LEN    (8)
+#define WPS_PIN_LEN (8)
 #define MAX_LIST_COUNT 8
 
 typedef PREPACK struct {
@@ -1300,18 +1647,18 @@ typedef enum {
 } WPS_ERROR_CODE;
 
 /* Authentication Type Flags */
-#define WPS_CRED_AUTH_OPEN    0x0001
-#define WPS_CRED_AUTH_WPAPSK  0x0002
-#define WPS_CRED_AUTH_SHARED  0x0004
-#define WPS_CRED_AUTH_WPA     0x0008
-#define WPS_CRED_AUTH_WPA2    0x0010
+#define WPS_CRED_AUTH_OPEN 0x0001
+#define WPS_CRED_AUTH_WPAPSK 0x0002
+#define WPS_CRED_AUTH_SHARED 0x0004
+#define WPS_CRED_AUTH_WPA 0x0008
+#define WPS_CRED_AUTH_WPA2 0x0010
 #define WPS_CRED_AUTH_WPA2PSK 0x0020
 
 /* Encryption Type Flags */
 #define WPS_CRED_ENCR_NONE 0x0001
-#define WPS_CRED_ENCR_WEP  0x0002
+#define WPS_CRED_ENCR_WEP 0x0002
 #define WPS_CRED_ENCR_TKIP 0x0004
-#define WPS_CRED_ENCR_AES  0x0008
+#define WPS_CRED_ENCR_AES 0x0008
 
 typedef enum {
     WPS_AUTH_TYPE_OPEN = 0x0001,
@@ -1356,6 +1703,504 @@ typedef PREPACK struct {
     WPS_CREDENTIAL credential;
 } POSTPACK WMI_P2P_PERSISTENT_PROFILE_CMD;
 
+/* P2P FW OFFLOAD */
+
+typedef enum { WMI_AP_APSD_DISABLED = 0, WMI_AP_APSD_ENABLED } WMI_AP_APSD_STATUS;
+
+typedef PREPACK struct {
+    uint8_t enable;
+} POSTPACK WMI_AP_SET_APSD_CMD;
+
+typedef enum {
+    WMI_AP_APSD_NO_DELIVERY_FRAMES_FOR_THIS_TRIGGER = 0x1,
+} WMI_AP_APSD_BUFFERED_TRAFFIC_FLAGS;
+
+typedef PREPACK struct {
+    uint16_t aid;
+    uint16_t bitmap;
+    uint32_t flags;
+} POSTPACK WMI_AP_APSD_BUFFERED_TRAFFIC_CMD;
+
+typedef PREPACK struct {
+    uint32_t freq;
+    uint32_t duration;
+} POSTPACK WMI_REMAIN_ON_CHNL_CMD_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t ID;
+    uint32_t freq;
+    uint32_t wait;
+    uint16_t len;
+    uint8_t data[1];
+} POSTPACK WMI_SEND_ACTION_CMD_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t ID;
+    uint8_t ACKStatus;
+} POSTPACK WMI_TX_STATUS_EVENT_STRUCT;
+
+typedef PREPACK struct {
+    uint8_t enable;
+} POSTPACK WMI_PROBE_REQ_REPORT_CMD_STRUCT;
+
+typedef PREPACK struct {
+    uint8_t disable;
+} POSTPACK WMI_DISABLE_11B_RATES_CMD_STRUCT;
+
+typedef PREPACK struct {
+    uint8_t RoleID;
+    uint8_t mgmtFrmType;
+    uint8_t ieLen;
+    uint8_t ieInfo[1];
+} POSTPACK WMI_SET_APPIE_EXTENDED_CMD_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t freq;
+    uint32_t duration;
+} POSTPACK WMI_REMAIN_ON_CHNL_EVENT_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t freq;
+    uint32_t duration;
+    uint8_t status;
+} POSTPACK WMI_CANCEL_REMAIN_ON_CHNL_EVENT_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t freq;
+    uint16_t len;
+    uint8_t data[1];
+} POSTPACK WMI_RX_ACTION_EVENT_STRUCT;
+
+typedef PREPACK struct {
+    uint16_t len;
+    uint8_t data[1];
+} POSTPACK WMI_P2P_CAPABILITIES_EVENT_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t freq;
+    uint16_t len;
+    uint8_t data[1];
+} POSTPACK WMI_P2P_RX_PROBE_REQ_EVENT_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t freq;
+    uint16_t len;
+    uint8_t data[1];
+} POSTPACK WMI_P2P_RX_PROBE_RESP_EVENT_STRUCT;
+
+typedef PREPACK struct {
+    uint16_t len;
+    uint8_t data[1];
+} POSTPACK WMI_ACL_REJECT_EVENT_STRUCT;
+
+#define P2P_FLAG_CAPABILITIES_REQ (0x00000001)
+#define P2P_FLAG_MACADDR_REQ (0x00000002)
+#define P2P_FLAG_P2P_MODEL_REQ (0x00000004)
+#define P2P_FLAG_MACADDR_BUNCH_REQ (0x00000008)
+
+typedef PREPACK struct {
+    uint32_t InfoReqFlags;
+} POSTPACK WMI_GET_P2P_INFO_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t InfoReqFlags;
+    uint16_t len;
+    uint8_t data[1];
+} POSTPACK WMI_P2P_INFO_EVENT_STRUCT;
+
+typedef PREPACK struct {
+    uint8_t GOPowerSave;
+} POSTPACK WMI_P2P_CAPABILITIES_STRUCT;
+
+typedef PREPACK struct {
+    uint8_t MACAddr[6];
+} POSTPACK WMI_P2P_MACADDR_STRUCT;
+
+typedef PREPACK struct {
+    uint8_t NumDev;
+    uint8_t MACAddr[4][6];
+} POSTPACK WMI_MACADDR_BUNCH_STRUCT;
+
+#define P2P_HOST_MODEL 1
+#define P2P_FW_MODEL 0
+
+typedef PREPACK struct {
+    uint8_t sa[WMI_MAC_LEN];
+    uint8_t dialog_token;
+    uint16_t dev_password_id;
+} POSTPACK WMI_P2P_REQ_TO_AUTH_EVENT;
+
+typedef PREPACK struct {
+    uint8_t sa[WMI_MAC_LEN];
+    uint8_t wps_buf[512];
+    uint16_t wps_buflen;
+    uint8_t p2p_buf[512];
+    uint16_t p2p_buflen;
+    uint8_t dialog_token;
+} POSTPACK WMI_P2P_GO_NEG_REQ_EVENT;
+
+typedef PREPACK struct {
+    uint8_t sa[WMI_MAC_LEN];
+    uint8_t bssid[WMI_MAC_LEN];
+    uint8_t go_dev_addr[WMI_MAC_LEN];
+    P2P_SSID ssid;
+    uint8_t is_persistent;
+    uint8_t dialog_token;
+} POSTPACK WMI_P2P_FW_INVITE_REQ_EVENT;
+
+typedef PREPACK struct {
+    uint16_t oper_freq;
+    uint8_t sa[WMI_MAC_LEN];
+    uint8_t bssid[WMI_MAC_LEN];
+    uint8_t is_bssid_valid;
+    uint8_t go_dev_addr[WMI_MAC_LEN];
+    P2P_SSID ssid;
+    uint8_t status;
+} POSTPACK WMI_P2P_INVITE_RCVD_RESULT_EVENT;
+
+typedef PREPACK struct {
+    uint8_t status;
+    uint8_t bssid[WMI_MAC_LEN];
+    uint8_t is_bssid_valid;
+} POSTPACK WMI_P2P_INVITE_SENT_RESULT_EVENT;
+
+#define WPS_DEV_TYPE_LEN 8
+#define WPS_MAX_DEVNAME_LEN 32
+typedef PREPACK struct {
+    uint8_t sa[WMI_MAC_LEN];
+    uint16_t wps_config_method;
+    uint8_t dev_addr[WMI_MAC_LEN];
+    uint8_t pri_dev_type[WPS_DEV_TYPE_LEN];
+    uint8_t device_name[WPS_MAX_DEVNAME_LEN];
+    uint8_t dev_name_len;
+    uint16_t dev_config_methods;
+    uint8_t device_capab;
+    uint8_t group_capab;
+} POSTPACK WMI_P2P_PROV_DISC_REQ_EVENT;
+
+typedef PREPACK struct {
+    uint8_t peer[WMI_MAC_LEN];
+    uint16_t config_methods;
+} POSTPACK WMI_P2P_PROV_DISC_RESP_EVENT;
+
+typedef PREPACK struct {
+    uint8_t type;
+    uint8_t transaction_status;
+    uint8_t dialog_token;
+    uint8_t frag_id;
+    uint8_t peer_addr[WMI_MAC_LEN];
+    uint16_t freq;
+    uint16_t status_code;
+    uint16_t comeback_delay;
+    uint16_t tlv_length;
+    uint16_t update_indic;
+    //  Variable length TLV will be placed after the event
+} POSTPACK WMI_P2P_SDPD_RX_EVENT;
+
+/** Reporting the WLAN STATISTICS */
+
+typedef PREPACK struct {
+    uint32_t unicast_tx_pkts;
+    uint32_t unicast_rx_pkts;
+    uint32_t multicast_tx_pkts;
+    uint32_t multicast_rx_pkts;
+    uint32_t broadcast_tx_pkts;
+    uint32_t broadcast_rx_pkts;
+    uint32_t unicast_non_null_tx_pkts; // Unicast TX Packets excluding NULL and Qos NULL pkts
+    uint32_t unicast_non_null_rx_pkts; // Unicast RX Packets excluding NULL and Qos NULL pkts
+    uint32_t unicast_filtered_accepted_tx_pkts;
+    uint32_t unicast_filtered_accepted_rx_pkts;
+    uint32_t multicast_filtered_accepted_tx_pkts;
+    uint32_t multicast_filtered_accepted_rx_pkts;
+    uint32_t broadcast_filtered_accepted_tx_pkts;
+    uint32_t broadcast_filtered_accepted_rx_pkts;
+    uint32_t unicast_filtered_rejected_tx_pkts;
+    uint32_t unicast_filtered_rejected_rx_pkts;
+    uint32_t multicast_filtered_rejected_tx_pkts;
+    uint32_t multicast_filtered_rejected_rx_pkts;
+    uint32_t broadcast_filtered_rejected_tx_pkts;
+    uint32_t broadcast_filtered_rejected_rx_pkts;
+    uint32_t null_tx_pkts;
+    uint32_t null_rx_pkts;
+    uint32_t qos_null_tx_pkts;
+    uint32_t qos_null_rx_pkts;
+    uint32_t ps_poll_tx_pkts;
+    uint32_t ps_poll_rx_pkts;
+    uint32_t tx_retry_cnt;
+    uint32_t beacon_miss_cnt;
+    uint32_t beacons_received_cnt;
+    uint32_t beacon_resync_success_cnt;
+    uint32_t beacon_resync_failure_cnt;
+    uint32_t curr_early_wakeup_adj_in_ms;
+    uint32_t avg_early_wakeup_adj_in_ms;
+    uint32_t early_termination_cnt;
+    uint32_t uapsd_trigger_rx_cnt;
+    uint32_t uapsd_trigger_tx_cnt;
+} POSTPACK WMI_DEVICE_WLAN_STATS;
+
+typedef PREPACK struct {
+    uint8_t htc_inf_cur_cnt;
+    uint8_t htc_inf_reaped_cnt;
+    uint8_t mac_inf_cur_cnt;
+    uint8_t mac_inf_reaped_cnt;
+    uint8_t fw_inf_cur_cnt;
+    uint8_t fw_inf_reaped_cnt;
+    uint8_t free_buf_cnt;
+    uint8_t mgmt_buf_cnt;
+    uint8_t smmgmt_buf_cnt;
+    uint8_t num_txbuf_queued;
+    uint8_t num_rxbuf_queued;
+    uint8_t reserved;
+} POSTPACK WMI_COMMON_WLAN_TXRX_BUFFER_INFO;
+
+typedef PREPACK struct {
+    uint32_t total_active_time_in_ms;
+    uint32_t total_powersave_time_in_ms;
+    WMI_COMMON_WLAN_TXRX_BUFFER_INFO txrx_buf_info;
+    uint32_t fcs_error_rx_pkts;
+} POSTPACK WMI_COMMON_WLAN_STATS;
+
+typedef PREPACK struct {
+    uint32_t rx_amsdu_pkts;
+    uint32_t reserved;
+} POSTPACK WMI_DEVICE_WLAN_STATS_EXT;
+
+typedef PREPACK struct {
+    uint16_t wmi_event_missed_last;
+    uint16_t reserved;
+    uint32_t wmi_event_missed_bitmap;
+    uint32_t wmi_event_missed_cnt;
+    uint32_t valid_rx_pkts;
+    uint32_t addr_miss_match_rx_pkts;
+    uint32_t avarage_rssi_data_pkts;
+    uint32_t avarage_rssi_mgmt_pkts;
+} POSTPACK WMI_DEVICE_WLAN_STATS_EXT2;
+
+typedef PREPACK struct {
+    WMI_DEVICE_WLAN_STATS devWlanStats;
+    WMI_COMMON_WLAN_STATS commonWlanStats;
+    WMI_DEVICE_WLAN_STATS_EXT devWlanStat_ext;
+    WMI_DEVICE_WLAN_STATS_EXT2 devWlanStat_ext2;
+} POSTPACK WMI_WLAN_STATS;
+
+typedef PREPACK struct {
+    uint32_t state;
+} POSTPACK WMI_11D_STATE;
+
+/*
+ * Large Frame Types
+ */
+typedef enum {
+    WMI_FRAME_BEACON_LARGE,
+    WMI_FRAME_PROBE_REQ_LARGE,
+    WMI_FRAME_PROBE_RESP_LARGE,
+    WMI_FRAME_ASSOC_REQ_LARGE,
+    WMI_FRAME_ASSOC_RESP_LARGE,
+    WMI_NUM_MGMT_FRAME_LARGE
+} WMI_MGMT_FRAME_LARGE_TYPE;
+
+typedef PREPACK struct {
+    uint16_t go_oper_freq;
+    uint8_t dialog_token;
+    uint8_t peer_addr[WMI_MAC_LEN];
+    uint8_t own_interface_addr[WMI_MAC_LEN];
+    uint8_t go_dev_dialog_token;
+    P2P_SSID peer_go_ssid;
+    uint8_t wps_method;
+    uint8_t dev_capab;
+} POSTPACK WMI_P2P_CONNECT_CMD_STRUCT;
+
+typedef PREPACK struct {
+    uint8_t P2PModel;
+} POSTPACK WMI_P2P_MODEL_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t freq;
+    uint8_t DestinationAddr[6];
+    uint16_t len;
+    uint8_t data[1];
+} POSTPACK WMI_P2P_PROBE_RESPONSE_CMD_STRUCT;
+
+typedef PREPACK struct {
+    uint8_t en;
+} POSTPACK WMI_P2P_PSIE_CMD_STRUCT;
+
+typedef PREPACK struct {
+    uint32_t timeout;
+    uint8_t type;
+} POSTPACK WMI_P2P_FW_FIND_CMD;
+
+typedef PREPACK struct {
+    uint16_t categ;
+    uint16_t sub_categ;
+} POSTPACK device_type_tuple;
+
+#define MAX_P2P_SEC_DEVICE_TYPES 5
+#define WPS_UUID_LEN 16
+#define WPS_MAX_DEVNAME_LEN 32
+typedef PREPACK struct {
+    device_type_tuple pri_dev_type;
+    uint8_t pri_device_type[8];
+    device_type_tuple sec_dev_type[MAX_P2P_SEC_DEVICE_TYPES];
+    uint8_t uuid[WPS_UUID_LEN];
+    uint8_t device_name[WPS_MAX_DEVNAME_LEN];
+    uint8_t dev_name_len;
+    uint16_t config_methods;
+} POSTPACK WMI_WPS_SET_CONFIG_CMD;
+
+typedef PREPACK struct {
+    device_type_tuple pri_dev_type;
+    device_type_tuple sec_dev_type[MAX_P2P_SEC_DEVICE_TYPES];
+    uint8_t device_addr[WMI_MAC_LEN];
+} POSTPACK WMI_SET_REQ_DEV_ATTR_CMD;
+
+typedef enum wmi_p2p_discovery_type {
+    WMI_P2P_FIND_START_WITH_FULL,
+    WMI_P2P_FIND_ONLY_SOCIAL,
+    WMI_P2P_FIND_PROGRESSIVE
+} WMI_P2P_DISC_TYPE;
+
+typedef PREPACK struct {
+    uint16_t listen_freq;
+    uint16_t force_freq;
+    uint16_t go_oper_freq;
+    uint8_t dialog_token;
+    uint8_t peer_addr[WMI_MAC_LEN];
+    uint8_t own_interface_addr[WMI_MAC_LEN];
+    uint8_t member_in_go_dev[WMI_MAC_LEN];
+    uint8_t go_dev_dialog_token;
+    P2P_SSID peer_go_ssid;
+    uint8_t wps_method;
+    uint8_t dev_capab;
+    int8_t go_intent;
+    uint8_t persistent_grp;
+} POSTPACK WMI_P2P_GO_NEG_START_CMD;
+
+typedef PREPACK struct {
+    uint8_t peer_addr[WMI_MAC_LEN];
+    uint8_t grp_formation_status;
+} POSTPACK WMI_P2P_GRP_FORMATION_DONE_CMD;
+
+typedef PREPACK struct {
+    uint32_t timeout;
+} POSTPACK WMI_P2P_LISTEN_CMD;
+
+typedef PREPACK struct {
+    uint16_t listen_freq;
+    uint16_t force_freq;
+    uint8_t status;
+    int8_t go_intent;
+    uint8_t wps_buf[512];
+    uint16_t wps_buflen;
+    uint8_t p2p_buf[512];
+    uint16_t p2p_buflen;
+    uint8_t dialog_token;
+    uint8_t wps_method;
+    uint8_t persistent_grp;
+    uint8_t sa[WMI_MAC_LEN];
+} POSTPACK WMI_P2P_GO_NEG_REQ_RSP_CMD;
+
+typedef enum { WMI_P2P_INVITE_ROLE_GO, WMI_P2P_INVITE_ROLE_ACTIVE_GO, WMI_P2P_INVITE_ROLE_CLIENT } WMI_P2P_INVITE_ROLE;
+
+typedef PREPACK struct {
+    uint16_t force_freq;
+    uint8_t status;
+    uint8_t dialog_token;
+    //    uint8_t p2p_buf[512];
+    uint16_t p2p_buflen;
+    uint8_t is_go;
+    uint8_t group_bssid[WMI_MAC_LEN];
+} POSTPACK WMI_P2P_INVITE_REQ_RSP_CMD;
+
+typedef PREPACK struct {
+    uint16_t force_freq;
+    uint8_t status;
+    uint8_t dialog_token;
+    uint8_t is_go;
+    uint8_t group_bssid[WMI_MAC_LEN];
+} POSTPACK WMI_P2P_FW_INVITE_REQ_RSP_CMD;
+
+typedef PREPACK struct {
+    uint16_t wps_method;
+    uint16_t listen_freq;
+    uint8_t dialog_token;
+    uint8_t peer[WMI_MAC_LEN];
+    uint8_t go_dev_addr[WMI_MAC_LEN];
+    P2P_SSID go_oper_ssid;
+} POSTPACK WMI_P2P_PROV_DISC_REQ_CMD;
+
+#define P2P_DEV (1 << 0)
+#define P2P_CLIENT (1 << 1)
+#define P2P_GO (1 << 2)
+
+#define RATECTRL_MODE_DEFAULT 0
+#define RATECTRL_MODE_PERONLY 1
+
+typedef PREPACK struct {
+    uint32_t mode;
+} POSTPACK WMI_SET_RATECTRL_PARM_CMD;
+
+#define WMI_P2P_MAX_TLV_LEN 1024
+typedef enum {
+    WMI_P2P_SD_TYPE_GAS_INITIAL_REQ = 0x1,
+    WMI_P2P_SD_TYPE_GAS_INITIAL_RESP = 0x2,
+    WMI_P2P_SD_TYPE_GAS_COMEBACK_REQ = 0x3,
+    WMI_P2P_SD_TYPE_GAS_COMEBACK_RESP = 0x4,
+    WMI_P2P_PD_TYPE_RESP = 0x5,
+    WMI_P2P_SD_TYPE_STATUS_IND = 0x6
+} WMI_P2P_SDPD_TYPE;
+
+typedef enum {
+    WMI_P2P_SDPD_TRANSACTION_PENDING = 0x1,
+    WMI_P2P_SDPD_TRANSACTION_COMP = 0x2
+} WMI_P2P_SDPD_TRANSACTION_STATUS;
+
+typedef PREPACK struct {
+    uint8_t type;
+    uint8_t dialog_token;
+    uint8_t frag_id;
+    uint8_t reserved1; /* alignment */
+    uint8_t peer_addr[WMI_MAC_LEN];
+    uint16_t freq;
+    uint16_t status_code;
+    uint16_t comeback_delay;
+    uint16_t tlv_length;
+    uint16_t update_indic;
+    uint16_t total_length;
+    uint16_t reserved2; /* future */
+    uint8_t tlv[WMI_P2P_MAX_TLV_LEN];
+} POSTPACK WMI_P2P_SDPD_TX_CMD;
+
+typedef PREPACK struct {
+    char wps_pin[WPS_PIN_LEN];
+    uint8_t peer_addr[WMI_MAC_LEN];
+    uint8_t wps_role;
+} POSTPACK WMI_P2P_PROV_INFO;
+
+typedef PREPACK struct {
+    uint8_t role; /* P2P_INV_ROLE */
+    uint16_t listen_freq;
+    uint16_t force_freq;
+    uint8_t dialog_token;
+    uint8_t peer_addr[WMI_MAC_LEN];
+    uint8_t bssid[WMI_MAC_LEN];
+    uint8_t go_dev_addr[WMI_MAC_LEN];
+    P2P_SSID ssid;
+    uint8_t is_persistent;
+    uint8_t wps_method;
+} POSTPACK WMI_P2P_FW_INVITE_CMD;
+
+typedef PREPACK struct {
+    uint8_t enable;
+    uint8_t ctwin;
+} POSTPACK WMI_OPPPS_INFO_STRUCT;
+
+typedef PREPACK struct {
+    uint8_t enable;
+    uint8_t count;
+    uint8_t noas[1]; /* P2P_NOA_DESCRIPTOR */
+} POSTPACK WMI_NOA_INFO_STRUCT;
+
 /*typedef struct {
     uint8_t  		 *device_name;
     uint8_t   		 uuid[WPS_UUID_LEN];
@@ -1367,7 +2212,7 @@ typedef PREPACK struct {
 }WMI_WPS_SET_CONFIG_CMD;*/
 
 /* WPS Commands AND Events DEFINITION END */
-#endif  // NT_FN_WPS
+#endif // NT_FN_WPS
 
 #ifdef ATH_KF
 typedef enum { WMI_AP_APSD_DISABLED = 0, WMI_AP_APSD_ENABLED } WMI_AP_APSD_STATUS;
@@ -1394,8 +2239,8 @@ typedef PREPACK struct {
     uint32_t multicast_rx_pkts;
     uint32_t broadcast_tx_pkts;
     uint32_t broadcast_rx_pkts;
-    uint32_t unicast_non_null_tx_pkts;  // Unicast TX Packets excluding NULL and Qos NULL pkts
-    uint32_t unicast_non_null_rx_pkts;  // Unicast RX Packets excluding NULL and Qos NULL pkts
+    uint32_t unicast_non_null_tx_pkts; // Unicast TX Packets excluding NULL and Qos NULL pkts
+    uint32_t unicast_non_null_rx_pkts; // Unicast RX Packets excluding NULL and Qos NULL pkts
     uint32_t unicast_filtered_accepted_tx_pkts;
     uint32_t unicast_filtered_accepted_rx_pkts;
     uint32_t multicast_filtered_accepted_tx_pkts;
@@ -1460,7 +2305,7 @@ typedef PREPACK struct {
     //	WMI_DEVICE_WLAN_STATS_EXT devWlanStat_ext;
     WMI_DEVICE_WLAN_STATS_EXT2 devWlanStat_ext2;
 } POSTPACK WMI_WLAN_STATS;
-#endif  // ATH_KF
+#endif // ATH_KF
 
 /*
  * Frame Types
@@ -1516,7 +2361,7 @@ typedef PREPACK struct {
 typedef PREPACK struct {
     uint32_t dtim; /* DTIM number */
 } POSTPACK WMI_GET_STA_DTIM_CMD;
-#endif  // ATH_KF
+#endif // ATH_KF
 
 /**
  * stats type
@@ -1592,7 +2437,7 @@ typedef PREPACK struct {
     uint32_t ftm_period; /*period for sending ftm frames in ms*/
     uint16_t ftm_count;
 } POSTPACK WMI_FTM_CMD;
-#endif  // NT_FN_FTM_11V
+#endif // NT_FN_FTM_11V
 
 typedef PREPACK struct {
     uint8_t network_type; /* AP or STA*/
@@ -1628,7 +2473,7 @@ typedef PREPACK struct {
 #define MAX_SCAN_SSID 15
 
 typedef struct {
-    uint16_t chan_freq;  // Channel frequency in MHz
+    uint16_t chan_freq; // Channel frequency in MHz
     uint8_t bssid[IEEE80211_ADDR_LEN];
     ssid_t ssid;
     uint32_t security_mode;
@@ -1753,6 +2598,31 @@ typedef enum {
     WIFI_PARAM_SET_EDCCA_THRESHOLD = 20,
     WIFI_PARAM_SET_TX_POWER = 21,
     WIFI_PARAM_SET_BMISS_THRESHOLD = 22,
+
+    WLAN_P2P_CONNECT,
+    WLAN_P2P_CONNECT_CLIENT,
+    WLAN_P2P_FIND,
+    WLAN_P2P_LISTEN,
+    WLAN_P2P_CANCEL,
+    WLAN_P2P_STOP_FIND,
+    WLAN_P2P_JOIN,
+    WLAN_P2P_NODE_LIST,
+    WLAN_P2P_SET_CONFIG,
+    WLAN_P2P_WPS_CONFIG,
+    WLAN_P2P_AUTH,
+    WLAN_P2P_DISC_REQ,
+    WLAN_P2P_SET,
+    WLAN_P2P_INVITE_AUTH,
+    WLAN_P2P_PERSISTENT_LIST,
+    WLAN_P2P_INVITE,
+    // WLAN_P2P_INV_CONNECT,
+    WLAN_P2P_JOIN_PROFILE,
+    WLAN_P2P_APMODE,
+    WLAN_P2P_APMODE_PP,
+    WLAN_P2P_SWITCH,
+    WLAN_P2P_SET_NOA,
+    WLAN_P2P_SET_OPPPS,
+    WLAN_P2P_SDPD,
 } param_id;
 enum {
     WIFI_STATUS_SUCCESS,
@@ -1766,5 +2636,22 @@ typedef enum {
     HOST_LOGGER_DETACHED = 0,
     HOST_LOGGER_ATTACHED = 1,
 } host_logger_state;
+
+/*
+ * The WMI_NEIGHBOR_REPORT Event is generated by the target to inform
+ * the host of BSS's it has found that matches the current profile.
+ * It can be used by the host to cache PMKs and/to initiate pre-authentication
+ * if the BSS supports it.  The first bssid is always the current associated
+ * BSS.
+ * The bssid and bssFlags information repeats according to the number
+ * or APs reported.
+ */
+typedef enum {
+    WMI_DEFAULT_BSS_FLAGS = 0x00,
+    WMI_PREAUTH_CAPABLE_BSS = 0x01,
+    WMI_PMKID_VALID_BSS = 0x02,
+} WMI_BSS_FLAGS;
+#define WMI_MAX_CHANNELS 64
+#define WMI_NLO_SCAN_PARAM 2
 #endif
 #endif /* _WMI_H_ */

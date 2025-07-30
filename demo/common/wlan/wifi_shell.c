@@ -1,13 +1,14 @@
-/*
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
- */
+/* 
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #include <stdio.h>
 #include <ctype.h>
 #include "wifi_cmn.h"
 #include "qapi_wlan.h"
 #include "qapi_console.h"
+#include "qapi_wlan_p2p.h"
 
 #include "qurt_internal.h"
 #include "qurt_mutex.h"
@@ -25,8 +26,14 @@
 #define WIFI_SHELL_INFO 1
 #define WIFI_SHELL_LOG  0
 
+// #define WIFI_SHELL_INFO 1
+#define WIFI_SHELL_LOG  0
+
 #define WLAN_SHELL_GROUP_NAME    "WLAN"
 #define WLAN_SHELL_GROUP_PRINTF_SUFFIX  "WLAN: "
+
+#define P2P_SHELL_GROUP_NAME     "P2P"
+#define P2P_SHELL_GROUP_PRINTF_SUFFIX  "P2P: "
 
 #define LOG_PREFIX  "[LOG] "
 
@@ -42,11 +49,18 @@
 #define log_printf(args...)     do { } while (0)
 #endif
 
+#if P2P_SHELL_LOG
+#define log_printf(msg,...)     printf(P2P_SHELL_GROUP_PRINTF_SUFFIX LOG_PREFIX msg, ##__VA_ARGS__)
+#else
+#define log_printf(args...)     do { } while (0)
+#endif
+
 #define PRINT_ERR_NOT_SUPPORTED  info_printf("Not supported yet\n")
 #define PRINT_ERR_CMD_FAILED     info_printf("Cmd failed\n")
 
 #define SCAN_MODE_BLOCKING      1
 #define SCAN_MODE_UNBLOCKING    2
+#define DEV_NUM 2
 
 #define MAX_WPS_PIN_SIZE        32
 
@@ -75,6 +89,19 @@ typedef struct wifi_shell_cxt_s {
 #ifdef CONFIG_WPS
     uint8_t         wps_stage;
 #endif
+#ifdef CONFIG_ENABLE_P2P_MODE
+    uint8_t         p2p_cancel_enable;
+    uint8_t         p2p_persistent_done;
+    qbool_t         p2pMode;
+    qbool_t         autogo_newpp;
+    uint8_t         p2p_intent;
+    uint8_t         p2p_session_in_progress; 
+    uint8_t         p2p_join_session_active;
+    uint8_t         p2p_persistent_go;   /* Used to remember persistent information while waiting for GO_NEG complete event */
+    uint32_t        set_channel_p2p;
+    uint8_t         wps_flag;
+    uint8_t         invitation_index;
+#endif
 } wifi_shell_cxt_t;
 
 typedef struct {
@@ -87,6 +114,45 @@ typedef struct {
 static wifi_shell_cxt_t g_wifi_shell_cxt;
 static wifi_shell_cxt_t *pg_wifi_shell_cxt;
 
+#ifdef CONFIG_ENABLE_P2P_MODE
+
+/* P2P Event Queue Nodes */
+typedef struct _CMD_P2P_EVENT_INFO_{
+    struct _CMD_P2P_EVENT_INFO_ *nextEvent; // link to next event in the queue
+    uint8_t device_id;
+    uint16_t event_id;
+    uint32_t length;
+    uint8_t pBuffer[1]; //variable size buffer. Allocation based on the Length
+} CMD_P2P_EVENT_INFO;
+
+/* P2P Event Queue */
+typedef struct {
+    qurt_mutex_t eventQueueMutex; //queue mutex
+    CMD_P2P_EVENT_INFO *pEventHead; //queue head
+    CMD_P2P_EVENT_INFO *pEventTail; // queue tail
+} CMD_P2P_EVENT_LIST;
+
+CMD_P2P_EVENT_LIST p2pEventNode;
+char p2p_wps_pin[__QAPI_WLAN_WPS_PIN_LEN];
+qapi_WLAN_P2P_Persistent_Mac_List_t p2p_peers_data[__QAPI_WLAN_P2P_MAX_LIST_COUNT];
+uint8_t p2p_join_mac_addr[__QAPI_WLAN_MAC_LEN];
+volatile uint8_t wifi_state[DEV_NUM] = {0,0};
+qapi_WLAN_P2P_Connect_Cmd_t p2p_join_profile_cmd;
+char wpa_passphrase[DEV_NUM][__QAPI_WLAN_PASSPHRASE_LEN + 1];
+
+uint8_t inv_response_evt_index = 0;
+
+#if CONFIG_ENABLE_P2P_MODE
+#define   P2P_CONNECT_OPERATION     1
+#define   P2P_PROVISION_OPERATION   2
+#define   P2P_AUTH_OPERATION        3
+#define   P2P_INVITE_OPERATION      4
+#endif
+
+uint8_t p2pScratchBuff[__QAPI_WLAN_P2P_EVT_BUF_SIZE];
+uint8_t original_ssid[__QAPI_WLAN_MAX_SSID_LENGTH]; 
+#endif
+/***********************************************************************************************/
 uint8_t get_active_device()
 {
 	wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
@@ -319,6 +385,14 @@ static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, v
 		}
 		break;
 	}
+
+#if CONFIG_ENABLE_P2P_MODE
+    case QAPI_WLAN_P2P_CB_E:
+       {
+           qapi_wlan_p2p_event_cb(deviceId, payload, &payload_Length);
+           break;
+       }
+#endif
     }
 }
 
@@ -569,7 +643,7 @@ qapi_Status_t set_active_deviceid(uint8_t deviceId)
 	}
 #endif
 
-	info_printf("DUT work in single device mode\n");
+	info_printf("DUT work in single device mode\r\n");
 	return QAPI_ERROR;
 }
 
@@ -589,6 +663,7 @@ static qapi_Status_t Scan(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Pa
     qbool_t scan_ssid = false;
 	qapi_WLAN_DEV_Mode_e opmode;
 	uint32_t length = sizeof(qapi_WLAN_DEV_Mode_e);
+
 	uint8_t deviceId = get_active_device();
 
     if (0 == p_cxt->wlan_enabled)
@@ -2376,7 +2451,7 @@ static qapi_Status_t getBmissThreshold(uint32_t __attribute__((__unused__)) Para
     }
     return QAPI_OK;
 }
-
+ 
 #ifdef CONFIG_WPS
 wps_context_t wps_context;
 char wpsPin[MAX_WPS_PIN_SIZE];
@@ -2507,6 +2582,2125 @@ static qapi_Status_t wpsPushSetup(uint32_t __attribute__((__unused__)) Parameter
 }
 #endif
 
+#ifdef CONFIG_ENABLE_P2P_MODE
+void app_p2p_process_persistent_list_event(uint8_t *pData)
+{
+    uint8_t *local_ptr = NULL;
+    uint32_t loop_index = 0;
+
+    if(!pData)
+    {
+        return;
+    }
+    local_ptr = pData;
+
+    memset(p2p_peers_data, 0,
+            (__QAPI_WLAN_P2P_MAX_LIST_COUNT * sizeof(qapi_WLAN_P2P_Persistent_Mac_List_t)));
+
+    memcpy(p2p_peers_data, local_ptr,
+           (__QAPI_WLAN_P2P_MAX_LIST_COUNT * sizeof(qapi_WLAN_P2P_Persistent_Mac_List_t)));
+
+    info_printf("\r\n");
+    if(pg_wifi_shell_cxt->p2p_cancel_enable == 0)
+    {
+        for(loop_index = 0; loop_index < __QAPI_WLAN_P2P_MAX_LIST_COUNT; loop_index++)
+        {
+            info_printf("mac_addr[%d] : %02x:%02x:%02x:%02x:%02x:%02x\r\n", loop_index,
+                    ((qapi_WLAN_P2P_Persistent_Mac_List_t *)local_ptr)->macaddr[0],
+                    ((qapi_WLAN_P2P_Persistent_Mac_List_t *)local_ptr)->macaddr[1],
+                    ((qapi_WLAN_P2P_Persistent_Mac_List_t *)local_ptr)->macaddr[3],
+                    ((qapi_WLAN_P2P_Persistent_Mac_List_t *)local_ptr)->macaddr[4],
+                    ((qapi_WLAN_P2P_Persistent_Mac_List_t *)local_ptr)->macaddr[5]);
+
+            info_printf("ssid[%d] : %s\r\n", loop_index,
+                    ((qapi_WLAN_P2P_Persistent_Mac_List_t *)local_ptr)->ssid);
+
+            if(((qapi_WLAN_P2P_Persistent_Mac_List_t *)local_ptr)->role ==
+                    QAPI_WLAN_P2P_INV_ROLE_ACTIVE_GO_E)
+            {
+                info_printf("passphrase[%d] : %s\r\n", loop_index,
+                        ((qapi_WLAN_P2P_Persistent_Mac_List_t *)local_ptr)->passphrase);
+            }
+            local_ptr += sizeof(qapi_WLAN_P2P_Persistent_Mac_List_t);
+        }
+    }
+    else
+    {
+        pg_wifi_shell_cxt->p2p_cancel_enable = 0;
+    }
+    return;
+}
+
+void app_p2p_process_node_list_event(uint8_t *pData)
+{
+    uint8_t *local_ptr = NULL, *temp_ptr = NULL;
+    uint8_t index = 0, temp_val = 0;
+    qapi_WLAN_P2P_Set_Cmd_t p2p_set_params;
+    uint32_t deviceId = 0, temp_device_id = 0;
+
+    if(!pData)
+    {
+        return;
+    }
+
+    local_ptr = pData;
+    temp_val = *local_ptr;
+    local_ptr++;
+
+    temp_ptr = local_ptr;
+    pg_wifi_shell_cxt->p2p_session_in_progress = 1;
+
+    deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        /* P2P device should always send/receive events/commands on dev 0 if
+           the app has switched to dev 1 while event is in dev 0 send command
+           via dev 0 and then switch to dev 1*/
+        temp_device_id = deviceId;
+        deviceId = 0;
+        set_active_deviceid(deviceId);
+    }
+    if (temp_val > 0)
+    {
+        for (index = 0; index < temp_val; index++)
+        {
+            if(pg_wifi_shell_cxt->p2p_join_session_active)
+            {
+                if(memcmp(((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->interface_Addr,
+                            p2p_join_mac_addr, __QAPI_WLAN_MAC_LEN) == 0)
+                {
+                    p2p_join_profile_cmd.go_Oper_Freq = ((qapi_WLAN_P2P_Device_Lite_t*)(local_ptr))->oper_Freq;
+                    break;
+                }
+            }
+            else
+            {
+                info_printf("\r\n\t p2p_config_method     : %x \r\n",
+                        (((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->config_Methods));
+
+                info_printf(" \t p2p_device_name       : %s \r\n",
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->device_Name);
+
+                info_printf("\t p2p_primary_dev_type  : %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\r\n ",
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->pri_Dev_Type[0],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->pri_Dev_Type[1],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->pri_Dev_Type[2],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->pri_Dev_Type[3],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->pri_Dev_Type[4],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->pri_Dev_Type[5],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->pri_Dev_Type[6],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->pri_Dev_Type[7]);
+
+                info_printf("\t p2p_interface_addr    : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->interface_Addr[0],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->interface_Addr[1],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->interface_Addr[2],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->interface_Addr[3],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->interface_Addr[4],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->interface_Addr[5]);
+
+                info_printf("\t p2p_device_addr       : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->p2p_Device_Addr[0],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->p2p_Device_Addr[1],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->p2p_Device_Addr[2],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->p2p_Device_Addr[3],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->p2p_Device_Addr[4],
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->p2p_Device_Addr[5]);
+
+                info_printf("\t p2p_device_capability : %x \r\n",
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->dev_Capab);
+
+                info_printf("\t p2p_group_capability  : %x \r\n",
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->group_Capab);
+
+                info_printf("\t p2p_wps_method        : %x \r\n",
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->wps_Method);
+
+                info_printf("\t Peer Oper   channel   : %d \r\n",
+                        ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->oper_Freq);
+            }
+
+            local_ptr += sizeof(qapi_WLAN_P2P_Device_Lite_t);
+        }
+
+        if(pg_wifi_shell_cxt->p2p_join_session_active)
+        {
+            pg_wifi_shell_cxt->p2p_join_session_active = 0;
+            p2p_set_params.val.mode.p2pmode = __QAPI_WLAN_P2P_CLIENT;
+
+            if (0 != qapi_WLAN_Set_Param(deviceId, __QAPI_WLAN_PARAM_GROUP_P2P,
+                        __QAPI_WLAN_PARAM_GROUP_P2P_OP_MODE,
+                        &p2p_set_params.val.mode.p2pmode,
+                        sizeof(p2p_set_params.val.mode.p2pmode),
+                        FALSE))
+            {
+                info_printf("\r\nStartP2P JOIN SET command did not execute properly\r\n");
+                goto set_temp_device;
+            }
+
+            if(qapi_WLAN_P2P_Join(deviceId, p2p_join_profile_cmd.wps_Method,
+                        &p2p_join_mac_addr[0], p2p_wps_pin,
+                        p2p_join_profile_cmd.go_Oper_Freq) != 0)
+            {
+                info_printf("\r\nP2P JOIN command did not execute properly\r\n");
+#if ENABLE_SCC_MODE
+                info_printf("support single concurrent channel only....\r\n");
+#endif /* ENABLE_SCC_MODE */
+                goto set_temp_device;
+            }
+        }
+    }
+    local_ptr = temp_ptr;
+
+set_temp_device:
+    if(temp_device_id != 0)
+    {
+        set_active_deviceid(temp_device_id);
+    }
+    pg_wifi_shell_cxt->p2p_session_in_progress = 0;
+    return;
+}
+
+void P2P_Event_Handler_Prov_Disc_Req(CMD_P2P_EVENT_INFO *pEventInfo)
+{
+    qapi_WLAN_P2P_Prov_Disc_Req_Event_t *local_ptr = NULL;
+    uint16_t wps_method = 0;
+
+    local_ptr = (qapi_WLAN_P2P_Prov_Disc_Req_Event_t *) pEventInfo->pBuffer;
+    wps_method = local_ptr->wps_Config_Method;
+    info_printf("\r\n source addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n", local_ptr->sa[0], local_ptr->sa[1],
+            local_ptr->sa[2], local_ptr->sa[3],
+            local_ptr->sa[4], local_ptr->sa[5]);
+
+    info_printf("\r\n wps_config_method : %x \r\n", local_ptr->wps_Config_Method);
+
+    if(__QAPI_WLAN_P2P_WPS_CONFIG_DISPLAY == wps_method)
+    {
+        info_printf("Provisional Disc Request - Display WPS PIN [%s] \r\n",p2p_wps_pin);
+    }
+    else if(__QAPI_WLAN_P2P_WPS_CONFIG_KEYPAD == wps_method)
+    {
+        info_printf("Provisional Disc Request - Enter WPS PIN \r\n");
+    }
+    else if(__QAPI_WLAN_P2P_WPS_CONFIG_PUSHBUTTON == wps_method)
+    {
+        info_printf("Provisional Disc Request - Push Button \r\n");
+    }
+    else
+    {
+        info_printf("Invalid Provisional Request \r\n");
+    }
+    return;
+}
+
+void P2P_Event_Handler_Prov_Disc_Resp(CMD_P2P_EVENT_INFO *pEventInfo)
+{
+    qapi_WLAN_P2P_Prov_Disc_Resp_Event_t *local_ptr = NULL;
+
+    local_ptr = (qapi_WLAN_P2P_Prov_Disc_Resp_Event_t *) pEventInfo->pBuffer;
+    info_printf("\r\n peer addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+            local_ptr->peer[0], local_ptr->peer[1], local_ptr->peer[2],
+            local_ptr->peer[3], local_ptr->peer[4], local_ptr->peer[5]);
+
+    if(__QAPI_WLAN_P2P_WPS_CONFIG_KEYPAD == local_ptr->config_Methods)
+    {
+        info_printf("Provisional Disc Response Keypad - WPS PIN [%s] \r\n",p2p_wps_pin);
+    }
+    else if(__QAPI_WLAN_P2P_WPS_CONFIG_DISPLAY == local_ptr->config_Methods)
+    {
+        info_printf("Provisional Disc Response Display \r\n");
+    }
+    else if(__QAPI_WLAN_P2P_WPS_CONFIG_PUSHBUTTON == local_ptr->config_Methods)
+    {
+        info_printf("Provisional Disc Response Push Button.\r\n");
+    }
+    else
+    {
+        info_printf("Invalid Provisional Response.\r\n");
+    }
+    return;
+}
+
+void P2P_Event_Handler_Req_To_Auth(CMD_P2P_EVENT_INFO *pEventInfo)
+{
+    qapi_WLAN_P2P_Req_To_Auth_Event_t *local_ptr = (qapi_WLAN_P2P_Req_To_Auth_Event_t *) pEventInfo->pBuffer;
+
+    info_printf("\r\n source addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n", local_ptr->sa[0], local_ptr->sa[1],
+            local_ptr->sa[2], local_ptr->sa[3], local_ptr->sa[4], local_ptr->sa[5]);
+
+    info_printf("\r\n dev_password_id : %x \r\n", local_ptr->dev_Password_Id);
+    return;
+}
+
+void P2P_Event_Handler_Sdpd_Rx(CMD_P2P_EVENT_INFO *pEventInfo)
+{
+    qapi_WLAN_P2P_Sdpd_Rx_Event_t *local_ptr = (qapi_WLAN_P2P_Sdpd_Rx_Event_t *) pEventInfo->pBuffer;
+
+    info_printf("Custom_Api_p2p_serv_disc_req event \r\n");
+    info_printf("type : %d   frag id : %x \r\n", local_ptr->type, local_ptr->frag_Id);
+    info_printf("transaction_status : %x \r\n", local_ptr->transaction_Status);
+    info_printf("freq : %d status_code : %d comeback_delay : %d tlv_length : %d update_indic : %d \r\n",
+            local_ptr->freq, local_ptr->status_Code, local_ptr->comeback_Delay, local_ptr->tlv_Length, local_ptr->update_Indic);
+
+    info_printf("source addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+            local_ptr->peer_Addr[0], local_ptr->peer_Addr[1],
+            local_ptr->peer_Addr[2], local_ptr->peer_Addr[3],
+            local_ptr->peer_Addr[4], local_ptr->peer_Addr[5]);
+
+    return;
+}
+
+void P2P_Event_Handler_Invite_Sent_Result(CMD_P2P_EVENT_INFO *pEventInfo)
+{
+    qapi_WLAN_P2P_Invite_Sent_Result_Event_t *local_ptr = NULL;
+    uint32_t deviceId = 0, temp_device_id = 0, dataLen = 0;
+    int32_t channel = __QAPI_WLAN_P2P_AUTO_CHANNEL;
+
+    local_ptr = (qapi_WLAN_P2P_Invite_Sent_Result_Event_t *) pEventInfo->pBuffer;
+    info_printf("Invitation Result %d\r\n", local_ptr->status);
+
+    if(local_ptr->status == 0)
+    {
+        info_printf("SSID %02x:%02x:%02x:%02x:%02x:%02x \r\n", local_ptr->bssid[0], local_ptr->bssid[1],
+                local_ptr->bssid[2], local_ptr->bssid[3],
+                local_ptr->bssid[4], local_ptr->bssid[5]);
+    }
+
+    if((p2p_peers_data[pg_wifi_shell_cxt->invitation_index].role == QAPI_WLAN_P2P_INV_ROLE_ACTIVE_GO_E) && (pg_wifi_shell_cxt->p2p_persistent_done == 0) && (local_ptr->status == 0))
+    {
+        pg_wifi_shell_cxt->p2p_session_in_progress = 1;
+        deviceId = get_active_device();
+        if(deviceId != 0)
+        {
+            /* P2P device should always send/receive events/commands on dev 0 if
+             * the app has switched to dev 1 while event is in dev 0 send command
+             * via dev 0 and then switch to dev 1 */
+            temp_device_id = deviceId;
+            /*
+             * If the device 1 is connected, we start GO on the home channel of device 1.
+             */
+            if(temp_device_id ==1 && wifi_state[temp_device_id] ==1)
+            {
+                dataLen = 4;
+                qapi_WLAN_Get_Param(temp_device_id,
+                        __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                        __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL,
+                        &channel,
+                        &dataLen);
+            }
+            deviceId = 0;
+            set_active_deviceid(deviceId);
+        }
+        else
+        {
+            temp_device_id = deviceId;
+            deviceId = 1;
+            set_active_deviceid(deviceId);
+            /*
+             * If the device 1 is connected, we start GO on the home channel of device 1.
+             */
+            if(wifi_state[deviceId] ==1)
+            {
+                qapi_WLAN_Get_Param(deviceId,
+                        __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                        __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL,
+                        &channel,
+                        &dataLen);
+            }
+            deviceId = temp_device_id;
+            set_active_deviceid(temp_device_id);
+        }
+        pg_wifi_shell_cxt->wps_flag = 0x01;
+
+        info_printf("Starting Autonomous GO \r\n");
+        if(qapi_WLAN_P2P_Start_Go(deviceId, NULL, channel, 1) != 0)
+        {
+            info_printf("\r\nStartP2P command did not execute properly\r\n");
+            goto set_temp_device;
+        }
+
+        pg_wifi_shell_cxt->p2p_persistent_done = 1;
+
+set_temp_device:
+        if(temp_device_id != 0){
+            set_active_deviceid(temp_device_id);
+        }
+        pg_wifi_shell_cxt->p2p_session_in_progress = 0;
+    }
+    return;
+}
+
+void P2P_Event_Handler_Invite_Rcvd_Result(CMD_P2P_EVENT_INFO *pEventInfo)
+{
+    qapi_WLAN_P2P_Invite_Rcvd_Result_Event_t *local_ptr = NULL;
+    qapi_WLAN_P2P_Go_Params_t goParams;
+    uint32_t deviceId = 0, temp_device_id = 0, dataLen = 0;
+    int32_t channel = __QAPI_WLAN_P2P_AUTO_CHANNEL;
+    int i = 0;
+
+    deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        /* P2P device should always send/receive events/commands on dev 0 if
+         * the app has switched to dev 1 while event is in dev 0 send command
+         * via dev 0 and then switch to dev 1 */
+        temp_device_id = deviceId;
+        /*
+         * If the device 1 is connected, we start GO on the home channel of device 1.
+         */
+        if(temp_device_id ==1 && wifi_state[temp_device_id] ==1)
+        {
+            qapi_WLAN_Get_Param(temp_device_id,
+                    __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                    __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL,
+                    &channel,
+                    &dataLen);
+        }
+        deviceId = 0;
+        set_active_deviceid(deviceId);
+    }
+    else
+    {
+        temp_device_id = deviceId;
+        deviceId = 1;
+        set_active_deviceid(deviceId);
+        /*
+         * If the device 1 is connected, we start GO on the home channel of device 1.
+         */
+        if(wifi_state[deviceId] ==1)
+        {
+            qapi_WLAN_Get_Param(deviceId,
+                    __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                    __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL,
+                    &channel,
+                    &dataLen);
+        }
+        deviceId = temp_device_id;
+        set_active_deviceid(temp_device_id);
+    }
+
+    local_ptr = (qapi_WLAN_P2P_Invite_Rcvd_Result_Event_t *) pEventInfo->pBuffer;
+    memset(&goParams,0, sizeof(qapi_WLAN_P2P_Go_Params_t));
+    info_printf("Invite Result Status : %x \r\n", local_ptr->status);
+
+    if (local_ptr->status == 0)
+    {
+        for (i=0;i<__QAPI_WLAN_MAC_LEN;i++)
+        {
+            info_printf(" [%x] ", local_ptr->sa[i]);
+        }
+    }
+    else
+    {
+        qapi_WLAN_P2P_Stop_Find(deviceId);
+    }
+    info_printf("\r\n");
+
+    if((p2p_peers_data[inv_response_evt_index].role == QAPI_WLAN_P2P_INV_ROLE_ACTIVE_GO_E) && (pg_wifi_shell_cxt->p2p_persistent_done == 0) &&
+            (local_ptr->status == 0))
+    {
+        // make AP Mode and WPS default settings for P2P GO
+        pg_wifi_shell_cxt->p2p_session_in_progress = 1;
+
+        pg_wifi_shell_cxt->wps_flag = 0x01;
+        info_printf("Starting Autonomous GO \r\n");
+
+        goParams.ssid_Len = strlen((char *) p2p_peers_data[inv_response_evt_index].ssid);
+        goParams.passphrase_Len = strlen((char *) p2p_peers_data[inv_response_evt_index].passphrase);
+        memcpy(goParams.ssid, p2p_peers_data[inv_response_evt_index].ssid,
+                goParams.ssid_Len);
+        memcpy(goParams.passphrase, p2p_peers_data[inv_response_evt_index].passphrase,
+                goParams.passphrase_Len);
+
+        if(qapi_WLAN_P2P_Start_Go(deviceId, &goParams, channel, 1) != 0)
+        {
+            info_printf("\r\nStartP2P command did not execute properly\r\n");
+            goto set_temp_device;
+        }
+
+        pg_wifi_shell_cxt->p2p_persistent_done = 1;
+        inv_response_evt_index = 0;
+    }
+
+set_temp_device:
+    if(temp_device_id != 0)
+    {
+        set_active_deviceid(temp_device_id);
+    }
+    pg_wifi_shell_cxt->p2p_session_in_progress = 0;
+    return;
+}
+
+void P2P_Event_Handler_Invite_Req(CMD_P2P_EVENT_INFO *pEventInfo)
+{
+    qapi_WLAN_P2P_Invite_Req_Event_t *local_ptr = (qapi_WLAN_P2P_Invite_Req_Event_t *) pEventInfo->pBuffer;
+    qapi_WLAN_P2P_Invite_Info_t invite_rsp_cmd;
+    uint32_t deviceId = 0, temp_device_id = 0;
+    int i = 0;
+
+    info_printf("Invitation Req Received From : ");
+    for (i = 0; i < __QAPI_WLAN_MAC_LEN; i++)
+    {
+        info_printf(" %x: ",local_ptr->sa[i]);
+    }
+    info_printf("\r\n");
+
+    memset(&invite_rsp_cmd, 0, sizeof(qapi_WLAN_P2P_Invite_Info_t));
+
+    if (local_ptr->is_Persistent)
+    {
+        for (i = 0; i < __QAPI_WLAN_P2P_MAX_LIST_COUNT; i++)
+        {
+            if(memcmp(local_ptr->sa, p2p_peers_data[i].macaddr, __QAPI_WLAN_MAC_LEN) == 0)
+            {
+                invite_rsp_cmd.status = 0;
+                inv_response_evt_index = i;
+                memcpy(invite_rsp_cmd.group_Bss_ID, p2p_peers_data[i].macaddr, __QAPI_WLAN_MAC_LEN);
+                break;
+            }
+        }
+
+        if(i == __QAPI_WLAN_P2P_MAX_LIST_COUNT)
+        {
+            invite_rsp_cmd.status = 1;
+            i = 0;
+        }
+    }
+    else
+    {
+        invite_rsp_cmd.status = 0;
+        memcpy(invite_rsp_cmd.group_Bss_ID, local_ptr->sa, __QAPI_WLAN_MAC_LEN);
+    }
+    pg_wifi_shell_cxt->p2p_session_in_progress = 1;
+    deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        /* P2P device should always send/receive events/commands on dev 0 if
+         * the app has switched to dev 1 while event is in dev 0 send command
+         * via dev 0 and then switch to dev 1 */
+        temp_device_id = deviceId;
+        deviceId = 0;
+        set_active_deviceid(deviceId);
+    }
+
+    /* send invite auth event */
+    if(qapi_WLAN_P2P_Invite_Auth(deviceId, (qapi_WLAN_P2P_Invite_Info_t *)&invite_rsp_cmd) != 0)
+    {
+        info_printf("\r\nStartP2P (P2P invite auth persistent)command did not execute properly\r\n");
+    }
+
+    if(temp_device_id != 0)
+    {
+        set_active_deviceid(temp_device_id);
+    }
+    pg_wifi_shell_cxt->p2p_session_in_progress = 0;
+    return;
+}
+
+void P2P_Event_Handler_Go_Neg_Result(CMD_P2P_EVENT_INFO *pEventInfo)
+{
+    qapi_WLAN_P2P_Go_Neg_Result_Event_t *p2pNeg = (qapi_WLAN_P2P_Go_Neg_Result_Event_t *) pEventInfo->pBuffer;
+    qapi_WLAN_P2P_Go_Params_t goParams;
+    uint32_t deviceId = 0, temp_device_id = 0, chnl = 0, signal_set = 0;
+    int32_t error = 0, result = 0;
+    uint8_t wps_mode = 0;
+    memset(p2p_wps_pin, 0, __QAPI_WLAN_WPS_PIN_LEN);
+	strlcpy(p2p_wps_pin, "12345670", sizeof(p2p_wps_pin));
+
+    info_printf("P2P GO Negotiation Result\r\n");
+    info_printf("      Status: %s\r\n",(p2pNeg->status) ? "FAILURE":"SUCCESS");
+
+    /* If group negotiation result was a failure then stop processing further. */
+    if(p2pNeg->status != 0)
+    {
+        pg_wifi_shell_cxt->p2p_persistent_go = QAPI_WLAN_P2P_NON_PERSISTENT_E;
+        qapi_WLAN_P2P_Stop_Find(deviceId);
+        return;
+    }
+
+    info_printf("    P2P Role: %s\r\n",(p2pNeg->role_Go) ? "P2P GO": "P2P Client");
+    info_printf("        SSID: %s\r\n", p2pNeg->ssid);
+    info_printf("     Channel: %d\r\n", p2pNeg->freq);
+    info_printf("  WPS Method: %s\r\n",
+            (p2pNeg->wps_Method == QAPI_WLAN_P2P_WPS_PBC_E) ? "PBC": "PIN");
+
+    pg_wifi_shell_cxt->p2p_session_in_progress = 1;
+    deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+
+        /* P2P device should always send/receive events/commands on dev 0 if
+         * the app has switched to dev 1 while event is in dev 0 send command
+         * via dev 0 and then switch to dev 1 */
+
+        temp_device_id = deviceId;
+        deviceId = 0;
+        set_active_deviceid(deviceId);
+    }
+
+    memset(&goParams, 0, sizeof(qapi_WLAN_P2P_Go_Params_t));
+    if(p2pNeg->role_Go == 1)
+    {
+        pg_wifi_shell_cxt->wps_flag = 0x01;
+        chnl = (p2pNeg->freq-2412)/5 + 1;
+
+        goParams.ssid_Len = p2pNeg->ssid_Len;
+        goParams.passphrase_Len = p2pNeg->passphrase_Len;
+        memcpy(goParams.ssid, p2pNeg->ssid, goParams.ssid_Len);
+        memcpy(goParams.passphrase, p2pNeg->pass_Phrase, goParams.passphrase_Len);
+
+        /* Reset global p2p_persistent_go variable */
+        pg_wifi_shell_cxt->p2p_persistent_go = QAPI_WLAN_P2P_NON_PERSISTENT_E;
+        if(qapi_WLAN_P2P_Start_Go(0, &goParams, chnl, p2pNeg->persistent_Grp) != 0)
+        {
+            info_printf("\r\nP2P connect command did not execute properly\r\n");
+            goto set_temp_device;
+        }
+        printf("p2p startt go end\r\n");
+    }
+
+    else if(p2pNeg->role_Go == 0)
+    {
+        uint8_t ssid[__QAPI_WLAN_MAX_SSID_LENGTH];
+        qapi_WLAN_Dev_Mode_e opMode = DEV_MODE_STATION_E;
+        qapi_WLAN_Set_Param(deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+                &opMode, sizeof(qapi_WLAN_Dev_Mode_e), FALSE);
+
+        memset(ssid, 0, sizeof(ssid));
+        memcpy(ssid, p2pNeg->ssid, sizeof(p2pNeg->ssid));
+        error = qapi_WLAN_Set_Param(0,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SSID,
+                (void *) ssid,
+                sizeof(ssid),
+                FALSE);
+        if(error != 0)
+        {
+            info_printf("Unable to set SSID\r\n");
+            goto set_temp_device;
+        }
+    }
+
+    /* WPS */
+    qapi_WLAN_WPS_Credentials_t wpsCreden;
+    qapi_WLAN_WPS_Start_t wps_start;
+
+    memset(&wpsCreden, 0, sizeof(qapi_WLAN_WPS_Credentials_t));
+    memset(&wps_start, 0, sizeof(qapi_WLAN_WPS_Start_t));
+
+    wps_context.connect_flag = (p2pNeg->role_Go) ? 0:8;
+
+    if(p2pNeg->wps_Method != QAPI_WLAN_P2P_WPS_PBC_E)
+    {
+        info_printf("pin mode\r\n");
+        wps_start.wps_Mode = QAPI_WLAN_WPS_PIN_MODE_E;
+        wps_start.pin_Length = 9;
+
+        //FIXME: This hardcoded pin value needs to be changed
+        // for production to reflect what is on a sticker/label
+        memcpy (wps_start.pin, p2p_wps_pin, wps_start.pin_Length);
+        wps_start.pin[wps_start.pin_Length - 1] = '\0';
+    }
+    else
+    {
+        info_printf("pbc mode, deviceId = %d, freq = %d\r\n", deviceId, p2pNeg->freq);
+        wps_start.wps_Mode = QAPI_WLAN_WPS_PBC_MODE_E;
+    }
+
+    memcpy(wpsCreden.ssid, p2pNeg->ssid, sizeof(p2pNeg->ssid));
+    memcpy(wpsCreden.mac_Addr, p2pNeg->peer_Interface_Addr, __QAPI_WLAN_MAC_LEN);
+    wpsCreden.ap_Channel  = p2pNeg->freq;
+    wpsCreden.ssid_Length = p2pNeg->ssid_Len;
+
+    if (0 != qapi_WLAN_Set_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                __QAPI_WLAN_PARAM_GROUP_SECURITY_WPS_CREDENTIALS,
+                &wpsCreden,
+                sizeof(qapi_WLAN_WPS_Credentials_t),
+                FALSE))
+    {
+        info_printf("set WPS failed\r\n");
+        return;
+    }
+    else {
+        info_printf("set WPS success\r\n");
+    }
+
+    /* Start WPS on the Aheros wifi */
+    
+    wps_mode = QAPI_WLAN_WPS_PBC_MODE_E;
+    /* Connect flag */
+    wps_context.connect_flag = 1;
+    info_printf("WPS started.\r\n");
+
+    if(qapi_WLAN_Start_Wps(deviceId, wps_context.connect_flag, wps_mode, wpsPin, 0/* AUTH_OPEN */) != 0)
+    {
+        info_printf("WPS failed\r\n");
+        return;
+    }
+    else {
+        info_printf("WPS success\r\n");
+    }
+
+set_temp_device:
+    if(temp_device_id != 0)
+    {
+        set_active_deviceid(temp_device_id);
+    }
+    pg_wifi_shell_cxt->p2p_session_in_progress = 0;
+    wps_context.wps_in_progress = 1;
+    return;
+}
+
+void P2P_Event_Handler(CMD_P2P_EVENT_INFO *pEventInfo)
+{
+    if (pEventInfo->event_id == __QAPI_WLAN_P2P_PROV_DISC_REQ_EVENTID)
+    {
+        P2P_Event_Handler_Prov_Disc_Req(pEventInfo);
+    }
+    else if (pEventInfo->event_id == __QAPI_WLAN_P2P_REQ_TO_AUTH_EVENTID)
+    {
+        P2P_Event_Handler_Req_To_Auth(pEventInfo);
+    }
+    else if (pEventInfo->event_id == __QAPI_WLAN_P2P_SDPD_RX_EVENTID)
+    {
+        P2P_Event_Handler_Sdpd_Rx(pEventInfo);
+    }
+    else if (pEventInfo->event_id == __QAPI_WLAN_P2P_PROV_DISC_RESP_EVENTID)
+    {
+        P2P_Event_Handler_Prov_Disc_Resp(pEventInfo);
+    }
+    else if (pEventInfo->event_id == __QAPI_WLAN_P2P_INVITE_SENT_RESULT_EVENTID)
+    {
+        P2P_Event_Handler_Invite_Sent_Result(pEventInfo);
+    }
+    else if (pEventInfo->event_id == __QAPI_WLAN_P2P_INVITE_RCVD_RESULT_EVENTID)
+    {
+        P2P_Event_Handler_Invite_Rcvd_Result(pEventInfo);
+    }
+    else if (pEventInfo->event_id == __QAPI_WLAN_P2P_INVITE_REQ_EVENTID)
+    {
+        P2P_Event_Handler_Invite_Req(pEventInfo);
+    }
+    else if (pEventInfo->event_id == __QAPI_WLAN_P2P_GO_NEG_RESULT_EVENTID)
+    {
+        P2P_Event_Handler_Go_Neg_Result(pEventInfo);
+    }
+    else
+    {
+        /* Should not come here */
+        info_printf("Unknown P2P Event %d\n", pEventInfo->event_id);
+    }
+}
+
+/* Add event info to the tail of the p2p event queue */
+uint32_t qapi_p2p_queueP2PEventInfo(uint8_t device_id, uint16_t event_id,
+        uint8_t *pBuffer, uint32_t Length)
+{
+    CMD_P2P_EVENT_INFO *pNewP2pEventInfo = NULL;
+
+    /* Allocate memory for the new p2p event.
+     * pNewP2pEventInfo->pBuffer[0] is pointer to the variable size pBuffer that is allocated based on the length
+     */
+    if((pNewP2pEventInfo = ((CMD_P2P_EVENT_INFO *)malloc(sizeof(CMD_P2P_EVENT_INFO) + Length))) == NULL){
+        /* Failure to allocate memory will drop the event at caller */
+        return -1;
+    }
+
+    pNewP2pEventInfo->nextEvent = NULL;
+    pNewP2pEventInfo->device_id = device_id;
+    pNewP2pEventInfo->event_id = event_id;
+    pNewP2pEventInfo->length = Length;
+
+    /* Copy the pBuffer to the variable length buffer pointer */
+    memcpy(&(pNewP2pEventInfo->pBuffer[0]), pBuffer, pNewP2pEventInfo->length);
+
+    /* aqucire mutex to update the p2p event queue */
+    qurt_mutex_lock(&(p2pEventNode.eventQueueMutex));
+
+    /* If empty, add to head
+     * else add the event to the tail of the queue
+     */
+    if((NULL == p2pEventNode.pEventHead) && (NULL == p2pEventNode.pEventTail))
+    {
+        p2pEventNode.pEventHead = p2pEventNode.pEventTail = pNewP2pEventInfo;
+    }
+    else
+    {
+        p2pEventNode.pEventTail->nextEvent = pNewP2pEventInfo;
+        p2pEventNode.pEventTail = pNewP2pEventInfo;
+    }
+
+    /* Release the mutex */
+    qurt_mutex_unlock(&(p2pEventNode.eventQueueMutex));
+    return 0;
+}
+
+/* Function to fetch event info at the head of the p2p event queue */
+CMD_P2P_EVENT_INFO *app_p2p_getNextP2PEventInfo(void)
+{
+    CMD_P2P_EVENT_INFO *pTemp = NULL;
+
+    /* Validate for empty queue */
+    qurt_mutex_lock(&(p2pEventNode.eventQueueMutex));
+    if(NULL != p2pEventNode.pEventHead)
+    {
+        /* aqucire mutex to update the p2p event queue */
+        pTemp =  p2pEventNode.pEventHead;
+        /* Update the queue head to the next or mark it empty */
+        if(p2pEventNode.pEventHead == p2pEventNode.pEventTail)
+        {
+            p2pEventNode.pEventHead = p2pEventNode.pEventTail = NULL;
+        }
+        else
+        {
+            p2pEventNode.pEventHead = p2pEventNode.pEventHead->nextEvent;
+        }
+        /* Release the mutex */
+    }
+    qurt_mutex_unlock(&(p2pEventNode.eventQueueMutex));
+
+    /* Return pointer to the event or NULL*/
+    return(pTemp);
+}
+
+
+void app_handle_p2p_pending_events()
+{
+    CMD_P2P_EVENT_INFO *pTemp = NULL;
+
+    /* Process all the pending P2P events */
+    while ((pTemp = app_p2p_getNextP2PEventInfo()))
+    {
+        if (0 == pTemp->length)
+        {
+            free(pTemp);
+            continue;
+        }
+        P2P_Event_Handler(pTemp);
+        free(pTemp);
+    }
+    return;
+}
+
+void qapi_wlan_p2p_event_cb(uint8_t device_Id, void *pData, uint32_t *pLength)
+{
+    qapi_WLAN_P2P_Event_Cb_Info_t *pP2p_Event_Cb_Info = (qapi_WLAN_P2P_Event_Cb_Info_t *)pData;
+    uint32_t status = 0;
+
+    switch(pP2p_Event_Cb_Info->event_ID)
+    {
+        case __QAPI_WLAN_P2P_GO_NEG_RESULT_EVENTID:
+        case __QAPI_WLAN_P2P_REQ_TO_AUTH_EVENTID:
+        case __QAPI_WLAN_P2P_PROV_DISC_RESP_EVENTID:
+        case __QAPI_WLAN_P2P_PROV_DISC_REQ_EVENTID:
+        case __QAPI_WLAN_P2P_INVITE_REQ_EVENTID:
+        case __QAPI_WLAN_P2P_INVITE_RCVD_RESULT_EVENTID:
+        case __QAPI_WLAN_P2P_INVITE_SENT_RESULT_EVENTID:
+        case __QAPI_WLAN_P2P_SDPD_RX_EVENTID:
+            {
+                /* This callback is executed in the proxy thread context.
+                 * No blocking event handler as each event is run to completion.
+                 * Copy the event into queue that is process at APP context. */
+                if(-1 == (status = qapi_p2p_queueP2PEventInfo(device_Id,
+                                (uint16_t)pP2p_Event_Cb_Info->event_ID,
+                                (uint8_t *)&pP2p_Event_Cb_Info->WLAN_P2P_Event_Info.go_Neg_Result_Event,
+                                *pLength)))
+                {
+                    info_printf(" Out of Memory: Dropping the P2P event\n");
+                    return;
+                }
+                app_handle_p2p_pending_events();
+                break;
+            }
+
+        default:
+            info_printf("Unknown P2P event %d\n", pP2p_Event_Cb_Info->event_ID);
+            break;
+    }
+    return;
+}
+
+void app_free_p2p_pending_events()
+{
+    CMD_P2P_EVENT_INFO *pTemp = NULL;
+
+    /* The check for 'p2pMode' is added to make sure that the mutex is
+     * initialized before trying to lock it */
+    if (pg_wifi_shell_cxt->p2pMode)
+    {
+        /* Free all the pending P2P events */
+        qurt_mutex_lock(&(p2pEventNode.eventQueueMutex));
+        while(p2pEventNode.pEventHead)
+        {
+            pTemp = p2pEventNode.pEventHead;
+            p2pEventNode.pEventHead = p2pEventNode.pEventHead->nextEvent;
+            free(pTemp);
+        }
+        p2pEventNode.pEventHead = NULL;
+        p2pEventNode.pEventTail = NULL;
+        qurt_mutex_unlock(&p2pEventNode.eventQueueMutex);
+        qurt_mutex_memheap_destroy(&p2pEventNode.eventQueueMutex);
+    }
+    return;
+}
+
+static qapi_Status_t P2p_enable(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    /* Following call sets the wlan_callback_handler() as the callback for asynchronous events */
+
+    if(qapi_WLAN_P2P_Enable(deviceId, true) != 0)
+    {
+        info_printf("P2P not enabled.\r\n");
+        return -1;
+    }
+
+    p2pEventNode.pEventHead = NULL;
+    p2pEventNode.pEventTail = NULL;
+    qurt_mutex_memheap_init(&p2pEventNode.eventQueueMutex);
+
+    pg_wifi_shell_cxt->p2pMode = TRUE;
+    pg_wifi_shell_cxt->p2p_intent = 0;    /* Default group owner intent */
+    pg_wifi_shell_cxt->autogo_newpp = FALSE;
+    pg_wifi_shell_cxt->p2p_cancel_enable = 0;
+    pg_wifi_shell_cxt->p2p_persistent_go = QAPI_WLAN_P2P_NON_PERSISTENT_E;
+
+    memset(p2p_wps_pin, 0, __QAPI_WLAN_WPS_PIN_LEN);
+    strlcpy(p2p_wps_pin, "12345670", sizeof(p2p_wps_pin));
+
+    /* Autonomous GO configurations */
+    wlan_set_passphrase("1234567890", 11);
+    memset(original_ssid, 0, __QAPI_WLAN_MAX_SSID_LENGTH);
+    strlcpy(original_ssid,"DIRECT-iO", sizeof(original_ssid));
+
+    memset(p2p_join_mac_addr, 0, __QAPI_WLAN_MAC_LEN);
+    memset(p2pScratchBuff, 0, sizeof(p2pScratchBuff));
+
+    return QAPI_OK;
+}
+
+
+static qapi_Status_t P2p_disable(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_Dev_Mode_e opMode;
+
+    uint32_t deviceId = get_active_device();
+
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    if(qapi_WLAN_P2P_Enable(deviceId, false) != 0)
+    {
+        info_printf("Disabling P2P mode failed.\r\n");
+        return -1;
+    }
+
+    opMode = DEV_MODE_STATION_E;
+    qapi_WLAN_Set_Param(deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+            __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+            &opMode, sizeof(qapi_WLAN_Dev_Mode_e), FALSE);
+
+    /* Free the event queue and destroy the mutex before disabling P2P. */
+    app_free_p2p_pending_events();
+
+    pg_wifi_shell_cxt->p2pMode = FALSE;
+    pg_wifi_shell_cxt->set_channel_p2p = 0;
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_set_config(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_P2P_Config_Params_t p2pConfig;
+
+    uint32_t deviceId = get_active_device();
+    if((Parameter_Count < 5))
+    {
+		 return QAPI_ERROR;
+    }
+
+     if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    pg_wifi_shell_cxt->set_channel_p2p = Parameter_List[2].Integer_Value; // for autogo
+
+    pg_wifi_shell_cxt->p2p_intent = Parameter_List[0].Integer_Value;
+    p2pConfig.go_Intent      = pg_wifi_shell_cxt->p2p_intent;
+    p2pConfig.listen_Chan    = (uint8_t)Parameter_List[1].Integer_Value;
+    p2pConfig.op_Chan	     = (uint8_t)Parameter_List[2].Integer_Value;
+    p2pConfig.age		     = (uint32_t)Parameter_List[4].Integer_Value;
+    p2pConfig.reg_Class      = 81;
+    p2pConfig.op_Reg_Class   = 81;
+    p2pConfig.max_Node_Count = 5;
+
+    if (0 != qapi_WLAN_Set_Param(deviceId, __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_CONFIG_PARAMS,
+                &p2pConfig, sizeof(p2pConfig), FALSE))
+    {
+        info_printf("P2P configuration failed.\r\n");
+        return -1;
+    }
+
+    info_printf("Device configuration set successfully.\r\n");
+    info_printf("Note: Cannot set country code.\r\n");
+    info_printf("Use board data file or tuneables instead.\r\n");
+
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_find(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_P2P_Find_Cmd_t find_params;
+
+    uint32_t deviceId = get_active_device();
+
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&find_params, 0, sizeof(qapi_WLAN_P2P_Find_Cmd_t));
+
+    if(Parameter_Count == 1)
+    {
+        if(strcmp(Parameter_List[0].String_Value,"1") == 0)
+        {
+            find_params.type = (QAPI_WLAN_P2P_DISC_START_WITH_FULL_E);
+            find_params.timeout = (300);
+        }
+        else if(strcmp(Parameter_List[0].String_Value,"2") == 0)
+        {
+            find_params.type = (QAPI_WLAN_P2P_DISC_ONLY_SOCIAL_E);
+            find_params.timeout = (300);
+        }
+        else if(strcmp(Parameter_List[0].String_Value,"3") == 0)
+        {
+            find_params.type = (QAPI_WLAN_P2P_DISC_PROGRESSIVE_E);
+            find_params.timeout = (300);
+        }
+        else
+        {
+            info_printf("Wrong option. Enter option 1,2 or 3\r\n");
+            return -1;
+        }
+    }
+
+    else if(Parameter_Count == 2)
+    {
+        if(strcmp(Parameter_List[0].String_Value,"1") == 0)
+        {
+            find_params.type = (QAPI_WLAN_P2P_DISC_START_WITH_FULL_E);
+            find_params.timeout = (Parameter_List[1].Integer_Value);
+        }
+        else if(strcmp(Parameter_List[0].String_Value,"2") == 0)
+        {
+            find_params.type = (QAPI_WLAN_P2P_DISC_ONLY_SOCIAL_E);
+            find_params.timeout = (Parameter_List[1].Integer_Value);
+        }
+        else if(strcmp(Parameter_List[0].String_Value,"3") == 0)
+        {
+            find_params.type = (QAPI_WLAN_P2P_DISC_PROGRESSIVE_E);
+            find_params.timeout = (Parameter_List[1].Integer_Value);
+        }
+        else
+        {
+            info_printf("Wrong option. Enter option 1,2 or 3\r\n");
+            return -1;
+        }
+    }
+
+    else
+    {
+        find_params.type = (QAPI_WLAN_P2P_DISC_ONLY_SOCIAL_E);
+        find_params.timeout = (300);
+    }
+
+    if(qapi_WLAN_P2P_Find(deviceId, find_params.type, find_params.timeout) != 0)
+    {
+        info_printf("P2P find command failed.\r\n");
+        return -1;
+    }
+
+    return QAPI_OK;
+}
+
+uint8_t P2P_Check_Peer_Is_Found(const uint8_t *peer_addr, uint8_t p2p_operation)
+{
+    uint32_t deviceId = 0; 
+    uint32_t dataLen = 0;
+    uint8_t *local_ptr = NULL, index = 0, temp_val = 0, peer_found = TRUE;
+    qapi_WLAN_P2P_Node_List_Params_t p2pNodeList;
+
+    deviceId = get_active_device();
+
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(p2pScratchBuff, 0, sizeof(p2pScratchBuff));
+    p2pNodeList.buffer_Length = __QAPI_WLAN_P2P_EVT_BUF_SIZE;
+    p2pNodeList.node_List_Buffer = p2pScratchBuff;
+    dataLen = sizeof(p2pNodeList);
+
+    if (0 != qapi_WLAN_Get_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_NODE_LIST,
+                &p2pNodeList, &dataLen))
+    {
+        info_printf("P2P node list command failed.\r\n");
+        return FALSE;
+    }
+
+    if(!p2pNodeList.node_List_Buffer)
+    {
+        return FALSE;
+    }
+    local_ptr = p2pNodeList.node_List_Buffer;
+    printf("local_ptr is %d, peer_addr id %d\r\n", ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->p2p_Device_Addr, peer_addr);
+
+    temp_val = *local_ptr;
+    local_ptr++;
+    if (temp_val > 0)
+    {
+        for (index = 0; index < temp_val; index++)
+        {
+            if(memcmp(((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->p2p_Device_Addr,
+                        peer_addr, __QAPI_WLAN_MAC_LEN) == 0)
+            {
+                peer_found = TRUE;
+                break;
+            }
+            if(p2p_operation == P2P_PROVISION_OPERATION)
+            {
+                if(memcmp(((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->interface_Addr,
+                            peer_addr, __QAPI_WLAN_MAC_LEN) == 0)
+                {
+                    peer_found = TRUE;
+                    break;
+                }
+            }
+            local_ptr += sizeof(qapi_WLAN_P2P_Device_Lite_t);
+        }
+    }
+
+    if(!peer_found)
+    {
+        info_printf("The Peer Device is not found, please do P2P Find again.\r\n");
+    }
+
+    return peer_found;
+}
+
+static qapi_Status_t P2p_connect(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t deviceId = 0; 
+    uint32_t dataLen = __QAPI_WLAN_MAC_LEN;
+    qapi_WLAN_P2P_Connect_Cmd_t p2p_connect;
+
+    deviceId = get_active_device();
+
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&p2p_connect, 0, sizeof(qapi_WLAN_P2P_Connect_Cmd_t));
+
+    if (0 != qapi_WLAN_Get_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_MAC_ADDRESS,
+                p2p_connect.own_Interface_Addr, &dataLen))
+    {
+        info_printf("Unable to obtain device mac address\r\n");
+        return -1;
+    }
+
+    info_printf("Own MAC addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+            p2p_connect.own_Interface_Addr[0], p2p_connect.own_Interface_Addr[1],
+            p2p_connect.own_Interface_Addr[2], p2p_connect.own_Interface_Addr[3],
+            p2p_connect.own_Interface_Addr[4], p2p_connect.own_Interface_Addr[5]);
+
+    if ((ether_aton((const char *)(Parameter_List[0].String_Value),p2p_connect.peer_Addr)) != 0)
+    {
+        info_printf("Invalid PEER MAC Address\r\n");
+        return -1;
+    }
+
+    if(!P2P_Check_Peer_Is_Found(p2p_connect.peer_Addr, P2P_CONNECT_OPERATION))
+    {
+        return -1;
+    }
+
+    info_printf("\r\nPeer MAC addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+            p2p_connect.peer_Addr[0], p2p_connect.peer_Addr[1],
+            p2p_connect.peer_Addr[2], p2p_connect.peer_Addr[3],
+            p2p_connect.peer_Addr[4], p2p_connect.peer_Addr[5]);
+
+    if(strcmp(Parameter_List[1].String_Value,"push") == 0)
+    {
+        p2p_connect.wps_Method = QAPI_WLAN_P2P_WPS_PBC_E;
+
+        /* Check if user has given "persistent" option */
+        if((Parameter_Count == 3) &&
+                strcmp(Parameter_List[2].String_Value,"persistent") == 0)
+        {
+            p2p_connect.dev_Capab |= __QAPI_WLAN_P2P_PERSISTENT_FLAG;
+        }
+    }
+    else
+    {
+        /* Check if user has provided WPS pin (8 characters) */
+        if(strlen((char *)Parameter_List[2].String_Value) == 8)
+        {
+            memset(p2p_wps_pin, 0, __QAPI_WLAN_WPS_PIN_LEN);
+            strlcpy(p2p_wps_pin, (const char *)(Parameter_List[2].String_Value), sizeof(p2p_wps_pin));
+
+            /* Check if user has given "persistent" option */
+            if((Parameter_Count == 4) &&
+                    strcmp(Parameter_List[3].String_Value,"persistent") == 0)
+            {
+                p2p_connect.dev_Capab |= __QAPI_WLAN_P2P_PERSISTENT_FLAG;
+            }
+        }
+
+        if(strcmp(Parameter_List[1].String_Value,"display") == 0)
+        {
+            p2p_connect.wps_Method = QAPI_WLAN_P2P_WPS_PIN_DISPLAY_E;
+            info_printf("WPS PIN %s \r\n",p2p_wps_pin);
+        }
+        else if(strcmp(Parameter_List[1].String_Value,"keypad") == 0)
+        {
+            p2p_connect.wps_Method = QAPI_WLAN_P2P_WPS_PIN_KEYPAD_E;
+        }
+    }
+
+    /* Save P2P persistent flag as it will be needed while starting
+       the group capability in beacons if role is P2P GO  */
+    if (p2p_connect.dev_Capab & __QAPI_WLAN_P2P_PERSISTENT_FLAG)
+    {
+        pg_wifi_shell_cxt->p2p_persistent_go = QAPI_WLAN_P2P_PERSISTENT_E;
+    }
+    else
+    {
+        pg_wifi_shell_cxt->p2p_persistent_go = QAPI_WLAN_P2P_NON_PERSISTENT_E;
+    }
+
+    if(qapi_WLAN_P2P_Connect(deviceId, p2p_connect.wps_Method,
+                p2p_connect.peer_Addr,
+                pg_wifi_shell_cxt->p2p_persistent_go) != 0)
+    {
+        info_printf("P2P connect command failed.\r\n");
+        pg_wifi_shell_cxt->p2p_persistent_go = QAPI_WLAN_P2P_NON_PERSISTENT_E;
+        return -1;
+    }
+
+    return QAPI_OK;
+}
+
+
+static qapi_Status_t P2p_provision(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_P2P_Prov_Disc_Req_Cmd_t p2p_prov_disc;
+    qapi_WLAN_P2P_Connect_Cmd_t p2p_connect;
+
+    uint32_t deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&p2p_prov_disc, 0, sizeof(qapi_WLAN_P2P_Prov_Disc_Req_Cmd_t));
+    if(strcmp(Parameter_List[1].String_Value, "push") == 0)
+    {
+        p2p_prov_disc.wps_Method = (uint16_t)__QAPI_WLAN_P2P_WPS_CONFIG_PUSHBUTTON;
+    }
+    else if(strcmp(Parameter_List[1].String_Value, "display") == 0)
+    {
+        p2p_prov_disc.wps_Method = (uint16_t)__QAPI_WLAN_P2P_WPS_CONFIG_DISPLAY;
+    }
+    else if(strcmp(Parameter_List[1].String_Value,"keypad") == 0)
+    {
+        p2p_prov_disc.wps_Method = (uint16_t)__QAPI_WLAN_P2P_WPS_CONFIG_KEYPAD;
+    }
+    else
+    {
+        info_printf("Incorrect WPS method\r\n");
+        return -1;
+    }
+
+    p2p_prov_disc.dialog_Token = 1;
+
+    if ((ether_aton((const char *)(Parameter_List[0].String_Value),p2p_prov_disc.peer)) != 0)
+    {
+        info_printf("Invalid PEER MAC Address\r\n");
+        return -1;
+    }
+
+    if(!P2P_Check_Peer_Is_Found(p2p_prov_disc.peer, P2P_PROVISION_OPERATION))
+    {
+        return -1;
+    }
+
+    if( qapi_WLAN_P2P_Prov(deviceId, p2p_prov_disc.wps_Method, p2p_prov_disc.peer) != 0 )
+    {
+        info_printf("P2P provision command failed.\r\n");
+        return -1;
+    }
+
+    /* Authorize P2P Device */
+    memset(&p2p_connect, 0, sizeof(qapi_WLAN_P2P_Connect_Cmd_t));
+    if(strcmp(Parameter_List[1].String_Value, "push") == 0)
+    {
+        p2p_connect.wps_Method = QAPI_WLAN_P2P_WPS_PBC_E;
+    }
+    else if(strcmp(Parameter_List[1].String_Value, "display") == 0)
+    {
+        p2p_connect.wps_Method = QAPI_WLAN_P2P_WPS_PIN_DISPLAY_E;
+    }
+    else if(strcmp(Parameter_List[1].String_Value,"keypad") == 0)
+    {
+        p2p_connect.wps_Method = QAPI_WLAN_P2P_WPS_PIN_KEYPAD_E;
+    }
+
+    if ((ether_aton((const char *)(Parameter_List[0].String_Value),p2p_connect.peer_Addr)) != 0)
+    {
+        info_printf("Invalid PEER MAC Address\r\n");
+        return -1;
+    }
+
+    p2p_connect.go_Intent = pg_wifi_shell_cxt->p2p_intent;
+    if(p2p_connect.wps_Method != QAPI_WLAN_P2P_WPS_NOT_READY_E)
+    {
+        if(qapi_WLAN_P2P_Auth(deviceId, p2p_connect.dev_Auth,
+                    p2p_connect.wps_Method, p2p_connect.peer_Addr,
+                    ((p2p_connect.dev_Capab & __QAPI_WLAN_P2P_PERSISTENT_FLAG) ?
+                     QAPI_WLAN_P2P_PERSISTENT_E : QAPI_WLAN_P2P_NON_PERSISTENT_E)) != 0)
+        {
+            info_printf("P2P provision command failed.\r\n");
+            return -1;
+        }
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_listen(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t timeout_val = 0;
+
+    uint32_t deviceId = get_active_device();
+
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    if (Parameter_Count == 1 && Parameter_List[0].Integer_Is_Valid)
+    {
+        timeout_val = Parameter_List[0].Integer_Value;
+    }
+    else
+    {
+        timeout_val = 300;
+    }
+
+    if(qapi_WLAN_P2P_Listen(deviceId, timeout_val) != 0)
+    {
+        info_printf("P2P listen command failed.\r\n");
+        return -1;
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_cancel(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t deviceId = 0, dataLen = 0;
+    qapi_WLAN_P2P_Network_List_Params_t p2pNetworkList;
+    qapi_WLAN_Dev_Mode_e opMode;
+
+    deviceId = get_active_device();
+
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    if(qapi_WLAN_P2P_Cancel(deviceId) != 0)
+    {
+        info_printf("P2P cancel command failed.\r\n");
+        return -1;
+    }
+
+    pg_wifi_shell_cxt->autogo_newpp = FALSE;
+    pg_wifi_shell_cxt->p2p_cancel_enable = 1;
+
+    memset(p2pScratchBuff, 0, sizeof(p2pScratchBuff));
+    p2pNetworkList.network_List_Buffer = p2pScratchBuff;
+    p2pNetworkList.buffer_Length = __QAPI_WLAN_P2P_EVT_BUF_SIZE;
+
+    if (0 != qapi_WLAN_Get_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_NETWORK_LIST,
+                &p2pNetworkList, &dataLen))
+    {
+        info_printf("P2P cancel command did not execute properly\r\n");
+        return -1;
+    }
+
+    /* Following call to app_p2p_process_persistent_list_event() is made to make
+     * p2p_cancel() blocking so that no other asynchronous p2p operations happen before
+     * p2p_cancel() completes. */
+    app_p2p_process_persistent_list_event(p2pNetworkList.network_List_Buffer);
+
+    /* Reset to mode station */
+    opMode = DEV_MODE_STATION_E;
+    qapi_WLAN_Set_Param(deviceId,
+            __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+            __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+            &opMode,
+            sizeof(qapi_WLAN_Dev_Mode_e),
+            FALSE);
+
+    pg_wifi_shell_cxt->p2p_persistent_done = 0;
+    set_power_mode(QAPI_WLAN_POWER_MODE_REC_POWER_E, QAPI_WLAN_POWER_MODULE_P2P_E);
+
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_join(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t deviceId = 0, dataLen = 0;
+    qapi_WLAN_P2P_Node_List_Params_t p2pNodeList;
+
+    deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    if ((ether_aton((const char *)(Parameter_List[0].String_Value),p2p_join_mac_addr)) != 0)
+    {
+        info_printf("Invalid PEER MAC Address\r\n");
+        return -1;
+    }
+
+    info_printf("Interface MAC addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+            p2p_join_mac_addr[0], p2p_join_mac_addr[1], p2p_join_mac_addr[2],
+            p2p_join_mac_addr[3], p2p_join_mac_addr[4], p2p_join_mac_addr[5]);
+
+    /* Update join profile */
+    memset(&p2p_join_profile_cmd, 0, sizeof( qapi_WLAN_P2P_Connect_Cmd_t));
+    if (0 != qapi_WLAN_Get_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_MAC_ADDRESS,
+                p2p_join_profile_cmd.own_Interface_Addr,
+                &dataLen))
+    {
+        info_printf("Unable to obtain device mac address\r\n");
+        return -1;
+    }
+
+    info_printf("Own MAC addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+            p2p_join_profile_cmd.own_Interface_Addr[0],
+            p2p_join_profile_cmd.own_Interface_Addr[1],
+            p2p_join_profile_cmd.own_Interface_Addr[2],
+            p2p_join_profile_cmd.own_Interface_Addr[3],
+            p2p_join_profile_cmd.own_Interface_Addr[4],
+            p2p_join_profile_cmd.own_Interface_Addr[5]);
+
+    if(strcmp(Parameter_List[1].String_Value,"push") == 0)
+    {
+        p2p_join_profile_cmd.wps_Method = QAPI_WLAN_P2P_WPS_PBC_E;
+    }
+    else if(strcmp(Parameter_List[1].String_Value,"display") == 0)
+    {
+        p2p_join_profile_cmd.wps_Method = QAPI_WLAN_P2P_WPS_PIN_DISPLAY_E;
+    }
+    else if(strcmp(Parameter_List[1].String_Value,"keypad") == 0)
+    {
+        p2p_join_profile_cmd.wps_Method = QAPI_WLAN_P2P_WPS_PIN_KEYPAD_E;
+    }
+
+    if(p2p_join_profile_cmd.wps_Method == QAPI_WLAN_P2P_WPS_PIN_DISPLAY_E ||
+            p2p_join_profile_cmd.wps_Method == QAPI_WLAN_P2P_WPS_PIN_KEYPAD_E)
+    {
+        memset(p2p_wps_pin, 0, __QAPI_WLAN_WPS_PIN_LEN);
+        strlcpy(p2p_wps_pin, (const char *)(Parameter_List[2].String_Value), sizeof(p2p_wps_pin));
+    }
+
+    memset(p2pScratchBuff, 0, sizeof(p2pScratchBuff));
+    pg_wifi_shell_cxt->p2p_join_session_active = 1;
+    p2pNodeList.buffer_Length = __QAPI_WLAN_P2P_EVT_BUF_SIZE;
+    p2pNodeList.node_List_Buffer = p2pScratchBuff;
+
+    if (0 != qapi_WLAN_Get_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_NODE_LIST,
+                &p2pNodeList, &dataLen))
+    {
+        info_printf("P2P join command did not execute properly\r\n");
+        return -1;
+    }
+
+    app_p2p_process_node_list_event(p2pNodeList.node_List_Buffer);
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_auth(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_P2P_Connect_Cmd_t p2p_connect;
+
+    uint32_t deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&p2p_connect, 0, sizeof(qapi_WLAN_P2P_Connect_Cmd_t));
+
+    if(strlen((char *)Parameter_List[2].String_Value) == 8)
+    {
+        memset(p2p_wps_pin, 0, __QAPI_WLAN_WPS_PIN_LEN);
+        strlcpy(p2p_wps_pin, (const char *)(Parameter_List[2].String_Value), sizeof(p2p_wps_pin));
+        info_printf("WPS Pin %s\r\n",p2p_wps_pin);
+
+        /* Check if user has given "persistent" option */
+        if((Parameter_Count == 4) &&
+                strcmp(Parameter_List[3].String_Value,"persistent") == 0)
+        {
+            p2p_connect.dev_Capab |= __QAPI_WLAN_P2P_PERSISTENT_FLAG;
+        }
+    }
+    if(strcmp(Parameter_List[1].String_Value, "deauth") == 0)
+    {
+        p2p_connect.dev_Auth = 1;
+    }
+    if(strcmp(Parameter_List[1].String_Value, "push") == 0)
+    {
+        p2p_connect.wps_Method = QAPI_WLAN_P2P_WPS_PBC_E;
+
+        /* Check if user has given "persistent" option */
+        if((Parameter_Count == 3) &&
+                strcmp(Parameter_List[2].String_Value,"persistent") == 0)
+        {
+            p2p_connect.dev_Capab |= __QAPI_WLAN_P2P_PERSISTENT_FLAG;
+        }
+    }
+    else if(strcmp(Parameter_List[1].String_Value, "display") == 0)
+    {
+        p2p_connect.wps_Method = QAPI_WLAN_P2P_WPS_PIN_DISPLAY_E;
+        info_printf("WPS PIN %s \r\n",p2p_wps_pin);
+    }
+    else if(strcmp(Parameter_List[1].String_Value,"keypad") == 0)
+    {
+        p2p_connect.wps_Method = QAPI_WLAN_P2P_WPS_PIN_KEYPAD_E;
+    }
+
+    if ((ether_aton((const char *)(Parameter_List[0].String_Value),p2p_connect.peer_Addr)) != 0)
+    {
+        info_printf("Invalid PEER MAC Address\r\n");
+        return -1;
+    }
+
+    if(!P2P_Check_Peer_Is_Found(p2p_connect.peer_Addr,P2P_AUTH_OPERATION))
+    {
+        return -1;
+    }
+
+    /* Save P2P persistent flag as it will be needed while starting
+       the group capability in beacons if role is P2P GO  */
+    if (p2p_connect.dev_Capab & __QAPI_WLAN_P2P_PERSISTENT_FLAG)
+    {
+        pg_wifi_shell_cxt->p2p_persistent_go = QAPI_WLAN_P2P_PERSISTENT_E;
+    }
+    else
+    {
+        pg_wifi_shell_cxt->p2p_persistent_go = QAPI_WLAN_P2P_NON_PERSISTENT_E;
+    }
+
+    if(qapi_WLAN_P2P_Auth(deviceId,
+                p2p_connect.dev_Auth,
+                (qapi_WLAN_P2P_WPS_Method_e) p2p_connect.wps_Method,
+                p2p_connect.peer_Addr, pg_wifi_shell_cxt->p2p_persistent_go) != 0)
+    {
+        info_printf("StartP2P command did not execute properly\r\n");
+        pg_wifi_shell_cxt->p2p_persistent_go = QAPI_WLAN_P2P_NON_PERSISTENT_E;
+        return -1;
+    }
+
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_auto_go(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint8_t persistent_Group = 0;
+    int32_t go_chan = __QAPI_WLAN_P2P_DEFAULT_CHAN;
+    uint32_t channel = 0, dataLen = 0;
+    uint32_t deviceId = get_active_device();
+
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    /* if set_channel_p2p is valid, prefer to use set_channel_p2p */
+    if (pg_wifi_shell_cxt->set_channel_p2p != 0) {
+        go_chan = pg_wifi_shell_cxt->set_channel_p2p;
+    }
+
+    /*
+     * If the device 1 is connected, we start GO on the home channel of device 1.
+     */
+
+    if(wifi_state[deviceId] ==1)
+    {
+        set_active_deviceid(1);
+        dataLen = 4;
+        qapi_WLAN_Get_Param(1,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHANNEL,
+                &channel,
+                &dataLen);
+        go_chan = channel;
+        set_active_deviceid(0);
+    }
+
+    pg_wifi_shell_cxt->p2pMode = TRUE;
+    pg_wifi_shell_cxt->wps_flag = 0x01;
+
+    info_printf("Starting Autonomous GO.\r\n");
+
+    /* Check if user has given "persistent" option */
+    if(Parameter_Count && strcmp(Parameter_List[0].String_Value,"persistent") == 0)
+    {
+        persistent_Group = 1;
+    }
+    else
+    {
+        persistent_Group = 0;
+    }
+
+    if(FALSE == pg_wifi_shell_cxt->autogo_newpp)
+    {
+        qapi_WLAN_P2P_Go_Params_t goParams;
+        memset(&goParams, 0, sizeof(qapi_WLAN_P2P_Go_Params_t));
+        goParams.ssid_Len = strlen("DIRECT-iO");
+        goParams.passphrase_Len = strlen(wpa_passphrase[deviceId]);
+
+        memcpy(goParams.ssid, "DIRECT-iO", goParams.ssid_Len);
+        memcpy(goParams.passphrase, wpa_passphrase[deviceId], goParams.passphrase_Len);
+
+        if(qapi_WLAN_P2P_Start_Go(deviceId, &goParams, go_chan, persistent_Group) != 0)
+        {
+            info_printf("P2P auto GO command did not execute properly.\r\n");
+            return -1;
+        }
+    }
+
+    else
+    {
+        if(qapi_WLAN_P2P_Start_Go(deviceId, NULL, go_chan,
+                    persistent_Group) != 0)
+        {
+            info_printf("P2P auto GO command did not execute properly.\r\n");
+            return -1;
+        }
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_invite_auth(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    if(Parameter_Count < 4)
+	{
+		return  QAPI_ERROR;
+	}
+    qapi_WLAN_P2P_Invite_Cmd_t p2pInvite;
+    qapi_WLAN_P2P_Go_Params_t ssidParams;
+    qapi_WLAN_Auth_Mode_e authMode = QAPI_WLAN_AUTH_WPA2_PSK_E;
+    qapi_WLAN_Crypt_Type_e encrType = QAPI_WLAN_CRYPT_AES_CRYPT_E;
+    uint32_t deviceId = 0, wifimode = 0, dataLen = 0, k = 0;
+    uint8_t p2p_invite_role;
+
+    deviceId = get_active_device();
+
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&p2pInvite, 0, sizeof(qapi_WLAN_P2P_Invite_Cmd_t));
+    memset(&ssidParams, 0, sizeof(qapi_WLAN_P2P_Go_Params_t));
+
+    for(k = 0; k < __QAPI_WLAN_P2P_MAX_LIST_COUNT; k++)
+    {
+        if(strncmp((char *)p2p_peers_data[k].ssid,
+                    (const char *)(Parameter_List[0].String_Value),
+                    strlen((const char *)(Parameter_List[0].String_Value))) == 0)
+        {
+            break;
+        }
+    }
+    if(k == __QAPI_WLAN_P2P_MAX_LIST_COUNT)
+    {
+        dataLen = 4;
+        qapi_WLAN_Get_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+                &wifimode, &dataLen);
+        // if((wifimode == DEV_MODE_STATION_E) && (get_dev_stat(deviceId) == UP))
+        if((wifimode == DEV_MODE_STATION_E))
+        {
+            p2p_invite_role = QAPI_WLAN_P2P_INV_ROLE_CLIENT_E;
+            p2pInvite.is_Persistent=0;
+        }
+        k = 0;
+    }
+    else
+    {
+        pg_wifi_shell_cxt->invitation_index = k;
+        p2p_invite_role = p2p_peers_data[k].role;
+        p2pInvite.is_Persistent=1;
+    }
+
+    if ((ether_aton((const char *)(Parameter_List[1].String_Value), p2pInvite.peer_Addr)) != 0)
+    {
+        info_printf("Invalid Invitation MAC Address\r\n");
+        return -1;
+    }
+
+    if(!P2P_Check_Peer_Is_Found(p2pInvite.peer_Addr,P2P_INVITE_OPERATION))
+    {
+        return -1;
+    }
+
+    if(strcmp(Parameter_List[2].String_Value, "push") == 0)
+    {
+        p2pInvite.wps_Method = QAPI_WLAN_P2P_WPS_PBC_E;
+    }
+    else if(strcmp(Parameter_List[2].String_Value, "display") == 0)
+    {
+        p2pInvite.wps_Method = QAPI_WLAN_P2P_WPS_PIN_KEYPAD_E;
+    }
+    else if(strcmp(Parameter_List[2].String_Value,"keypad") == 0)
+    {
+        p2pInvite.wps_Method = QAPI_WLAN_P2P_WPS_PIN_DISPLAY_E;
+    }
+    else
+    {
+        info_printf("Incorrect wps method not proper P2P Invite \r\n");
+        return -1;
+    }
+
+    if( qapi_WLAN_P2P_Invite(deviceId, (const char *)(Parameter_List[0].String_Value),
+                p2pInvite.wps_Method, p2pInvite.peer_Addr,
+                p2pInvite.is_Persistent, p2p_invite_role) != 0 )
+    {
+        info_printf("P2P command did not execute properly\r\n");
+        return -1;
+    }
+
+    if(p2p_invite_role == QAPI_WLAN_P2P_INV_ROLE_ACTIVE_GO_E)
+    {
+        if(0 != qapi_WLAN_Set_Param(deviceId,
+                    __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                    __QAPI_WLAN_PARAM_GROUP_SECURITY_ENCRYPTION_TYPE,
+                    (void *) &encrType, //QCOM_WLAN_CRYPT_AES_CRYPT
+                    sizeof(qapi_WLAN_Crypt_Type_e), FALSE))
+        {
+            return -1;
+        }
+
+        if ( 0 != qapi_WLAN_Set_Param(deviceId,
+                    __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                    __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE,
+                    (void *) &authMode, //QCOM_WLAN_AUTH_WPA2_PSK
+                    sizeof(qapi_WLAN_Auth_Mode_e), FALSE))
+        {
+            return -1;
+        }
+
+        memcpy(ssidParams.passphrase, (char *)p2p_peers_data[k].passphrase,
+                strlen((char *)p2p_peers_data[k].passphrase));
+        memcpy(ssidParams.ssid, (char *)p2p_peers_data[k].ssid,
+                strlen((char *)p2p_peers_data[k].ssid));
+        ssidParams.ssid_Len = strlen((char *)p2p_peers_data[k].ssid);
+        ssidParams.passphrase_Len = strlen((char *)p2p_peers_data[k].passphrase);
+
+        if ( 0 != qapi_WLAN_Set_Param(deviceId,
+
+                    __QAPI_WLAN_PARAM_GROUP_P2P,
+                    __QAPI_WLAN_PARAM_GROUP_P2P_GO_PARAMS,
+                    &ssidParams, sizeof(ssidParams), FALSE))
+        {
+            info_printf("P2P command did not execute properly\r\n");
+            return -1;
+        }
+    }
+
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_get_nodelist(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t deviceId = 0; 
+    uint32_t dataLen = sizeof(qapi_WLAN_P2P_Node_List_Params_t);
+    qapi_WLAN_P2P_Node_List_Params_t p2pNodeList;
+
+    deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(p2pScratchBuff, 0, sizeof(p2pScratchBuff));
+    p2pNodeList.buffer_Length = __QAPI_WLAN_P2P_EVT_BUF_SIZE;
+    p2pNodeList.node_List_Buffer = p2pScratchBuff;
+
+    if (0 != qapi_WLAN_Get_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_NODE_LIST,
+                &p2pNodeList, &dataLen))
+    {
+        info_printf("P2P node list command failed.\r\n");
+        return -1;
+    }
+
+    app_p2p_process_node_list_event(p2pNodeList.node_List_Buffer);
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_get_networklist(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t deviceId = 0, dataLen = 0;
+    qapi_WLAN_P2P_Network_List_Params_t p2pNetworkList;
+
+    deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(p2pScratchBuff, 0, sizeof(p2pScratchBuff));
+    p2pNetworkList.network_List_Buffer = p2pScratchBuff;
+    p2pNetworkList.buffer_Length = __QAPI_WLAN_P2P_EVT_BUF_SIZE;
+
+    if (0 != qapi_WLAN_Get_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_NETWORK_LIST,
+                &p2pNetworkList, &dataLen))
+    {
+        info_printf("P2P command did not execute properly\r\n");
+        return -1;
+    }
+
+    app_p2p_process_persistent_list_event(p2pNetworkList.network_List_Buffer);
+
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_set_noa_params(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_P2P_Noa_Params_t noaParams;
+
+    uint32_t deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&noaParams, 0, sizeof(qapi_WLAN_P2P_Noa_Params_t));
+
+    noaParams.noa_Desc_Params[0].type_Count = Parameter_List[0].Integer_Value;
+    noaParams.noa_Desc_Params[0].start_Offset_Us = Parameter_List[1].Integer_Value;
+    noaParams.noa_Desc_Params[0].duration_Us = Parameter_List[2].Integer_Value;
+    noaParams.noa_Desc_Params[0].interval_Us = Parameter_List[3].Integer_Value;
+    noaParams.enable = 1;
+    noaParams.count = 1;
+
+    if (0 != qapi_WLAN_Set_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_NOA_PARAMS,
+                &noaParams,
+                sizeof(noaParams),
+                FALSE))
+    {
+        info_printf("P2P command did not execute properly\r\n");
+        return -1;
+    }
+
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_set_oops_params(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_P2P_Opps_Params_t opps;
+
+    uint32_t deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&opps, 0, sizeof(qapi_WLAN_P2P_Opps_Params_t));
+    opps.ct_Win	= Parameter_List[0].Integer_Value;
+    opps.enable = Parameter_List[1].Integer_Value;
+    if (0 != qapi_WLAN_Set_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_OPPS_PARAMS,
+                &opps, sizeof(opps), FALSE))
+    {
+        info_printf("P2P command did not execute properly\r\n");
+        return -1;
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_set_operating_class(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_P2P_Config_Params_t p2pConfig;
+
+    uint32_t deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&p2pConfig, 0, sizeof(qapi_WLAN_P2P_Config_Params_t));
+
+    pg_wifi_shell_cxt->p2p_intent = Parameter_List[0].Integer_Value;
+    pg_wifi_shell_cxt->set_channel_p2p = Parameter_List[2].Integer_Value;
+
+    p2pConfig.go_Intent      = pg_wifi_shell_cxt->p2p_intent;
+    p2pConfig.listen_Chan    = 6;
+    p2pConfig.op_Chan	     = Parameter_List[2].Integer_Value;
+    p2pConfig.age            = 3000;
+    p2pConfig.reg_Class      = 81;
+    p2pConfig.op_Reg_Class	 = Parameter_List[1].Integer_Value;
+    p2pConfig.max_Node_Count = 4;
+
+    if (0 != qapi_WLAN_Set_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_CONFIG_PARAMS,
+                &p2pConfig, sizeof(p2pConfig), FALSE))
+    {
+        info_printf("P2P command did not execute properly\r\n");
+        return -1;
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_stop_find(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    if(qapi_WLAN_P2P_Stop_Find(deviceId) != 0)
+    {
+        info_printf("P2P stop command did not execute properly\r\n");
+        return -1;
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_passphrase(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_Auth_Mode_e authMode = QAPI_WLAN_AUTH_WPA2_PSK_E;
+    qapi_WLAN_Crypt_Type_e encrType = QAPI_WLAN_CRYPT_AES_CRYPT_E;
+    qapi_WLAN_P2P_Go_Params_t ssidParams;
+
+    uint32_t deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&ssidParams, 0, sizeof(qapi_WLAN_P2P_Go_Params_t));
+
+    if(0 != qapi_WLAN_Set_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                __QAPI_WLAN_PARAM_GROUP_SECURITY_ENCRYPTION_TYPE,
+                (void *) &encrType,
+                sizeof(qapi_WLAN_Crypt_Type_e),
+                FALSE))
+    {
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE,
+                &authMode,
+                sizeof(qapi_WLAN_Auth_Mode_e),
+                FALSE))
+
+    {
+        return -1;
+    }
+
+    pg_wifi_shell_cxt->autogo_newpp = TRUE;
+    memcpy(ssidParams.passphrase, (char *)(Parameter_List[0].String_Value),
+            strlen((char *)(Parameter_List[0].String_Value)));
+    memcpy(ssidParams.ssid, (char *)(Parameter_List[1].String_Value),
+            strlen((char *)(Parameter_List[1].String_Value)));
+
+    ssidParams.ssid_Len = strlen((char *)(Parameter_List[1].String_Value));
+    ssidParams.passphrase_Len = strlen((char *)(Parameter_List[0].String_Value));
+
+    if ( 0 != qapi_WLAN_Set_Param(deviceId,
+                __QAPI_WLAN_PARAM_GROUP_P2P,
+                __QAPI_WLAN_PARAM_GROUP_P2P_GO_PARAMS,
+                &ssidParams,	sizeof(ssidParams), FALSE))
+    {
+        info_printf("P2P command did not execute properly\r\n");
+        return -1;
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t P2p_set(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t deviceId = 0, len = 0;
+    qapi_WLAN_P2P_Set_Cmd_t p2p_set_params;
+
+    deviceId = get_active_device();
+    if(deviceId != 0)
+    {
+        deviceId = 0;
+    }
+
+    memset(&p2p_set_params, 0, sizeof(qapi_WLAN_P2P_Set_Cmd_t));
+
+    if(strcmp(Parameter_List[0].String_Value,"p2pmode") == 0)
+    {
+        if (Parameter_Count < 2)
+        {
+            info_printf("Incorrect parameters\r\n", deviceId);
+            return -1;
+        }
+
+        p2p_set_params.config_Id = __QAPI_WLAN_PARAM_GROUP_P2P_OP_MODE;
+
+        if(strcmp(Parameter_List[1].String_Value,"p2pdev") == 0)
+        {
+            p2p_set_params.val.mode.p2pmode = __QAPI_WLAN_P2P_DEV;
+        }
+        else if(strcmp(Parameter_List[1].String_Value,"p2pclient") == 0)
+        {
+            p2p_set_params.val.mode.p2pmode = __QAPI_WLAN_P2P_CLIENT;
+        }
+        else if(strcmp(Parameter_List[1].String_Value,"p2pgo") == 0)
+        {
+            p2p_set_params.val.mode.p2pmode = __QAPI_WLAN_P2P_GO;
+        }
+        else
+        {
+            info_printf("Input can be \"p2pdev/p2pclient/p2pgo\"");
+            return -1;
+        }
+
+        len = sizeof(p2p_set_params.val.mode);
+        info_printf("p2p mode :%x, Config Id %x\r\n",p2p_set_params.val.mode.p2pmode,p2p_set_params.config_Id);
+    }
+
+    else if(strcmp(Parameter_List[0].String_Value,"postfix") == 0)
+    {
+        p2p_set_params.config_Id = __QAPI_WLAN_PARAM_GROUP_P2P_SSID_POSTFIX;
+        if(strlen((char *)Parameter_List[1].String_Value)) {
+            memcpy(p2p_set_params.val.ssid_Postfix.ssid_Postfix,
+                    (char *)Parameter_List[1].String_Value,
+                    strlen((char *)Parameter_List[1].String_Value));
+
+            p2p_set_params.val.ssid_Postfix.ssid_Postfix_Length = strlen((char *)Parameter_List[1].String_Value);
+            len = sizeof(p2p_set_params.val.ssid_Postfix);
+            info_printf("PostFix string %s, Len %d\r\n",
+                    p2p_set_params.val.ssid_Postfix.ssid_Postfix,
+                    p2p_set_params.val.ssid_Postfix.ssid_Postfix_Length);
+        }
+    }
+
+    else if(strcmp(Parameter_List[0].String_Value, "intrabss") == 0)
+    {
+        p2p_set_params.config_Id = __QAPI_WLAN_PARAM_GROUP_P2P_INTRA_BSS;
+        p2p_set_params.val.intra_Bss.flag = Parameter_List[1].Integer_Value;
+        len = sizeof(p2p_set_params.val.intra_Bss);
+    }
+
+    else if(strcmp(Parameter_List[0].String_Value, "gointent") == 0)
+    {
+        p2p_set_params.config_Id = __QAPI_WLAN_PARAM_GROUP_P2P_GO_INTENT;
+        p2p_set_params.val.go_Intent.value = Parameter_List[1].Integer_Value;
+        len = sizeof(p2p_set_params.val.go_Intent);
+    }
+
+    else if (strcmp(Parameter_List[0].String_Value, "cckrates") == 0){
+        p2p_set_params.config_Id = __QAPI_WLAN_PARAM_GROUP_P2P_CCK_RATES;
+        p2p_set_params.val.cck_Rates.enable = Parameter_List[1].Integer_Value;
+        len = sizeof(p2p_set_params.val.cck_Rates);
+    }
+    else if (strcmp(Parameter_List[0].String_Value, "listenchannel") == 0) {
+        if ((Parameter_Count < 3) ||
+                (Parameter_List[1].Integer_Value < 0) ||
+                (Parameter_List[2].Integer_Value < 0)){
+            info_printf("Incorrect parameters\r\n", deviceId);
+            return -1;
+        }
+
+        p2p_set_params.config_Id = __QAPI_WLAN_PARAM_GROUP_P2P_LISTEN_CHANNEL;
+        p2p_set_params.val.listen_Channel.reg_Class = Parameter_List[1].Integer_Value;
+        p2p_set_params.val.listen_Channel.channel = Parameter_List[2].Integer_Value;
+        len = sizeof(p2p_set_params.val.cck_Rates);
+    }
+
+    else if (strcmp(Parameter_List[0].String_Value, "devname") == 0) {
+        if (Parameter_Count < 2) {
+            info_printf("Incorrect parameters\r\n");
+            return -1;
+        }
+
+        len = strlen((char *)Parameter_List[1].String_Value);
+        if (len > __QAPI_WLAN_P2P_WPS_MAX_DEVNAME_LEN) {
+            info_printf("Device name exceeds the allowed length\r\n");
+            return -1;
+        }
+
+        p2p_set_params.config_Id = __QAPI_WLAN_PARAM_GROUP_P2P_DEV_NAME;
+        memset(p2p_set_params.val.device_Name.dev_Name, 0, __QAPI_WLAN_P2P_WPS_MAX_DEVNAME_LEN + 1);
+        memcpy(p2p_set_params.val.device_Name.dev_Name, (char *)Parameter_List[1].String_Value, len);
+        p2p_set_params.val.device_Name.dev_Name_Len = len;
+    }
+
+    else
+    {
+        info_printf("Incorrect parameters\r\n", deviceId);
+        return -1;
+    }
+
+    if (0 != qapi_WLAN_Set_Param(deviceId, __QAPI_WLAN_PARAM_GROUP_P2P,
+                p2p_set_params.config_Id,	&p2p_set_params.val,
+                len, FALSE))
+    {
+        info_printf("P2P set command did not execute properly\r\n");
+        return -1;
+    }
+    return QAPI_OK;
+}
+
+#endif /* CONFIG_ENABLE_P2P_MODE */
+
 const QAPI_Console_Command_t wifi_shell_cmds[] =
 {
     // cmd_function    cmd_string               usage_string             description
@@ -2566,9 +4760,44 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 
 };
 
+#ifdef CONFIG_ENABLE_P2P_MODE
+const QAPI_Console_Command_t p2p_shell_cmds[] =
+{
+    // cmd_function           cmd_string         usage_string         description
+    { P2p_enable,                "On",              "",                  "Enable P2P"   },
+    { P2p_find,                  "Find",            "<channel_options = 1|2|3> <timeoutInSecs>",   "Initiates search for P2P peers. Channel_options = { 1: Scan all the channels from regulatory domain channel list,  2: Scan only the social channels (default), 3: Continue channel scan from the last scanned channel index}. Default value for timeoutInSecs = 60. When the timeout period expires, the find operation is stopped. "   },
+    { P2p_get_nodelist,           "ListNodes",       "",                  "Display the results of P2P find operation."   },
+    { P2p_connect,               "Connect",         "<peer_dev_mac> <wps_method = push|display|keypad> [WPS pin if keypad] [persistent]",      "Initiate connection request with a given peer MAC address using given WPS configuration method."   },
+
+    { P2p_disable,               "Off",             "",                  "Disable P2P"   },
+    { P2p_set_config,            "SetConfig",       "<GO_intent> <listen channel> <operating channel> <country> <node_timeout>", "Disable/Enable P2P"   },
+    { P2p_provision,             "Provision",       "<peer_dev_mac> <wps_method = push|display|keypad>",   "Provision the WPS configuration method between the DUT and the peer."   },
+    { P2p_listen,                "Listen",          "<timeout>",               "Initiate P2P listen process.When the timeout period expires, the listen operation is stopped. Default value is 300 seconds."   },
+    { P2p_cancel,                "Cancel",          "",                  "Cancels ongoing P2P operation"   },
+    { P2p_join,                  "Join",            "<GO_intf_mac> <wps_method = push|display|keypad> [WPS pin if keypad] [persistent]",   "Join a P2P client to an existing P2P Group Owner."   },
+    { P2p_auth,                  "Auth",            "<peer_dev_mac> <wps_method = push|display|keypad|deauth> [WPS pin if keypad] [persistent]",   "Authenticate/Reject a connection request from a given peer MAC address using the given WPS configuration method."   },
+    { P2p_auto_go,                "AutoGO",          "[persistent]",      "Start P2P device in Autonomous Group Owner mode."   },
+    { P2p_invite_auth,            "Invite",          "<ssid> <peer_dev_mac> <wps_method= push|display|keypad> [persistent]",   "Invite a peer, from persistent database, to connect"   },
+    { P2p_get_networklist,        "ListNetworks",    "",                  "Display the list of persistent P2P connections that are saved in the persistent media."   },
+    { P2p_set_oops_params,	   	    "SetOPPSParams",	"<ctwin> <enable>",  "Set Opportunistics Power Save parameters."   },
+    { P2p_set_noa_params,          "SetNOAParams",    "<count> <start_offset_in_usec> <duration_in_usec> <interval_in_usec> ",      "Set NOA parameters."   },
+    { P2p_set_operating_class,     "SetOpClass",      "<GO_intent> <oper_reg_class> <oper_reg_channel>",      "Set Operating class parameters."   },
+    { P2p_set,                   "Set",             "p2pmode <p2pdev|p2pclient|p2pgo> | postfix <postfix_string> | intrabss <flag> | gointent <Intent> | cckrates <1:Enable|0:Disable> >", "Set P2P parameters" },
+    { P2p_stop_find,              "StopFind",        "",                  "Stop P2P operation" },
+    { P2p_passphrase,            "SetPassphrase",   "<passphrase> <SSID>",  "Set P2P passphrase" },
+
+};
+#endif
+
 const QAPI_Console_Command_Group_t wifi_shell_cmd_group = {WLAN_SHELL_GROUP_NAME, sizeof(wifi_shell_cmds) / sizeof(QAPI_Console_Command_t), wifi_shell_cmds};
 
 QAPI_Console_Group_Handle_t wifi_shell_cmd_group_handle;
+
+#ifdef CONFIG_ENABLE_P2P_MODE
+const QAPI_Console_Command_Group_t p2p_shell_cmd_group = {P2P_SHELL_GROUP_NAME, sizeof(p2p_shell_cmds) / sizeof(QAPI_Console_Command_t), p2p_shell_cmds};
+
+QAPI_Console_Group_Handle_t p2p_shell_cmd_group_handle;
+#endif
 
 void wifi_shell_init (void)
 {
@@ -2578,6 +4807,13 @@ void wifi_shell_init (void)
     qurt_mutex_create(&p_cxt->wifi_shell_cxt_mutex);
     pg_wifi_shell_cxt->auth = QAPI_WLAN_AUTH_NONE_E;
     wifi_shell_cmd_group_handle = QAPI_Console_Register_Command_Group(NULL, &wifi_shell_cmd_group);
+
+#ifdef CONFIG_ENABLE_P2P_MODE
+     p2p_shell_cmd_group_handle = QAPI_Console_Register_Command_Group(wifi_shell_cmd_group_handle, &p2p_shell_cmd_group);
+
+    if (p2p_shell_cmd_group_handle)
+    {
+        info_printf("WLAN P2P Registered = %d\r\n", sizeof(p2p_shell_cmds)/ sizeof(QAPI_Console_Command_t));
+    }
+#endif
 }
-
-

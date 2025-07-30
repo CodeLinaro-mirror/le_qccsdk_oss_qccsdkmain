@@ -1,51 +1,48 @@
-#Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-#SPDX-License-Identifier: BSD-3-Clause-Clear
+#Copyright(c) 2024 Qualcomm Innovation Center, Inc.All rights reserved.
+#SPDX - License - Identifier : BSD - 3 - Clause - Clear
 #
 #import("${root_build_dir}/mainconfig.gni")
 import("//configs_decl.gni")
 
-drivers_inc = [
-    "//include/api",
-    "//include/qapi",
-    "//drivers/wlan",
-    "//hal/qcc730/i2c",
-    "//drivers/lowpower",
-    "//demo/common/peripherals/gpio",
-]
+    drivers_inc =
+        [
+            "//include/api",
+            "//include/qapi",
+            "//drivers/wlan",
+            "//hal/qcc730/i2c",
+            "//drivers/lowpower",
+            "//demo/common/peripherals/gpio",
+        ]
 
-drivers_src = [
-    "peripherals/qapi_i2c.c",
-]
+    drivers_src =
+        [
+            "peripherals/qapi_i2c.c",
+        ]
 
-gpio_src = [
-    "peripherals/qapi_gpio.c",
-]
+    gpio_src =
+        [
+            "peripherals/qapi_gpio.c",
+        ]
 
-lowpower_src = [
-    "lowpower/qapi_lowpower.c",
-]
-fw_upgrade_src = [
-    "fw_upgrade/qapi_firmware_upgrade.c",
-]
+    lowpower_src =
+        [
+            "lowpower/qapi_lowpower.c",
+        ] fw_upgrade_src =
+            ["fw_upgrade/qapi_firmware_upgrade.c", ]
 
-not_needed("*", [ ])
+    not_needed("*", [])
 
-config("_config") {
-    include_dirs = drivers_inc
-    if (CONFIG_HTTP_CLIENT) {
-        include_dirs += ["//modules/net/httpc"]
-    }
+        config("_config") {
+            include_dirs = drivers_inc if (CONFIG_HTTP_CLIENT) { include_dirs += ["//modules/net/httpc"] }
 
-    if (CONFIG_HTTP_SERVER) {
-        include_dirs += ["//modules/net/httpd"]
-    }
-}
+            if (CONFIG_HTTP_SERVER) {
+                include_dirs += ["//modules/net/httpd"]
+            }
+        }
 
-source_set("drivers") {
-    sources = drivers_src
-    if (CONFIG_LOWPOWER_SHELL) {
-        sources += lowpower_src
-    }
+source_set("drivers")
+{
+    sources = drivers_src if (CONFIG_LOWPOWER_SHELL) { sources += lowpower_src }
     if (CONFIG_PLATFORM_QAPI) {
         sources += [
             "platform/qapi_fw_info.c",
@@ -55,9 +52,9 @@ source_set("drivers") {
             "platform/qapi_rram.c",
         ]
     }
-    if (CONFIG_FW_UPGRADE) { 
+    if (CONFIG_FW_UPGRADE) {
         sources += fw_upgrade_src
-    }   
+    }
     if (CONFIG_WLAN) {
         if (CONFIG_WIFI_SHELL) {
             sources += [
@@ -66,15 +63,16 @@ source_set("drivers") {
                 "wlan/wlan_qapi_helper.c",
                 "wlan/wmi_api.c",
                 "wlan/wlan_drv.c",
+                "wlan/qapi_wlan_p2p.c",
             ]
-        }
-        else if (CONFIG_MATTER_ENABLE) {
+        } else if (CONFIG_MATTER_ENABLE) {
             sources += [
                 "wlan/qapi_wlan_base.c",
                 "wlan/qapi_wlan_param_group.c",
                 "wlan/wlan_qapi_helper.c",
                 "wlan/wmi_api.c",
                 "wlan/wlan_drv.c",
+                "wlan/qapi_wlan_p2p.c",
             ]
         }
     }
@@ -83,31 +81,29 @@ source_set("drivers") {
             "peripherals/qapi_flash.c",
         ]
     }
-    if (CONFIG_UART_QAPI) { 
+    if (CONFIG_UART_QAPI) {
         sources += [
             "peripherals/qapi_uart.c",
         ]
     }
-    if (CONFIG_HTTP_CLIENT) { 
+    if (CONFIG_HTTP_CLIENT) {
         sources += [
             "net/qapi_httpc.c",
             "//modules/net/httpc/qcom_http_client.c",
         ]
     }
 
-    if (CONFIG_HTTP_SERVER) { 
+    if (CONFIG_HTTP_SERVER) {
         sources += [
             "net/qapi_httpsvr.c",
         ]
     }
-    
+
     if (CONFIG_RING_IF_ONLY) {
         sources += [
-             "hfc/qapi_hfc.c",
+            "hfc/qapi_hfc.c",
         ]
     }
 
     sources += gpio_src
-                                    
 }
-

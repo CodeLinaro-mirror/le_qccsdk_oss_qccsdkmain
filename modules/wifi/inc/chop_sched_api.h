@@ -1,5 +1,5 @@
-/*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+/* 
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  * @file chop_sched_api.h
@@ -34,28 +34,28 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
  * ------------------------------------------------------------------------
  */
 #define MCC_TXTX_ACTIVITY_THRESHOLD 1000
-#define MCC_TXTX_DROP_THOLD         20
-#define ROUTER_MAX_DEV              2
+#define MCC_TXTX_DROP_THOLD 20
+#define ROUTER_MAX_DEV 2
 
-#define CHMGR_INFINITE_DURATION       0       /* infinite duration for new_op */
-#define CO_PAUSETX_TIMEOUT            50      /* milliseconds */
-#define CO_PAUSETX_BT_TIMEOUT         5       /* milliseconds, drain time before BT device */
-#define CO_PM_TIMEOUT                 5       /* milliseconds, drain time before BT device */
-#define CO_MULTI_HOME_PAUSETX_TIMEOUT 1       /* milliseconds */
-#define CO_UPDATE_TIME_THRESHOLD      1024000 /*microseconds, the threshold to update start_time of co*/
+#define CHMGR_INFINITE_DURATION 0        /* infinite duration for new_op */
+#define CO_PAUSETX_TIMEOUT 50            /* milliseconds */
+#define CO_PAUSETX_BT_TIMEOUT 5          /* milliseconds, drain time before BT device */
+#define CO_PM_TIMEOUT 5                  /* milliseconds, drain time before BT device */
+#define CO_MULTI_HOME_PAUSETX_TIMEOUT 1  /* milliseconds */
+#define CO_UPDATE_TIME_THRESHOLD 1024000 /*microseconds, the threshold to update start_time of co*/
 
 //#define DURATION_DEV_START      1000    /* 1 second */
 #define DURATION_DEV_START 1000000 /* 1 second */
 
 #define DURATION_BEACON_RESYNC 1000000 /* 1 second */
-#define DURATION_LOW_PRIO      102400  /* 20 TU */
-#define DURATION_HIGH_PRIO     20480   /* 20 TU */
-#define DURATION_NORMAL        15360   /* 15 TU */
+#define DURATION_LOW_PRIO 102400       /* 20 TU */
+#define DURATION_HIGH_PRIO 20480       /* 20 TU */
+#define DURATION_NORMAL 15360          /* 15 TU */
 
-#define DELAY_BEFORE_TBTT                                           \
-    (1024 * 17) /*why 17 TU: tx_drain_ahead (2) + wait tx drain (5) \
-                 * + fake sleep(3) + wait ap drain(2) + change      \
-                 * channel(1) + swba ahead(4)                       \
+#define DELAY_BEFORE_TBTT                                                                                              \
+    (1024 * 17) /*why 17 TU: tx_drain_ahead (2) + wait tx drain (5)                                                    \
+                 * + fake sleep(3) + wait ap drain(2) + change                                                         \
+                 * channel(1) + swba ahead(4)                                                                          \
                  */
 
 #define CTS_MAX_DURATION 32000
@@ -166,6 +166,7 @@ typedef enum co_priority {
 typedef enum {
     OC_LOCK_ID_CO_CMD = 3,
     OC_LOCK_ID_DC_SCAN = 4,
+    OC_LOCK_ID_P2P_LISTEN = 5,
     OC_LOCK_ID_ROAM_SCAN = 6,
 } OC_LOCK_ID;
 

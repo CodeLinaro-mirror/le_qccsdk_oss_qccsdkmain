@@ -24,5 +24,13 @@ config QCSPI_HFC_ATCMD_ENABLE
         bool "Enable AT command over QCSPI. if AT Command over QCSPI is not needed , please default to n"
         default n
 
+config ENABLE_P2P_MODE
+	bool "P2p mode. Please default to n"
+	default n
+
+config ENABLE_P2P_LIB
+    bool "enable p2p lib support"
+    default n
+
 endmenu
 endmenu

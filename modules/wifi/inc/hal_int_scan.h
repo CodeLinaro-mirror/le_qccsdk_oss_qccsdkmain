@@ -1,5 +1,5 @@
-/*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+/* 
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -21,11 +21,11 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "nt_flags.h"
 
 /* types of frames that SCAN module recognizes and can send during scan begin */
-#define HAL_SCAN_FRMTYPE_NO_FRAME  0
+#define HAL_SCAN_FRMTYPE_NO_FRAME 0
 #define HAL_SCAN_FRMTYPE_DATA_NULL 1
-#define HAL_SCAN_FRMTYPE_QOS_NULL  2
-#define HAL_SCAN_FRMTYPE_CTS2SELF  3
-#define HAL_SCAN_FRMTYPE_MAX       4
+#define HAL_SCAN_FRMTYPE_QOS_NULL 2
+#define HAL_SCAN_FRMTYPE_CTS2SELF 3
+#define HAL_SCAN_FRMTYPE_MAX 4
 
 /* maximum number of channel support by during switch channel*/
 #ifdef CONFIG_WIFILIB_6GHZ
@@ -39,24 +39,28 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 /* It is not defined in ht_hw have to define here */
 #define HAL_RXP_CFG_FLT_TYPE_SUBTYPE_RX_DISABLE0_MASK 0XFFFFFFFF
 #define HAL_RXP_CFG_FLT_TYPE_SUBTYPE_RX_DISABLE1_MASK 0XFFFFFFFF
-#define HAL_RXP_BEACON_FRAME_FILTER_OFFSET            0x20
-#define HAL_RXP_PROBE_RESPONSE_FRAME_FILTER_OFFSET    0x14
-#define HAL_RXP_CFG_BEACON_FLT_ENABLE_OFFSET          0X8
-#define HAL_RXP_CFG_PROBE_FLT_ENABLE_OFSET            0x5
-#define HAL_RXP_CFG_ACK_FLT_ENABLE_OFFSET             0x1D
-#define HAL_RXP_SW_BD_CH_NUM_SET                      (16)
+#define HAL_RXP_ACTION_FRAME_FILTER_OFFSET 0x34
+#define HAL_RXP_BEACON_FRAME_FILTER_OFFSET 0x20
+#define HAL_RXP_PROBE_RESPONSE_FRAME_FILTER_OFFSET 0x14
+#define HAL_RXP_PROBE_REQUEST_FRAME_FILTER_OFFSET 0x10
+#define HAL_RXP_CFG_ACTION_FLT_ENABLE_OFSET 0xD
+#define HAL_RXP_CFG_BEACON_FLT_ENABLE_OFFSET 0X8
+#define HAL_RXP_CFG_PROBE_FLT_ENABLE_OFSET 0x5
+#define HAL_RXP_CFG_PROBE_REQUEST_FLT_ENABLE_OFSET 0x4
+#define HAL_RXP_CFG_ACK_FLT_ENABLE_OFFSET 0x1D
+#define HAL_RXP_SW_BD_CH_NUM_SET (16)
 
 /* @brief to restored the register values and store back again that value to registers */
 typedef struct nt_hal_scan_s {
-    uint8_t r_channel;  // restore channel number
-    uint8_t r_phyband;  // restore phyband
+    uint8_t r_channel; // restore channel number
+    uint8_t r_phyband; // restore phyband
     uint16_t r_resv;
-    uint32_t r_rxp_flt0;        // restore rxp filter disable0
-    uint32_t r_rxp_flt1;        // restore rxp filter disable1
-    uint32_t r_bo_mapping1;     // restore back off engine mapping1
-    uint32_t r_bo_mapping2;     // restore back off engine mapping2
-    uint32_t r_rxp_beacon_flt;  // restore rxp beacon filter
-    uint32_t r_rxp_probe_flt;   // restore rxp probe filter
+    uint32_t r_rxp_flt0;       // restore rxp filter disable0
+    uint32_t r_rxp_flt1;       // restore rxp filter disable1
+    uint32_t r_bo_mapping1;    // restore back off engine mapping1
+    uint32_t r_bo_mapping2;    // restore back off engine mapping2
+    uint32_t r_rxp_beacon_flt; // restore rxp beacon filter
+    uint32_t r_rxp_probe_flt;  // restore rxp probe filter
 
 } nt_hal_scan_t;
 
@@ -109,4 +113,4 @@ void nt_hal_tx_rx_disable_pre_bmu_recovery(void);
 void nt_hal_tx_rx_enable_post_bmu_recovery(uint8_t chnum);
 #endif /* SUPPORT_BMU_ERROR_RECOVERY */
 
-#endif  //_HAL_INT_SCAN_H_
+#endif //_HAL_INT_SCAN_H_
