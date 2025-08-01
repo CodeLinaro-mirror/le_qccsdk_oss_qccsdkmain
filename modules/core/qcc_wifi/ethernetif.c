@@ -210,8 +210,9 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
     } else if (eth_hdr->usFrameType == dp_htons(NT_IPV6_FRAME_TYPE)) {
         ip6_header = (ip6_header_t *)((uint8_t *)eth_hdr + sizeof(ethernet_header_t));
         dpm_tid = (((dp_ntohl(ip6_header->ulVersionTCFlowLabel) >> 20) & 0xff) & 0x7);
+    } else if (eth_hdr->usFrameType == dp_htons(NT_ARP_FRAME_TYPE)) {
+        dpm_tid = 6; /* set tid of arp to VO to avoid delayed transmission caused by data packet's tid being higher than arp */
     }
-
 #ifdef SUPPORT_RING_IF
     b_is_ip_pkt = is_ip_packet(eth_hdr);
     if (FALSE == b_is_ip_pkt) {
@@ -305,7 +306,8 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
 
 #if NT_FN_DPM_WMM
     if ((pnDpA->wmm_enable == NT_DPM_WMM_ENABLE) && ((eth_hdr->usFrameType == dp_htons(NT_IP_FRAME_TYPE)) ||
-                                                     (eth_hdr->usFrameType == dp_htons(NT_IPV6_FRAME_TYPE)))) {
+                                                     (eth_hdr->usFrameType == dp_htons(NT_IPV6_FRAME_TYPE))||
+                                                     (eth_hdr->usFrameType == dp_htons(NT_ARP_FRAME_TYPE)))) {
         ac = pnDpA->tid_to_ac_map.ac_per_tid[dpm_tid];
         wmm_queue = &pnDpA->wmm_queue[ac];
 

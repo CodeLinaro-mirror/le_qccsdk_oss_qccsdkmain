@@ -583,7 +583,8 @@ nt_dpm_process_eth_packet_from_stack(void *frame, uint32_t length)
         ret = nt_dpm_add_to_wmm_queue(pnDpA, frame, length, qos_for_non_ip);
 #else
     if ((pnDpA->wmm_enable == NT_DPM_WMM_ENABLE) && ((eth_hdr->usFrameType == dp_htons(NT_IP_FRAME_TYPE)) ||
-                                                     (eth_hdr->usFrameType == dp_htons(NT_IPV6_FRAME_TYPE))))
+                                                     (eth_hdr->usFrameType == dp_htons(NT_IPV6_FRAME_TYPE))||
+                                                     (eth_hdr->usFrameType == dp_htons(NT_ARP_FRAME_TYPE))))                              
         ret = nt_dpm_add_to_wmm_queue(pnDpA, frame, length);
 #endif /* SUPPORT_RING_IF */
     else
