@@ -1336,15 +1336,6 @@ Set EDCCA threshold to 0-100.
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCCA_THRESHOLD     90
 
-/**
-Command ID to configure the DTIM value when operating in Station mode.
-
-@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
-
-@param[in] uint32_t        set force dtim value 1-30
-*/
-#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_SET_STA_DTIM           91
-
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE                0
 
 /**

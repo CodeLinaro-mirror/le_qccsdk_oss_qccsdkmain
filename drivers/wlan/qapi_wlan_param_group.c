@@ -123,10 +123,10 @@ qapi_Status_t qapi_WLAN_Set_Param (uint8_t __attribute__((__unused__)) device_ID
             ret = wlan_set_amsdu_rx(device_ID, enable);
 			break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_AMSDU_RX */
 		}
-        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_SET_STA_DTIM: {
-            uint32_t force_dtim = *((uint32_t *) data);
-            ret = wlan_set_sta_force_dtim(device_ID, force_dtim);
-            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SET_STA_DTIM */
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU: {
+            qapi_WLAN_Listen_Interval_Params_t *listen_interval = (qapi_WLAN_Listen_Interval_Params_t *) data;
+            ret = wlan_set_sta_slptime(device_ID, listen_interval->time, listen_interval->round_type);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU */
         }
         case __QAPI_WLAN_PARAM_GROUP_WIRELESS_APP_IE: {
             qapi_WLAN_App_Ie_Params_t *ie_param = (qapi_WLAN_App_Ie_Params_t *) data;
@@ -397,7 +397,7 @@ qapi_Status_t qapi_WLAN_Get_Param (uint8_t __attribute__((__unused__)) device_ID
             if (*length < sizeof(uint32_t)) {
                 return QAPI_WLAN_ERR_EINVAL;
             }
-            ret = wlan_get_sta_slptime(interval);
+            wlan_get_sta_slptime(interval);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU */
         }
         case __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS: {

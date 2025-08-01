@@ -274,7 +274,8 @@ typedef struct {
     uint8_t acceptable_tx_count;
     uint8_t acceptable_rx_count;
     uint16_t max_bcn_rx_no_wake_limit;
-    uint8_t force_dtim;  // num of dtim interval
+    uint8_t force_dtim; // num of dtim interval
+    uint16_t round;
     uint16_t bmps_re_enter_delay;
 } PM_INFRA_STA_CONFIG_PARAMS;
 
