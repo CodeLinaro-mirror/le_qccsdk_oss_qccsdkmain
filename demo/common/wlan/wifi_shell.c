@@ -1422,34 +1422,35 @@ static qapi_Status_t GetRate(uint32_t __attribute__((__unused__)) Parameter_Coun
     return QAPI_OK;
 }
 
-static qapi_Status_t setSTAForceDtim(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+static qapi_Status_t setSTAListenInterval(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
     uint8_t deviceId = get_active_device();
-    uint32_t force_dtim;
+    qapi_WLAN_Listen_Interval_Params_t listen_interval;
 
-    if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+    if(Parameter_Count != 2 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
-    if (Parameter_List[0].Integer_Value > 30 || Parameter_List[0].Integer_Value < 0) {
-        info_printf("force dtim need set 1-30\r\n");
+    if (Parameter_List[0].Integer_Value > UINT16_MAX || Parameter_List[0].Integer_Value < 0) {
+        info_printf("listen interval need set 0-65535 TU\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    if (!(Parameter_List[1].Integer_Value == 0 || Parameter_List[1].Integer_Value == 1)) {
+        info_printf("round type need set to 0 or 1\r\n");
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
-    force_dtim = (uint32_t)Parameter_List[0].Integer_Value;
-
-    if (force_dtim == 0) {
-        info_printf("cancel force dtim\r\n");
-    }
+    listen_interval.time = (uint16_t)Parameter_List[0].Integer_Value;
+    listen_interval.round_type = (uint16_t)Parameter_List[1].Integer_Value;
 
     if (0 != qapi_WLAN_Set_Param (deviceId,
                                 __QAPI_WLAN_PARAM_GROUP_WIRELESS,
-                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_SET_STA_DTIM,
-                                &force_dtim,
-                                sizeof(force_dtim),
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU,
+                                &listen_interval,
+                                sizeof(listen_interval),
                                 FALSE))
     {
-        info_printf("set force dtim fail\r\n");
+        info_printf("set STA listen interval fail\r\n");
         return -1;
     }
     return 0;
@@ -1465,10 +1466,10 @@ static qapi_Status_t getSTAListenInterval(uint32_t __attribute__((__unused__)) P
                                 __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU,
                                 &listen_interval,
                                 &length)){
-        info_printf("get listen interval fail for device %d, please get it after connect\n",deviceId);
+        info_printf("get listen interval fail for device %d\n",deviceId);
         return -1;
     } else {
-        info_printf("get listen_interval: %dTU\r\n", listen_interval);
+        info_printf("get listen interval: %d TU\r\n", listen_interval);
     }
     return 0;
 }
@@ -2542,8 +2543,8 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 	{ setAPInactivityPeriod,	"SetAPInactivityPeriod",        "<inactivity_period_in_mins>",  "Set inactivity period "},
 	{ setCSAType,		"setCSAType",		"<0:csa | 1:ecsa>",	"set CSA type to CSA or ECSA"},
 	{ channelSwitch,	"channelSwitch",	"<new channel num> <switch count> <switch mode> [is 6G]",	"channel switch in AP mode"},
-	{ setSTAForceDtim,	"setSTAForceDtim",        "<DTIM coefficient: 0 ~ 30>",  "Set STA DTIM, listeninterval = DTIM coefficient * AP DTIM period * AP beacon interval, set 0 to cancel force dtim"},
-	{ getSTAListenInterval,	"getSTAListenInterval",        "",  "Get STA listen interval in TU, 1TU=1024us"},
+	{ setSTAListenInterval,	"setSTAListenInterval",        "<listen_interval_in_TU> <0: ronud up|1: round down>",  "Set STA listen interval in TU which will round up/down to DTIM interval, 1TU=1024us"},
+	{ getSTAListenInterval,	"getSTAListenInterval",        "",  "Get STA listen interval in TU"},
 	{ sendRawFrame,	"sendRawFrame",        "",  "<rate_index> <num_tries = 1-14> <num_bytes = 0-1400> <channel: 1-11 or 36-> <type = 0:Beacon, 1:Probe Request, 2: QoS Data, 3: 4-addr data, ff:self-defined> [addr1 [addr2 [addr3 [addr4]]]]"},
 #ifdef CONFIG_MGMT_FILTER_DEMO	
 	{ setMgmtFilter,	"setMgmtFilter",        "0:None, 1:Asso Resp, 2:Probe Resp, 3:Asso and Probe Resp, -1:print mgmt frames",  "Set management frames filter"},
