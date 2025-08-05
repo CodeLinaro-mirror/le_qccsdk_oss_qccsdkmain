@@ -1331,9 +1331,7 @@ void eth_rx_thread(void *arg)
     fd_set read_fd_set;
 	fd_set write_fd_set;
 	fd_set error_fd_set;
-	struct timeval time_out;
 	int max_fd = -1;
-	int msg_value = -1;
     int ret_val = -1;
     struct sockaddr_in from_addr;
     int32_t fromlen;
@@ -1396,10 +1394,7 @@ void eth_rx_thread(void *arg)
             max_fd = (sock > max_fd) ? sock : max_fd;
         }
 
-        time_out.tv_sec = 0;
-        time_out.tv_usec = 100;
-        
-        ret_val = lwip_select(max_fd + 1, &read_fd_set, &write_fd_set, &error_fd_set, &time_out);
+        ret_val = lwip_select(max_fd + 1, &read_fd_set, &write_fd_set, &error_fd_set, NULL);
 
         if (eth_rx_quit)
         {
@@ -1551,7 +1546,6 @@ static qapi_Status_t eth_tx(uint32_t __attribute__((__unused__)) Parameter_Count
     struct netif *netif = NULL;
     struct eth_hdr *eth;
     char *da;
-    uint32_t mac_addr_len;
     uint8_t *srcmac;
     uint8_t eth_proto = ETHPROTO_EAP;
     uint8_t eapol[] = {
