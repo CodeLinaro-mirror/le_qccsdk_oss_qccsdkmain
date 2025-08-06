@@ -478,7 +478,7 @@ qapi_Status_t qapi_WLAN_Get_Param(uint8_t __attribute__((__unused__)) device_ID,
             if (*length < sizeof(uint32_t)) {
                 return QAPI_WLAN_ERR_EINVAL;
             }
-            wlan_get_sta_slptime(interval);
+            ret = wlan_get_sta_slptime(interval);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_STA_LISTEN_INTERVAL_IN_TU */
         }
         case __QAPI_WLAN_PARAM_GROUP_WIRELESS_RTS: {

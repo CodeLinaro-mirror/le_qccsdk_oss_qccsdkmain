@@ -537,7 +537,7 @@ qapi_Status_t wlan_get_sta_slptime(uint32_t *listen_interval)
 	if (gdevp->ifState == IF_UP)
 		*listen_interval = (uint32_t)wlan_get_listen_interval(gdevp, ni_intval) * ni_intval;
 	else
-		*listen_interval = (uint32_t)wlan_get_listen_interval(gdevp, 100) * 100;
+		return QAPI_ERROR;
 	return QAPI_OK;
 }
 
