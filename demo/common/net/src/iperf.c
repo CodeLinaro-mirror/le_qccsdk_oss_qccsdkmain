@@ -13,6 +13,7 @@
 #include "qurt_internal.h"
 #include "qurt_mutex.h"
 #include "iperf.h"
+#include <stdbool.h>
 #include "lwip/sockets.h"
 #include "lwip/def.h"
 #include "lwip/ip6_addr.h"
@@ -90,7 +91,6 @@ int sessionRefCount = 0;                                /* Total number of activ
 int tcpRefCount = 0;                                    /* Number of active TCP RX sessions */
 bench_tcp_server_t g_tcpServers[BENCH_TCP_MAX_SERVERS]; /* Array of TCP Server objects */
 int serverRefCount = 0;
-bool tcp_rx_rslt_created = false; /* indicate iperf_rx_show_result thread is created for tcp server */
 
 /***************************************************************************************
  *
@@ -991,6 +991,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
                     IPERF_PRINTF("UDP result task creation failed\r\n");
                     goto RET_OK;
                 }
+                tCxt->result_create = true;
             }
         } else if (protocol == TCP) {
             if (iperf_common_SetParams(tCxt, tCxt->params.rx_params.v6, "tcp", port, RX) != 0) {
@@ -1052,7 +1053,7 @@ qapi_Status_t iperf(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Paramete
                     IPERF_PRINTF("TCP result task creation failed\r\n");
                     goto RET_OK;
                 }
-                tcp_rx_rslt_created = true;
+                tCxt->result_create = true;
             }
         }
     } else {
@@ -1928,7 +1929,7 @@ void iperf_rx_show_result(void *arg)
     while (1) {
         qurt_thread_sleep(iperf_display_interval);
 
-        if (iperf_rx_quit == 1 || p_tCxt == NULL)
+        if (iperf_rx_quit == 1 || p_tCxt->quit)
             goto QUIT;
 
         app_get_time(&iperf_curr_time);
@@ -1971,6 +1972,7 @@ void iperf_rx_show_result(void *arg)
     }
 
 QUIT:
+    p_tCxt->result_create = false;
     nt_osal_thread_delete(NULL);
     return;
 }
@@ -2164,11 +2166,6 @@ void iperf_udp_rx(THROUGHPUT_CXT *p_tCxt)
                     }
                 }
 
-                if (family == AF_INET && errno == ENOTSOCK)  // TODO
-                {
-                    app_get_time(&p_tCxt->pktStats.last_time);
-                    goto QUIT;
-                }
             } while (conn_sock == 0);
 
             // check recv data
@@ -2239,6 +2236,10 @@ QUIT:
 
         if (p_tCxt->iperf_stream_id < MAX_STREAM) {
             iperf_stream_id[p_tCxt->iperf_stream_id] = 0;
+        }
+        p_tCxt->quit = true;
+        while (p_tCxt->result_create) {
+            qurt_thread_sleep(10);
         }
 
         if (p_tCxt->buffer) {
@@ -2585,13 +2586,10 @@ void iperf_tcp_rx(THROUGHPUT_CXT *p_tCxt)
     FD_ZERO(&rset);
 
     do {
-        if ((iperf_rx_quit && !tcp_rx_rslt_created) || tcp_server->exit || (get_device_connect_state() == false)) {
+        if (iperf_rx_quit || tcp_server->exit || (get_device_connect_state() == false)) {
             goto QUIT;
         }
 
-        if (iperf_rx_quit && tcp_rx_rslt_created) {
-            goto QUIT;
-        }
 
         FD_SET(tcp_server->sockfd, &rset);
         tv.tv_sec = 10;
@@ -2783,6 +2781,10 @@ QUIT:
     }
 
     if (p_tCxt) {
+        p_tCxt->quit = true;
+        while (p_tCxt->result_create) {
+            qurt_thread_sleep(10);
+        }
         qurt_thread_sleep(10 * p_tCxt->iperf_stream_id);
 
         if (p_tCxt->iperf_stream_id < MAX_STREAM) {
