@@ -7,6 +7,7 @@
 
 #define _IPERF_H_
 
+#include <stdbool.h>
 #include "qcli_api.h"
 #include "qapi_console.h"
 
@@ -184,6 +185,8 @@ typedef struct throughput_cxt {
     void *session;
     TaskHandle_t rx_task_handler;
     uint16_t tcp_snd_buf;
+    bool result_create;
+    bool quit;
 } THROUGHPUT_CXT;
 
 typedef struct {
