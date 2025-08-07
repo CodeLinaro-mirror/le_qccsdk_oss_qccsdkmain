@@ -1218,24 +1218,6 @@ static qapi_Status_t SetPromiscuous(uint32_t __attribute__((__unused__)) Paramet
     return QAPI_WLAN_ERROR;
 }
 
-static qapi_Status_t Enable80211v(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
-{
-    PRINT_ERR_NOT_SUPPORTED;
-    return QAPI_WLAN_ERROR;
-}
-
-static qapi_Status_t EnableSuspend(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
-{
-    PRINT_ERR_NOT_SUPPORTED;
-    return QAPI_WLAN_ERROR;
-}
-
-static qapi_Status_t Suspend(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
-{
-    PRINT_ERR_NOT_SUPPORTED;
-    return QAPI_WLAN_ERROR;
-}
-
 qapi_Status_t set_country_code(char *country)
 {
 	qapi_Status_t ret = QAPI_OK;
@@ -4722,9 +4704,6 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { SetAggregationParameters,"SetAggregationParameters",  "<tx_tid_mask> <rx_tid_mask>",    "Set aggregation on RX or TX or both. Enabled via TID bit mask (0x00-0xff)"}, 
     { SetAMSDU,        "SetAMSDU",              "<rx> <enable|disable>",    "Enable/Disable receive AMSDU"},
     { SetPromiscuous,  "SetPromiscuous",        "<enable|filter> [config|reset]",    "Enable/disable promoscuous mode and configure, reset filters."},
-    { Enable80211v,    "Enable80211v",          "<1: enable| 0: disable>", "Enable/Disable 802.11v features"},
-    { EnableSuspend,   "EnableSuspend",         "",                      "Enable WLAN Suspend. Should be done before connecting to a network."},
-    { Suspend,         "Suspend",               "<time_in_ms>",          "Suspends the WLAN"},
     { SetCountryCode,  "SetCountryCode",        "<country_code_string>", "Set country code"},
     { GetCountryCode,  "GetCountryCode",        "",                      "Query country code from OTP"},
 #ifdef CONFIG_DEBUG_CMD_XPA
