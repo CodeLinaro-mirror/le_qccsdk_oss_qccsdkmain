@@ -25,10 +25,10 @@ qapi_Status_t qapi_WLAN_P2P_Enable(uint8_t device_ID, qapi_WLAN_Enable_e enable)
     wlan_p2p_enable(device_ID, enable);
     p2pConfig.go_Intent = 0;
     p2pConfig.listen_Chan = 1;
-    p2pConfig.op_Chan = 1;
+    p2pConfig.op_Chan = 36;
     p2pConfig.age = 3000;
     p2pConfig.reg_Class = 81;
-    p2pConfig.op_Reg_Class = 81;
+    p2pConfig.op_Reg_Class = 115;
     p2pConfig.max_Node_Count = 5;
     qapi_WLAN_Set_Param(device_ID, __QAPI_WLAN_PARAM_GROUP_P2P, __QAPI_WLAN_PARAM_GROUP_P2P_CONFIG_PARAMS,
                         (void *)&p2pConfig, sizeof(p2pConfig), QAPI_WLAN_NO_WAIT_E);

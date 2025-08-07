@@ -3104,6 +3104,10 @@ void P2P_Event_Handler_Go_Neg_Result(CMD_P2P_EVENT_INFO *pEventInfo)
     uint32_t deviceId = 0, temp_device_id = 0, chnl = 0, signal_set = 0;
     int32_t error = 0, result = 0;
     uint8_t wps_mode = 0;
+
+    if (0 == p2pNeg->freq) {
+        return;
+    }
     memset(p2p_wps_pin, 0, __QAPI_WLAN_WPS_PIN_LEN);
 	strlcpy(p2p_wps_pin, "12345670", sizeof(p2p_wps_pin));
 
@@ -3540,7 +3544,7 @@ static qapi_Status_t P2p_set_config(uint32_t __attribute__((__unused__)) Paramet
     p2pConfig.op_Chan	     = (uint8_t)Parameter_List[2].Integer_Value;
     p2pConfig.age		     = (uint32_t)Parameter_List[4].Integer_Value;
     p2pConfig.reg_Class      = 81;
-    p2pConfig.op_Reg_Class   = 81;
+    p2pConfig.op_Reg_Class   = 115;
     p2pConfig.max_Node_Count = 5;
 
     if (0 != qapi_WLAN_Set_Param(deviceId, __QAPI_WLAN_PARAM_GROUP_P2P,
