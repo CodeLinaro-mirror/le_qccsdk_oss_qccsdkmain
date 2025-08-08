@@ -67,7 +67,7 @@ static ip_addr_t default_gw[MAX_ROLE];
 #define HEXDUMP(inbuf, inlen, ascii, addr)  app_hexdump_raw(inbuf, inlen, ascii, addr)
 static const char hexchar_net_shell[] = "0123456789ABCDEF";
 static uint16_t eth_raw_rx_protocol = 0x888e;
-static uint8_t eth_rx_quit;
+static uint8_t eth_rx_quit = 1;
 static void eth_help(void);
 uint8_t net_ascii_to_hex(char val);
 int32_t net_ether_aton(const char *orig, uint8_t *eth);
@@ -1476,8 +1476,9 @@ static qapi_Status_t eth_rx(uint32_t __attribute__((__unused__)) Parameter_Count
                     break;
 
                 case 'q':   /* -q */
-                    eth_rx_quit = true;
+                    eth_rx_quit = 1;
                     rc = QAPI_OK;
+                    printf("eth rx session closed.\n");
                     goto end;
 
                 default:
@@ -1497,6 +1498,13 @@ static qapi_Status_t eth_rx(uint32_t __attribute__((__unused__)) Parameter_Count
             goto end;
         }
     }   /* for */
+
+    if(eth_rx_quit == 0){
+        printf("ERROR: only one rx session supported for eth rx demo, please close the previous one first.\n");
+        goto end;
+    }
+
+    eth_rx_quit = 0;
 
     status = (uint32_t)nt_qurt_thread_create(eth_rx_thread, "eth_rx_task", 1024, NULL, 6, &eth_rx_task_handle);
     
@@ -1725,8 +1733,6 @@ static qapi_Status_t eth(uint32_t __attribute__((__unused__)) Parameter_Count, Q
         eth_help();
         return QAPI_ERROR;
     }
-
-    eth_rx_quit = 0;
 
     if (strncmp(Parameter_List[0].String_Value, "tx", 1) == 0)
     {
