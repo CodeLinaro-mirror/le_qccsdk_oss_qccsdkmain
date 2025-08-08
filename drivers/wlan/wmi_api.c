@@ -402,7 +402,7 @@ static void wmi_join_comp_event(void *msg)
     if (p_qapi_join_evt->bss_Connection_Status == 0)
         goto done;
 
-    if (p_qapi_join_evt->evt_hdr.status == QAPI_OK) {
+    if (p_qapi_join_evt->evt_hdr.status == QAPI_OK && (((WMI_JOIN_EVT *)msg)->reason_code != DISCONNECT_CMD)) {
         p_cxt->connected = true;
     } else {
         p_cxt->connected = false;
