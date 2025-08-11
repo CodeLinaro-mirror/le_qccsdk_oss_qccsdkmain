@@ -251,6 +251,19 @@ static qapi_Status_t command_ver(uint32_t __attribute__((__unused__)) Parameter_
                CUID_0);
     }
     printf("build date and time: %s - %s\n", __DATE__, __TIME__);
+    unsigned char *mac_addr = (unsigned char *)0x1a01c0;
+    printf("MAC address: 0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x\r\n", mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+    unsigned char *module_part_number = (unsigned char*)0x1a0264;
+    printf("Module Part Number: ");
+    uint8_t i = 0;
+    while (module_part_number[i] && module_part_number[i] != 0x03) {
+        printf("%c", module_part_number[i]);
+        i++;
+    }
+    printf("\n");
+    unsigned int manufacturing_year_week = *(unsigned int*)0x1a0260;
+    printf("Manufacturing year: %d, week: %d\r\n", (manufacturing_year_week >> 8) & 0xff, manufacturing_year_week & 0xff);
+    printf("BOM configuration: %d\r\n", (manufacturing_year_week >> 16) & 0xffff);
     return QAPI_OK;
 }
 
