@@ -1,4 +1,4 @@
-/* 
+/*
 Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
@@ -929,21 +929,41 @@ static void wmi_p2p_node_list_event(void *msg)
         return;
     }
 
-    WMI_P2P_NODE_LIST_EVENT *handleP2PDev = (WMI_P2P_NODE_LIST_EVENT *)msg;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_WLAN_P2P_Node_List_Params_t *evt = &(p_cxt->get_p2p_nodelist);
 
-    uint8_t *tmpBuf = (uint8_t *)p_cxt->pScanOut;
-    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
-    {
-        memset(p_cxt->pScanOut, 0, p_cxt->pScanOutSize);
-        *tmpBuf = handleP2PDev->num_p2p_dev;
-        tmpBuf++;
-
-        memscpy((uint8_t *)tmpBuf, p_cxt->pScanOutSize, ((uint8_t *)(handleP2PDev->data)),
-                (sizeof(qapi_WLAN_P2P_Device_Lite_t) * (handleP2PDev->num_p2p_dev)));
+    WMI_P2P_NODE_LIST_EVENT *handleP2PDev = (WMI_P2P_NODE_LIST_EVENT *)msg;
+    if (!evt || !handleP2PDev || !evt->node_List_Buffer) {
+        printf("Error: Null pointer input\n");
+        return;
     }
 
-    if (p_cxt->wlan_get_nodelist_block_mode) {
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    if (!p_cxt) {
+        printf("Invalid context or buffer\n");
+        qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+        return;
+    }
+    // calculate the space
+    uint32_t dev_count = handleP2PDev->num_p2p_dev;
+    uint32_t dev_struct_size = sizeof(qapi_WLAN_P2P_Device_Lite_t);
+    uint32_t required_size = dev_count * dev_struct_size + 1;
+
+    if (evt->buffer_Length < required_size) {
+        printf("Error: buffer too small for %zu devices\n", dev_count);
+        qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+        return;
+    }
+
+    memset(evt->node_List_Buffer, 0, evt->buffer_Length);
+    uint8_t *tmpBuf = evt->node_List_Buffer;
+
+    *tmpBuf = handleP2PDev->num_p2p_dev;
+    tmpBuf++;
+    memcpy(tmpBuf, ((uint8_t *)(handleP2PDev->data)),
+           (sizeof(qapi_WLAN_P2P_Device_Lite_t) * (handleP2PDev->num_p2p_dev)));
+
+    if (!p_cxt->wlan_get_nodelist_block_mode) {
         qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_NODELIST);
     }
 
@@ -1779,5 +1799,28 @@ qapi_Status_t wmi_stop_scan(void)
     ret = get_wlan_qapi_error();
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
     return ret;
+}
+#endif
+
+#ifdef CONFIG_ENABLE_P2P_MODE
+qapi_Status_t wmi_p2p_get_node_list(void)
+{
+    qapi_Status_t error = QAPI_ERROR;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+
+    /* Already a blocking P2P command is pending response. This has to wait till we get response for previous command */
+    wmi_cmd_send(WMI_P2P_GET_NODE_LIST_CMDID, NULL, 0);
+
+    if (!p_cxt->wlan_get_nodelist_block_mode) {
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_NODELIST, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    error = get_wlan_qapi_error();
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+
+    return error;
 }
 #endif

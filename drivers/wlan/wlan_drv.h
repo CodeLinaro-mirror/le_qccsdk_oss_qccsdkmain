@@ -110,6 +110,7 @@ typedef struct wlan_qapi_cxt_s {
     WMI_WPS_START_CMD wps_param;
 #endif
 #ifdef CONFIG_ENABLE_P2P_MODE
+    qapi_WLAN_P2P_Node_List_Params_t get_p2p_nodelist;
     uint32_t wlan_get_nodelist_block_mode : 1;
     uint32_t p2p_mutex : 1;
     WMI_P2P_SET_PROFILE_CMD p2p_set_profile;
