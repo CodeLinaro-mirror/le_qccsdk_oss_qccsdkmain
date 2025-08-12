@@ -1,4 +1,4 @@
-/* 
+/*
 Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
@@ -513,10 +513,10 @@ qapi_Status_t wlan_set_sta_slptime(uint8_t device_ID, uint16_t time, uint16_t ro
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
     WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
 
-	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
-	cmd->pdev_param_id = WIFI_PARAM_SET_STA_DTIM;
-	cmd->pdev_param_value = time | (round_type << 16);
-	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+    memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+    cmd->pdev_param_id = WIFI_PARAM_SET_STA_DTIM;
+    cmd->pdev_param_value = time | (round_type << 16);
+    wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
 
     if (p_cxt->wlan_set_param_block_mode) {
         p_cxt->param_id = WIFI_PARAM_SET_STA_DTIM;
@@ -534,11 +534,11 @@ qapi_Status_t wlan_get_sta_slptime(uint32_t *listen_interval)
     extern uint16_t wlan_get_listen_interval(devh_t * dev, uint16_t beaconInterval);
     uint16_t ni_intval = gdevp->bss->ni_intval;
 
-	if (gdevp->ifState == IF_UP)
-		*listen_interval = (uint32_t)wlan_get_listen_interval(gdevp, ni_intval) * ni_intval;
-	else
-		return QAPI_ERROR;
-	return QAPI_OK;
+    if (gdevp->ifState == IF_UP)
+        *listen_interval = (uint32_t)wlan_get_listen_interval(gdevp, ni_intval) * ni_intval;
+    else
+        return QAPI_ERROR;
+    return QAPI_OK;
 }
 
 qapi_Status_t wlan_clear_mgmt_frame_queue(void)
@@ -1198,17 +1198,19 @@ qapi_Status_t wlan_p2p_set_pass_ssid(uint8_t device_id, qapi_WLAN_P2P_Go_Params_
 }
 
 /* NODE_LIST */
-qapi_Status_t wlan_p2p_get_node_list(uint8_t device_id, void *app_buf, uint32_t buf_size)
+qapi_Status_t wlan_p2p_get_node_list(uint8_t device_id, qapi_WLAN_P2P_Node_List_Params_t *getnodelis)
 {
-    qapi_Status_t error = QAPI_OK;
+    qapi_Status_t ret = QAPI_ERROR;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    if (p_cxt == NULL || !p_cxt->get_p2p_nodelist.node_List_Buffer)
+        return ret;
 
-    /* Already a blocking P2P command is pending response. This has to wait till we get response for previous command */
-    wmi_cmd_send(WMI_P2P_GET_NODE_LIST_CMDID, NULL, 0);
-    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
-    error = get_wlan_qapi_error();
-    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
-    return error;
+    ret = wmi_p2p_get_node_list();
+    if (ret == QAPI_OK) {
+        memscpy(getnodelis, sizeof(qapi_WLAN_P2P_Node_List_Params_t), &(p_cxt->get_p2p_nodelist),
+                sizeof(qapi_WLAN_P2P_Node_List_Params_t));
+    }
+    return ret;
 }
 
 qapi_Status_t wlan_p2p_set_config(uint8_t device_id, qapi_WLAN_P2P_Config_Params_t *p2pConfig)

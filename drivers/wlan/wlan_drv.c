@@ -137,6 +137,8 @@ int wlan_qapi_init(void)
 #endif
 #ifdef CONFIG_ENABLE_P2P_MODE
     p_cxt->p2p_mutex = true;
+    p_cxt->get_p2p_nodelist.buffer_Length = __QAPI_WLAN_P2P_EVT_BUF_SIZE;
+    p_cxt->get_p2p_nodelist.node_List_Buffer = malloc(__QAPI_WLAN_P2P_EVT_BUF_SIZE);
 #endif
     p_cxt->wlan_connect_block_mode = false;
     p_cxt->wlan_disconnect_block_mode = true;

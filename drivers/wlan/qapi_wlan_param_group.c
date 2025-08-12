@@ -601,7 +601,7 @@ qapi_Status_t qapi_WLAN_Get_Param(uint8_t __attribute__((__unused__)) device_ID,
         switch (param_ID) {
         case __QAPI_WLAN_PARAM_GROUP_P2P_NODE_LIST: {
             qapi_WLAN_P2P_Node_List_Params_t *pNodeList = (qapi_WLAN_P2P_Node_List_Params_t *)data;
-            ret = wlan_p2p_get_node_list(device_ID, pNodeList->node_List_Buffer, pNodeList->buffer_Length);
+            ret = wlan_p2p_get_node_list(device_ID, pNodeList);
             break;
         }
         case __QAPI_WLAN_PARAM_GROUP_P2P_NETWORK_LIST: {
