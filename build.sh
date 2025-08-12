@@ -17,13 +17,15 @@ export PATH=/pkg/qct/software/arm/linaro-toolchain/gcc-arm-none-eabi-8-2019-q3-u
 python intg.py --fsdk
 if [ ! -d ${SCRIPT_PATH}/../prebuilt_HY11 ]; then
     mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11
+    mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11/p2p/lib
     mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11_ART
     cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/lib/libwifi_core.a  ${SCRIPT_PATH}/../prebuilt_HY11/
+    cp ${SCRIPT_PATH}/../qccsdk/output/wifi_lib/FERMION_WIFI_LIB/DEBUG/p2p/lib/libwifi_core.a  ${SCRIPT_PATH}/../prebuilt_HY11/p2p/lib/
     cp ${SCRIPT_PATH}/../comp/wifi/NOTICE ${SCRIPT_PATH}/../prebuilt_HY11/
     cp ${SCRIPT_PATH}/../comp/wifi/LICENSE.txt ${SCRIPT_PATH}/../prebuilt_HY11/
-    cp ${SCRIPT_PATH}/../prebuilt_HY11/* ${SCRIPT_PATH}/../prebuilt_HY11_ART/
+    cp -r ${SCRIPT_PATH}/../prebuilt_HY11/* ${SCRIPT_PATH}/../prebuilt_HY11_ART/
 else
     mkdir -p ${SCRIPT_PATH}/../prebuilt_HY11_ART
-    cp ${SCRIPT_PATH}/../prebuilt_HY11/* ${SCRIPT_PATH}/../prebuilt_HY11_ART/
+    cp -r ${SCRIPT_PATH}/../prebuilt_HY11/* ${SCRIPT_PATH}/../prebuilt_HY11_ART/
 fi
 

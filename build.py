@@ -163,6 +163,7 @@ def option_parser():
     parser.add_option("--clean", "-c", action="store_true", default=False, dest="clean", help="To clean the build")
     parser.add_option("--menuconfig", "-m", action="store_true", default=False, dest="menuconfig", help="To run menuconfig")
     parser.add_option("--sign", "-s", action="store_true", default=False, dest="sign", help="Enable sign image")
+    parser.add_option("--p2p", "-p", action="store_true", default=False, dest="p2p", help="Enable p2p flag")
     # parser.add_option("-d", action="store_true", default=True,  dest="debug", help="debug")
     return parser.parse_args()
 
@@ -200,7 +201,10 @@ def gen_dot_conf(image = 'fermion_legacy'):
     # python tools/kconfig_scripts/kconfig.py --handwritten-input-configs Kconfig build/output/.config build/output/include/autoconf.h build/output/kconfig-files-list.log demo/qcli_demo/prj.conf
     Kconfig_logfile = os.path.join(build_output, 'kconfig-files-list.log')
     if image == 'FERMION_WIFI_LIB':
-        Kconfig_file = './modules/wifi/Kconfig.lib'
+        if not (main_options.p2p):
+            Kconfig_file = './modules/wifi/Kconfig.lib'
+        else:
+            Kconfig_file = './modules/wifi/Kconfig_p2p.lib'
     else:
         prj_conf = proj_conf[image]
         board_defconfig = 'boards/%s/%s_defconfig'%(g_val_board_name, g_val_board_name)
@@ -411,7 +415,10 @@ def start_build(image = 'FERMION_WIFI_LIB', out_dir = default_build_output):
     global log_path
 
     build_output = os.path.join(out_dir, image)
-    build_output = os.path.join(build_output, 'DEBUG')
+    if not (main_options.p2p):
+        build_output = os.path.join(build_output, 'DEBUG')
+    else:
+        build_output = os.path.join(build_output, 'DEBUG/p2p')
     if not os.path.exists(build_output):
         os.makedirs(build_output)
 
