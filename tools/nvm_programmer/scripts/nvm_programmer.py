@@ -166,6 +166,7 @@ class NVM_Programmer(GDB_Framework):
         self.argparser.add_argument('-g', '--get-key', help='The key of OTP region to read')
         self.argparser.add_argument('--config', help='The yaml file which may contain OTP key-value pairs')
         self.argparser.add_argument('--otp_field_cfg', default='otp_field_list.yaml', help='OTP field configuration file')
+        self.argparser.add_argument('--compare-key', help='One key-value pair to comapre with that in OTP region')
 
     def load_fields(self, file_name):
         with open(file_name, 'r') as f:
@@ -217,6 +218,14 @@ class NVM_Programmer(GDB_Framework):
 
     def write_otp_field(self, field, value):
         print('{}={}'.format(field.name, value.upper()))
+        if field.name == 'MODULE_PART_NUMBER':
+            res = self.read_otp_field(field, False)
+            int_value = b''.join(res)
+            int_value = int_value.rstrip(b'\x00')
+            if int_value.hex().lower().endswith('03'):
+                print(f"{field.name} already exits, skip write.")
+                return
+            value = '0x' + ''.join(f'{ord(c):02x}' for c in value) + '03'
         length = field.length
         offset = field.offset
         size = math.ceil(field.length/8)
@@ -308,6 +317,9 @@ class NVM_Programmer(GDB_Framework):
         else:
             res_hex_string='0x'+''.join([hex(int.from_bytes(x, byteorder='big'))[2:].zfill(2) for x in res])
         if flag == True:
+            if field.name == 'MODULE_PART_NUMBER':
+                raw_bytes = bytes.fromhex(res_hex_string[2:])
+                res_hex_string = raw_bytes.decode('ascii')
             print('{}={}'.format(field.name, res_hex_string.upper()))
         return res
 
@@ -451,6 +463,41 @@ class NVM_Programmer(GDB_Framework):
                 print('********************************************************************************')
             self.cleanup()
             return
+
+        if self.config['compare_key'] != None:
+            if self.config['nvm_name'] != 'otp':
+                print('\'-n otp\' should be used when compare with OTP')
+                return
+            self.setup()
+            self.init_ram_image(self.config['ram_image'])
+            self.load_fields(self.config['otp_field_cfg'])
+            self.set_nvm_name()
+            kv=self.config['compare_key']
+            key, value = kv.split('=', 2)
+            field = self.get_field(key)
+            self.update_permission()
+            res = self.read_otp_field(field, False)
+            length = field.length
+            offset = field.offset
+            if length < 48:
+                mask:int = ((1 << length) - 1) << offset
+                int_value = int.from_bytes(b''.join(res), byteorder='little')
+                int_value &= mask
+                int_value >>= offset
+                res_hex_string=hex(int_value)
+            else:
+                res_hex_string='0x'+''.join([hex(int.from_bytes(x, byteorder='big'))[2:].zfill(2) for x in res])
+            if field.name == 'MODULE_PART_NUMBER':
+                raw_bytes = bytes.fromhex(res_hex_string[2:])
+                res_hex_string = raw_bytes.decode('ascii')
+                res_hex_string = res_hex_string.replace('\x03', '').replace('\x00', '')
+            if res_hex_string.upper() == value.upper():
+                print('{} in OTP={}, the value is same'.format(key, res_hex_string))
+            else:
+                print('{} in OTP={}, the value is not same'.format(key, res_hex_string))
+            self.cleanup()
+            return
+
         # check the address of updated programming image
         if self.config['partial_erase'] ==True and (self.config['size'] == None or self.config['begin_address'] == None):
             self.argparser.print_help()
