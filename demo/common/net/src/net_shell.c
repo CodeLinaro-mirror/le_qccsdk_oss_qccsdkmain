@@ -1342,6 +1342,7 @@ void eth_rx_thread(void *arg)
     char *buf = NULL;
     int sock = QAPI_ERROR;
     uint8_t eth_proto = ETHPROTO_EAP;
+    struct timeval time_out;
 
     netif = get_netif_by_device(STA_DEVICE);
 
@@ -1393,8 +1394,9 @@ void eth_rx_thread(void *arg)
             FD_SET(sock, &read_fd_set);
             max_fd = (sock > max_fd) ? sock : max_fd;
         }
-
-        ret_val = lwip_select(max_fd + 1, &read_fd_set, &write_fd_set, &error_fd_set, NULL);
+        time_out.tv_sec = 0;
+        time_out.tv_usec = 100;
+        ret_val = lwip_select(max_fd + 1, &read_fd_set, &write_fd_set, &error_fd_set, &time_out);
 
         if (eth_rx_quit)
         {
