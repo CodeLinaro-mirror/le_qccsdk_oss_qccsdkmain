@@ -1029,7 +1029,7 @@ qbool_t QAT_RxTask_Start()
     qbool_t Ret_Val = true;
     uint32_t ret_val;
 
-    ret_val = (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 4096, NULL, 6, &qat_rx_task_hdl);
+    ret_val = (uint32_t)nt_qurt_thread_create(QAT_RxTasks, "qat_rx_task", 8192, NULL, 6, &qat_rx_task_hdl);
     if (ret_val != pdPASS) {
         printf("QAT: task creation failed out of memory\r\n");
         ASSERT(0);

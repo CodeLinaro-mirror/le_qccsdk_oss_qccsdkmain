@@ -443,6 +443,9 @@ bool ringif_f2a_pkt_attach(uint8_t ring_id, uint32_t *p_buf_start, uint32_t *p_b
                           (uint32_t)p_write_element->p_buf[0], p_write_element->len, p_write_element->info);
 
     /* Indicate to Host that ring has been updated */
+#ifdef CONFIG_QAT_HTTPC_DEMO
+    sys_msleep(5);
+#endif
     ringif_indicate_to_host(ring_id, RING_DIR_F2A);
     return TRUE;
 }
