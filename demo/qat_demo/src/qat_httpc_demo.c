@@ -183,6 +183,7 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
 {
     QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
     qapi_Status_t result = QAPI_OK;
+    uint16_t malloc_retry_cnt = 0;
     char buffer[HTTP_STR_BUFFER_LENGTH];
 
     switch (Op_Type) {
@@ -255,9 +256,13 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
             }
 
             if (g_https_cfg.is_cache_data) {
-                if(!(g_https_cfg.is_keep_alive && conn_enable)) {
+                if (!(g_https_cfg.is_keep_alive && conn_enable)) {
                     // malloc buffer
-                    if (!create_send_buffer(g_https_cfg.data_len)) {
+                    while (!create_send_buffer(g_https_cfg.data_len) && malloc_retry_cnt < 10) {
+                        sys_msleep(3000);
+                        malloc_retry_cnt++;
+                    }
+                    if (!g_https_cfg.send_buff) {
                         snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST: buffer malloc fail \r\n");
                         rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
                         goto rlt;
@@ -2734,8 +2739,9 @@ qapi_Status_t at_httpc_post(char *url, int32_t data_len, char *data)
     char buffer[HTTP_STR_BUFFER_LENGTH] = {0};
     char path_url[HTTP_URL_STR_BUFFER_LENGTH] = {0};
     uint16 count = 0;
+    uint16 conn_retry = 0;
 
-    if (!conn_enable) {
+    while (conn_retry < 10 && !conn_enable) {
         // httpc stop
         rlt = at_httpc_stop();
         if (rlt != QAPI_OK) {
@@ -2763,13 +2769,18 @@ qapi_Status_t at_httpc_post(char *url, int32_t data_len, char *data)
         // httpc conn
         rlt = at_httpc_conn(url);
         if (rlt != QAPI_OK) {
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: connection fail\r\n");
-            QAT_Response_Str(QAT_RC_ERROR, buffer);
-            goto endpiont;
+            conn_retry++;
+            sys_msleep(10000);
+        } else {
+            conn_enable = TRUE;
         }
-        conn_enable = TRUE;
     }
-
+    if (rlt != QAPI_OK) {
+        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: connection fail\r\n");
+        QAT_Response_Str(QAT_RC_ERROR, buffer);
+        goto endpiont;
+    }
+    
     at_rec_state = QAPI_NET_HTTPC_RX_MORE_DATA;
 
     if (g_https_cfg.header_field_num > 0) {

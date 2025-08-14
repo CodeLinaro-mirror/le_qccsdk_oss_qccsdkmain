@@ -211,7 +211,7 @@ nt_low_level_output(struct netif *netif, struct pbuf *p)
         ip6_header = (ip6_header_t *)((uint8_t *)eth_hdr + sizeof(ethernet_header_t));
         dpm_tid = (((dp_ntohl(ip6_header->ulVersionTCFlowLabel) >> 20) & 0xff) & 0x7);
     } else if (eth_hdr->usFrameType == dp_htons(NT_ARP_FRAME_TYPE)) {
-        dpm_tid = 5; /* set tid of arp to VI to avoid delayed transmission caused by data packet's tid being higher than arp */
+        dpm_tid = 0;
     }
 #ifdef SUPPORT_RING_IF
     b_is_ip_pkt = is_ip_packet(eth_hdr);
