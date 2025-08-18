@@ -110,18 +110,34 @@ qapi_Status_t qapi_WLAN_P2P_Connect(uint8_t device_ID, qapi_WLAN_P2P_WPS_Method_
     if (persistent == QAPI_WLAN_P2P_PERSISTENT_E) {
         p2p_connect.dev_capab |= P2P_PERSISTENT_FLAG;
     }
+
+    if((p2p_connect.go_intent >= 10) || (p2p_connect.go_intent == 15))
+    {
+        p_cxt->connect_cmd.networkType = AP_NETWORK;
+    }
+    if((p2p_connect.go_intent <= 9) || (p2p_connect.go_intent == 0))
+    {
+        p_cxt->connect_cmd.networkType = INFRA_NETWORK;
+    }
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    memset(&p_cxt->p2p_Event_Cb_Info, 0, sizeof(qapi_WLAN_P2P_Event_Cb_Info_t));
+    p_cxt->p2p_connect_in_progress = true;
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+
     wmi_cmd_send(WMI_P2P_CONNECT_CMDID, &p2p_connect, sizeof(WMI_P2P_FW_CONNECT_CMD));
-    if (p_cxt->wlan_set_param_block_mode) {
+    if (p_cxt->wlan_p2p_block_mode) {
         qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GO_NEG_RESULT, QURT_SIGNAL_ATTR_CLEAR_MASK);
         log_printf("block mode, WMI cmd done\n");
     } else {
         log_printf("unblock mode, should check WMI cmd done in event cb\n");
     }
-    printf("connect successful\r");
 
-    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
-    error = get_wlan_qapi_error();
-    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+    if (p_cxt->wlan_p2p_block_mode) {
+        qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+        error = get_wlan_qapi_error();
+        qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+    }
     return error;
 }
 
@@ -199,20 +215,22 @@ qapi_Status_t qapi_WLAN_P2P_Invite(uint8_t device_ID, const char *ssid, qapi_WLA
     p2pInvite.wps_method = (uint8_t)wps_Method;
     p2pInvite.is_persistent = (uint8_t)persistent;
     p2pInvite.role = (uint8_t)role;
+    p2pInvite.dialog_token  = 1;
 
     wmi_cmd_send(WMI_P2P_INVITE_CMDID, &p2pInvite, sizeof(WMI_P2P_INVITE_CMD));
 #if 0
-    if (p_cxt->wlan_set_param_block_mode) {
-        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_MODE, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    if (p_cxt->wlan_p2p_block_mode) {
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_INVITE_REQ, QURT_SIGNAL_ATTR_CLEAR_MASK);
         log_printf("block mode, WMI cmd done\n");
     } else {
         log_printf("unblock mode, should check WMI cmd done in event cb\n");
     }
 #endif
-
+    if (p_cxt->wlan_p2p_block_mode) {
     qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
     error = get_wlan_qapi_error();
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+    }
 
     return error;
 }
@@ -313,13 +331,14 @@ qapi_Status_t qapi_WLAN_P2P_Prov(uint8_t device_ID, uint16_t wps_Method, const u
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 
     wmi_cmd_send(WMI_P2P_FW_PROV_DISC_REQ_CMDID, &p2p_prov_disc, sizeof(WMI_P2P_FW_PROV_DISC_REQ_CMD));
+#if 0
     if (p_cxt->wlan_set_param_block_mode) {
         qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_PROV_DISC_REQ, QURT_SIGNAL_ATTR_CLEAR_MASK);
         log_printf("block mode, WMI cmd done\n");
     } else {
         log_printf("unblock mode, should check WMI cmd done in event cb\n");
     }
-
+#endif
     error = get_wlan_qapi_error();
 
     return error;
@@ -376,9 +395,10 @@ qapi_Status_t qapi_WLAN_P2P_Stop_Find(uint8_t device_ID)
 qapi_Status_t qapi_WLAN_P2P_Invite_Auth(uint8_t device_ID, const qapi_WLAN_P2P_Invite_Info_t *invite_Info)
 {
     qapi_Status_t error = QAPI_OK;
-    WMI_P2P_FW_INVITE_REQ_RSP_CMD inv_rsp_cmd;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_P2P_FW_INVITE_REQ_RSP_CMD inv_rsp_cmd = p_cxt->p2p_inv_rsp;
 
-    memset(&inv_rsp_cmd, 0, sizeof(inv_rsp_cmd));
+    memset(&inv_rsp_cmd, 0, sizeof(WMI_P2P_FW_INVITE_REQ_RSP_CMD));
     inv_rsp_cmd.force_freq = invite_Info->force_Freq;
     inv_rsp_cmd.status = invite_Info->status;
     inv_rsp_cmd.dialog_token = invite_Info->dialog_Token;
@@ -386,8 +406,18 @@ qapi_Status_t qapi_WLAN_P2P_Invite_Auth(uint8_t device_ID, const qapi_WLAN_P2P_I
     memscpy(inv_rsp_cmd.group_bssid, sizeof(inv_rsp_cmd.group_bssid), invite_Info->group_Bss_ID,
             sizeof(invite_Info->group_Bss_ID));
 
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    memset(&p_cxt->p2p_Event_Cb_Info, 0, sizeof(qapi_WLAN_P2P_Event_Cb_Info_t));
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+
     if (wmi_cmd_send(WMI_P2P_INVITE_REQ_RSP_CMDID, &inv_rsp_cmd, sizeof(inv_rsp_cmd)) != QAPI_OK) {
         error = QAPI_ERROR;
+    }
+
+    if (p_cxt->wlan_p2p_block_mode) {
+        qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+        error = get_wlan_qapi_error();
+        qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
     }
     return error;
 }
