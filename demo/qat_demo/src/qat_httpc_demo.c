@@ -484,24 +484,24 @@ rlt:
                 if (count > HTTP_WAIT_RSP_TIME) {
                     snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, timeout\r\n");
                     QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    if (!g_https_cfg.is_keep_alive) {
+                        // httpc disconn
+                        if (global_conn_enable) {
+                            result = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+                            if (result != QAPI_OK) {
+                                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+                                QAT_Response_Str(QAT_RC_ERROR, buffer);
+                            }
+                            global_conn_enable = false;
+                        }
 
-                    // httpc disconn
-                    if (global_conn_enable) {
-                        result = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+                        // httpc stop
+                        result = at_httpc_stop();
                         if (result != QAPI_OK) {
-                            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+                            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
                             QAT_Response_Str(QAT_RC_ERROR, buffer);
                         }
-                        global_conn_enable = false;
                     }
-
-                    // httpc stop
-                    result = at_httpc_stop();
-                    if (result != QAPI_OK) {
-                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
-                        QAT_Response_Str(QAT_RC_ERROR, buffer);
-                    }
-
                     break;
                 }
             }
@@ -2958,22 +2958,24 @@ endpiont:
             snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: SEND FAIL, timeout\r\n");
             QAT_Response_Str(QAT_RC_ERROR, buffer);
 
-            // httpc disconn
-            if (conn_enable) {
-                rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+            if (!g_https_cfg.is_keep_alive) {
+                // httpc disconn
+                if (conn_enable) {
+                    rlt = at_httpc_disconn(QAT_HTTPC_CLIENT_INDEX);
+                    if (rlt != QAPI_OK) {
+                        snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+                        QAT_Response_Str(QAT_RC_ERROR, buffer);
+                    }
+                }
+
+                // httpc stop
+                rlt = at_httpc_stop();
                 if (rlt != QAPI_OK) {
-                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: session disconn fail\r\n");
+                    snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
                     QAT_Response_Str(QAT_RC_ERROR, buffer);
                 }
+                conn_enable = FALSE;
             }
-
-            // httpc stop
-            rlt = at_httpc_stop();
-            if (rlt != QAPI_OK) {
-                snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPCPOST: client stop fail\r\n");
-                QAT_Response_Str(QAT_RC_ERROR, buffer);
-            }
-            conn_enable = FALSE;
             break;
         }
     }
