@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+#include "cmsis_device.h"
+
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -296,6 +298,7 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
     extern uint64_t nt_socpm_slp_time_total;
     extern int mcu_sleep_force;
     extern int nt_socpm_resume_f;
+    extern unsigned int __vectors_start;
     uint32_t warm_boot_sts;
     uint32_t slp_tmr_sts;
 #if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
@@ -566,6 +569,15 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
             process_routine = 0;
 
             cpu_irq_disable();
+            /**
+            * Workaround to address incorrect __stack_ptr value after BMPS.
+            * Upon warm boot, VTOR points to __stack_ptr instead of __isr_vectors.
+            * The DXE Interrupt Handler of channel 3 is wrong,
+            * which may cause a crash after VO packet transmission.
+            * To prevent this, VTOR is explicitly set to __isr_vectors to ensure
+            * correct interrupt handling after wake-up.
+            */
+            SCB->VTOR = (uint32_t)(&__vectors_start);
             portENABLE_INTERRUPTS(); /* Sets the BASEPRI to 0x00*/
 
             nt_socpm_resume_f = 0;
