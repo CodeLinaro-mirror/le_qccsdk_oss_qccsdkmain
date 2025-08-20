@@ -2579,7 +2579,7 @@ void app_p2p_process_persistent_list_event(uint8_t *pData)
     memset(p2p_peers_data, 0,
             (__QAPI_WLAN_P2P_MAX_LIST_COUNT * sizeof(qapi_WLAN_P2P_Persistent_Mac_List_t)));
 
-    memcpy(p2p_peers_data, local_ptr,
+    memscpy(p2p_peers_data, (__QAPI_WLAN_P2P_MAX_LIST_COUNT * sizeof(qapi_WLAN_P2P_Persistent_Mac_List_t)), local_ptr,
            (__QAPI_WLAN_P2P_MAX_LIST_COUNT * sizeof(qapi_WLAN_P2P_Persistent_Mac_List_t)));
 
     info_printf("\r\n");
@@ -3026,7 +3026,7 @@ void P2P_Event_Handler_Invite_Req(CMD_P2P_EVENT_INFO *pEventInfo)
         info_printf(" %x: ",local_ptr->sa[i]);
     }
     info_printf("\r\n");
-
+    
     memset(&invite_rsp_cmd, 0, sizeof(qapi_WLAN_P2P_Invite_Info_t));
 
     if (local_ptr->is_Persistent)
@@ -3037,7 +3037,7 @@ void P2P_Event_Handler_Invite_Req(CMD_P2P_EVENT_INFO *pEventInfo)
             {
                 invite_rsp_cmd.status = 0;
                 inv_response_evt_index = i;
-                memcpy(invite_rsp_cmd.group_Bss_ID, p2p_peers_data[i].macaddr, __QAPI_WLAN_MAC_LEN);
+                memscpy(invite_rsp_cmd.group_Bss_ID, __QAPI_WLAN_MAC_LEN, p2p_peers_data[i].macaddr, __QAPI_WLAN_MAC_LEN);
                 break;
             }
         }
@@ -3046,12 +3046,13 @@ void P2P_Event_Handler_Invite_Req(CMD_P2P_EVENT_INFO *pEventInfo)
         {
             invite_rsp_cmd.status = 1;
             i = 0;
+            memscpy(invite_rsp_cmd.group_Bss_ID, __QAPI_WLAN_MAC_LEN, local_ptr->sa, __QAPI_WLAN_MAC_LEN);
         }
     }
     else
     {
         invite_rsp_cmd.status = 0;
-        memcpy(invite_rsp_cmd.group_Bss_ID, local_ptr->sa, __QAPI_WLAN_MAC_LEN);
+        memscpy(invite_rsp_cmd.group_Bss_ID, __QAPI_WLAN_MAC_LEN, local_ptr->sa, __QAPI_WLAN_MAC_LEN);
     }
     pg_wifi_shell_cxt->p2p_session_in_progress = 1;
     deviceId = get_active_device();

@@ -751,135 +751,130 @@ static void wmi_send_raw_event(void *msg)
 }
 
 #if CONFIG_ENABLE_P2P_MODE
-void fill_p2p_event_info(event_t *p2p_evt, void *pData, void *qptr)
+void fill_p2p_event_info(qapi_WLAN_P2P_Event_Cb_Info_t *p2p_evt, void *pData)
 {
     if (NULL == p2p_evt)
         return;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
 
-    if (*p2p_evt == WMI_P2P_GO_NEG_RESULT_EVENTID) {
+    if (p2p_evt->event_ID == WMI_P2P_GO_NEG_RESULT_EVENTID) {
         WMI_P2P_GO_NEG_RESULT_EVENT *p2p_go_result;
-        qapi_WLAN_P2P_Go_Neg_Result_Event_t *q_p2p_go_result = (qapi_WLAN_P2P_Go_Neg_Result_Event_t *)qptr;
+        qapi_WLAN_P2P_Go_Neg_Result_Event_t *q_p2p_go_result = &(p2p_evt->WLAN_P2P_Event_Info.go_Neg_Result_Event);
 
-        *p2p_evt = __QAPI_WLAN_P2P_GO_NEG_RESULT_EVENTID;
+        p2p_evt->event_ID = __QAPI_WLAN_P2P_GO_NEG_RESULT_EVENTID;
         p2p_go_result = (WMI_P2P_GO_NEG_RESULT_EVENT *)pData;
         q_p2p_go_result->freq = p2p_go_result->freq;
         q_p2p_go_result->status = p2p_go_result->status;
         q_p2p_go_result->role_Go = p2p_go_result->role_go;
         q_p2p_go_result->ssid_Len = p2p_go_result->ssid_len;
-        memcpy(q_p2p_go_result->ssid, p2p_go_result->ssid, q_p2p_go_result->ssid_Len);
-        memcpy(q_p2p_go_result->pass_Phrase, p2p_go_result->pass_phrase, WMI_MAX_P2P_PASSPHRASE_STR_LEN);
-        memcpy(q_p2p_go_result->peer_Device_Addr, p2p_go_result->peer_device_addr,
+        memscpy(q_p2p_go_result->ssid, q_p2p_go_result->ssid_Len, p2p_go_result->ssid, q_p2p_go_result->ssid_Len);
+        memscpy(q_p2p_go_result->pass_Phrase, WMI_MAX_P2P_PASSPHRASE_STR_LEN, p2p_go_result->pass_phrase, WMI_MAX_P2P_PASSPHRASE_STR_LEN);
+        memscpy(q_p2p_go_result->peer_Device_Addr, sizeof(q_p2p_go_result->peer_Device_Addr), p2p_go_result->peer_device_addr,
                sizeof(q_p2p_go_result->peer_Device_Addr));
-        memcpy(q_p2p_go_result->peer_Interface_Addr, p2p_go_result->peer_interface_addr,
+        memscpy(q_p2p_go_result->peer_Interface_Addr, sizeof(q_p2p_go_result->peer_Interface_Addr), p2p_go_result->peer_interface_addr,
                sizeof(q_p2p_go_result->peer_Interface_Addr));
         q_p2p_go_result->wps_Method = p2p_go_result->wps_method;
         q_p2p_go_result->persistent_Grp = p2p_go_result->persistent_grp;
         q_p2p_go_result->passphrase_Len = p2p_go_result->passphrase_len;
 
-        if (p_cxt->wlan_enable_block_mode) {
-            qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GO_NEG_RESULT);
+        if (p_cxt->p2p_connect_in_progress) {
+            if (p_cxt->wlan_p2p_block_mode) {
+                qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GO_NEG_RESULT);
+            }
+            p_cxt->p2p_connect_in_progress = false;
         }
-
-    } else if (*p2p_evt == WMI_P2P_REQ_TO_AUTH_EVENTID) {
+    } else if (p2p_evt->event_ID == WMI_P2P_REQ_TO_AUTH_EVENTID) {
         WMI_P2P_REQ_TO_AUTH_EVENT *p2p_req_auth;
-        qapi_WLAN_P2P_Req_To_Auth_Event_t *q_p2p_req_auth = (qapi_WLAN_P2P_Req_To_Auth_Event_t *)qptr;
+        qapi_WLAN_P2P_Req_To_Auth_Event_t *q_p2p_req_auth = &p2p_evt->WLAN_P2P_Event_Info.req_Auth_Event;
 
-        *p2p_evt = __QAPI_WLAN_P2P_REQ_TO_AUTH_EVENTID;
+        p2p_evt->event_ID = __QAPI_WLAN_P2P_REQ_TO_AUTH_EVENTID;
         p2p_req_auth = (WMI_P2P_REQ_TO_AUTH_EVENT *)pData;
-        memcpy(q_p2p_req_auth->sa, p2p_req_auth->sa, sizeof(q_p2p_req_auth->sa));
+        memscpy(q_p2p_req_auth->sa, sizeof(q_p2p_req_auth->sa), p2p_req_auth->sa, sizeof(q_p2p_req_auth->sa));
         q_p2p_req_auth->dialog_Token = p2p_req_auth->dialog_token;
         q_p2p_req_auth->dev_Password_Id = p2p_req_auth->dev_password_id;
-
-        if (p_cxt->wlan_disable_block_mode) {
-            qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_REQ_TO_AUTH);
-        }
-    } else if (*p2p_evt == WMI_P2P_PROV_DISC_REQ_EVENTID) {
+    } else if (p2p_evt->event_ID == WMI_P2P_PROV_DISC_REQ_EVENTID) {
         WMI_P2P_PROV_DISC_REQ_EVENT *p2p_prov_disc_req;
-        qapi_WLAN_P2P_Prov_Disc_Req_Event_t *q_p2p_prov_disc_req = (qapi_WLAN_P2P_Prov_Disc_Req_Event_t *)qptr;
+        qapi_WLAN_P2P_Prov_Disc_Req_Event_t *q_p2p_prov_disc_req = &p2p_evt->WLAN_P2P_Event_Info.prov_Disc_Req_Event;
 
-        *p2p_evt = __QAPI_WLAN_P2P_PROV_DISC_REQ_EVENTID;
+        p2p_evt->event_ID = __QAPI_WLAN_P2P_PROV_DISC_REQ_EVENTID;
         p2p_prov_disc_req = (WMI_P2P_PROV_DISC_REQ_EVENT *)pData;
-        memcpy(q_p2p_prov_disc_req->sa, p2p_prov_disc_req->sa, sizeof(q_p2p_prov_disc_req->sa));
+        memscpy(q_p2p_prov_disc_req->sa, sizeof(q_p2p_prov_disc_req->sa), p2p_prov_disc_req->sa, sizeof(q_p2p_prov_disc_req->sa));
         q_p2p_prov_disc_req->wps_Config_Method = p2p_prov_disc_req->wps_config_method;
-        memcpy(q_p2p_prov_disc_req->dev_Addr, p2p_prov_disc_req->dev_addr, sizeof(q_p2p_prov_disc_req->dev_Addr));
-        memcpy(q_p2p_prov_disc_req->pri_Dev_Type, p2p_prov_disc_req->pri_dev_type,
+        memscpy(q_p2p_prov_disc_req->dev_Addr, sizeof(q_p2p_prov_disc_req->dev_Addr), p2p_prov_disc_req->dev_addr, sizeof(q_p2p_prov_disc_req->dev_Addr));
+        memscpy(q_p2p_prov_disc_req->pri_Dev_Type, sizeof(q_p2p_prov_disc_req->pri_Dev_Type), p2p_prov_disc_req->pri_dev_type,
                sizeof(q_p2p_prov_disc_req->pri_Dev_Type));
-        memcpy(q_p2p_prov_disc_req->device_Name, p2p_prov_disc_req->device_name,
+        memscpy(q_p2p_prov_disc_req->device_Name, sizeof(q_p2p_prov_disc_req->device_Name), p2p_prov_disc_req->device_name,
                sizeof(q_p2p_prov_disc_req->device_Name));
         q_p2p_prov_disc_req->dev_Name_Len = p2p_prov_disc_req->dev_name_len;
         q_p2p_prov_disc_req->dev_Config_Methods = p2p_prov_disc_req->dev_config_methods;
         q_p2p_prov_disc_req->device_Capab = p2p_prov_disc_req->device_capab;
         q_p2p_prov_disc_req->group_Capab = p2p_prov_disc_req->group_capab;
-        if (p_cxt->wlan_disable_block_mode) {
-            qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_PROV_DISC_REQ);
-        }
-    } else if (*p2p_evt == WMI_P2P_SDPD_RX_EVENTID) {
+    } else if (p2p_evt->event_ID == WMI_P2P_SDPD_RX_EVENTID) {
         WMI_P2P_SDPD_RX_EVENT *p2p_service_disc_req;
-        qapi_WLAN_P2P_Sdpd_Rx_Event_t *q_p2p_service_disc_req = (qapi_WLAN_P2P_Sdpd_Rx_Event_t *)qptr;
+        qapi_WLAN_P2P_Sdpd_Rx_Event_t *q_p2p_service_disc_req = &p2p_evt->WLAN_P2P_Event_Info.serv_Disc_Recv_Event;
 
-        *p2p_evt = __QAPI_WLAN_P2P_SDPD_RX_EVENTID;
+        p2p_evt->event_ID = __QAPI_WLAN_P2P_SDPD_RX_EVENTID;
         p2p_service_disc_req = (WMI_P2P_SDPD_RX_EVENT *)pData;
         q_p2p_service_disc_req->type = p2p_service_disc_req->type;
         q_p2p_service_disc_req->transaction_Status = p2p_service_disc_req->transaction_status;
         q_p2p_service_disc_req->dialog_Token = p2p_service_disc_req->dialog_token;
         q_p2p_service_disc_req->frag_Id = p2p_service_disc_req->frag_id;
-        memcpy(q_p2p_service_disc_req->peer_Addr, p2p_service_disc_req->peer_addr,
+        memscpy(q_p2p_service_disc_req->peer_Addr, sizeof(q_p2p_service_disc_req->peer_Addr), p2p_service_disc_req->peer_addr,
                sizeof(q_p2p_service_disc_req->peer_Addr));
         q_p2p_service_disc_req->freq = p2p_service_disc_req->freq;
         q_p2p_service_disc_req->status_Code = p2p_service_disc_req->status_code;
         q_p2p_service_disc_req->comeback_Delay = p2p_service_disc_req->comeback_delay;
         q_p2p_service_disc_req->tlv_Length = p2p_service_disc_req->tlv_length;
         q_p2p_service_disc_req->update_Indic = p2p_service_disc_req->update_indic;
-    } else if (*p2p_evt == WMI_P2P_INVITE_REQ_EVENTID) {
+    } else if (p2p_evt->event_ID == WMI_P2P_INVITE_REQ_EVENTID) {
         WMI_P2P_FW_INVITE_REQ_EVENT *p2p_invite_req;
-        qapi_WLAN_P2P_Invite_Req_Event_t *q_p2p_invite_req = (qapi_WLAN_P2P_Invite_Req_Event_t *)qptr;
+        qapi_WLAN_P2P_Invite_Req_Event_t *q_p2p_invite_req = &(p2p_evt->WLAN_P2P_Event_Info.invite_Req_Event);
 
-        *p2p_evt = __QAPI_WLAN_P2P_INVITE_REQ_EVENTID;
+        p2p_evt->event_ID = __QAPI_WLAN_P2P_INVITE_REQ_EVENTID;
         p2p_invite_req = (WMI_P2P_FW_INVITE_REQ_EVENT *)pData;
-        memcpy(q_p2p_invite_req->sa, p2p_invite_req->sa, sizeof(q_p2p_invite_req->sa));
-        memcpy(q_p2p_invite_req->bssid, p2p_invite_req->bssid, sizeof(q_p2p_invite_req->bssid));
-        memcpy(q_p2p_invite_req->go_Dev_Addr, p2p_invite_req->go_dev_addr, sizeof(q_p2p_invite_req->go_Dev_Addr));
+        memscpy(q_p2p_invite_req->sa, sizeof(q_p2p_invite_req->sa), p2p_invite_req->sa, sizeof(q_p2p_invite_req->sa));
+        memscpy(q_p2p_invite_req->bssid, sizeof(q_p2p_invite_req->bssid), p2p_invite_req->bssid, sizeof(q_p2p_invite_req->bssid));
+        memscpy(q_p2p_invite_req->go_Dev_Addr, sizeof(q_p2p_invite_req->go_Dev_Addr), p2p_invite_req->go_dev_addr, sizeof(q_p2p_invite_req->go_Dev_Addr));
         q_p2p_invite_req->ssid.ssid_Length = p2p_invite_req->ssid.ssidLength;
-        memcpy(q_p2p_invite_req->ssid.ssid, p2p_invite_req->ssid.ssid, q_p2p_invite_req->ssid.ssid_Length);
+        memscpy(q_p2p_invite_req->ssid.ssid, q_p2p_invite_req->ssid.ssid_Length, p2p_invite_req->ssid.ssid, q_p2p_invite_req->ssid.ssid_Length);
         q_p2p_invite_req->is_Persistent = p2p_invite_req->is_persistent;
         q_p2p_invite_req->dialog_Token = p2p_invite_req->dialog_token;
-    } else if (*p2p_evt == WMI_P2P_INVITE_RCVD_RESULT_EVENTID) {
+    } else if (p2p_evt->event_ID == WMI_P2P_INVITE_RCVD_RESULT_EVENTID) {
         WMI_P2P_INVITE_RCVD_RESULT_EVENT *p2p_invite_rcvd_result;
         qapi_WLAN_P2P_Invite_Rcvd_Result_Event_t *q_p2p_invite_rcvd_result =
-            (qapi_WLAN_P2P_Invite_Rcvd_Result_Event_t *)qptr;
+            &p2p_evt->WLAN_P2P_Event_Info.invite_Rcvd_Result_Event;
 
-        *p2p_evt = __QAPI_WLAN_P2P_INVITE_RCVD_RESULT_EVENTID;
+        p2p_evt->event_ID = __QAPI_WLAN_P2P_INVITE_RCVD_RESULT_EVENTID;
         p2p_invite_rcvd_result = (WMI_P2P_INVITE_RCVD_RESULT_EVENT *)pData;
         q_p2p_invite_rcvd_result->oper_Freq = p2p_invite_rcvd_result->oper_freq;
-        memcpy(q_p2p_invite_rcvd_result->sa, p2p_invite_rcvd_result->sa, sizeof(q_p2p_invite_rcvd_result->sa));
-        memcpy(q_p2p_invite_rcvd_result->bssid, p2p_invite_rcvd_result->bssid, sizeof(q_p2p_invite_rcvd_result->bssid));
+        memscpy(q_p2p_invite_rcvd_result->sa, sizeof(q_p2p_invite_rcvd_result->sa), p2p_invite_rcvd_result->sa, sizeof(q_p2p_invite_rcvd_result->sa));
+        memscpy(q_p2p_invite_rcvd_result->bssid, sizeof(q_p2p_invite_rcvd_result->bssid), p2p_invite_rcvd_result->bssid, sizeof(q_p2p_invite_rcvd_result->bssid));
         q_p2p_invite_rcvd_result->is_Bssid_Valid = p2p_invite_rcvd_result->is_bssid_valid;
-        memcpy(q_p2p_invite_rcvd_result->go_Dev_Addr, p2p_invite_rcvd_result->go_dev_addr,
+        memscpy(q_p2p_invite_rcvd_result->go_Dev_Addr, sizeof(q_p2p_invite_rcvd_result->go_Dev_Addr), p2p_invite_rcvd_result->go_dev_addr,
                sizeof(q_p2p_invite_rcvd_result->go_Dev_Addr));
         q_p2p_invite_rcvd_result->ssid.ssid_Length = p2p_invite_rcvd_result->ssid.ssidLength;
-        memcpy(q_p2p_invite_rcvd_result->ssid.ssid, sizeof(q_p2p_invite_rcvd_result->ssid.ssid),
-               p2p_invite_rcvd_result->ssid.ssid);
+        memscpy(q_p2p_invite_rcvd_result->ssid.ssid, sizeof(q_p2p_invite_rcvd_result->ssid.ssid),
+               p2p_invite_rcvd_result->ssid.ssid, sizeof(q_p2p_invite_rcvd_result->ssid.ssid));
         q_p2p_invite_rcvd_result->ssid.ssid_Length = p2p_invite_rcvd_result->ssid.ssidLength;
         q_p2p_invite_rcvd_result->status = p2p_invite_rcvd_result->status;
-    } else if (*p2p_evt == WMI_P2P_INVITE_SENT_RESULT_EVENTID) {
+    } else if (p2p_evt->event_ID == WMI_P2P_INVITE_SENT_RESULT_EVENTID) {
         WMI_P2P_INVITE_SENT_RESULT_EVENT *p2p_invite_sent_result;
         qapi_WLAN_P2P_Invite_Sent_Result_Event_t *q_p2p_invite_sent_result =
-            (qapi_WLAN_P2P_Invite_Sent_Result_Event_t *)qptr;
+            &p2p_evt->WLAN_P2P_Event_Info.invite_Sent_Result_Event;
 
-        *p2p_evt = __QAPI_WLAN_P2P_INVITE_SENT_RESULT_EVENTID;
+        p2p_evt->event_ID = __QAPI_WLAN_P2P_INVITE_SENT_RESULT_EVENTID;
         p2p_invite_sent_result = (WMI_P2P_INVITE_SENT_RESULT_EVENT *)pData;
         q_p2p_invite_sent_result->status = p2p_invite_sent_result->status;
-        memcpy(q_p2p_invite_sent_result->bssid, p2p_invite_sent_result->bssid, sizeof(q_p2p_invite_sent_result->bssid));
+        memscpy(q_p2p_invite_sent_result->bssid, sizeof(q_p2p_invite_sent_result->bssid), p2p_invite_sent_result->bssid, sizeof(q_p2p_invite_sent_result->bssid));
         q_p2p_invite_sent_result->is_Bssid_Valid = p2p_invite_sent_result->is_bssid_valid;
-    } else if (*p2p_evt == WMI_P2P_PROV_DISC_RESP_EVENTID) {
+    } else if (p2p_evt->event_ID == WMI_P2P_PROV_DISC_RESP_EVENTID) {
         WMI_P2P_PROV_DISC_RESP_EVENT *p2p_prov_disc_resp;
-        qapi_WLAN_P2P_Prov_Disc_Resp_Event_t *q_p2p_prov_disc_resp = (qapi_WLAN_P2P_Prov_Disc_Resp_Event_t *)qptr;
+        qapi_WLAN_P2P_Prov_Disc_Resp_Event_t *q_p2p_prov_disc_resp = &p2p_evt->WLAN_P2P_Event_Info.prov_Disc_Resp_Event;
 
-        *p2p_evt = __QAPI_WLAN_P2P_PROV_DISC_RESP_EVENTID;
+        p2p_evt->event_ID = __QAPI_WLAN_P2P_PROV_DISC_RESP_EVENTID;
         p2p_prov_disc_resp = (WMI_P2P_PROV_DISC_RESP_EVENT *)pData;
         q_p2p_prov_disc_resp->config_Methods = p2p_prov_disc_resp->config_methods;
-        memcpy(q_p2p_prov_disc_resp->peer, sizeof(q_p2p_prov_disc_resp->peer), p2p_prov_disc_resp->peer);
+        memscpy(q_p2p_prov_disc_resp->peer, sizeof(q_p2p_prov_disc_resp->peer), p2p_prov_disc_resp->peer, sizeof(p2p_prov_disc_resp->peer));
     }
 }
 
@@ -889,24 +884,30 @@ static void wmi_p2p_event(event_t eventid, void *msg)
         warn_printf("msg NULL\n");
         return;
     }
+    qapi_WLAN_Callback_t wlan_cb = NULL;
+    void *applicationContext = NULL;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
-    qapi_WLAN_P2P_Event_Cb_Info_t p2p_Event_Cb_Info;
+    qapi_WLAN_P2P_Event_Cb_Info_t p2p_Event_Cb_Info = p_cxt->p2p_Event_Cb_Info;
     uint32_t len = sizeof(p2p_Event_Cb_Info);
-    memset(&p2p_Event_Cb_Info, 0, sizeof(p2p_Event_Cb_Info));
 
     /* get the callback handler from the device context */
     qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    if(p_cxt->qapi_event_handler != NULL){
+        /* call this later from outside the spinlock */
+        wlan_cb = (qapi_WLAN_Callback_t )p_cxt->qapi_event_handler;
+        applicationContext = p_cxt->event_application_Context;
+    }
 
-    fill_p2p_event_info(&eventid, msg, &(p2p_Event_Cb_Info.WLAN_P2P_Event_Info.go_Neg_Result_Event));
     /* call the callback function provided by application to
      * indicate last transmitted rate */
-    if (p_cxt->qapi_event_handler != NULL) {
-
+    if (wlan_cb != NULL) {
         /* Since event info is an union of multiple events, we can copy the
           payload onto any of the union members. We will always copy it to the
           first member of the union */
+        memset(&p2p_Event_Cb_Info, 0, sizeof(p2p_Event_Cb_Info));
         p2p_Event_Cb_Info.event_ID = eventid;
-        p_cxt->qapi_event_handler(p_cxt->network_id, QAPI_WLAN_P2P_CB_E, p_cxt->event_application_Context,
+        fill_p2p_event_info(&p2p_Event_Cb_Info, msg);
+        p_cxt->qapi_event_handler(p_cxt->network_id, QAPI_WLAN_P2P_CB_E, applicationContext,
                                   &p2p_Event_Cb_Info, len);
     }
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);

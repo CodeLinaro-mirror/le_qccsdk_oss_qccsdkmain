@@ -111,8 +111,11 @@ typedef struct wlan_qapi_cxt_s {
 #endif
 #ifdef CONFIG_ENABLE_P2P_MODE
     qapi_WLAN_P2P_Node_List_Params_t get_p2p_nodelist;
+    qapi_WLAN_P2P_Event_Cb_Info_t p2p_Event_Cb_Info;
     uint32_t wlan_get_nodelist_block_mode : 1;
-    uint32_t p2p_mutex : 1;
+    uint32_t wlan_p2p_block_mode : 1;
+    qbool_t p2p_connect_in_progress;
+    WMI_P2P_FW_INVITE_REQ_RSP_CMD p2p_inv_rsp;
     WMI_P2P_SET_PROFILE_CMD p2p_set_profile;
     WMI_P2P_GRP_INIT_CMD p2p_grp_init;
     WMI_P2P_FIND_CMD p2p_find;
