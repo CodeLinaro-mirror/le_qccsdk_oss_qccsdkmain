@@ -793,19 +793,20 @@ static QAT_Command_Status_t Extend_Command_SetWpaParameters(uint32_t Op_Type, ui
                 e_wpa_ver = QAPI_WLAN_AUTH_WPA3_SAE_E;
             } else if (!strcmp(wpaVer, "SAE_WPA2")) {
                 e_wpa_ver = QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E;
+            } else if(!strcmp(wpaVer,"SAE_WPA2_WPA")) {
+                e_wpa_ver = QAPI_WLAN_AUTH_WPA_WPA2_SAE_MIXED_E;
             } else {
                 snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWWPA:FAIL, %s", wpaVer);
                 QAT_Response_Str(QAT_RC_ERROR, buffer);
                 return rc;
             }
 
-            if ((e_wpa_ver != QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) &&
+            if (((e_wpa_ver != QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) && (e_wpa_ver != QAPI_WLAN_AUTH_WPA_WPA2_SAE_MIXED_E)) && 
                 (Parameter_Count != 3 || Parameter_List[1].Integer_Is_Valid || Parameter_List[2].Integer_Is_Valid)) {
                 QAT_Response_Str(QAT_RC_ERROR, NULL);
                 return rc;
             }
-
-            if (e_wpa_ver == QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) {
+            if ((e_wpa_ver == QAPI_WLAN_AUTH_WPA2_SAE_MIXED_E) || (e_wpa_ver == QAPI_WLAN_AUTH_WPA_WPA2_SAE_MIXED_E)) {
                 e_cipher = QAPI_WLAN_CRYPT_AUTO;
             } else {
                 char *ucipher = Parameter_List[1].String_Value;
@@ -838,7 +839,7 @@ static QAT_Command_Status_t Extend_Command_SetWpaParameters(uint32_t Op_Type, ui
             break;
         }
         case QAT_OP_EXEC: {
-            QAT_Response_Str(QAT_RC_QUIET, "+CWWPA=WPA/WPA2/SEA/SAE_WPA2,CCMP,CCMP/TKIP,TKIP");
+            QAT_Response_Str(QAT_RC_QUIET, "+CWWPA=WPA/WPA2/SEA,CCMP,CCMP/TKIP,TKIP. For mix mode, +CWWPA=SAE_WPA2/SAE_WPA2_WPA,CCMP and TKIP are not required");
             break;
         }
         default:;
