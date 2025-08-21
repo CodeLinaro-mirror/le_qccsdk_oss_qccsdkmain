@@ -52,7 +52,7 @@ nt_status_t wpa_find_authmode(struct ieee80211_common_ie *cie, AUTH_MODE *authmo
 AUTH_MODE wlan_wpa_get_auth_algorithm(CRYPTO_TYPE cipher, uint8_t *sel);
 #endif
 
-nt_status_t security_ie_parse(uint8_t *pie, uint8_t *cipher, uint8_t *auth, uint8_t ie_type);
+nt_status_t security_ie_parse(devh_t *dev, uint8_t *pie, uint8_t *cipher, uint8_t *auth, uint8_t ie_type);
 void wlan_wpa3_tdi_update(devh_t *dev, uint8_t mode);
 void wlan_wpa3_tdi_clear(devh_t *dev);
 uint8_t wlan_wpa3_tdi_mode(devh_t *dev);
