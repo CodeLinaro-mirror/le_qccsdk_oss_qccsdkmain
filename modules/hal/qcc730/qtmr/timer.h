@@ -1,10 +1,10 @@
 /*========================================================================
-*Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*SPDX-License-Identifier: BSD-3-Clause-Clear
-*
-* @file timer.h
-* @brief High Res Timer param and struct definitions
-*========================================================================*/
+ *Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * @file timer.h
+ * @brief High Res Timer param and struct definitions
+ *========================================================================*/
 #ifndef TIMER_H
 #define TIMER_H
 
@@ -15,14 +15,14 @@
 #include "nt_osal.h"
 #include "fwconfig_wlan.h"
 
-#if defined (SUPPORT_HIGH_RES_TIMER)
+#if defined(SUPPORT_HIGH_RES_TIMER)
 
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
  * ----------------------------------------------------------------------*/
 
 #define HRES_TIMER_PROFILING
-#define MAX_DUMP_LEN                128
+#define MAX_DUMP_LEN 128
 /*-------------------------------------------------------------------------
  * Type Declarations
  * ----------------------------------------------------------------------*/
@@ -32,18 +32,16 @@ typedef uint64_t time_timetick_type;
  * Various units supported by the timetick module
  */
 typedef enum {
-    T_TICK,     /**< -- Return time in Ticks */
-    T_USEC,     /**< -- Return time in Microseconds */
-    T_MSEC,     /**< -- Return time in Milliseconds */
-    T_SEC,      /**< -- Return time in Seconds */
+    T_TICK, /**< -- Return time in Ticks */
+    T_USEC, /**< -- Return time in Microseconds */
+    T_MSEC, /**< -- Return time in Milliseconds */
+    T_SEC,  /**< -- Return time in Seconds */
 
-    T_NONE=T_TICK  /**< -- use if no paticular return type is needed */
+    T_NONE = T_TICK /**< -- use if no paticular return type is needed */
 } time_unit_type;
 
-
 /** @brief Timer state structure type. */
-typedef enum timer_state_struct
-{
+typedef enum timer_state_struct {
     TIMER_DEFAULT_FLAG = 1,
     TIMER_DEF_FLAG,
     TIMER_SET_FLAG,
@@ -53,39 +51,35 @@ typedef enum timer_state_struct
 } timer_state_struct_type;
 
 /* Error Returns Enums of Timer APIs */
-typedef enum
-{
+typedef enum {
     TE_SUCCESS = 0,
     TE_FAIL,
     /* Need to make "timer_client" as dependency if some module is calling
        into timer creation apis before timer module gets initialized */
     TE_TIMER_MODULE_NOT_INITIALIZED, /* timer creation apis are called before timer system is initialized */
-    TE_HANDLE_IN_USE,              /* timer is being defined upon a valid timer */
-    TE_INVALID_TIMER_HANDLE,       /* timer is invalid */
-    TE_INVALID_PARAMETERS,         /* input parameters for an api are invalid */
-    TE_INVALID_DURATION,           /* timer is invalid duration */
-    TE_INVALID_STATE_FOR_OP,       /* timer is in invalid state for requested operation */
-    TE_MALLOC_FAILED,              /* free client timers are over */
-    TE_NO_FREE_INTERNAL_TIMER,     /* free internal timers are over */
-    TE_TIMER_NOT_ACTIVE,           /* timer is not active but an operation expects it */
-    TE_TIMER_ALREADY_IN_SAME_STATE,/* timer is already in state where an operation is being tried */
-    TE_INVALID_TASK,               /* not a valid task to arm the timer from */
-    TE_INVALID_UNIT,               /* time unit not supported or invalid */
+    TE_HANDLE_IN_USE,                /* timer is being defined upon a valid timer */
+    TE_INVALID_TIMER_HANDLE,         /* timer is invalid */
+    TE_INVALID_PARAMETERS,           /* input parameters for an api are invalid */
+    TE_INVALID_DURATION,             /* timer is invalid duration */
+    TE_INVALID_STATE_FOR_OP,         /* timer is in invalid state for requested operation */
+    TE_MALLOC_FAILED,                /* free client timers are over */
+    TE_NO_FREE_INTERNAL_TIMER,       /* free internal timers are over */
+    TE_TIMER_NOT_ACTIVE,             /* timer is not active but an operation expects it */
+    TE_TIMER_ALREADY_IN_SAME_STATE,  /* timer is already in state where an operation is being tried */
+    TE_INVALID_TASK,                 /* not a valid task to arm the timer from */
+    TE_INVALID_UNIT,                 /* time unit not supported or invalid */
     TE_MAX = 0xFFFFFFFF
-}
-timer_error_type;
+} timer_error_type;
 
-typedef enum
-{
+typedef enum {
     TIMER_INFO_ABS_EXPIRY = 0,
     TIMER_INFO_TIMER_DURATION,
     TIMER_INFO_TIMER_REMAINING,
     TIMER_INFO_MAX,
-}timer_info_type;
+} timer_info_type;
 
 /* Timer msg identifier */
-enum
-{
+enum {
     TMR_CMD_ID_TIMEOUT,
     TMR_CMD_ID_UNTIMEOUT,
 };
@@ -101,55 +95,50 @@ typedef uint32_t timer_handle_type;
 
 /** Timer callback function.
  */
-typedef void (*timer_cb_type) (timer_handle_type timer);
+typedef void (*timer_cb_type)(timer_handle_type timer);
 
 /** User task info type
  */
-typedef struct
-{
-    TaskHandle_t    handle;
-    uint32_t        event;
-    QueueHandle_t   timer_queue;
-}task_info_type;
+typedef struct {
+    TaskHandle_t handle;
+    uint32_t event;
+    QueueHandle_t timer_queue;
+} task_info_type;
 
 typedef task_info_type *task_info_ptr;
 
-typedef struct
-{
-    bool                    reload;
-    time_unit_type          unit;
-    time_timetick_type      time;
-}timer_set_attribute_type;
+typedef struct {
+    bool reload;
+    time_unit_type unit;
+    time_timetick_type time;
+} timer_set_attribute_type;
 
-typedef struct
-{
-    timer_handle_type   handle;
-    timer_cb_type       timer_cb;
+typedef struct {
+    timer_handle_type handle;
+    timer_cb_type timer_cb;
 #if defined(HRES_TIMER_PROFILING)
-    time_timetick_type  set_time;
-    time_timetick_type  isr_start;
-    time_timetick_type  isr_end;
-    time_timetick_type  q_push_time;
-    time_timetick_type  q_pop_time;
-    time_timetick_type  delay;
+    time_timetick_type set_time;
+    time_timetick_type isr_start;
+    time_timetick_type isr_end;
+    time_timetick_type q_push_time;
+    time_timetick_type q_pop_time;
+    time_timetick_type delay;
 #endif
-}timer_msg_t;
+} timer_msg_t;
 
-typedef struct
-{
+typedef struct {
     char pcTaskName[configMAX_TASK_NAME_LEN];
     uint64_t ms_time;
     timer_cb_type q_timer_callback;
     TimerCallbackFunction_t nt_timer_callback;
-}sleep_time_info_t;
+} sleep_time_info_t;
 
-typedef struct timer_cmd_s
-{
-    bool                reload;
-    uint8_t             cmd_id;
-    time_unit_type      unit;
-    timer_ptr_type      p_handle;
-    time_timetick_type  time;
+typedef struct timer_cmd_s {
+    bool reload;
+    uint8_t cmd_id;
+    time_unit_type unit;
+    timer_ptr_type p_handle;
+    time_timetick_type time;
 } timer_cmd_t;
 /*-------------------------------------------------------------------------
  * Function Declarations and Documentation
@@ -173,12 +162,7 @@ void hres_timer_init_setup(void);
  *
  * @return TE_SUCCESS on success, else valid error type
  */
-timer_error_type hres_timer_init
-(
-    uint32_t max_timers,
-    void* buffer_start_address,
-    bool start_timer_task
-);
+timer_error_type hres_timer_init(uint32_t max_timers, void *buffer_start_address, bool start_timer_task);
 
 /**
  * hres_timer_def
@@ -191,12 +175,7 @@ timer_error_type hres_timer_init
  *
  * @return Returns TE_SUCCESS on success, else a valid error type
  */
-timer_error_type hres_timer_def
-(
-    timer_ptr_type  timer,
-    timer_cb_type   func_addr,
-    task_info_ptr   task_info
-);
+timer_error_type hres_timer_def(timer_ptr_type timer, timer_cb_type func_addr, task_info_ptr task_info);
 
 /**
  * hres_timer_set_64
@@ -211,13 +190,7 @@ timer_error_type hres_timer_def
  *
  * @return Returns TE_SUCCESS on success, else a valid error type
  */
-timer_error_type hres_timer_set_64
-(
-    timer_ptr_type      timer,
-    time_timetick_type  time,
-    bool                reload,
-    time_unit_type      unit
-);
+timer_error_type hres_timer_set_64(timer_ptr_type timer, time_timetick_type time, bool reload, time_unit_type unit);
 
 /**
  * hres_timer_undef
@@ -280,10 +253,7 @@ void hres_timer_sleep_adjust(uint64_t sleep_duration);
  *
  * @return Returns TE_SUCCESS on success, else a valid error type
  */
-timer_error_type hres_timer_stop
-(
-    timer_ptr_type timer_handle
-);
+timer_error_type hres_timer_stop(timer_ptr_type timer_handle);
 
 /**
  * hres_timer_timetick_get
@@ -313,12 +283,7 @@ uint32_t hres_timer_deinit(void);
  *
  * @return Success or failure after conversion
  */
-int8_t timer_cvt_to_tick64
-(
-    uint64_t time,
-    time_unit_type unit,
-    uint64_t *pTimeRet
-);
+int8_t timer_cvt_to_tick64(uint64_t time, time_unit_type unit, uint64_t *pTimeRet);
 
 /**
  * timer_cvt_from_tick64
@@ -331,12 +296,7 @@ int8_t timer_cvt_to_tick64
  *
  * @return Returns 0 on success, -1 on failure
  */
-int8_t timer_cvt_from_tick64
-(
-    uint64_t time,
-    time_unit_type unit,
-    uint64_t *pTimeRet
-);
+int8_t timer_cvt_from_tick64(uint64_t time, time_unit_type unit, uint64_t *pTimeRet);
 
 /**
  * hres_timer_handler
@@ -349,7 +309,7 @@ int8_t timer_cvt_from_tick64
  */
 uint32_t hres_timer_handler(QueueHandle_t timer_queue);
 
-#if defined (HRES_TIMER_PROFILING)
+#if defined(HRES_TIMER_PROFILING)
 /**
  * hres_timer_log_dump
  *
@@ -388,7 +348,6 @@ void hres_timer_print_dump(void);
  */
 uint64_t hres_timer_curr_time_us(void);
 
-
 /**
  * hres_curr_time_ms
  *
@@ -411,7 +370,6 @@ uint32_t hres_timer_curr_time_ms(void);
  */
 void hres_timer_us_delay(uint32_t time_us);
 
-
 /**
  * hres_ms_delay
  *
@@ -425,4 +383,3 @@ void hres_timer_ms_delay(uint32_t time_ms);
 
 #endif /* IMAGE_FERMION */
 #endif /*TIMER_H*/
-

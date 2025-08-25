@@ -37,42 +37,36 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #define MD5_MAC_LEN 16
 
-int sha256_prf(const uint8_t *key, size_t key_len, const char *label,
-	       const uint8_t *data, size_t data_len, uint8_t *buf, size_t buf_len);
-int sha256_prf_bits(const uint8_t *key, size_t key_len, const char *label,
-		    const uint8_t *data, size_t data_len, uint8_t *buf,
-		    size_t buf_len_bits);
+int sha256_prf(const uint8_t *key, size_t key_len, const char *label, const uint8_t *data, size_t data_len,
+               uint8_t *buf, size_t buf_len);
+int sha256_prf_bits(const uint8_t *key, size_t key_len, const char *label, const uint8_t *data, size_t data_len,
+                    uint8_t *buf, size_t buf_len_bits);
 void forced_memzero(void *ptr, size_t len);
 
-int sha1_prf(const uint8_t *key, size_t key_len, const char *label,
-	     const uint8_t *data, size_t data_len, uint8_t *buf, size_t buf_len);
+int sha1_prf(const uint8_t *key, size_t key_len, const char *label, const uint8_t *data, size_t data_len, uint8_t *buf,
+             size_t buf_len);
 
 int omac1_aes_128(const uint8_t *key, const uint8_t *data, size_t data_len, uint8_t *mac);
 
-int hmac_sha1_vector(const uint8_t *key, size_t key_len, size_t num_elem,
-		     const uint8_t *addr[], const size_t *len, uint8_t *mac);
+int hmac_sha1_vector(const uint8_t *key, size_t key_len, size_t num_elem, const uint8_t *addr[], const size_t *len,
+                     uint8_t *mac);
 
-int pbkdf2_sha1(const char *passphrase, const unsigned  char *ssid, size_t ssid_len,
-		int iterations, uint8_t *buf, size_t __attribute__((__unused__)) buflen); // added function decleration
+int pbkdf2_sha1(const char *passphrase, const unsigned char *ssid, size_t ssid_len, int iterations, uint8_t *buf,
+                size_t __attribute__((__unused__)) buflen);  // added function decleration
 
-int hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *data, size_t data_len,
-	     uint8_t *mac);
+int hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *data, size_t data_len, uint8_t *mac);
 
-int hmac_sha1(const uint8_t *key, size_t key_len, const uint8_t *data, size_t data_len,
-	      uint8_t *mac);
+int hmac_sha1(const uint8_t *key, size_t key_len, const uint8_t *data, size_t data_len, uint8_t *mac);
 
-
-int hmac_sha256_vector(const uint8_t *key, size_t key_len, size_t num_elem,
-		       const uint8_t *addr[], const size_t *len, uint8_t *mac);
-int hmac_sha256(const uint8_t *key, size_t key_len, const uint8_t *data,
-		size_t data_len, uint8_t *mac);
+int hmac_sha256_vector(const uint8_t *key, size_t key_len, size_t num_elem, const uint8_t *addr[], const size_t *len,
+                       uint8_t *mac);
+int hmac_sha256(const uint8_t *key, size_t key_len, const uint8_t *data, size_t data_len, uint8_t *mac);
 
 int8_t gen_random_number(uint8_t *dest, uint8_t len);
 
 int aes_wrap(const uint8_t *kek, size_t kek_len, int n, const uint8_t *plain, uint8_t *cipher);
 
-int aes_unwrap(const uint8_t *kek, size_t kek_len, int n, const uint8_t *cipher,
-	       uint8_t *plain);
+int aes_unwrap(const uint8_t *kek, size_t kek_len, int n, const uint8_t *cipher, uint8_t *plain);
 
 /**
  * rc4_skip - XOR RC4 stream to given data with skip-stream-start
@@ -87,11 +81,10 @@ int aes_unwrap(const uint8_t *kek, size_t kek_len, int n, const uint8_t *cipher,
  * stream, and XOR the end result with the data buffer to perform RC4
  * encryption/decryption.
  */
-int rc4_skip(const uint8_t *key, size_t keylen, size_t skip,
-		uint8_t *data, size_t data_len);
+int rc4_skip(const uint8_t *key, size_t keylen, size_t skip, uint8_t *data, size_t data_len);
 
 #define SHA256_MAC_LEN 32
-#define SHA1_MAC_LEN 20
+#define SHA1_MAC_LEN   20
 
 #if defined(NT_FN_WPS) || defined(NT_FN_WPA3)
 
@@ -121,7 +114,6 @@ int md4_vector_new(size_t num_elem, const uint8_t *addr[], const size_t *len, ui
  */
 int md5_vector(size_t num_elem, const uint8_t *addr[], const size_t *len, uint8_t *mac);
 
-
 /**
  * sha1_vector - SHA-1 hash for data vector
  * @num_elem: Number of elements in the data vector
@@ -130,8 +122,7 @@ int md5_vector(size_t num_elem, const uint8_t *addr[], const size_t *len, uint8_
  * @mac: Buffer for the hash
  * Returns: 0 on success, -1 on failure
  */
-int sha1_vector(size_t num_elem, const uint8_t *addr[], const size_t *len,
-		uint8_t *mac);
+int sha1_vector(size_t num_elem, const uint8_t *addr[], const size_t *len, uint8_t *mac);
 
 #if 0
 /**
@@ -157,8 +148,7 @@ int __must_check fips186_2_prf(const uint8_t *seed, size_t seed_len, uint8_t *x,
  * @mac: Buffer for the hash
  * Returns: 0 on success, -1 on failure
  */
-int sha256_vector(size_t num_elem, const uint8_t *addr[], const size_t *len,
-		uint8_t *mac);
+int sha256_vector(size_t num_elem, const uint8_t *addr[], const size_t *len, uint8_t *mac);
 
 /**
  * sha384_vector - SHA384 hash for data vector
@@ -168,8 +158,7 @@ int sha256_vector(size_t num_elem, const uint8_t *addr[], const size_t *len,
  * @mac: Buffer for the hash
  * Returns: 0 on success, -1 on failure
  */
-int sha384_vector(size_t num_elem, const uint8_t *addr[], const size_t *len,
-		uint8_t *mac);
+int sha384_vector(size_t num_elem, const uint8_t *addr[], const size_t *len, uint8_t *mac);
 
 /**
  * sha512_vector - SHA512 hash for data vector
@@ -179,8 +168,7 @@ int sha384_vector(size_t num_elem, const uint8_t *addr[], const size_t *len,
  * @mac: Buffer for the hash
  * Returns: 0 on success, -1 on failure
  */
-int sha512_vector(size_t num_elem, const uint8_t *addr[], const size_t *len,
-		uint8_t *mac);
+int sha512_vector(size_t num_elem, const uint8_t *addr[], const size_t *len, uint8_t *mac);
 
 #ifdef MBEDTLS_DES_C
 /**
@@ -199,7 +187,7 @@ int des_encrypt(const uint8_t *clear, const uint8_t *key, uint8_t *cypher);
  * @len: Key length in bytes (usually 16, i.e., 128 bits)
  * Returns: Pointer to context data or %NULL on failure
  */
-void * aes_encrypt_init(const uint8_t *key, size_t len);
+void *aes_encrypt_init(const uint8_t *key, size_t len);
 
 /**
  * aes_encrypt - Encrypt one AES block
@@ -222,7 +210,7 @@ void aes_encrypt_deinit(void *ctx);
  * @len: Key length in bytes (usually 16, i.e., 128 bits)
  * Returns: Pointer to context data or %NULL on failure
  */
-void * aes_decrypt_init(const uint8_t *key, size_t len);
+void *aes_decrypt_init(const uint8_t *key, size_t len);
 
 /**
  * aes_decrypt - Decrypt one AES block
@@ -239,12 +227,15 @@ int aes_decrypt(void *ctx, const uint8_t *crypt, uint8_t *plain);
  */
 void aes_decrypt_deinit(void *ctx);
 
-
 enum crypto_hash_alg {
-	CRYPTO_HASH_ALG_MD5, CRYPTO_HASH_ALG_SHA1,
-	CRYPTO_HASH_ALG_HMAC_MD5, CRYPTO_HASH_ALG_HMAC_SHA1,
-	CRYPTO_HASH_ALG_SHA256, CRYPTO_HASH_ALG_HMAC_SHA256,
-	CRYPTO_HASH_ALG_SHA384, CRYPTO_HASH_ALG_SHA512
+    CRYPTO_HASH_ALG_MD5,
+    CRYPTO_HASH_ALG_SHA1,
+    CRYPTO_HASH_ALG_HMAC_MD5,
+    CRYPTO_HASH_ALG_HMAC_SHA1,
+    CRYPTO_HASH_ALG_SHA256,
+    CRYPTO_HASH_ALG_HMAC_SHA256,
+    CRYPTO_HASH_ALG_SHA384,
+    CRYPTO_HASH_ALG_SHA512
 };
 
 struct crypto_hash;
@@ -261,8 +252,7 @@ struct crypto_hash;
  * (CONFIG_TLS=internal). If that is not used, the crypto wrapper does not need
  * to implement this.
  */
-struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const uint8_t *key,
-				      size_t key_len);
+struct crypto_hash *crypto_hash_init(enum crypto_hash_alg alg, const uint8_t *key, size_t key_len);
 
 /**
  * crypto_hash_update - Add data to hash calculation
@@ -295,10 +285,13 @@ void crypto_hash_update(struct crypto_hash *ctx, const uint8_t *data, size_t len
  */
 int crypto_hash_finish(struct crypto_hash *ctx, uint8_t *hash, size_t *len);
 
-
 enum crypto_cipher_alg {
-	CRYPTO_CIPHER_NULL = 0, CRYPTO_CIPHER_ALG_AES, CRYPTO_CIPHER_ALG_3DES,
-	CRYPTO_CIPHER_ALG_DES, CRYPTO_CIPHER_ALG_RC2, CRYPTO_CIPHER_ALG_RC4
+    CRYPTO_CIPHER_NULL = 0,
+    CRYPTO_CIPHER_ALG_AES,
+    CRYPTO_CIPHER_ALG_3DES,
+    CRYPTO_CIPHER_ALG_DES,
+    CRYPTO_CIPHER_ALG_RC2,
+    CRYPTO_CIPHER_ALG_RC4
 };
 
 struct crypto_cipher;
@@ -316,9 +309,8 @@ struct crypto_cipher;
  * (CONFIG_TLS=internal). If that is not used, the crypto wrapper does not need
  * to implement this.
  */
-struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
-					  const uint8_t *iv, const uint8_t *key,
-					  size_t key_len);
+struct crypto_cipher *crypto_cipher_init(enum crypto_cipher_alg alg, const uint8_t *iv, const uint8_t *key,
+                                         size_t key_len);
 
 #if 0
 /**
@@ -362,7 +354,6 @@ int __must_check crypto_cipher_decrypt(struct crypto_cipher *ctx,
  */
 void crypto_cipher_deinit(struct crypto_cipher *ctx);
 
-
 struct crypto_public_key;
 struct crypto_private_key;
 
@@ -380,11 +371,10 @@ struct crypto_private_key;
  * (CONFIG_TLS=internal). If that is not used, the crypto wrapper does not need
  * to implement this.
  */
-struct crypto_public_key * crypto_public_key_import(const uint8_t *key, size_t len);
+struct crypto_public_key *crypto_public_key_import(const uint8_t *key, size_t len);
 
-struct crypto_public_key *
-crypto_public_key_import_parts(const uint8_t *n, size_t n_len,
-			       const uint8_t *e, size_t e_len);
+struct crypto_public_key *crypto_public_key_import_parts(const uint8_t *n, size_t n_len, const uint8_t *e,
+                                                         size_t e_len);
 
 /**
  * crypto_private_key_import - Import an RSA private key
@@ -397,9 +387,7 @@ crypto_public_key_import_parts(const uint8_t *n, size_t n_len,
  * (CONFIG_TLS=internal). If that is not used, the crypto wrapper does not need
  * to implement this.
  */
-struct crypto_private_key * crypto_private_key_import(const uint8_t *key,
-						      size_t len,
-						      const char *passwd);
+struct crypto_private_key *crypto_private_key_import(const uint8_t *key, size_t len, const char *passwd);
 
 /**
  * crypto_public_key_from_cert - Import an RSA public key from a certificate
@@ -415,8 +403,7 @@ struct crypto_private_key * crypto_private_key_import(const uint8_t *key,
  * (CONFIG_TLS=internal). If that is not used, the crypto wrapper does not need
  * to implement this.
  */
-struct crypto_public_key * crypto_public_key_from_cert(const uint8_t *buf,
-						       size_t len);
+struct crypto_public_key *crypto_public_key_from_cert(const uint8_t *buf, size_t len);
 
 #if 0
 /**
@@ -506,13 +493,10 @@ int __must_check crypto_public_key_decrypt_pkcs1(
 	u8 *plain, size_t *plain_len);
 #endif
 
-int crypto_dh_init(uint8_t generator, const uint8_t *prime, size_t prime_len, uint8_t *privkey,
-		uint8_t *pubkey);
-int crypto_dh_derive_secret(uint8_t generator, const uint8_t *prime, size_t prime_len,
-			    const uint8_t *order, size_t order_len,
-			    const uint8_t *privkey, size_t privkey_len,
-			    const uint8_t *pubkey, size_t pubkey_len,
-				uint8_t *secret, size_t *len);
+int crypto_dh_init(uint8_t generator, const uint8_t *prime, size_t prime_len, uint8_t *privkey, uint8_t *pubkey);
+int crypto_dh_derive_secret(uint8_t generator, const uint8_t *prime, size_t prime_len, const uint8_t *order,
+                            size_t order_len, const uint8_t *privkey, size_t privkey_len, const uint8_t *pubkey,
+                            size_t pubkey_len, uint8_t *secret, size_t *len);
 
 #if 0
 /**
@@ -535,7 +519,6 @@ int __must_check crypto_global_init(void);
  */
 void crypto_global_deinit(void);
 
-
 /**
  * crypto_mod_exp - Modular exponentiation of large integers
  * @base: Base integer (big endian byte array)
@@ -556,11 +539,8 @@ void crypto_global_deinit(void);
  * (CONFIG_TLS=internal). If that is not used, the crypto wrapper does not need
  * to implement this.
  */
-int crypto_mod_exp_new(const uint8_t *base, size_t base_len,
-				const uint8_t *power, size_t power_len,
-				const uint8_t *modulus, size_t modulus_len,
-				uint8_t *result, size_t *result_len);
-
+int crypto_mod_exp_new(const uint8_t *base, size_t base_len, const uint8_t *power, size_t power_len,
+                       const uint8_t *modulus, size_t modulus_len, uint8_t *result, size_t *result_len);
 
 /**
  * crypto_get_random - Generate cryptographically strong pseudo-random bytes
@@ -572,7 +552,6 @@ int crypto_mod_exp_new(const uint8_t *base, size_t base_len,
  * sequence, this functions must return -1.
  */
 int crypto_get_random(void *buf, size_t len);
-
 
 /**
  * struct crypto_bignum - bignum
@@ -594,7 +573,7 @@ struct crypto_key;
  * crypto_bignum_init - Allocate memory for bignum
  * Returns: Pointer to allocated bignum or %NULL on failure
  */
-struct crypto_bignum * crypto_bignum_init(void);
+struct crypto_bignum *crypto_bignum_init(void);
 
 /**
  * crypto_bignum_init_set - Allocate memory for bignum and set the value
@@ -602,14 +581,14 @@ struct crypto_bignum * crypto_bignum_init(void);
  * @len: Length of buf in octets
  * Returns: Pointer to allocated bignum or %NULL on failure
  */
-struct crypto_bignum * crypto_bignum_init_set(const uint8_t *buf, size_t len);
+struct crypto_bignum *crypto_bignum_init_set(const uint8_t *buf, size_t len);
 
 /**
  * crypto_bignum_init_set - Allocate memory for bignum and set the value (uint)
  * @val: Value to set
  * Returns: Pointer to allocated bignum or %NULL on failure
  */
-struct crypto_bignum * crypto_bignum_init_uint(unsigned int val);
+struct crypto_bignum *crypto_bignum_init_uint(unsigned int val);
 
 /**
  * crypto_bignum_deinit - Free bignum
@@ -626,8 +605,7 @@ void crypto_bignum_deinit(struct crypto_bignum *n, int clear);
  * @padlen: Length in octets to pad the result to or 0 to indicate no padding
  * Returns: Number of octets written on success, -1 on failure
  */
-int crypto_bignum_to_bin(const struct crypto_bignum *a,
-		uint8_t *buf, size_t buflen, size_t padlen);
+int crypto_bignum_to_bin(const struct crypto_bignum *a, uint8_t *buf, size_t buflen, size_t padlen);
 
 /**
  * crypto_bignum_rand - Create a random number in range of modulus
@@ -644,9 +622,7 @@ int crypto_bignum_rand(struct crypto_bignum *r, const struct crypto_bignum *m);
  * @c: Bignum; used to store the result of a + b
  * Returns: 0 on success, -1 on failure
  */
-int crypto_bignum_add(const struct crypto_bignum *a,
-		      const struct crypto_bignum *b,
-		      struct crypto_bignum *c);
+int crypto_bignum_add(const struct crypto_bignum *a, const struct crypto_bignum *b, struct crypto_bignum *c);
 
 /**
  * crypto_bignum_mod - c = a % b
@@ -655,9 +631,7 @@ int crypto_bignum_add(const struct crypto_bignum *a,
  * @c: Bignum; used to store the result of a % b
  * Returns: 0 on success, -1 on failure
  */
-int crypto_bignum_mod(const struct crypto_bignum *a,
-		      const struct crypto_bignum *b,
-		      struct crypto_bignum *c);
+int crypto_bignum_mod(const struct crypto_bignum *a, const struct crypto_bignum *b, struct crypto_bignum *c);
 
 /**
  * crypto_bignum_exptmod - Modular exponentiation: d = a^b (mod c)
@@ -667,10 +641,8 @@ int crypto_bignum_mod(const struct crypto_bignum *a,
  * @d: Bignum; used to store the result of a^b (mod c)
  * Returns: 0 on success, -1 on failure
  */
-int crypto_bignum_exptmod(const struct crypto_bignum *a,
-			  const struct crypto_bignum *b,
-			  const struct crypto_bignum *c,
-			  struct crypto_bignum *d);
+int crypto_bignum_exptmod(const struct crypto_bignum *a, const struct crypto_bignum *b, const struct crypto_bignum *c,
+                          struct crypto_bignum *d);
 
 /**
  * crypto_bignum_inverse - Inverse a bignum so that a * c = 1 (mod b)
@@ -679,9 +651,7 @@ int crypto_bignum_exptmod(const struct crypto_bignum *a,
  * @c: Bignum; used to store the result
  * Returns: 0 on success, -1 on failure
  */
-int crypto_bignum_inverse(const struct crypto_bignum *a,
-			  const struct crypto_bignum *b,
-			  struct crypto_bignum *c);
+int crypto_bignum_inverse(const struct crypto_bignum *a, const struct crypto_bignum *b, struct crypto_bignum *c);
 
 /**
  * crypto_bignum_sub - c = a - b
@@ -690,9 +660,7 @@ int crypto_bignum_inverse(const struct crypto_bignum *a,
  * @c: Bignum; used to store the result of a - b
  * Returns: 0 on success, -1 on failure
  */
-int crypto_bignum_sub(const struct crypto_bignum *a,
-		      const struct crypto_bignum *b,
-		      struct crypto_bignum *c);
+int crypto_bignum_sub(const struct crypto_bignum *a, const struct crypto_bignum *b, struct crypto_bignum *c);
 
 /**
  * crypto_bignum_div - c = a / b
@@ -701,9 +669,7 @@ int crypto_bignum_sub(const struct crypto_bignum *a,
  * @c: Bignum; used to store the result of a / b
  * Returns: 0 on success, -1 on failure
  */
-int crypto_bignum_div(const struct crypto_bignum *a,
-		      const struct crypto_bignum *b,
-		      struct crypto_bignum *c);
+int crypto_bignum_div(const struct crypto_bignum *a, const struct crypto_bignum *b, struct crypto_bignum *c);
 
 /**
  * crypto_bignum_addmod - d = a + b (mod c)
@@ -713,10 +679,8 @@ int crypto_bignum_div(const struct crypto_bignum *a,
  * @d: Bignum; used to store the result of (a + b) % c
  * Returns: 0 on success, -1 on failure
  */
-int crypto_bignum_addmod(const struct crypto_bignum *a,
-			 const struct crypto_bignum *b,
-			 const struct crypto_bignum *c,
-			 struct crypto_bignum *d);
+int crypto_bignum_addmod(const struct crypto_bignum *a, const struct crypto_bignum *b, const struct crypto_bignum *c,
+                         struct crypto_bignum *d);
 
 /**
  * crypto_bignum_mulmod - d = a * b (mod c)
@@ -726,10 +690,8 @@ int crypto_bignum_addmod(const struct crypto_bignum *a,
  * @d: Bignum; used to store the result of (a * b) % c
  * Returns: 0 on success, -1 on failure
  */
-int crypto_bignum_mulmod(const struct crypto_bignum *a,
-			 const struct crypto_bignum *b,
-			 const struct crypto_bignum *c,
-			 struct crypto_bignum *d);
+int crypto_bignum_mulmod(const struct crypto_bignum *a, const struct crypto_bignum *b, const struct crypto_bignum *c,
+                         struct crypto_bignum *d);
 
 /**
  * crypto_bignum_cmp - Compare two bignums
@@ -737,8 +699,7 @@ int crypto_bignum_mulmod(const struct crypto_bignum *a,
  * @b: Bignum
  * Returns: -1 if a < b, 0 if a == b, or 1 if a > b
  */
-int crypto_bignum_cmp(const struct crypto_bignum *a,
-		      const struct crypto_bignum *b);
+int crypto_bignum_cmp(const struct crypto_bignum *a, const struct crypto_bignum *b);
 
 /**
  * crypto_bignum_bits - Get size of a bignum in bits
@@ -767,9 +728,7 @@ int crypto_bignum_is_one(const struct crypto_bignum *a);
  * @p: Bignum
  * Returns: Legendre symbol -1,0,1 on success; -2 on calculation failure
  */
-int crypto_bignum_legendre(const struct crypto_bignum *a,
-        const struct crypto_bignum *p);
-
+int crypto_bignum_legendre(const struct crypto_bignum *a, const struct crypto_bignum *p);
 
 /**
  * struct crypto_ec - Elliptic curve context
@@ -785,7 +744,7 @@ struct crypto_ec;
  *  attribute registrty for RFC 2409)
  * Returns: Pointer to EC context or %NULL on failure
  */
-struct crypto_ec * crypto_ec_init(int group);
+struct crypto_ec *crypto_ec_init(int group);
 
 /**
  * crypto_ec_deinit - Deinitialize elliptic curve context
@@ -812,7 +771,7 @@ size_t crypto_ec_prime_len_bits(struct crypto_ec *e);
  * @e: EC context from crypto_ec_init()
  * Returns: Prime (bignum) defining the group
  */
-const struct crypto_bignum * crypto_ec_get_prime(struct crypto_ec *e);
+const struct crypto_bignum *crypto_ec_get_prime(struct crypto_ec *e);
 
 /**
  * crypto_ec_get_a - Get curve coefficients a
@@ -833,7 +792,7 @@ const struct crypto_bignum *crypto_ec_get_b(struct crypto_ec *e);
  * @e: EC context from crypto_ec_init()
  * Returns: Order (bignum) of the group
  */
-const struct crypto_bignum * crypto_ec_get_order(struct crypto_ec *e);
+const struct crypto_bignum *crypto_ec_get_order(struct crypto_ec *e);
 
 /**
  * struct crypto_ec_point - Elliptic curve point
@@ -848,7 +807,7 @@ struct crypto_ec_point;
  * @e: EC context from crypto_ec_init()
  * Returns: Pointer to EC point data or %NULL on failure
  */
-struct crypto_ec_point * crypto_ec_point_init(struct crypto_ec *e);
+struct crypto_ec_point *crypto_ec_point_init(struct crypto_ec *e);
 
 /**
  * crypto_ec_point_deinit - Deinitialize EC point data
@@ -869,8 +828,7 @@ void crypto_ec_point_deinit(struct crypto_ec_point *p, int clear);
  * that has the x and y coordinates in big endian byte order fields padded to
  * the length of the prime defining the group.
  */
-int crypto_ec_point_to_bin(struct crypto_ec *e,
-        const struct crypto_ec_point *point, uint8_t *x, uint8_t *y);
+int crypto_ec_point_to_bin(struct crypto_ec *e, const struct crypto_ec_point *point, uint8_t *x, uint8_t *y);
 
 /**
  * crypto_ec_point_from_bin - Create EC point from binary data
@@ -882,8 +840,7 @@ int crypto_ec_point_to_bin(struct crypto_ec *e,
  * buffer assuming the values are in big endian byte order with fields padded to
  * the length of the prime defining the group.
  */
-struct crypto_ec_point * crypto_ec_point_from_bin(struct crypto_ec *e,
-        const uint8_t *val);
+struct crypto_ec_point *crypto_ec_point_from_bin(struct crypto_ec *e, const uint8_t *val);
 
 /**
  * crypto_bignum_add - c = a + b
@@ -893,9 +850,8 @@ struct crypto_ec_point * crypto_ec_point_from_bin(struct crypto_ec *e,
  * @c: Bignum; used to store the result of a + b
  * Returns: 0 on success, -1 on failure
  */
-int crypto_ec_point_add(struct crypto_ec *e, const struct crypto_ec_point *a,
-        const struct crypto_ec_point *b,
-        struct crypto_ec_point *c);
+int crypto_ec_point_add(struct crypto_ec *e, const struct crypto_ec_point *a, const struct crypto_ec_point *b,
+                        struct crypto_ec_point *c);
 
 /**
  * crypto_bignum_mul - res = b * p
@@ -905,9 +861,8 @@ int crypto_ec_point_add(struct crypto_ec *e, const struct crypto_ec_point *a,
  * @res: EC point; used to store the result of b * p
  * Returns: 0 on success, -1 on failure
  */
-int crypto_ec_point_mul(struct crypto_ec *e, const struct crypto_ec_point *p,
-        const struct crypto_bignum *b,
-        struct crypto_ec_point *res);
+int crypto_ec_point_mul(struct crypto_ec *e, const struct crypto_ec_point *p, const struct crypto_bignum *b,
+                        struct crypto_ec_point *res);
 
 /**
  * crypto_ec_point_invert - Compute inverse of an EC point
@@ -925,9 +880,8 @@ int crypto_ec_point_invert(struct crypto_ec *e, struct crypto_ec_point *p);
  * @y_bit: y-bit (0 or 1) for selecting the y value to use
  * Returns: 0 on success, -1 on failure
  */
-int crypto_ec_point_solve_y_coord(struct crypto_ec *e,
-        struct crypto_ec_point *p,
-        const struct crypto_bignum *x, int y_bit);
+int crypto_ec_point_solve_y_coord(struct crypto_ec *e, struct crypto_ec_point *p, const struct crypto_bignum *x,
+                                  int y_bit);
 
 /**
  * crypto_ec_point_compute_y_sqr - Compute y^2 = x^3 + ax + b
@@ -935,9 +889,7 @@ int crypto_ec_point_solve_y_coord(struct crypto_ec *e,
  * @x: x coordinate
  * Returns: y^2 on success, %NULL failure
  */
-struct crypto_bignum *
-crypto_ec_point_compute_y_sqr(struct crypto_ec *e,
-        const struct crypto_bignum *x);
+struct crypto_bignum *crypto_ec_point_compute_y_sqr(struct crypto_ec *e, const struct crypto_bignum *x);
 
 /**
  * crypto_ec_point_is_at_infinity - Check whether EC point is neutral element
@@ -946,8 +898,7 @@ crypto_ec_point_compute_y_sqr(struct crypto_ec *e,
  * Returns: 1 if the specified EC point is the neutral element of the group or
  *   0 if not
  */
-int crypto_ec_point_is_at_infinity(struct crypto_ec *e,
-        const struct crypto_ec_point *p);
+int crypto_ec_point_is_at_infinity(struct crypto_ec *e, const struct crypto_ec_point *p);
 
 /**
  * crypto_ec_point_is_on_curve - Check whether EC point is on curve
@@ -955,8 +906,7 @@ int crypto_ec_point_is_at_infinity(struct crypto_ec *e,
  * @p: EC point
  * Returns: 1 if the specified EC point is on the curve or 0 if not
  */
-int crypto_ec_point_is_on_curve(struct crypto_ec *e,
-        const struct crypto_ec_point *p);
+int crypto_ec_point_is_on_curve(struct crypto_ec *e, const struct crypto_ec_point *p);
 
 /**
  * crypto_ec_point_cmp - Compare two EC points
@@ -965,9 +915,7 @@ int crypto_ec_point_is_on_curve(struct crypto_ec *e,
  * @b: EC point
  * Returns: 0 on equal, non-zero otherwise
  */
-int crypto_ec_point_cmp(const struct crypto_ec *e,
-        const struct crypto_ec_point *a,
-        const struct crypto_ec_point *b);
+int crypto_ec_point_cmp(const struct crypto_ec *e, const struct crypto_ec_point *a, const struct crypto_ec_point *b);
 
 /**
  * crypto_ec_get_publickey_buf - Write EC public key to buffer
@@ -1022,8 +970,7 @@ int crypto_ec_get_curve_id(const struct crypto_ec_group *group);
  * @secret_len: secret len
  * Returns: 0 if success else negative value
  */
-int crypto_ecdh(struct crypto_key *key_own, struct crypto_key *key_peer,
-		uint8_t *secret, size_t *secret_len);
+int crypto_ecdh(struct crypto_key *key_own, struct crypto_key *key_peer, uint8_t *secret, size_t *secret_len);
 
 /**
  * crypto_ecdsa_get_sign: get crypto ecdsa signed hash
@@ -1034,9 +981,8 @@ int crypto_ecdh(struct crypto_key *key_own, struct crypto_key *key_peer,
  * @hash_len: length of hash
  * Return: 0 if success else negative value
  */
-int crypto_ecdsa_get_sign(unsigned char *hash,
-		const struct crypto_bignum *r, const struct crypto_bignum *s,
-		struct crypto_key *csign, int hash_len);
+int crypto_ecdsa_get_sign(unsigned char *hash, const struct crypto_bignum *r, const struct crypto_bignum *s,
+                          struct crypto_key *csign, int hash_len);
 
 /**
  * crypto_edcsa_sign_verify: verify crypto ecdsa signed hash
@@ -1047,8 +993,8 @@ int crypto_ecdsa_get_sign(unsigned char *hash,
  * @hlen: length of hash
  * Return: 0 if success else negative value
  */
-int crypto_edcsa_sign_verify(const unsigned char *hash, const struct crypto_bignum *r,
-			const struct crypto_bignum *s, struct crypto_key *csign, int hlen);
+int crypto_edcsa_sign_verify(const unsigned char *hash, const struct crypto_bignum *r, const struct crypto_bignum *s,
+                             struct crypto_key *csign, int hlen);
 
 /**
  * crypto_ec_parse_subpub_key: get EC key context from sub public key
@@ -1070,7 +1016,7 @@ int crypto_is_ec_key(struct crypto_key *key);
  * @ike_group: grpup
  * Return: crypto key
  */
-struct crypto_key * crypto_ec_gen_keypair(uint16_t ike_group);
+struct crypto_key *crypto_ec_gen_keypair(uint16_t ike_group);
 
 /**
  * crypto_ec_write_pub_key: return public key in charater buffer
@@ -1087,8 +1033,7 @@ int crypto_ec_write_pub_key(struct crypto_key *key, unsigned char **key_buf);
  * @len: length of x and y coordiate
  * Return : crypto key
  */
-struct crypto_key * crypto_ec_set_pubkey_point(const struct crypto_ec_group *group,
-					     const uint8_t *buf, size_t len);
+struct crypto_key *crypto_ec_set_pubkey_point(const struct crypto_ec_group *group, const uint8_t *buf, size_t len);
 /**
  * crypto_ec_free_key: free crypto key
  * Return : None
@@ -1123,8 +1068,8 @@ int crypto_get_order(struct crypto_ec_group *group, struct crypto_bignum *x);
  * @y: y coordinate
  * Return : 0 if success
  */
-int crypto_ec_get_affine_coordinates(struct crypto_ec *e, struct crypto_ec_point *pt,
-        struct crypto_bignum *x, struct crypto_bignum *y);
+int crypto_ec_get_affine_coordinates(struct crypto_ec *e, struct crypto_ec_point *pt, struct crypto_bignum *x,
+                                     struct crypto_bignum *y);
 
 /**
  * crypto_ec_get_group_byname: get ec curve group by name
@@ -1171,9 +1116,8 @@ int crypto_ec_get_priv_key_der(struct crypto_key *key, unsigned char **key_data,
  * @padlen: padding length
  * Return : 0 if success
  */
-int crypto_bignum_to_string(const struct crypto_bignum *a,
-		uint8_t *buf, size_t buflen, size_t padlen);
+int crypto_bignum_to_string(const struct crypto_bignum *a, uint8_t *buf, size_t buflen, size_t padlen);
 
-#endif //defined(NT_FN_WPA3) || defined(NT_FN_WPS)
+#endif  // defined(NT_FN_WPA3) || defined(NT_FN_WPS)
 
 #endif /* CORE_WIFI_SECURITY_INC_CRYPTO_MBEDTLS_H_ */

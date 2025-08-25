@@ -83,7 +83,7 @@ static esp_err_t httpd_send_all(httpd_req_t *r, const char *buf, size_t buf_len)
             return ESP_FAIL;
         }
         ESP_LOGD(TAG, LOG_FMT("sent = %d"), ret);
-        buf     += ret;
+        buf += ret;
         buf_len -= ret;
     }
     return ESP_OK;
@@ -104,16 +104,17 @@ static size_t httpd_recv_pending(httpd_req_t *r, char *buf, size_t buf_len)
 
 int httpd_recv_with_opt(httpd_req_t *r, char *buf, size_t buf_len, bool halt_after_pending)
 {
-    ESP_LOGD(TAG, LOG_FMT("requested length = %"NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST(buf_len));
+    ESP_LOGD(TAG, LOG_FMT("requested length = %" NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST(buf_len));
 
     size_t pending_len = 0;
     struct httpd_req_aux *ra = r->aux;
 
     /* First fetch pending data from local buffer */
     if (ra->sd->pending_len > 0) {
-        ESP_LOGD(TAG, LOG_FMT("pending length = %"NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST(ra->sd->pending_len));
+        ESP_LOGD(TAG, LOG_FMT("pending length = %" NEWLIB_NANO_COMPAT_FORMAT),
+                 NEWLIB_NANO_COMPAT_CAST(ra->sd->pending_len));
         pending_len = httpd_recv_pending(r, buf, buf_len);
-        buf     += pending_len;
+        buf += pending_len;
         buf_len -= pending_len;
 
         /* If buffer filled then no need to recv.
@@ -140,7 +141,8 @@ int httpd_recv_with_opt(httpd_req_t *r, char *buf, size_t buf_len, bool halt_aft
         return ret;
     }
 
-    ESP_LOGD(TAG, LOG_FMT("received length = %"NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST((ret + pending_len)));
+    ESP_LOGD(TAG, LOG_FMT("received length = %" NEWLIB_NANO_COMPAT_FORMAT),
+             NEWLIB_NANO_COMPAT_CAST((ret + pending_len)));
     return ret + pending_len;
 }
 
@@ -159,7 +161,7 @@ size_t httpd_unrecv(struct httpd_req *r, const char *buf, size_t buf_len)
      * such that it is right aligned inside the buffer */
     size_t offset = sizeof(ra->sd->pending_data) - ra->sd->pending_len;
     memcpy(ra->sd->pending_data + offset, buf, ra->sd->pending_len);
-    ESP_LOGD(TAG, LOG_FMT("length = %"NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST(ra->sd->pending_len));
+    ESP_LOGD(TAG, LOG_FMT("length = %" NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST(ra->sd->pending_len));
     return ra->sd->pending_len;
 }
 
@@ -178,7 +180,7 @@ esp_err_t httpd_resp_set_hdr(httpd_req_t *r, const char *field, const char *valu
     }
 
     struct httpd_req_aux *ra = r->aux;
-    struct httpd_data *hd = (struct httpd_data *) r->handle;
+    struct httpd_data *hd = (struct httpd_data *)r->handle;
 
     /* Number of additional headers is limited */
     if (ra->resp_hdrs_count >= hd->config.max_resp_headers) {
@@ -255,8 +257,8 @@ esp_err_t httpd_resp_send(httpd_req_t *r, const char *buf, ssize_t buf_len)
     ra->req_hdrs_count = 0;
 
     /* Size of essential headers is limited by scratch buffer size */
-    if (snprintf(ra->scratch, sizeof(ra->scratch), httpd_hdr_str,
-                 ra->status, ra->content_type, buf_len) >= sizeof(ra->scratch)) {
+    if (snprintf(ra->scratch, sizeof(ra->scratch), httpd_hdr_str, ra->status, ra->content_type, buf_len) >=
+        sizeof(ra->scratch)) {
         return ESP_ERR_HTTPD_RESP_HDR;
     }
 
@@ -329,8 +331,8 @@ esp_err_t httpd_resp_send_chunk(httpd_req_t *r, const char *buf, ssize_t buf_len
 
     if (!ra->first_chunk_sent) {
         /* Size of essential headers is limited by scratch buffer size */
-        if (snprintf(ra->scratch, sizeof(ra->scratch), httpd_chunked_hdr_str,
-                     ra->status, ra->content_type) >= sizeof(ra->scratch)) {
+        if (snprintf(ra->scratch, sizeof(ra->scratch), httpd_chunked_hdr_str, ra->status, ra->content_type) >=
+            sizeof(ra->scratch)) {
             return ESP_ERR_HTTPD_RESP_HDR;
         }
 
@@ -374,7 +376,7 @@ esp_err_t httpd_resp_send_chunk(httpd_req_t *r, const char *buf, ssize_t buf_len
     }
 
     if (buf) {
-        if (httpd_send_all(r, buf, (size_t) buf_len) != ESP_OK) {
+        if (httpd_send_all(r, buf, (size_t)buf_len) != ESP_OK) {
             return ESP_ERR_HTTPD_RESP_SEND;
         }
     }
@@ -399,58 +401,58 @@ esp_err_t httpd_resp_send_err(httpd_req_t *req, httpd_err_code_t error, const ch
     const char *status;
 
     switch (error) {
-    case HTTPD_501_METHOD_NOT_IMPLEMENTED:
-        status = "501 Method Not Implemented";
-        msg    = "Server does not support this method";
-        break;
-    case HTTPD_505_VERSION_NOT_SUPPORTED:
-        status = "505 Version Not Supported";
-        msg    = "HTTP version not supported by server";
-        break;
-    case HTTPD_400_BAD_REQUEST:
-        status = "400 Bad Request";
-        msg    = "Bad request syntax";
-        break;
-    case HTTPD_401_UNAUTHORIZED:
-        status = "401 Unauthorized";
-        msg    = "No permission -- see authorization schemes";
-        break;
-    case HTTPD_403_FORBIDDEN:
-        status = "403 Forbidden";
-        msg    = "Request forbidden -- authorization will not help";
-        break;
-    case HTTPD_404_NOT_FOUND:
-        status = "404 Not Found";
-        msg    = "Nothing matches the given URI";
-        break;
-    case HTTPD_405_METHOD_NOT_ALLOWED:
-        status = "405 Method Not Allowed";
-        msg    = "Specified method is invalid for this resource";
-        break;
-    case HTTPD_408_REQ_TIMEOUT:
-        status = "408 Request Timeout";
-        msg    = "Server closed this connection";
-        break;
-    case HTTPD_414_URI_TOO_LONG:
-        status = "414 URI Too Long";
-        msg    = "URI is too long";
-        break;
-    case HTTPD_411_LENGTH_REQUIRED:
-        status = "411 Length Required";
-        msg    = "Client must specify Content-Length";
-        break;
-    case HTTPD_413_CONTENT_TOO_LARGE:
-        status = "413 Content Too Large";
-        msg    = "Content is too large";
-        break;
-    case HTTPD_431_REQ_HDR_FIELDS_TOO_LARGE:
-        status = "431 Request Header Fields Too Large";
-        msg    = "Header fields are too long";
-        break;
-    case HTTPD_500_INTERNAL_SERVER_ERROR:
-    default:
-        status = "500 Internal Server Error";
-        msg    = "Server has encountered an unexpected error";
+        case HTTPD_501_METHOD_NOT_IMPLEMENTED:
+            status = "501 Method Not Implemented";
+            msg = "Server does not support this method";
+            break;
+        case HTTPD_505_VERSION_NOT_SUPPORTED:
+            status = "505 Version Not Supported";
+            msg = "HTTP version not supported by server";
+            break;
+        case HTTPD_400_BAD_REQUEST:
+            status = "400 Bad Request";
+            msg = "Bad request syntax";
+            break;
+        case HTTPD_401_UNAUTHORIZED:
+            status = "401 Unauthorized";
+            msg = "No permission -- see authorization schemes";
+            break;
+        case HTTPD_403_FORBIDDEN:
+            status = "403 Forbidden";
+            msg = "Request forbidden -- authorization will not help";
+            break;
+        case HTTPD_404_NOT_FOUND:
+            status = "404 Not Found";
+            msg = "Nothing matches the given URI";
+            break;
+        case HTTPD_405_METHOD_NOT_ALLOWED:
+            status = "405 Method Not Allowed";
+            msg = "Specified method is invalid for this resource";
+            break;
+        case HTTPD_408_REQ_TIMEOUT:
+            status = "408 Request Timeout";
+            msg = "Server closed this connection";
+            break;
+        case HTTPD_414_URI_TOO_LONG:
+            status = "414 URI Too Long";
+            msg = "URI is too long";
+            break;
+        case HTTPD_411_LENGTH_REQUIRED:
+            status = "411 Length Required";
+            msg = "Client must specify Content-Length";
+            break;
+        case HTTPD_413_CONTENT_TOO_LARGE:
+            status = "413 Content Too Large";
+            msg = "Content is too large";
+            break;
+        case HTTPD_431_REQ_HDR_FIELDS_TOO_LARGE:
+            status = "431 Request Header Fields Too Large";
+            msg = "Header fields are too long";
+            break;
+        case HTTPD_500_INTERNAL_SERVER_ERROR:
+        default:
+            status = "500 Internal Server Error";
+            msg = "Server has encountered an unexpected error";
     }
 
     /* If user has provided custom message, override default message */
@@ -533,22 +535,21 @@ esp_err_t httpd_resp_send_custom_err(httpd_req_t *req, const char *status, const
     return ret;
 }
 
-esp_err_t httpd_register_err_handler(httpd_handle_t handle,
-                                     httpd_err_code_t error,
+esp_err_t httpd_register_err_handler(httpd_handle_t handle, httpd_err_code_t error,
                                      httpd_err_handler_func_t err_handler_fn)
 {
     if (handle == NULL || error >= HTTPD_ERR_CODE_MAX) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    struct httpd_data *hd = (struct httpd_data *) handle;
+    struct httpd_data *hd = (struct httpd_data *)handle;
     hd->err_handler_fns[error] = err_handler_fn;
     return ESP_OK;
 }
 
 esp_err_t httpd_req_handle_err(httpd_req_t *req, httpd_err_code_t error)
 {
-    struct httpd_data *hd = (struct httpd_data *) req->handle;
+    struct httpd_data *hd = (struct httpd_data *)req->handle;
     esp_err_t ret;
 
     /* Invoke custom error handler if configured */
@@ -580,7 +581,8 @@ int httpd_req_recv(httpd_req_t *r, char *buf, size_t buf_len)
     }
 
     struct httpd_req_aux *ra = r->aux;
-    ESP_LOGD(TAG, LOG_FMT("remaining length = %"NEWLIB_NANO_COMPAT_FORMAT), NEWLIB_NANO_COMPAT_CAST(ra->remaining_len));
+    ESP_LOGD(TAG, LOG_FMT("remaining length = %" NEWLIB_NANO_COMPAT_FORMAT),
+             NEWLIB_NANO_COMPAT_CAST(ra->remaining_len));
 
     if (buf_len > ra->remaining_len) {
         buf_len = ra->remaining_len;
@@ -626,9 +628,9 @@ esp_err_t httpd_req_async_handler_begin(httpd_req_t *r, httpd_req_t **out)
     memcpy(async->aux, r->aux, sizeof(struct httpd_req_aux));
 
     // Copy response header block
-    struct httpd_data *hd = (struct httpd_data *) r->handle;
-    struct httpd_req_aux *async_aux = (struct httpd_req_aux *) async->aux;
-    struct httpd_req_aux *r_aux = (struct httpd_req_aux *) r->aux;
+    struct httpd_data *hd = (struct httpd_data *)r->handle;
+    struct httpd_req_aux *async_aux = (struct httpd_req_aux *)async->aux;
+    struct httpd_req_aux *r_aux = (struct httpd_req_aux *)r->aux;
 
     async_aux->resp_hdrs = calloc(hd->config.max_resp_headers, sizeof(struct resp_hdr));
     if (async_aux->resp_hdrs == NULL) {
@@ -686,18 +688,18 @@ static int httpd_sock_err(const char *ctx, int sockfd)
     ESP_LOGW(TAG, LOG_FMT("error in %s : %d"), ctx, errno);
 
     switch (errno) {
-    case EAGAIN:
-    case EINTR:
-        errval = HTTPD_SOCK_ERR_TIMEOUT;
-        break;
-    case EINVAL:
-    case EBADF:
-    case EFAULT:
-    case ENOTSOCK:
-        errval = HTTPD_SOCK_ERR_INVALID;
-        break;
-    default:
-        errval = HTTPD_SOCK_ERR_FAIL;
+        case EAGAIN:
+        case EINTR:
+            errval = HTTPD_SOCK_ERR_TIMEOUT;
+            break;
+        case EINVAL:
+        case EBADF:
+        case EFAULT:
+        case ENOTSOCK:
+            errval = HTTPD_SOCK_ERR_INVALID;
+            break;
+        default:
+            errval = HTTPD_SOCK_ERR_FAIL;
     }
     return errval;
 }

@@ -1,76 +1,73 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
-
-#ifndef  _HAL_API_SYS_H_
-#define  _HAL_API_SYS_H_
+#ifndef _HAL_API_SYS_H_
+#define _HAL_API_SYS_H_
 
 #include <stdint.h>
 #include "ieee80211_defs.h"  // included for accessing wmm parameters structure
 #include "nt_common.h"
 //#include "hal_int_security.h" //included for accessing encryption type structure
 
-#define HAL_STATUS(err)            (NT_MODULE_HAL | (err))
+#define HAL_STATUS(err) (NT_MODULE_HAL | (err))
 
-#define HAL_NBSS_MAX            2          // max number of BSS supported
-#define HAL_NSTA_MAX            7          // max number of STA's supported (includes self STA)
-#define HAL_RETRY_RATES_NUM_MAX 3          // max number of retry rates supported
-#define HAL_TIDS_MAX            16         // max number of TID's supported (<= 16)
+#define HAL_NBSS_MAX            2   // max number of BSS supported
+#define HAL_NSTA_MAX            7   // max number of STA's supported (includes self STA)
+#define HAL_RETRY_RATES_NUM_MAX 3   // max number of retry rates supported
+#define HAL_TIDS_MAX            16  // max number of TID's supported (<= 16)
 
-#define HAL_MACADDR_SZ          6          // mac address size
-#define HAL_MACADDR_LOW_WORD    4          // mac address size
+#define HAL_MACADDR_SZ       6  // mac address size
+#define HAL_MACADDR_LOW_WORD 4  // mac address size
 
 // these are also used to index into the BSS table - do not change these defs
-#define HAL_BSSMODE_AP          0          // BSS started as an infra-AP
-#define HAL_BSSMODE_STA         1          // STA connecting to an infra AP
+#define HAL_BSSMODE_AP  0  // BSS started as an infra-AP
+#define HAL_BSSMODE_STA 1  // STA connecting to an infra AP
 #ifndef SUPPORT_TWO_STA_CONC
-#define HAL_BSSMODE_MAX         2
+#define HAL_BSSMODE_MAX 2
 
-#define HAL_AP_START_STAIDX		3			//Staidx for connected stations starts from 3 on AP side
+#define HAL_AP_START_STAIDX 3  // Staidx for connected stations starts from 3 on AP side
 #else
-#define HAL_BSSMODE_STA2        2
-#define HAL_BSSMODE_MAX         3
+#define HAL_BSSMODE_STA2 2
+#define HAL_BSSMODE_MAX  3
 
-#define HAL_AP_START_STAIDX		4			//Staidx for connected stations starts from 4 on AP side
+#define HAL_AP_START_STAIDX 4  // Staidx for connected stations starts from 4 on AP side
 #endif
-#define DPU_IDX_STA1            0          //dpu index used for sta1
-#define DPU_IDX_STA2            1         //dpu index used for sta2
-#define DPU_IDX_INVALID         0xFF
-#define HAL_BSSMODE_INVALID     0xFF
-#define GET_STA_ID_FROM_HAL_MOD(x) x  /* mode and sta_id has one to one mapping,
-                                       * and staid is initalized with mode
-                                       * in nt_hal_bss_add function
-                                       */
-typedef struct nt_hal_ba_params_s
-{
-	//Block ack supported parameters
-	uint16_t ba_buffersize;
-	uint16_t ba_tid;
-	uint8_t ba_direction;
-	uint16_t seq_num;
-	uint8_t ba_enable;
+#define DPU_IDX_STA1        0  // dpu index used for sta1
+#define DPU_IDX_STA2        1  // dpu index used for sta2
+#define DPU_IDX_INVALID     0xFF
+#define HAL_BSSMODE_INVALID 0xFF
+#define GET_STA_ID_FROM_HAL_MOD(x)               \
+    x /* mode and sta_id has one to one mapping, \
+       * and staid is initalized with mode       \
+       * in nt_hal_bss_add function              \
+       */
+typedef struct nt_hal_ba_params_s {
+    // Block ack supported parameters
+    uint16_t ba_buffersize;
+    uint16_t ba_tid;
+    uint8_t ba_direction;
+    uint16_t seq_num;
+    uint8_t ba_enable;
 
-}nt_hal_ba_params_t;
+} nt_hal_ba_params_t;
 
+typedef struct nt_hal_sta_s {
+    // First two fields bssid and assocId are used to find staid for sta.
+    uint16_t aid;                     // assoc id - on a per bss basis
+    uint8_t sta_mac[HAL_MACADDR_SZ];  // MAC Address of STA
+    uint16_t listen_interval;         // Listen interval.
 
-typedef struct nt_hal_sta_s
-{
-	// First two fields bssid and assocId are used to find staid for sta.
-	uint16_t aid;                         // assoc id - on a per bss basis
-	uint8_t  sta_mac[HAL_MACADDR_SZ];     // MAC Address of STA
-	uint16_t listen_interval;             // Listen interval.
+    // these are assigned for internal use by HAL
+    uint8_t sta_idx;
+    uint8_t rmf;
 
-	// these are assigned for internal use by HAL
-	uint8_t  sta_idx;
-	uint8_t rmf;
+    uint8_t p_rate;  // primay tx rate table index
+    uint8_t s_rate;  // secondary tx rate table index
+    uint8_t t_rate;  // tertiary tx rate table index
 
-	uint8_t p_rate;           //primay tx rate table index
-	uint8_t s_rate;           //secondary tx rate table index
-	uint8_t t_rate;           //tertiary tx rate table index
-
-	#if 0
+#if 0
 		// Field to indicate if this is sta entry for itself STA adding entry for itself
 		// or remote (AP adding STA after successful association.
 		// This may or may not be required in production driver.
@@ -215,42 +212,41 @@ typedef struct nt_hal_sta_s
 		tANI_U8 enableLifetimeQid07;
 		tANI_U16 lifetimeThresholdQid07;
 
-	#endif
+#endif
 
-		nt_hal_ba_params_t hal_ba_params;
+    nt_hal_ba_params_t hal_ba_params;
 
 } nt_hal_sta_t;
 
-typedef struct nt_hal_bss_s
-{
-	uint8_t  bss_id[HAL_MACADDR_SZ];    // MAC Address/BSSID/same as wifi local mac address
-	uint8_t  local_mac[HAL_MACADDR_SZ]; // local wifi mac address, ignored for BSSMODE_AP,
-										// for BSSMODE_STA this is used to configure STA desc
+typedef struct nt_hal_bss_s {
+    uint8_t bss_id[HAL_MACADDR_SZ];     // MAC Address/BSSID/same as wifi local mac address
+    uint8_t local_mac[HAL_MACADDR_SZ];  // local wifi mac address, ignored for BSSMODE_AP,
+                                        // for BSSMODE_STA this is used to configure STA desc
 
-	uint8_t  bss_mode;                  // HAL_BSSMODE_* (AP or STA)
+    uint8_t bss_mode;  // HAL_BSSMODE_* (AP or STA)
 
-	uint8_t  bcn_dtim;                  // AP: DTIM count (number of beacons, 0/1 => all bcns are DTIM)
-	uint16_t bcn_interval;              // AP: delta between beacons (number of TU's)
-	uint8_t  bss_bcn_rate;              // AP: 0 => default, [0, HAL_RT_IDX_MAX_RATES)
-	uint8_t  bss_uc_rate;               // AP: 0 => default  [0, HAL_RT_IDX_MAX_RATES)
-	uint8_t  bss_mcbc_rate;             // AP: 0 => default  [0, HAL_RT_IDX_MAX_RATES)
-	uint8_t* bcn;                       // AP: pointer to beacon mgmt frame (not including template header)
-	uint16_t bcn_len;                   // AP: number of bytes in the beacon
+    uint8_t bcn_dtim;       // AP: DTIM count (number of beacons, 0/1 => all bcns are DTIM)
+    uint16_t bcn_interval;  // AP: delta between beacons (number of TU's)
+    uint8_t bss_bcn_rate;   // AP: 0 => default, [0, HAL_RT_IDX_MAX_RATES)
+    uint8_t bss_uc_rate;    // AP: 0 => default  [0, HAL_RT_IDX_MAX_RATES)
+    uint8_t bss_mcbc_rate;  // AP: 0 => default  [0, HAL_RT_IDX_MAX_RATES)
+    uint8_t *bcn;           // AP: pointer to beacon mgmt frame (not including template header)
+    uint16_t bcn_len;       // AP: number of bytes in the beacon
 
-	// these are assigned for internal use by HAL
-	uint8_t  bss_sta_idx : 1;           // assigned sta id for the BSS itself
-	uint8_t  bss_num_sta : 3;           // number of sta's in the BSS
-	uint8_t  bss_sta_map;               // bitmap of sta's indices assigned in the BSS
-	                                    // 0/1 are reserved for BSS AP/STA; rest are for STA's in AP
+    // these are assigned for internal use by HAL
+    uint8_t bss_sta_idx : 1;  // assigned sta id for the BSS itself
+    uint8_t bss_num_sta : 3;  // number of sta's in the BSS
+    uint8_t bss_sta_map;      // bitmap of sta's indices assigned in the BSS
+                              // 0/1 are reserved for BSS AP/STA; rest are for STA's in AP
 
-	// Broadcast DPU descriptor index allocated by HAL and used for broadcast/multicast packets.
-	uint8_t  bcast_dpu_desc_idx;
+    // Broadcast DPU descriptor index allocated by HAL and used for broadcast/multicast packets.
+    uint8_t bcast_dpu_desc_idx;
 
-#ifdef ENABLE_MCS4_RX 
+#ifdef ENABLE_MCS4_RX
     uint8_t mcs4_rx_enabled;
 #endif /*ENABLE_MCS4_RX*/
 
-	#if 0
+#if 0
 		// MAC Rate Set
 		// Review FIXME - Does HAL need this?
 		tSirMacRateSet rateSet;
@@ -275,10 +271,9 @@ typedef struct nt_hal_bss_s
 
 		// Current Extension Channel, if applicable
 		tANI_U8 currentExtChannel;
-	#endif
+#endif
 
-
-	#if 0
+#if 0
 		/*
 		* Following parameters are for returning status and station index from HAL to PE
 		* via response message. HAL does not read them.
@@ -299,32 +294,33 @@ typedef struct nt_hal_bss_s
 		//HAL will send the response message to LIM only when this flag is set.
 		//LIM will set this flag, whereas DVT will not set this flag.
 		tANI_U8 respReqd;
-	#endif
+#endif
 
-		void(*pre_beacon_callback)(void); //call back function
-		void (*bad_decrypt_error_interrupt_callback)(void); //call back function for bad decrypt error
-		void(*mic_error_interrupt_callback)(void); //call back function for mic error
-		void(*eosp_interrupt_callback)(uint8_t tid, uint8_t more_bit, uint8_t staid); //Call back function for eosp interrupt
-		void(*more_bit_interrupt_callback)(void); //More bit interrupt callback
+    void (*pre_beacon_callback)(void);                   // call back function
+    void (*bad_decrypt_error_interrupt_callback)(void);  // call back function for bad decrypt error
+    void (*mic_error_interrupt_callback)(void);          // call back function for mic error
+    void (*eosp_interrupt_callback)(uint8_t tid, uint8_t more_bit,
+                                    uint8_t staid);  // Call back function for eosp interrupt
+    void (*more_bit_interrupt_callback)(void);       // More bit interrupt callback
 
-		void(*tsf_match_callback)(); //call back function for tsf match
-		void(*tsf_match_beacon_callback)(); //call back function for twbtt tsf match for wur beacon
-	#if (defined NT_FN_TWT)
-		void(*tsf_match_twt_sleep_callback)();
-	#endif	//NT_FN_TWT
-	#if (defined NT_FN_WUR_STA)
-		/*! @function : wur_packet_interrupt_callback
-		 * 	@Brief	:	call back funtion for received wur frame
-		 * 	@Param	:	received frame byte
-		 * */
-		void(*wur_packet_interrupt_callback)(uint64_t payload);
-		void(*wake_main_radio_interrupt_callback)();
-		void(*wur_beacon_miss_interrupt_callback)();
-		void(*wur_packet_crc_error_interrupt_callback)(); //Wur packet crc error interrupt callback
-	#endif
+    void (*tsf_match_callback)();         // call back function for tsf match
+    void (*tsf_match_beacon_callback)();  // call back function for twbtt tsf match for wur beacon
+#if (defined NT_FN_TWT)
+    void (*tsf_match_twt_sleep_callback)();
+#endif  // NT_FN_TWT
+#if (defined NT_FN_WUR_STA)
+    /*! @function : wur_packet_interrupt_callback
+     * 	@Brief	:	call back funtion for received wur frame
+     * 	@Param	:	received frame byte
+     * */
+    void (*wur_packet_interrupt_callback)(uint64_t payload);
+    void (*wake_main_radio_interrupt_callback)();
+    void (*wur_beacon_miss_interrupt_callback)();
+    void (*wur_packet_crc_error_interrupt_callback)();  // Wur packet crc error interrupt callback
+#endif
 #ifdef NT_FN_FTM
-		void(*nt_rtt_t4_capture_interrupt_callback)();
-		void(*nt_rtt_t2_capture_interrupt_callback)();
+    void (*nt_rtt_t4_capture_interrupt_callback)();
+    void (*nt_rtt_t2_capture_interrupt_callback)();
 #endif
 
 } nt_hal_bss_t;
@@ -349,7 +345,6 @@ typedef struct nt_hal_bss_s
  */
 nt_status_t nt_hal_bss_add(nt_hal_bss_t *bss);
 
-
 /**
  * @brief Delete a BSS
  * Deletes/frees all the resources associated with the BSS
@@ -359,7 +354,6 @@ nt_status_t nt_hal_bss_add(nt_hal_bss_t *bss);
  * @return eNT_OK  on success
  */
 nt_status_t nt_hal_bss_del(nt_hal_bss_t *bss, uint8_t conc_mode);
-
 
 /**
  * @brief Add a new STA
@@ -389,9 +383,9 @@ nt_status_t nt_hal_sta_del(nt_hal_bss_t *bss, nt_hal_sta_t *sta);
 void hal_modules_txrx_enable(uint8_t enable);
 void hal_mod_bmu_sta_disable(uint8_t staidx);
 void _hal_mod_bmu_sta_enable(uint8_t staidx);
-void hal_mod_rxp_desc_set_mac(uint8_t* mac);
-nt_status_t nt_hal_ba_add(nt_hal_bss_t *bss,nt_hal_sta_t *sta);
-nt_status_t nt_hal_ba_del(nt_hal_bss_t *bss,nt_hal_sta_t *sta);
+void hal_mod_rxp_desc_set_mac(uint8_t *mac);
+nt_status_t nt_hal_ba_add(nt_hal_bss_t *bss, nt_hal_sta_t *sta);
+nt_status_t nt_hal_ba_del(nt_hal_bss_t *bss, nt_hal_sta_t *sta);
 
 #if (FERMION_CHIP_VERSION == 2)
 nt_status_t nt_hal_wmm_params_set(struct chanAccParams *wmm, uint32_t phyRateFullHalfQuarter);
@@ -402,13 +396,13 @@ nt_status_t nt_hal_mod_wmmparam_cw(uint8_t qid, uint16_t min, uint16_t max);
 nt_status_t nt_hal_mod_ba_win_size(uint16_t ack_timeout, uint16_t delay);
 nt_status_t nt_hal_mod_slot_time(uint32_t slot_time);
 
-uint32_t hal_find_seq_num(nt_hal_bss_t *bss,uint32_t staid,uint32_t batid);
-uint32_t nt_hal_get_seq_num(nt_hal_bss_t *bss,uint32_t staid,uint32_t batid);
-uint8_t hal_dpu_descidx_get(uint8_t mode,uint8_t staid);
-void hal_rpe_blockandflush_cache(uint8_t staidx,uint8_t tid,uint8_t blockreq);
-void hal_rpe_updateblockreq(uint8_t staidx,	uint8_t batid,uint8_t blockreq);
+uint32_t hal_find_seq_num(nt_hal_bss_t *bss, uint32_t staid, uint32_t batid);
+uint32_t nt_hal_get_seq_num(nt_hal_bss_t *bss, uint32_t staid, uint32_t batid);
+uint8_t hal_dpu_descidx_get(uint8_t mode, uint8_t staid);
+void hal_rpe_blockandflush_cache(uint8_t staidx, uint8_t tid, uint8_t blockreq);
+void hal_rpe_updateblockreq(uint8_t staidx, uint8_t batid, uint8_t blockreq);
 void hal_rpe_flushbitmap_cache(void);
-void hal_rpe_flushsrc_entry(uint8_t staidx,uint8_t batid);
+void hal_rpe_flushsrc_entry(uint8_t staidx, uint8_t batid);
 /**
  * @brief  Enables eosp interrupt
  * @params none
@@ -427,7 +421,7 @@ void nt_hal_disable_eosp_interrupt(void);
  * @param sta      info about the STA to which rmf bit should update
  * @param rmf      rmf bit to be updated.
  */
-void hal_modules_rmf_update(nt_hal_bss_t* bss, nt_hal_sta_t* sta, uint8_t rmf);
+void hal_modules_rmf_update(nt_hal_bss_t *bss, nt_hal_sta_t *sta, uint8_t rmf);
 uint8_t hal_tblidx_get(uint8_t mode, uint8_t staid);
 void hal_rxp_filter_manipulation(uint8_t testvar);
 
@@ -436,5 +430,4 @@ void hal_rxp_filter_manipulation(uint8_t testvar);
  */
 void nt_hal_get_uapsd_get_info_(uint8_t sta_id);
 
-
-#endif // _HAL_API_SYS_H_
+#endif  // _HAL_API_SYS_H_

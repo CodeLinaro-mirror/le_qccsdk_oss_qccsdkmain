@@ -1,16 +1,16 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*========================================================================
-* @file ring_svc_api.h
-* @brief Ring Service API param and function declarations
-* ======================================================================*/
+ * @file ring_svc_api.h
+ * @brief Ring Service API param and function declarations
+ * ======================================================================*/
 #ifndef RING_SVC_API_H
 #define RING_SVC_API_H
 /*------------------------------------------------------------------------
-* Include Files
-* ----------------------------------------------------------------------*/
+ * Include Files
+ * ----------------------------------------------------------------------*/
 #include <stdbool.h>
 #include "fwconfig_cmn.h"
 #include "nt_flags.h"
@@ -21,28 +21,28 @@
 #include "wifi_fw_ring_api.h"
 
 /*------------------------------------------------------------------------
-* Preprocessor Definitions and Constants
-* ----------------------------------------------------------------------*/
-#define INVALID_RING_ID  0xFF
+ * Preprocessor Definitions and Constants
+ * ----------------------------------------------------------------------*/
+#define INVALID_RING_ID 0xFF
 
 /*------------------------------------------------------------------------
-* Type Declarations
-* ----------------------------------------------------------------------*/
+ * Type Declarations
+ * ----------------------------------------------------------------------*/
 typedef struct _ring_element {
-uint32_t *p_buf; /* Pointer to Fermion memory buffer*/
-uint16_t len;  /* Length of the packet */
-uint16_t info; /* Info describing the packet type */
+    uint32_t *p_buf; /* Pointer to Fermion memory buffer*/
+    uint16_t len;    /* Length of the packet */
+    uint16_t info;   /* Info describing the packet type */
 
-/* Scratch buff */
-void *p_buf_start; /* Start of the buf used for freeing */ 
+    /* Scratch buff */
+    void *p_buf_start; /* Start of the buf used for freeing */
 } ring_element_t;
 
-typedef bool  (* _pfn_clear_elem)(void *p_element);
-typedef bool  (* _pfn_refill_elem)(void *p_element);
-typedef bool (* _pfn_process)( ring_element_t* p_elem);
+typedef bool (*_pfn_clear_elem)(void *p_element);
+typedef bool (*_pfn_refill_elem)(void *p_element);
+typedef bool (*_pfn_process)(ring_element_t *p_elem);
 /*------------------------------------------------------------------------
-* Function Declarations and Documentation
-* ----------------------------------------------------------------------*/
+ * Function Declarations and Documentation
+ * ----------------------------------------------------------------------*/
 /* API exposed to Init module */
 void ringif_init(void);
 void ringif_set_dbg_log_lvl(uint8_t dbg_log_lvl);
@@ -118,12 +118,10 @@ bool ringif_a2f_delete_ring(uint8_t ring_id, _pfn_clear_elem pfn_clear_elem);
 bool ringif_f2a_delete_ring(uint8_t ring_id, _pfn_clear_elem pfn_clear_elem);
 
 /* API for attaching a packet to the ring */
-bool ringif_f2a_pkt_attach(uint8_t ring_id, uint32_t *p_buf_start, 
-                           uint32_t *p_buf, uint16_t len, uint16_t info);
+bool ringif_f2a_pkt_attach(uint8_t ring_id, uint32_t *p_buf_start, uint32_t *p_buf, uint16_t len, uint16_t info);
 
 /* API for detaching multiple packets from the ring */
-uint8_t ringif_a2f_process_pkts(uint8_t ring_id, _pfn_process pfn_process, 
-                                              _pfn_refill_elem pfn_refill);
+uint8_t ringif_a2f_process_pkts(uint8_t ring_id, _pfn_process pfn_process, _pfn_refill_elem pfn_refill);
 
 /* API function to get the control buffer size */
 uint16_t ringif_get_ctrl_buf_size(void);

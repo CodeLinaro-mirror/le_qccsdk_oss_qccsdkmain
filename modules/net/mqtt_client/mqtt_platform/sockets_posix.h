@@ -41,10 +41,10 @@
 
 /* Logging configuration for the Sockets. */
 #ifndef LIBRARY_LOG_NAME
-    #define LIBRARY_LOG_NAME     "Sockets"
+#define LIBRARY_LOG_NAME "Sockets"
 #endif
 #ifndef LIBRARY_LOG_LEVEL
-    #define LIBRARY_LOG_LEVEL    LOG_ERROR
+#define LIBRARY_LOG_LEVEL LOG_ERROR
 #endif
 
 #include "logging_stack.h"
@@ -53,7 +53,7 @@
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
 #endif
 /* *INDENT-ON* */
 
@@ -63,8 +63,7 @@
 /**
  * @brief TCP Connect / Disconnect return status.
  */
-typedef enum SocketStatus
-{
+typedef enum SocketStatus {
     SOCKETS_SUCCESS = 0,         /**< Function successfully completed. */
     SOCKETS_INVALID_PARAMETER,   /**< At least one parameter was invalid. */
     SOCKETS_INSUFFICIENT_MEMORY, /**< Insufficient memory required to establish connection. */
@@ -76,11 +75,10 @@ typedef enum SocketStatus
 /**
  * @brief Information on the remote server for connection setup.
  */
-typedef struct ServerInfo
-{
-    const char * pHostName; /**< @brief Server host name. */
-    size_t hostNameLength;  /**< @brief Length of the server host name. */
-    uint16_t port;          /**< @brief Server port in host-order. */
+typedef struct ServerInfo {
+    const char *pHostName; /**< @brief Server host name. */
+    size_t hostNameLength; /**< @brief Length of the server host name. */
+    uint16_t port;         /**< @brief Server port in host-order. */
 } ServerInfo_t;
 
 /**
@@ -96,10 +94,8 @@ typedef struct ServerInfo
  * @return #SOCKETS_SUCCESS if successful;
  * #SOCKETS_INVALID_PARAMETER, #SOCKETS_DNS_FAILURE, #SOCKETS_CONNECT_FAILURE on error.
  */
-SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
-                                const ServerInfo_t * pServerInfo,
-                                uint32_t sendTimeoutMs,
-                                uint32_t recvTimeoutMs );
+SocketStatus_t Sockets_Connect(int32_t *pTcpSocket, const ServerInfo_t *pServerInfo, uint32_t sendTimeoutMs,
+                               uint32_t recvTimeoutMs);
 
 /**
  * @brief End connection to server.
@@ -108,11 +104,11 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
  *
  * @return #SOCKETS_SUCCESS if successful; #SOCKETS_INVALID_PARAMETER on error.
  */
-SocketStatus_t Sockets_Disconnect( int32_t tcpSocket );
+SocketStatus_t Sockets_Disconnect(int32_t tcpSocket);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus
-    }
+}
 #endif
 /* *INDENT-ON* */
 

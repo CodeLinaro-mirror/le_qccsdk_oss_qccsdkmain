@@ -1,7 +1,6 @@
 #ifndef QURT_MUTEX_H
 #define QURT_MUTEX_H
 
-
 /**
   @file qurt_mutex.h
   @brief Prototypes of mutex API.
@@ -10,7 +9,8 @@
   - Recursive mutex
   - Recursive mutex with priority inheritance.
 
-  The two mutex types have different performance; in particular, mutex lock operations are slower with priority inheritance mutexes.
+  The two mutex types have different performance; in particular, mutex lock operations are slower with priority
+inheritance mutexes.
 
   @note1hang Both mutex behaviors may not be supported on some target platforms.
   The mutex behavior is specified at system build time -- it cannot be changed at runtime.
@@ -29,10 +29,10 @@ INITIALIZATION AND SEQUENCING REQUIREMENTS
                         CONSTANTS AND MACROS
 =============================================================================*/
 
-  /** @addtogroup mutex_types
+/** @addtogroup mutex_types
 @{ */
 
-#define QURT_MUTEX_OBJ_SIZE_BYTES    64 /**< QuRT mutex object size. */
+#define QURT_MUTEX_OBJ_SIZE_BYTES 64 /**< QuRT mutex object size. */
 
 /*=============================================================================
                         TYPEDEFS
@@ -216,7 +216,7 @@ int qurt_mutex_lock_timed(qurt_mutex_t *lock, qurt_time_t timeout);
   @dependencies
   None.
  */
-void qurt_mutex_unlock(qurt_mutex_t *lock);	/* unlock */
+void qurt_mutex_unlock(qurt_mutex_t *lock); /* unlock */
 
 /**
   Attempts to lock the specified mutex.
@@ -248,4 +248,3 @@ int qurt_mutex_try_lock(qurt_mutex_t *lock);
 /** @} */ /* end_addtogroup mutex_types */
 
 #endif /* QURT_MUTEX_H */
-

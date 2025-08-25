@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #ifndef BD_H_
 #define BD_H_
@@ -9,105 +9,111 @@
 #include "stdint.h"
 
 #define CR6_MANAGEMENT_FRAME_PROTECTION
-#define ANI_BIG_BYTE_ENDIAN // This flag is defined here to enable use of BIG Endian version of BD structure as the BD is still interepreted by WMAC modules in BIG endian format
-							// even though CPU is LITTLE endian.
+#define ANI_BIG_BYTE_ENDIAN  // This flag is defined here to enable use of BIG Endian version of BD structure as the BD
+                             // is still interepreted by WMAC modules in BIG endian format even though CPU is LITTLE
+                             // endian.
 #define NT_BMU_BD_SIZE 128
 
 /********************************************************************************************************************/
 
-
-
 /* SW defined BD type, used in  tSmacBdRxpRx & tSmacBdHostTx*/
-#define NT_SMAC_SWBD_TYPE_RXRAW                    0   //RAW BD format from RxP, use tSmacBdRxpRx
-#define NT_SMAC_SWBD_TYPE_DATA                     1   //Rx/Tx Data BD, use tSmacBdHostRx
-#define NT_SMAC_SWBD_TYPE_JUNK                     2   //Frame to be dropped by Host directly.
-#define NT_SMAC_SWBD_TYPE_CTLMSG                   3   //BD for passing ctrl message between host/SoftMac.
+#define NT_SMAC_SWBD_TYPE_RXRAW  0  // RAW BD format from RxP, use tSmacBdRxpRx
+#define NT_SMAC_SWBD_TYPE_DATA   1  // Rx/Tx Data BD, use tSmacBdHostRx
+#define NT_SMAC_SWBD_TYPE_JUNK   2  // Frame to be dropped by Host directly.
+#define NT_SMAC_SWBD_TYPE_CTLMSG 3  // BD for passing ctrl message between host/SoftMac.
 
 /* Tx Ack Policy */
-#define NT_SMAC_SWBD_ACKPOLICY_NORMAL              0   /* Normal ACK */
-#define NT_SMAC_SWBD_ACKPOLICY_NO                  1   /* No ACK */
+#define NT_SMAC_SWBD_ACKPOLICY_NORMAL 0 /* Normal ACK */
+#define NT_SMAC_SWBD_ACKPOLICY_NO     1 /* No ACK */
 
 /* SoftMac Rx response frame type */
-#define NT_SMAC_SWBD_RXRESPONSE_UNDEFINED          0   /*Not applicable, may be in promisc mode,..., or unspecified by SoftMac*/
-#define NT_SMAC_SWBD_RXRESPONSE_NONE               1   /*No response frame sent to TA*/
-#define NT_SMAC_SWBD_RXRESPONSE_BACK               2   /*Blk ACK frame sent to TA after rcv this frame*/
-#define NT_SMAC_SWBD_RXRESPONSE_NORMALACK          3   /*Normal ACK frame sent to TA after rcv this frame*/
-#define NT_SMAC_SWBD_RXRESPONSE_NULL               4   /*NULL frame sent to TA after rcv this frame, maybe due to PM bit*/
-#define NT_SMAC_SWBD_RXRESPONSE_PSPOLL             5   /*PS-Poll frame sent to TA after rcv this frame, maybe due to beacon TIM bit*/
+#define NT_SMAC_SWBD_RXRESPONSE_UNDEFINED 0 /*Not applicable, may be in promisc mode,..., or unspecified by SoftMac*/
+#define NT_SMAC_SWBD_RXRESPONSE_NONE      1 /*No response frame sent to TA*/
+#define NT_SMAC_SWBD_RXRESPONSE_BACK      2 /*Blk ACK frame sent to TA after rcv this frame*/
+#define NT_SMAC_SWBD_RXRESPONSE_NORMALACK 3 /*Normal ACK frame sent to TA after rcv this frame*/
+#define NT_SMAC_SWBD_RXRESPONSE_NULL      4 /*NULL frame sent to TA after rcv this frame, maybe due to PM bit*/
+#define NT_SMAC_SWBD_RXRESPONSE_PSPOLL    5 /*PS-Poll frame sent to TA after rcv this frame, maybe due to beacon TIM \
+                                               bit*/
 
 /* SoftMac Rx reorder buffer */
-#define NT_SMAC_SWBD_RXREORDER_OPCODE_INVALID              0
-#define NT_SMAC_SWBD_RXREORDER_OPCODE_QCURRENT_FWDADV     1 /* Queue current packet, Fwd up to Head ptr if Head ptr advanced, then set new head ptr */
-#define NT_SMAC_SWBD_RXREORDER_OPCODE_QCURRENT_FWD        4 /* Queue current packet, Fwd up to Head ptr, then set new head ptr */
-#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWD_QCURRENT        2 /* Fwd up to Head ptr, queue the new packet, then set new head ptr */
-#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWDALL_QCURRENT     3 /* Fwd all frmes, queue the new packet, then set new head ptr*/
-#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWDALL_FWDCURRENT   5 /* Fwd all frames then current frame, finally set new head ptr*/
-#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWDADV_DROPCURRENT  6 /* Forward up to Head prt if Head ptr advanced then set new head ptr. Drop current frame (ex: BAR)*/
-#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWDALL_DROPCURRENT   7 /* Fwd all frmes, then set new head ptr. Drop current frame (ex:BAR) */
+#define NT_SMAC_SWBD_RXREORDER_OPCODE_INVALID 0
+#define NT_SMAC_SWBD_RXREORDER_OPCODE_QCURRENT_FWDADV \
+    1 /* Queue current packet, Fwd up to Head ptr if Head ptr advanced, then set new head ptr */
+#define NT_SMAC_SWBD_RXREORDER_OPCODE_QCURRENT_FWD \
+    4 /* Queue current packet, Fwd up to Head ptr, then set new head ptr */
+#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWD_QCURRENT \
+    2 /* Fwd up to Head ptr, queue the new packet, then set new head ptr */
+#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWDALL_QCURRENT 3 /* Fwd all frmes, queue the new packet, then set new head \
+                                                           ptr*/
+#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWDALL_FWDCURRENT \
+    5 /* Fwd all frames then current frame, finally set new head ptr*/
+#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWDADV_DROPCURRENT \
+    6 /* Forward up to Head prt if Head ptr advanced then set new head ptr. Drop current frame (ex: BAR)*/
+#define NT_SMAC_SWBD_RXREORDER_OPCODE_FWDALL_DROPCURRENT \
+    7 /* Fwd all frmes, then set new head ptr. Drop current frame (ex:BAR) */
 
 /* Mac Protection */
-#define NT_SMAC_SWBD_PROTECTION_DEFAULT            0   /* Default */
-#define NT_SMAC_SWBD_PROTECTION_NO                 1   /* No protection */
-#define NT_SMAC_SWBD_PROTECTION_FORCERTS           2   /* RTS forced */
-#define NT_SMAC_SWBD_PROTECTION_FORCECTS2S         3   /* CTS-to-self forced */
-#define NT_SMAC_SWBD_PROTECTION_FORCE3CTS2S         10   /* CTS-to-self forced */
+#define NT_SMAC_SWBD_PROTECTION_DEFAULT     0  /* Default */
+#define NT_SMAC_SWBD_PROTECTION_NO          1  /* No protection */
+#define NT_SMAC_SWBD_PROTECTION_FORCERTS    2  /* RTS forced */
+#define NT_SMAC_SWBD_PROTECTION_FORCECTS2S  3  /* CTS-to-self forced */
+#define NT_SMAC_SWBD_PROTECTION_FORCE3CTS2S 10 /* CTS-to-self forced */
 
 /* TX station index */
-#define NT_SMAC_SWBD_TX_STAIDX_GROUP               0 /* raIndex : broadcast/multicast */
-#define NT_SMAC_SWBD_TX_STAIDX_INVALID             254 /* taIndex & raIndex : invalid */
+#define NT_SMAC_SWBD_TX_STAIDX_GROUP   0   /* raIndex : broadcast/multicast */
+#define NT_SMAC_SWBD_TX_STAIDX_INVALID 254 /* taIndex & raIndex : invalid */
 
 /* TX TID */
-#define NT_SMAC_SWBD_TX_TID_MGMT_LOW               0   /* ProbeResponse */
-#define NT_SMAC_SWBD_TX_TID_MGMT_HIGH              1   /* Other management frames */
-#define NT_SMAC_SWBD_TX_TID_MGMT_LOWEST            2   /* SoftMAC internal */
-#define NT_SMAC_SWBD_TX_TID_MGMT_NUM               3
+#define NT_SMAC_SWBD_TX_TID_MGMT_LOW    0 /* ProbeResponse */
+#define NT_SMAC_SWBD_TX_TID_MGMT_HIGH   1 /* Other management frames */
+#define NT_SMAC_SWBD_TX_TID_MGMT_LOWEST 2 /* SoftMAC internal */
+#define NT_SMAC_SWBD_TX_TID_MGMT_NUM    3
 
 /* TX BD structure */
 /*changed in fermion from 0x48 to 0x4C for 4B Tx-bd complete dialogToken padding */
-#define NT_TX_MPDUHEADER_OFFSET          0x4C /* SoftMAC recommended MPDU header offset */
+#define NT_TX_MPDUHEADER_OFFSET 0x4C /* SoftMAC recommended MPDU header offset */
 
 #ifdef CR6_SEQUENCE_NUMBER_GENERATION
-#define HOST_GENERATE_SN 0
-#define LEGACY_HW_GENERATE_SN 1
+#define HOST_GENERATE_SN         0
+#define LEGACY_HW_GENERATE_SN    1
 #define TID_BASED_HW_GENERATE_SN 2
 #endif
 
 /* TX MPDU data offset */
-#define NT_TX_MGMTDATA_OFFSET            0x64//add 4 more bytes
-#define NT_TX_MPDUDATA_OFFSET            0x6E //minimal 0x4C+26=0x66
+#define NT_TX_MGMTDATA_OFFSET 0x64  // add 4 more bytes
+#define NT_TX_MPDUDATA_OFFSET 0x6E  // minimal 0x4C+26=0x66
 
-#define NT_TX_EAPOLDATA_OFFSET			 0x66 //add 4 more bytes
+#define NT_TX_EAPOLDATA_OFFSET 0x66  // add 4 more bytes
 
 /* RX BD structure */
-#define NT_SMAC_SWBD_RX_MPDUHEADER_OFFSET          0x4c
+#define NT_SMAC_SWBD_RX_MPDUHEADER_OFFSET 0x4c
 
 /* RX station index */
-#define NT_SMAC_HWBD_RX_UNKNOWN_UCAST              254
-#define NT_SMAC_HWBD_RX_UNKNOWN_MCAST              0
+#define NT_SMAC_HWBD_RX_UNKNOWN_UCAST 254
+#define NT_SMAC_HWBD_RX_UNKNOWN_MCAST 0
 
 /* Rate index */
-#define NT_SMAC_SWBD_TX_RATEINDEX_DEFAULT          255
+#define NT_SMAC_SWBD_TX_RATEINDEX_DEFAULT 255
 
 //#define	NT_SMAC_SWBD_QID_0						   0
-#define	NT_SMAC_SWBD_QID_10						   10
+#define NT_SMAC_SWBD_QID_10 10
 
-#define BD_TX_END	18
-#define BD_RX_END 	19
+#define BD_TX_END 18
+#define BD_RX_END 19
 
-#define NT_MAC_DEAUTH             0XC
-#define NT_MAC_DISASSOC           0XA
-#define NT_MAC_ACTION             0XD
-#define NT_MAC_PROBE_REQUEST		0X4	//Subtype of probe request
-#define NT_MAC_PROBE_RESPONSE	0X5	//Subtype of probe response
-#define NT_MAC_SUBTYPE			0X4
-#define NT_MAC_SUBTYPE_MASK 	0XF
-
+#define NT_MAC_DEAUTH         0XC
+#define NT_MAC_DISASSOC       0XA
+#define NT_MAC_ACTION         0XD
+#define NT_MAC_PROBE_REQUEST  0X4  // Subtype of probe request
+#define NT_MAC_PROBE_RESPONSE 0X5  // Subtype of probe response
+#define NT_MAC_SUBTYPE        0X4
+#define NT_MAC_SUBTYPE_MASK   0XF
 
 #if 0
 typedef struct BDTXTemplate {
     /* 0x00 */
 #ifdef CR6_MANAGEMENT_FRAME_PROTECTION
- #ifdef SW_ASSISTED_MODE
+#ifdef SW_ASSISTED_MODE
 #ifdef ANI_BIG_BYTE_ENDIAN
     /* Routing flag. D/C in Tx processing.
      * To reach SoftMAC Tx code, host needs to set this routing flag to
@@ -714,53 +720,52 @@ typedef struct BDTXTemplate {
 } __attribute__((packed)) __attribute__((aligned (4))) BDTXTemplate_t, *pBDTXTemplate;
 #endif
 
-
 #if 0
 
 typedef struct dpm_bd_tx_template {
 	/* 0x00 */
-#define BD_TYPE_GENERIC                      0   /* generic BD format, use tSmacBdGeneric */
-#define BD_TYPE_FRAG                         1   /* fragmentation BD format, use tSmacBdDpuFrag*/
+#define BD_TYPE_GENERIC 0 /* generic BD format, use tSmacBdGeneric */
+#define BD_TYPE_FRAG    1 /* fragmentation BD format, use tSmacBdDpuFrag*/
     uint32_t bdt : 2;
 
-#define NO_FRAME_TRANSLATION                        0
-#define FRAME_TRANS_REQUIRED                        1
+#define NO_FRAME_TRANSLATION 0
+#define FRAME_TRANS_REQUIRED 1
     uint32_t ft : 1;
 
-#define ENCRYPTION_DISABLED                     1
+#define ENCRYPTION_DISABLED 1
     uint32_t dpuNE : 1;
 
-#define NO_INTERRUPT_GENERATED                      0
-#define GENERATE_TX_INTERRUPT                       1
+#define NO_INTERRUPT_GENERATED 0
+#define GENERATE_TX_INTERRUPT  1
     uint32_t txCPLT : 2;
     uint32_t reserved1 : 1;
 
-#define UNICAST_PACKET                              0
-#define BROADCAST_PACKET                            1
+#define UNICAST_PACKET   0
+#define BROADCAST_PACKET 1
     uint32_t ub : 1;
 
-#define NOT_RMF                                     0
-#define RMF_ENCRYPT                                 1
+#define NOT_RMF     0
+#define RMF_ENCRYPT 1
     uint32_t rmf : 1;
     uint32_t noValHD : 1;
     uint32_t noTCPUDPCheckSumGenerated : 1;
 
-#define IP_CS_NOT_GENERATED                         0
-#define IP_CS_GENERATED                             1
+#define IP_CS_NOT_GENERATED 0
+#define IP_CS_GENERATED     1
     uint32_t ipCSGenEnable : 1;
 
-#define TCP_UDP_CS_NOT_GENERATED                    0
-#define TCP_UDP_CS_GENERATED                        1
+#define TCP_UDP_CS_NOT_GENERATED 0
+#define TCP_UDP_CS_GENERATED     1
     uint32_t tcpUdpCSEnable : 1;
 
-#define CSU_DISABLED                                0
-#define CSU_ENABLED                                 1
+#define CSU_DISABLED 0
+#define CSU_ENABLED  1
     uint32_t csuTxEnable : 1;
 
-#define CSU_SOFTWARE_MODE                           1
+#define CSU_SOFTWARE_MODE 1
     uint32_t csuSWMode : 1;//0
 
-#define UMA_BD_ENABLE                               1
+#define UMA_BD_ENABLE 1
     uint32_t umaBDenable : 1;
     uint32_t umaBSSID : 2;
     uint32_t reserved2 : 3;
@@ -789,12 +794,12 @@ typedef struct dpm_bd_tx_template {
     /* 0x10 */
     uint32_t reserved4 : 8;
 
-#define NON_QOS_FRAME                               0
+#define NON_QOS_FRAME 0
     uint32_t tid : 4;//Fill
 
-#define HOST_GENERATED_SN                           0
-#define NON_TID_SSN                                 1
-#define TID_BASED_SSN                               2
+#define HOST_GENERATED_SN 0
+#define NON_TID_SSN       1
+#define TID_BASED_SSN     2
 	uint32_t bdSsn : 2;
     uint32_t reserved5 : 2;
     uint32_t mpduLength : 16;//Fill
@@ -804,12 +809,12 @@ typedef struct dpm_bd_tx_template {
     uint32_t reserved6 : 7;
     uint32_t txWqId : 5;//Fill --->?
 
-#define USE_TPE_STA_DESC_RATE                       0
-#define USE_TPE_BD_RATE_1                           1
-#define USE_TPE_BD_RATE_2                           2
+#define USE_TPE_STA_DESC_RATE 0
+#define USE_TPE_BD_RATE_1     1
+#define USE_TPE_BD_RATE_2     2
     uint32_t BDrate : 2;//Fill
 
-#define IMMEDIATE_ACK                       0
+#define IMMEDIATE_ACK 0
 	uint32_t ackPolicy : 2;
     uint32_t StaId : 8;//Fill
     uint32_t dpuDescIdx : 8;//Fill
@@ -851,82 +856,81 @@ typedef struct dpm_bd_tx_template {
 
 } __attribute__((packed)) __attribute__((aligned (4))) dpm_bd_tx_template_t, *p_dpm_bd_tx_template;
 
-
 #else
 #if 1
 
 typedef struct dpm_bd_tx_template {
-	/*0X00*/
-#define BD_TYPE_GENERIC                      0   /* generic BD format, use tSmacBdGeneric */
-#define BD_TYPE_FRAG                         1   /* fragmentation BD format, use tSmacBdDpuFrag*/
+    /*0X00*/
+#define BD_TYPE_GENERIC           0 /* generic BD format, use tSmacBdGeneric */
+#define BD_TYPE_FRAG              1 /* fragmentation BD format, use tSmacBdDpuFrag*/
     uint32_t bdt : 2;
-#define NO_FRAME_TRANSLATION                      	0
-#define FRAME_TRANS_REQUIRED                        1
+#define NO_FRAME_TRANSLATION      0
+#define FRAME_TRANS_REQUIRED      1
     uint32_t ft : 1;
-#define ENCRYPTION_DISABLED                     1
-#define ENCRYPTION_ENABLE						0
+#define ENCRYPTION_DISABLED       1
+#define ENCRYPTION_ENABLE         0
     uint32_t dpuNE : 1;
-    uint32_t fwTxComplete0:1;
-    uint32_t txComplete1:1;
-	uint32_t rsvd2_5 : 1;
-#define UNICAST_PACKET 						0
-#define BROADCAST_PACKET					1
-	uint32_t ub : 1;
-#define RMF_DISABLE								0
-#define RMF_ENABLE									1
-	uint32_t rmf : 1;
-	uint32_t reserved2_0 : 10;
-    uint32_t tmf : 1;                   // BIT19 : "1" indicate that this frame is a TM/FTM frame
+    uint32_t fwTxComplete0 : 1;
+    uint32_t txComplete1 : 1;
+    uint32_t rsvd2_5 : 1;
+#define UNICAST_PACKET            0
+#define BROADCAST_PACKET          1
+    uint32_t ub : 1;
+#define RMF_DISABLE               0
+#define RMF_ENABLE                1
+    uint32_t rmf : 1;
+    uint32_t reserved2_0 : 10;
+    uint32_t tmf : 1;  // BIT19 : "1" indicate that this frame is a TM/FTM frame
     uint32_t reserved2_1 : 1;
-	uint32_t dpuSignature : 3;
-#define DPU_ROUTING_FLAG					25
-	uint32_t dpuRF : 8;
+    uint32_t dpuSignature : 3;
+#define DPU_ROUTING_FLAG          25
+    uint32_t dpuRF : 8;
 
-	/*0x04*/
-	uint32_t dpuFeedback : 8;
-	uint32_t aduFeedback : 8;
-	uint32_t reserved3 : 16;
+    /*0x04*/
+    uint32_t dpuFeedback : 8;
+    uint32_t aduFeedback : 8;
+    uint32_t reserved3 : 16;
 
-	/*0x08*/
-	uint32_t tailPduIdx : 16;
-	uint32_t headPduIdx : 16;
+    /*0x08*/
+    uint32_t tailPduIdx : 16;
+    uint32_t headPduIdx : 16;
 
-	/*0x0C*/
-	uint32_t pduCount : 7;
-	uint32_t mpduDataOffset : 9;//Fill
-	uint32_t mpduHeaderOffset : 8;//FIll
-#define NONQOS_MPDU_HEADER_LENGTH					24
-#define QOS_MPDU_HEADER_LENGTH					    26
-	uint32_t mpduHeaderLength : 8;//Fill
+    /*0x0C*/
+    uint32_t pduCount : 7;
+    uint32_t mpduDataOffset : 9;    // Fill
+    uint32_t mpduHeaderOffset : 8;  // FIll
+#define NONQOS_MPDU_HEADER_LENGTH 24
+#define QOS_MPDU_HEADER_LENGTH    26
+    uint32_t mpduHeaderLength : 8;  // Fill
 
-	/* 0x10 */
-	uint32_t reserved4 : 8;
-#define NON_QOS_FRAME                               0
-    uint32_t tid : 4;//Fill
-#define HOST_GENERATED_SN                           0
-#define NON_TID_SSN                                 1
-#define TID_BASED_SSN                               2
-	uint32_t bdSsn : 2;
-	uint32_t reserved5 : 2;
-	uint32_t mpduLength : 16;//Fill
+    /* 0x10 */
+    uint32_t reserved4 : 8;
+#define NON_QOS_FRAME             0
+    uint32_t tid : 4;  // Fill
+#define HOST_GENERATED_SN         0
+#define NON_TID_SSN               1
+#define TID_BASED_SSN             2
+    uint32_t bdSsn : 2;
+    uint32_t reserved5 : 2;
+    uint32_t mpduLength : 16;  // Fill
 
-	/*0X14*/
-	uint32_t reserved6 : 7;
-	uint32_t txWqId : 5;//Fill
-#define USE_TPE_STA_DESC_RATE                       0
-#define USE_TPE_BD_RATE_1                           1
-#define USE_TPE_BD_RATE_2                           2
-    uint32_t BDrate : 2;//Fill
-#define IMMEDIATE_ACK                        		0
-#define NOIMMEDIATE_ACK								1
-	uint32_t ackPolicy : 2;
-	uint32_t StaId : 8;//Fill
-#define DPUDESC_IDX_MCBC_MGMT						6
-#define DPUDESC_IDX_MCBC_DATA					    7
-	uint32_t dpuDescIdx : 8;//Fill
+    /*0X14*/
+    uint32_t reserved6 : 7;
+    uint32_t txWqId : 5;  // Fill
+#define USE_TPE_STA_DESC_RATE     0
+#define USE_TPE_BD_RATE_1         1
+#define USE_TPE_BD_RATE_2         2
+    uint32_t BDrate : 2;  // Fill
+#define IMMEDIATE_ACK             0
+#define NOIMMEDIATE_ACK           1
+    uint32_t ackPolicy : 2;
+    uint32_t StaId : 8;       // Fill
+#define DPUDESC_IDX_MCBC_MGMT     6
+#define DPUDESC_IDX_MCBC_DATA     7
+    uint32_t dpuDescIdx : 8;  // Fill
 
-	/* 0x18 */
-	uint32_t reserved7;
+    /* 0x18 */
+    uint32_t reserved7;
 
     /* 0x1C */
     uint32_t reserved8;
@@ -937,68 +941,67 @@ typedef struct dpm_bd_tx_template {
     /* 0x24 */
     uint32_t DXETimeStampPrevious;
 
-	/* 0x28 */
-	uint32_t reserved9 : 11;
-	uint32_t TcpUdpChecksumOffset : 5;//Fill --- > Used?
-	uint32_t TcpUdpStartOffset : 16;//Fill --- > Used?
+    /* 0x28 */
+    uint32_t reserved9 : 11;
+    uint32_t TcpUdpChecksumOffset : 5;  // Fill --- > Used?
+    uint32_t TcpUdpStartOffset : 16;    // Fill --- > Used?
 
-	/* 0x2C */
-	uint32_t reserved10 : 16;
-	uint32_t TcpUdpByteLength : 16;//Fill --- > Used?
+    /* 0x2C */
+    uint32_t reserved10 : 16;
+    uint32_t TcpUdpByteLength : 16;  // Fill --- > Used?
 
-	/* 0x30 */
-	uint32_t reserved11;
+    /* 0x30 */
+    uint32_t reserved11;
 
     /* 0x34 - 0x47 */
     uint8_t rsvdMPIcmmds[20];
 
-} __attribute__((packed)) __attribute__((aligned (4))) dpm_bd_tx_template_t, *p_dpm_bd_tx_template;
-
+} __attribute__((packed)) __attribute__((aligned(4))) dpm_bd_tx_template_t, *p_dpm_bd_tx_template;
 
 #else
 
 typedef struct dpm_bd_tx_template {
-	/* 0x00 */
+    /* 0x00 */
     uint32_t dpuRF : 8;
-	uint32_t dpuSignature : 3;
-	uint32_t reserved2 : 3;
-	uint32_t umaBSSID : 2;
-#define UMA_BD_ENABLE                               1
+    uint32_t dpuSignature : 3;
+    uint32_t reserved2 : 3;
+    uint32_t umaBSSID : 2;
+#define UMA_BD_ENABLE            1
     uint32_t umaBDenable : 1;
-#define CSU_SOFTWARE_MODE                           1
-    uint32_t csuSWMode : 1;//0
-#define CSU_DISABLED                                0
-#define CSU_ENABLED                                 1
+#define CSU_SOFTWARE_MODE        1
+    uint32_t csuSWMode : 1;  // 0
+#define CSU_DISABLED             0
+#define CSU_ENABLED              1
     uint32_t csuTxEnable : 1;
-#define TCP_UDP_CS_NOT_GENERATED                    0
-#define TCP_UDP_CS_GENERATED                        1
+#define TCP_UDP_CS_NOT_GENERATED 0
+#define TCP_UDP_CS_GENERATED     1
     uint32_t tcpUdpCSEnable : 1;
-#define IP_CS_NOT_GENERATED                         0
-#define IP_CS_GENERATED                             1
+#define IP_CS_NOT_GENERATED      0
+#define IP_CS_GENERATED          1
     uint32_t ipCSGenEnable : 1;
     uint32_t noTCPUDPCheckSumGenerated : 1;
-	uint32_t noValHD : 1;
-#define NOT_RMF                                     0
-#define RMF_ENCRYPT                                 1
+    uint32_t noValHD : 1;
+#define NOT_RMF                  0
+#define RMF_ENCRYPT              1
     uint32_t rmf : 1;
-#define UNICAST_PACKET                              0
-#define BROADCAST_PACKET                            1
+#define UNICAST_PACKET           0
+#define BROADCAST_PACKET         1
     uint32_t ub : 1;
     uint32_t reserved1 : 1;
-#define NO_INTERRUPT_GENERATED                      0
-#define GENERATE_TX_INTERRUPT                       1
+#define NO_INTERRUPT_GENERATED   0
+#define GENERATE_TX_INTERRUPT    1
     uint32_t txCPLT : 2;
-#define ENCRYPTION_DISABLED                     1
+#define ENCRYPTION_DISABLED      1
     uint32_t dpuNE : 1;
-#define NO_FRAME_TRANSLATION                        0
-#define FRAME_TRANS_REQUIRED                        1
+#define NO_FRAME_TRANSLATION     0
+#define FRAME_TRANS_REQUIRED     1
     uint32_t ft : 1;
-#define BD_TYPE_GENERIC                      0   /* generic BD format, use tSmacBdGeneric */
-#define BD_TYPE_FRAG                         1   /* fragmentation BD format, use tSmacBdDpuFrag*/
+#define BD_TYPE_GENERIC          0 /* generic BD format, use tSmacBdGeneric */
+#define BD_TYPE_FRAG             1 /* fragmentation BD format, use tSmacBdDpuFrag*/
     uint32_t bdt : 2;
 
     /* 0x04 */
-	uint32_t reserved3 : 16;
+    uint32_t reserved3 : 16;
     uint32_t aduFeedback : 8;
     uint32_t dpuFeedback : 8;
 
@@ -1007,32 +1010,32 @@ typedef struct dpm_bd_tx_template {
     uint32_t tailPduIdx : 16;
 
     /* 0x0C */
-	uint32_t mpduHeaderLength : 8;//Fill
-    uint32_t mpduHeaderOffset : 8;//FIll
-    uint32_t mpduDataOffset : 9;//Fill
+    uint32_t mpduHeaderLength : 8;  // Fill
+    uint32_t mpduHeaderOffset : 8;  // FIll
+    uint32_t mpduDataOffset : 9;    // Fill
     uint32_t pduCount : 7;
 
     /* 0x10 */
-	uint32_t mpduLength : 16;//Fill
+    uint32_t mpduLength : 16;  // Fill
     uint32_t reserved5 : 2;
-#define HOST_GENERATED_SN                           0
-#define NON_TID_SSN                                 1
-#define TID_BASED_SSN                               2
-	uint32_t bdSsn : 2;
-#define NON_QOS_FRAME                               0
-    uint32_t tid : 4;//Fill
+#define HOST_GENERATED_SN        0
+#define NON_TID_SSN              1
+#define TID_BASED_SSN            2
+    uint32_t bdSsn : 2;
+#define NON_QOS_FRAME            0
+    uint32_t tid : 4;  // Fill
     uint32_t reserved4 : 8;
 
     /* 0x14 */
-    uint32_t dpuDescIdx : 8;//Fill
-    uint32_t StaId : 8;//Fill
-#define IMMEDIATE_ACK                       0
-	uint32_t ackPolicy : 2;
-#define USE_TPE_STA_DESC_RATE                       0
-#define USE_TPE_BD_RATE_1                           1
-#define USE_TPE_BD_RATE_2                           2
-    uint32_t BDrate : 2;//Fill
-	uint32_t txWqId : 5;//Fill --->?
+    uint32_t dpuDescIdx : 8;  // Fill
+    uint32_t StaId : 8;       // Fill
+#define IMMEDIATE_ACK            0
+    uint32_t ackPolicy : 2;
+#define USE_TPE_STA_DESC_RATE    0
+#define USE_TPE_BD_RATE_1        1
+#define USE_TPE_BD_RATE_2        2
+    uint32_t BDrate : 2;  // Fill
+    uint32_t txWqId : 5;  // Fill --->?
     uint32_t reserved6 : 7;
 
     /* 0x18 */
@@ -1048,141 +1051,46 @@ typedef struct dpm_bd_tx_template {
     uint32_t DXETimeStampPrevious;
 
     /* 0x28 */
-	uint32_t TcpUdpStartOffset : 16;//Fill --- > Used?
-    uint32_t TcpUdpChecksumOffset : 5;//Fill --- > Used?
+    uint32_t TcpUdpStartOffset : 16;    // Fill --- > Used?
+    uint32_t TcpUdpChecksumOffset : 5;  // Fill --- > Used?
     uint32_t reserved9 : 11;
 
     /* 0x2C */
-	uint32_t TcpUdpByteLength : 16;//Fill --- > Used?
+    uint32_t TcpUdpByteLength : 16;  // Fill --- > Used?
     uint32_t reserved10 : 16;
 
-	/* 0x30 */
+    /* 0x30 */
     uint32_t reserved11;
 
     /* 0x34 - 0x47 */
     uint8_t rsvdMPIcmmds[20];
 
-} __attribute__((packed)) __attribute__((aligned (4))) dpm_bd_tx_template_t, *p_dpm_bd_tx_template;
+} __attribute__((packed)) __attribute__((aligned(4))) dpm_bd_tx_template_t, *p_dpm_bd_tx_template;
 
 #endif
 #endif
 
 #if 1
 typedef struct DPMBDRXTemplate {
-
-	/* 0x00 */
-	uint32_t bdt : 2;
-	uint32_t reserved2 : 1;
-	uint32_t dpuNE : 1;
-	uint32_t rxKeyId : 2;
-	uint32_t ub: 1;
-	uint32_t rmf: 1;
-	uint32_t reserved1:9;
-	uint32_t tsf_received:1;
-	uint32_t frame_after_beacon:1;
-	uint32_t miss_addr2_hit:1;
-	uint32_t station_auth:1;
-	uint32_t dpuSignature:3;
-	uint32_t dpuRF : 8;
-
-	/* 0x04 */
-	uint32_t dpuFeedback:8;
-	uint32_t reserved3:8;
-	uint32_t PenultimatePDU:16;
-
-	/* 0x08 */
-	uint32_t tailPduIdx : 16;
-	uint32_t headPduIdx : 16;
-
-	/* 0x0c */
-	uint32_t pduCount : 7;
-	uint32_t mpduDataOffset : 9;
-	uint32_t mpduHeaderOffset : 8;
-	uint32_t mpduHeaderLength : 8;
-
-	/* 0x10 */
-	uint32_t reserved5: 8;
-	uint32_t tid : 4;
-	uint32_t reserved4 : 4;
-	uint32_t mpduLength : 16;
-
-	/* 0x14 */
-	uint32_t addr3Index:8;
-	uint32_t addr2Index:8;
-	uint32_t addr1Index:8;
-	uint32_t dpuDescIdx:8;
-
-#if 0
-	uint32_t rxpFlags;
-#else
-	/* 0x18, see SMAC_HWBD_RXFLAG_XXXX */
-	uint32_t rxpFlags :23; /* RxP flags*/
-	uint32_t rateIndex :9;
-#endif
-
-	 /* 0x1c, 20 */
-	 uint32_t phyStats0;                      /* PHY status word 0*/
-	 uint32_t phyStats1;                      /* PHY status word 0*/
-
-    /* 0x24 */
-    uint32_t mclkRxTimestamp;                /* Rx timestamp, microsecond based*/
-
-    /* 0x28~0x3f */
-    uint32_t rxPmiCmd[6];                /* PMI cmd rcvd from RxP */
-
-	/* 0x40 */
-	uint32_t reserved7:4;
-	uint32_t ReorderSlotIndex:6;
-	uint32_t ReorderFwdIndex:6;    // 1 : rcvd beacon has TSF later than ours.
-	uint32_t reserved6:12;     // 1: we have sent beacon in this TBTT.
-	uint32_t ReorderOpcode:4;        /* bit=1: Frame is rcvd during SCAN/Learn mode */
-
-	/* 0x44 */
-	uint32_t ExpectedSeqNo:12;
-	uint32_t CurrentSeqNo:12;
-	uint32_t swfield:8;
-
-	/* 0x48 */
-	uint32_t totalAmsduSize:16;
-	uint32_t subFrameIndex:4;
-	uint32_t processOrder:4;
-	uint32_t reserved9:4;
-	uint32_t isAmsduErrorFlag:1;
-	uint32_t isLastAmsduSubFrame:1;
-	uint32_t isFirstAmsduSubFrame:1;
-	uint32_t isAmsduSubframe:1;
-
-} __attribute__((packed)) __attribute__((aligned (4))) dpm_bd_rx_template_t, *p_dpm_bd_rx_template;
-
-#else
-typedef struct DPMBDRXTemplate {
-	/* 0x00 */
+    /* 0x00 */
     uint32_t bdt : 2;
-    uint32_t ft : 1;
+    uint32_t reserved2 : 1;
     uint32_t dpuNE : 1;
-    uint32_t rxKeyId : 3;
-	uint32_t ub : 1;
+    uint32_t rxKeyId : 2;
+    uint32_t ub : 1;
     uint32_t rmf : 1;
-    uint32_t umabypass:1;
-	uint32_t llc:1;
-	uint32_t ipCSError:1;
-	uint32_t tcpUDPCSError:1;
-	uint32_t csValid:1;
-	uint32_t csuVerifiedIpv46OrNot:1;
-	uint32_t csuVerifiedtcpUDPOrNot:1;
-	uint32_t noValidHeader:1;
-    uint32_t tsf_received:1;
-    uint32_t frame_after_beacon:1;
-    uint32_t miss_addr2_hit:1;
-    uint32_t station_auth:1;
-    uint32_t dpuSignature:3;
+    uint32_t reserved1 : 9;
+    uint32_t tsf_received : 1;
+    uint32_t frame_after_beacon : 1;
+    uint32_t miss_addr2_hit : 1;
+    uint32_t station_auth : 1;
+    uint32_t dpuSignature : 3;
     uint32_t dpuRF : 8;
 
     /* 0x04 */
-    uint32_t dpuFeedback:8;
-    uint32_t MagicPkt:1;
-    uint32_t aduFeedback:7;
-    uint32_t PenultimatePDU:16;
+    uint32_t dpuFeedback : 8;
+    uint32_t reserved3 : 8;
+    uint32_t PenultimatePDU : 16;
 
     /* 0x08 */
     uint32_t tailPduIdx : 16;
@@ -1195,54 +1103,148 @@ typedef struct DPMBDRXTemplate {
     uint32_t mpduHeaderLength : 8;
 
     /* 0x10 */
-    uint32_t reserved1: 7;
+    uint32_t reserved5 : 8;
+    uint32_t tid : 4;
+    uint32_t reserved4 : 4;
+    uint32_t mpduLength : 16;
+
+    /* 0x14 */
+    uint32_t addr3Index : 8;
+    uint32_t addr2Index : 8;
+    uint32_t addr1Index : 8;
+    uint32_t dpuDescIdx : 8;
+
+#if 0
+	uint32_t rxpFlags;
+#else
+    /* 0x18, see SMAC_HWBD_RXFLAG_XXXX */
+    uint32_t rxpFlags : 23; /* RxP flags*/
+    uint32_t rateIndex : 9;
+#endif
+
+    /* 0x1c, 20 */
+    uint32_t phyStats0; /* PHY status word 0*/
+    uint32_t phyStats1; /* PHY status word 0*/
+
+    /* 0x24 */
+    uint32_t mclkRxTimestamp; /* Rx timestamp, microsecond based*/
+
+    /* 0x28~0x3f */
+    uint32_t rxPmiCmd[6]; /* PMI cmd rcvd from RxP */
+
+    /* 0x40 */
+    uint32_t reserved7 : 4;
+    uint32_t ReorderSlotIndex : 6;
+    uint32_t ReorderFwdIndex : 6;  // 1 : rcvd beacon has TSF later than ours.
+    uint32_t reserved6 : 12;       // 1: we have sent beacon in this TBTT.
+    uint32_t ReorderOpcode : 4;    /* bit=1: Frame is rcvd during SCAN/Learn mode */
+
+    /* 0x44 */
+    uint32_t ExpectedSeqNo : 12;
+    uint32_t CurrentSeqNo : 12;
+    uint32_t swfield : 8;
+
+    /* 0x48 */
+    uint32_t totalAmsduSize : 16;
+    uint32_t subFrameIndex : 4;
+    uint32_t processOrder : 4;
+    uint32_t reserved9 : 4;
+    uint32_t isAmsduErrorFlag : 1;
+    uint32_t isLastAmsduSubFrame : 1;
+    uint32_t isFirstAmsduSubFrame : 1;
+    uint32_t isAmsduSubframe : 1;
+
+} __attribute__((packed)) __attribute__((aligned(4))) dpm_bd_rx_template_t, *p_dpm_bd_rx_template;
+
+#else
+typedef struct DPMBDRXTemplate {
+    /* 0x00 */
+    uint32_t bdt : 2;
+    uint32_t ft : 1;
+    uint32_t dpuNE : 1;
+    uint32_t rxKeyId : 3;
+    uint32_t ub : 1;
+    uint32_t rmf : 1;
+    uint32_t umabypass : 1;
+    uint32_t llc : 1;
+    uint32_t ipCSError : 1;
+    uint32_t tcpUDPCSError : 1;
+    uint32_t csValid : 1;
+    uint32_t csuVerifiedIpv46OrNot : 1;
+    uint32_t csuVerifiedtcpUDPOrNot : 1;
+    uint32_t noValidHeader : 1;
+    uint32_t tsf_received : 1;
+    uint32_t frame_after_beacon : 1;
+    uint32_t miss_addr2_hit : 1;
+    uint32_t station_auth : 1;
+    uint32_t dpuSignature : 3;
+    uint32_t dpuRF : 8;
+
+    /* 0x04 */
+    uint32_t dpuFeedback : 8;
+    uint32_t MagicPkt : 1;
+    uint32_t aduFeedback : 7;
+    uint32_t PenultimatePDU : 16;
+
+    /* 0x08 */
+    uint32_t tailPduIdx : 16;
+    uint32_t headPduIdx : 16;
+
+    /* 0x0c */
+    uint32_t pduCount : 7;
+    uint32_t mpduDataOffset : 9;
+    uint32_t mpduHeaderOffset : 8;
+    uint32_t mpduHeaderLength : 8;
+
+    /* 0x10 */
+    uint32_t reserved1 : 7;
     uint32_t tid : 4;
     uint32_t reserved2 : 5;
     uint32_t mpduLength : 16;
 
     /* 0x14 */
-    uint32_t addr3Index:8;
-    uint32_t addr2Index:8;
-    uint32_t addr1Index:8;
-    uint32_t dpuDescIdx:8;
+    uint32_t addr3Index : 8;
+    uint32_t addr2Index : 8;
+    uint32_t addr1Index : 8;
+    uint32_t dpuDescIdx : 8;
 
     /* 0x18, see SMAC_HWBD_RXFLAG_XXXX */
-    uint32_t rxpFlags:23;                       /* RxP flags*/
-    uint32_t rateIndex:9;
+    uint32_t rxpFlags : 23; /* RxP flags*/
+    uint32_t rateIndex : 9;
 
     /* 0x1c, 20 */
-    uint32_t phyStats0;                      /* PHY status word 0*/
-    uint32_t phyStats1;                      /* PHY status word 0*/
+    uint32_t phyStats0; /* PHY status word 0*/
+    uint32_t phyStats1; /* PHY status word 0*/
 
     /* 0x24 */
-    uint32_t mclkRxTimestamp;                /* Rx timestamp, microsecond based*/
+    uint32_t mclkRxTimestamp; /* Rx timestamp, microsecond based*/
 
     /* 0x28~0x3f */
-    uint32_t rxPmiCmd[6];                /* PMI cmd rcvd from RxP */
+    uint32_t rxPmiCmd[6]; /* PMI cmd rcvd from RxP */
 
     /* 0x40 */
-    uint32_t reserved3:4;
-    uint32_t ReorderSlotIndex:6;
-    uint32_t ReorderFwdIndex:6;    // 1 : rcvd beacon has TSF later than ours.
-    uint32_t reserved4:12;     // 1: we have sent beacon in this TBTT.
-    uint32_t ReorderOpcode:4;        /* bit=1: Frame is rcvd during SCAN/Learn mode */
+    uint32_t reserved3 : 4;
+    uint32_t ReorderSlotIndex : 6;
+    uint32_t ReorderFwdIndex : 6;  // 1 : rcvd beacon has TSF later than ours.
+    uint32_t reserved4 : 12;       // 1: we have sent beacon in this TBTT.
+    uint32_t ReorderOpcode : 4;    /* bit=1: Frame is rcvd during SCAN/Learn mode */
 
     /* 0x44 */
-    uint32_t ExpectedSeqNo:12;
-    uint32_t CurrentSeqNo:12;
-    uint32_t swfield:8;
+    uint32_t ExpectedSeqNo : 12;
+    uint32_t CurrentSeqNo : 12;
+    uint32_t swfield : 8;
 
     /* 0x48 */
-    uint32_t totalAmsduSize:16;
-    uint32_t subFrameIndex:4;
-    uint32_t processOrder:4;
-    uint32_t reserved6:4;
-    uint32_t isAmsduErrorFlag:1;
-    uint32_t isLastAmsduSubFrame:1;
-    uint32_t isFirstAmsduSubFrame:1;
-    uint32_t isAmsduSubframe:1;
+    uint32_t totalAmsduSize : 16;
+    uint32_t subFrameIndex : 4;
+    uint32_t processOrder : 4;
+    uint32_t reserved6 : 4;
+    uint32_t isAmsduErrorFlag : 1;
+    uint32_t isLastAmsduSubFrame : 1;
+    uint32_t isFirstAmsduSubFrame : 1;
+    uint32_t isAmsduSubframe : 1;
 
-} __attribute__((packed)) __attribute__((aligned (4))) dpm_bd_rx_template_t, *p_dpm_bd_rx_template;
+} __attribute__((packed)) __attribute__((aligned(4))) dpm_bd_rx_template_t, *p_dpm_bd_rx_template;
 #endif
 
 #if 0

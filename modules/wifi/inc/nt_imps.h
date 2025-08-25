@@ -12,12 +12,10 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define CORE_WIFI_SME_INC_NT_IMPS_H_
 
 #include "nt_osal.h"
-#include "pm_api.h" // PM_TIMER structure is used
+#include "pm_api.h"  // PM_TIMER structure is used
 //#include "autoconf.h"
 
-
 #define DEFAULT_IMPS_SLEEP_TIME 120000
-
 
 /*
  * 1 - Norrmal sleep mode(WIFI and MCU will be off);
@@ -25,32 +23,29 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 //#define DEFAULT_IMPS_SLEEP_MODE 1
 
-typedef enum{
-	TURN_OFF=0,TURN_ON=1
-}IMPS_ENABLE_DISABLE;
-
+typedef enum { TURN_OFF = 0, TURN_ON = 1 } IMPS_ENABLE_DISABLE;
 
 typedef struct {
-	uint32_t imps_sleep_time;       /*IMPS time period value*/
-	uint8_t imps_enabled;           /* IMPS Enabled or disabled */
-	NT_BOOL host_mode_configured;   /* Host mode enabled or disabled for IMPS */
+    uint32_t imps_sleep_time;     /*IMPS time period value*/
+    uint8_t imps_enabled;         /* IMPS Enabled or disabled */
+    NT_BOOL host_mode_configured; /* Host mode enabled or disabled for IMPS */
 #ifdef SUPPORT_IMPS_IMPROVEMENTS
 #ifdef ENABLE_IMPS_TIMER_ON_BOOTUP
-    uint32_t cnx_wait_time_ms;      /* Wait time for wifi connection */
-#endif /* ENABLE_IMPS_TIMER_ON_BOOTUP */
-    uint32_t recnx_wait_time_ms;    /* Wait time for wifi reconnection after disconnection*/
-    uint32_t cmd_proc_wait_time_ms; /* Max time taken by the WMI cmd to process*/
-    uint64_t cmd_recv_timestamp;    /* to store last received WMI cmd timestamp */
-    nt_osal_timer_handle_t imps_cnx_wait_timer;   /* Timer to wait for connection/reconnection */
+    uint32_t cnx_wait_time_ms;                  /* Wait time for wifi connection */
+#endif                                          /* ENABLE_IMPS_TIMER_ON_BOOTUP */
+    uint32_t recnx_wait_time_ms;                /* Wait time for wifi reconnection after disconnection*/
+    uint32_t cmd_proc_wait_time_ms;             /* Max time taken by the WMI cmd to process*/
+    uint64_t cmd_recv_timestamp;                /* to store last received WMI cmd timestamp */
+    nt_osal_timer_handle_t imps_cnx_wait_timer; /* Timer to wait for connection/reconnection */
     bool imps_cnx_timer_started;
-#endif /* SUPPORT_IMPS_IMPROVEMENTS */
-    bool imps_registered;            /* Register for IMPS at imps_cnx_wait_timer timeout cb and handled it in idle task */
-    uint8_t policy;            /*  use mcu sleep or deep sleep */
+#endif                    /* SUPPORT_IMPS_IMPROVEMENTS */
+    bool imps_registered; /* Register for IMPS at imps_cnx_wait_timer timeout cb and handled it in idle task */
+    uint8_t policy;       /*  use mcu sleep or deep sleep */
 } IMPS_STRUCT_CTX_t;
 
 /*timer*/
-void nt_wpm_init_imps(devh_t*);
-void nt_wpm_imps_enable_disable(devh_t* dev, uint8_t state);
+void nt_wpm_init_imps(devh_t *);
+void nt_wpm_imps_enable_disable(devh_t *dev, uint8_t state);
 
 /*
  * @brief: for registering imps standby
@@ -88,8 +83,8 @@ void *nt_wpm_imps_stats(void);
 #ifdef SUPPORT_IMPS_IMPROVEMENTS
 void nt_imps_cnx_timeout_cb(void);
 void _pm_post_pmImps_timeout_msg(TimerHandle_t thandle);
-void start_imps_cnx_wait_timer(uint32_t timeout_value); 
-void stop_imps_cnx_wait_timer(); 
+void start_imps_cnx_wait_timer(uint32_t timeout_value);
+void stop_imps_cnx_wait_timer();
 #endif /* SUPPORT_IMPS_IMPROVEMENTS */
 
 #endif /* CORE_WIFI_SME_INC_NT_IMPS_H_ */

@@ -21,32 +21,30 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #if defined(SUPPORT_COEX)
 /* A wrapper macro to create and send simulated GPM messages */
-#define COEX_TEST_SIMULATE_SEND_GPM(name, args)                  \
-    do{                                                               \
-        if (TRUE == coex_sim_gpm_create(name, args)) {           \
-            coex_sim_mci_process_gpm(&g_sim.gpm);                     \
-    }                                                                 \
-}while(0);
+#define COEX_TEST_SIMULATE_SEND_GPM(name, args)        \
+    do {                                               \
+        if (TRUE == coex_sim_gpm_create(name, args)) { \
+            coex_sim_mci_process_gpm(&g_sim.gpm);      \
+        }                                              \
+    } while (0);
 
-#define POLICY_PRINT(policy)    \
-        do {    \
-            switch(policy)      \
-            {   \
-                case COEX_TRF_MGMT_FREERUN:     \
-                    NT_LOG_COEX_INFO(COEX_TEST,"Policy is: FREE RUN", 0, 0, 0); \
-                    break;  \
-                case COEX_TRF_MGMT_SHAPE_STATIC_PM: \
-                    NT_LOG_COEX_INFO(COEX_TEST,"Policy is: STATIC PM", 0, 0, 0);    \
-                    break;  \
-                default:    \
-                    NT_LOG_COEX_INFO(COEX_TEST,"Policy is: NONE", 0, 0, 0); \
-                    break;  \
-            }   \
-        } while(0)
+#define POLICY_PRINT(policy)                                                  \
+    do {                                                                      \
+        switch (policy) {                                                     \
+            case COEX_TRF_MGMT_FREERUN:                                       \
+                NT_LOG_COEX_INFO(COEX_TEST, "Policy is: FREE RUN", 0, 0, 0);  \
+                break;                                                        \
+            case COEX_TRF_MGMT_SHAPE_STATIC_PM:                               \
+                NT_LOG_COEX_INFO(COEX_TEST, "Policy is: STATIC PM", 0, 0, 0); \
+                break;                                                        \
+            default:                                                          \
+                NT_LOG_COEX_INFO(COEX_TEST, "Policy is: NONE", 0, 0, 0);      \
+                break;                                                        \
+        }                                                                     \
+    } while (0)
 
 #ifdef PLATFORM_FERMION
-enum coex_modules
-{
+enum coex_modules {
     BMH = 0x01,
     LMH = 0x02,
     PMH = 0x04,
@@ -55,8 +53,7 @@ enum coex_modules
     MCIM = 0x20,
 };
 
-enum cxc_intr
-{
+enum cxc_intr {
     BMH_INTR = 0,
     BMH_INTR1,
     BMH_RX_MSG,
@@ -64,28 +61,37 @@ enum cxc_intr
 };
 #endif
 
-#define COEX_SDM_WK_BEFORE_BCN      0x00000001
-#define COEX_SDM_WK_AFTER_BCN       0x00000002
-#define COEX_WEIGHT_UPDATE_DISABLE  0x00000004
+#define COEX_SDM_WK_BEFORE_BCN     0x00000001
+#define COEX_SDM_WK_AFTER_BCN      0x00000002
+#define COEX_WEIGHT_UPDATE_DISABLE 0x00000004
 
-#define COEX_TEST_PRINT_COEX_SDM_WK_BEFORE_BCN \
-        WLAN_DBG3_PRINT("Co-Ex B [ Pwrup Ctrl | MCIB Err Evt | Rx Msg Raw ]", HAL_REG_RD(QWLAN_CXC_PMH_REG_R_CXC_PMH_R0_POWERUP_CTRL_REG), HAL_REG_RD(QWLAN_CXC_MCIBASIC_REG_R_CXC_MCIBASIC_R1_ERROR_EVENT_REG), HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_INTERRUPT_RX_MSG_RAW_REG));  \
-        WLAN_DBG2_PRINT("Co-Ex B [ BT Req | BT Req NACK ]", HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_BT_REQ_CNT_REG), HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_BT_REQ_NACK_CNT_REG));
+#define COEX_TEST_PRINT_COEX_SDM_WK_BEFORE_BCN                                                                     \
+    WLAN_DBG3_PRINT("Co-Ex B [ Pwrup Ctrl | MCIB Err Evt | Rx Msg Raw ]",                                          \
+                    HAL_REG_RD(QWLAN_CXC_PMH_REG_R_CXC_PMH_R0_POWERUP_CTRL_REG),                                   \
+                    HAL_REG_RD(QWLAN_CXC_MCIBASIC_REG_R_CXC_MCIBASIC_R1_ERROR_EVENT_REG),                          \
+                    HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_INTERRUPT_RX_MSG_RAW_REG));                          \
+    WLAN_DBG2_PRINT("Co-Ex B [ BT Req | BT Req NACK ]", HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_BT_REQ_CNT_REG), \
+                    HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_BT_REQ_NACK_CNT_REG));
 
-#define COEX_TEST_PRINT_COEX_SDM_WK_AFTER_BCN \
-        WLAN_DBG3_PRINT("Co-Ex A [ Pwrup Ctrl | MCIB Err Evt | Rx Msg Raw ]", HAL_REG_RD(QWLAN_CXC_PMH_REG_R_CXC_PMH_R0_POWERUP_CTRL_REG), HAL_REG_RD(QWLAN_CXC_MCIBASIC_REG_R_CXC_MCIBASIC_R1_ERROR_EVENT_REG), HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_INTERRUPT_RX_MSG_RAW_REG));  \
-        WLAN_DBG3_PRINT("Co-Ex A [ BT Req | BT Req NACK | TBTT ]", HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_BT_REQ_CNT_REG), HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_BT_REQ_NACK_CNT_REG), HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_TBTT_CNT_ARB1_REG));    \
-        WLAN_DBG2_PRINT("Co-Ex A [ Bcn Rx | Bcn Miss ]", gpBtCoexUtilDev->sdm_bcn_rx_cnt, gpBtCoexUtilDev->sdm_bcn_miss_cnt );
+#define COEX_TEST_PRINT_COEX_SDM_WK_AFTER_BCN                                             \
+    WLAN_DBG3_PRINT("Co-Ex A [ Pwrup Ctrl | MCIB Err Evt | Rx Msg Raw ]",                 \
+                    HAL_REG_RD(QWLAN_CXC_PMH_REG_R_CXC_PMH_R0_POWERUP_CTRL_REG),          \
+                    HAL_REG_RD(QWLAN_CXC_MCIBASIC_REG_R_CXC_MCIBASIC_R1_ERROR_EVENT_REG), \
+                    HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_INTERRUPT_RX_MSG_RAW_REG)); \
+    WLAN_DBG3_PRINT("Co-Ex A [ BT Req | BT Req NACK | TBTT ]",                            \
+                    HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_BT_REQ_CNT_REG),            \
+                    HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_BT_REQ_NACK_CNT_REG),       \
+                    HAL_REG_RD(QWLAN_CXC_BMH_REG_R_CXC_BMH_R1_TBTT_CNT_ARB1_REG));        \
+    WLAN_DBG2_PRINT("Co-Ex A [ Bcn Rx | Bcn Miss ]", gpBtCoexUtilDev->sdm_bcn_rx_cnt,     \
+                    gpBtCoexUtilDev->sdm_bcn_miss_cnt);
 
-#define COEX_TEST_PRINT(testcase)   \
-    extern BTCOEX_UTIL_STRUCT *gpBtCoexUtilDev; \
-    if(testcase && gpBtCoexUtilDev->coex_test_code) \
-    { \
-        COEX_TEST_PRINT_##testcase; \
+#define COEX_TEST_PRINT(testcase)                      \
+    extern BTCOEX_UTIL_STRUCT *gpBtCoexUtilDev;        \
+    if (testcase && gpBtCoexUtilDev->coex_test_code) { \
+        COEX_TEST_PRINT_##testcase;                    \
     }
 
-enum
-{
+enum {
     /* Add enums, for different
     Co-Ex Unit Test here */
     COEX_RX_RATE_MONITOR_SET_THRESHOLD = 0,
@@ -132,7 +138,7 @@ enum
     COEX_ENABLE_DISABLE_BTSIM_SEQ = 33,
     COEX_STRESS_BTSIM_TIMER_START = 34,
     COEX_STRESS_BTSIM_TIMER_STOP = 35,
-    /* BTSIM Related */
+/* BTSIM Related */
 #endif /* SUPPORT_COEX_SIMULATOR */
 #endif
     COEX_SCHEDULE = 36,
@@ -166,9 +172,9 @@ enum
     COEX_MCI_RESET = 60,
 #endif
 };
-void coex_unit_test_cmd(uint32_t* args, uint8_t num_args);
+void coex_unit_test_cmd(uint32_t *args, uint8_t num_args);
 
 #else
 #define COEX_TEST_PRINT(testcase)
-#endif/* SUPPORT_COEX */
-#endif/* #ifndef _COEX_TEST_H_ */
+#endif /* SUPPORT_COEX */
+#endif /* #ifndef _COEX_TEST_H_ */

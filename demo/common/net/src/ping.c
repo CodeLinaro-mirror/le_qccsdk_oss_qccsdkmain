@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 /**
  * @file
@@ -84,7 +84,7 @@
  * PING_DEBUG: Enable debugging for PING.
  */
 #ifndef PING_DEBUG
-#define PING_DEBUG     LWIP_DBG_ON
+#define PING_DEBUG LWIP_DBG_ON
 #endif
 
 /** ping receive timeout - in milliseconds */
@@ -94,12 +94,12 @@
 
 /** ping delay - in milliseconds */
 #ifndef PING_DELAY
-#define PING_DELAY     500
+#define PING_DELAY 500
 #endif
 
 /** ping identifier - must fit on a u16_t */
 #ifndef PING_ID
-#define PING_ID        0xAFAF
+#define PING_ID 0xAFAF
 #endif
 
 /** ping additional data size to include in the packet */
@@ -121,7 +121,7 @@
 #endif
 
 /* ping variables */
-static const ip_addr_t* ping_target;
+static const ip_addr_t *ping_target;
 ip_addr_t ping_addr;
 
 static u16_t ping_seq_num;
@@ -132,15 +132,15 @@ static u32_t ping_time;
 static struct raw_pcb *ping_pcb_v4;
 #if LWIP_IPV6
 static struct raw_pcb *ping_pcb_v6;
-#endif//  LWIP_IPV6
-#endif /* PING_USE_SOCKETS */
+#endif  //  LWIP_IPV6
+#endif  /* PING_USE_SOCKETS */
 static int ping_count = 0;
 static uint32_t ping_bytes;
 static uint32_t ping_delay = 500;
 static uint32_t ping_rsp_rcvd = 0;
 static uint32_t ping_total_count = 0;
 static uint32_t ping_sent_count = 0;
-static uint8_t  ping_rsp_flag = 0;
+static uint8_t ping_rsp_flag = 0;
 
 static TickType_t ping_send_ticks;
 
@@ -149,439 +149,424 @@ uint8_t ping_confirm = 0;
 static void ping_timeout(void *arg);
 
 #ifndef SUPPORT_FERMION_LOGGER
-static void ping_dbg_print_pair( char *title, uint32_t data)
+static void ping_dbg_print_pair(char *title, uint32_t data)
 {
-	char pbuf[100];
-	snprintf(pbuf,sizeof(pbuf), "%s %u \r\n", title, (unsigned int)data);
-	nt_dbg_print(pbuf);
-	//nt_at_ok_error(data,1,title);
+    char pbuf[100];
+    snprintf(pbuf, sizeof(pbuf), "%s %u \r\n", title, (unsigned int)data);
+    nt_dbg_print(pbuf);
+    // nt_at_ok_error(data,1,title);
 }
 #else
 #define ping_dbg_print_pair(string, ...) NT_LOG_PRINT(COMMON, ERR, string, __VA_ARGS__)
-#endif //SUPPORT_FERMION_LOGGER
+#endif  // SUPPORT_FERMION_LOGGER
 void ping_stop()
 {
-	ping_total_count=0;
-	ping_count = 1;  // to stop the ping
-	ping_total_count = ping_sent_count+1;
-        ping_rsp_flag = 0;
+    ping_total_count = 0;
+    ping_count = 1;  // to stop the ping
+    ping_total_count = ping_sent_count + 1;
+    ping_rsp_flag = 0;
 }
 
 static void ping_complete()
 {
     char pbuf[100];
-    snprintf(pbuf,sizeof(pbuf), "%s %u, %s %u\r\n", "ping complete: Sent packets =", (unsigned int)ping_total_count, "Received packets =", (unsigned int)ping_rsp_rcvd);
+    snprintf(pbuf, sizeof(pbuf), "%s %u, %s %u\r\n", "ping complete: Sent packets =", (unsigned int)ping_total_count,
+             "Received packets =", (unsigned int)ping_rsp_rcvd);
     nt_dbg_print(pbuf);
     ping_status status = ping_fail;
-    if(ping_rsp_rcvd>(ping_total_count/2) )
-    {
+    if (ping_rsp_rcvd > (ping_total_count / 2)) {
         status = ping_success;
     }
 
-    if(!ping_confirm)
-    {
-        wlan_wmi_local_evt_notification(WMI_IP_PING_EVTID, \
-                                        (void *)&status, \
-                                        sizeof(status));
+    if (!ping_confirm) {
+        wlan_wmi_local_evt_notification(WMI_IP_PING_EVTID, (void *)&status, sizeof(status));
 
         ping_confirm = 1;
     }
 }
 
 /** Prepare a echo ICMP request */
-static void
-ping_prepare_echo( icmpm_echo_hdr *iecho, u16_t len)
+static void ping_prepare_echo(icmpm_echo_hdr *iecho, u16_t len)
 {
-  size_t i;
-  size_t data_len = len - sizeof(icmpm_echo_hdr);
+    size_t i;
+    size_t data_len = len - sizeof(icmpm_echo_hdr);
 
 #if LWIP_IPV4
-  if(IP_IS_V4(ping_target)){
-  ICMPH_TYPE_SET(icmpm_2_icmp(iecho), ICMP_ECHO);
-  }
+    if (IP_IS_V4(ping_target)) {
+        ICMPH_TYPE_SET(icmpm_2_icmp(iecho), ICMP_ECHO);
+    }
 #endif
 #if LWIP_IPV6
-  if(IP_IS_V6(ping_target)){
-  ICMPH_TYPE_SET(icmpm_2_icmp6(iecho), ICMP6_TYPE_EREQ);
-  }
+    if (IP_IS_V6(ping_target)) {
+        ICMPH_TYPE_SET(icmpm_2_icmp6(iecho), ICMP6_TYPE_EREQ);
+    }
 #endif
 
-  ICMPH_CODE_SET(icmpm_2_icmp(iecho), 0);
-  icmpm_2_icmpg(iecho)->chksum = 0;
-  icmpm_2_icmpg(iecho)->id     = PING_ID;
-  icmpm_2_icmpg(iecho)->seqno  = lwip_htons(++ping_seq_num);
+    ICMPH_CODE_SET(icmpm_2_icmp(iecho), 0);
+    icmpm_2_icmpg(iecho)->chksum = 0;
+    icmpm_2_icmpg(iecho)->id = PING_ID;
+    icmpm_2_icmpg(iecho)->seqno = lwip_htons(++ping_seq_num);
 
-  /* fill the additional data buffer with some data */
-  for(i = 0; i < data_len; i++) {
-    ((char*)iecho)[sizeof(icmpm_echo_hdr) + i] = (char)i;
-  }
+    /* fill the additional data buffer with some data */
+    for (i = 0; i < data_len; i++) {
+        ((char *)iecho)[sizeof(icmpm_echo_hdr) + i] = (char)i;
+    }
 
-  if(IP_IS_V4(ping_target)){
-    icmpm_2_icmpg(iecho)->chksum = inet_chksum(icmpm_2_icmpg(iecho), len);
-  }
+    if (IP_IS_V4(ping_target)) {
+        icmpm_2_icmpg(iecho)->chksum = inet_chksum(icmpm_2_icmpg(iecho), len);
+    }
 }
 
 #if PING_USE_SOCKETS
 
 /* Ping using the socket ip */
-static err_t
-ping_send(int s, const ip_addr_t *addr)
+static err_t ping_send(int s, const ip_addr_t *addr)
 {
-  int err;
-  struct icmp_echo_hdr *iecho;
-  struct sockaddr_storage to;
-  size_t ping_size = sizeof(struct icmp_echo_hdr) + PING_DATA_SIZE;
-  LWIP_ASSERT("ping_size is too big", ping_size <= 0xffff);
+    int err;
+    struct icmp_echo_hdr *iecho;
+    struct sockaddr_storage to;
+    size_t ping_size = sizeof(struct icmp_echo_hdr) + PING_DATA_SIZE;
+    LWIP_ASSERT("ping_size is too big", ping_size <= 0xffff);
 
 #if LWIP_IPV6
-  if(IP_IS_V6(addr) && !ip6_addr_isipv4mappedipv6(ip_2_ip6(addr))) {
-    /* todo: support ICMP6 echo */
-    return ERR_VAL;
-  }
-#endif /* LWIP_IPV6 */
-
-  iecho = (struct icmp_echo_hdr *)mem_malloc((mem_size_t)ping_size);
-  if (!iecho) {
-    return ERR_MEM;
-  }
-
-  ping_prepare_echo(iecho, (u16_t)ping_size);
-
-#if LWIP_IPV4
-  if(IP_IS_V4(addr)) {
-    struct sockaddr_in *to4 = (struct sockaddr_in*)&to;
-    to4->sin_len    = sizeof(to4);
-    to4->sin_family = AF_INET;
-    inet_addr_from_ip4addr(&to4->sin_addr, ip_2_ip4(addr));
-  }
-#endif /* LWIP_IPV4 */
-
-#if LWIP_IPV6
-  if(IP_IS_V6(addr)) {
-    struct sockaddr_in6 *to6 = (struct sockaddr_in6*)&to;
-    to6->sin6_len    = sizeof(to6);
-    to6->sin6_family = AF_INET6;
-    inet6_addr_from_ip6addr(&to6->sin6_addr, ip_2_ip6(addr));
-  }
-#endif /* LWIP_IPV6 */
-
-  err = lwip_sendto(s, iecho, ping_size, 0, (struct sockaddr*)&to, sizeof(to));
-
-  mem_free(iecho);
-
-  return (err ? ERR_OK : ERR_VAL);
-}
-
-static void
-ping_recv(int s)
-{
-  char buf[64];
-  int len;
-  struct sockaddr_storage from;
-  int fromlen = sizeof(from);
-
-  while((len = lwip_recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&from, (socklen_t*)&fromlen)) > 0) {
-    if (len >= (int)(sizeof(struct ip_hdr)+sizeof(struct icmp_echo_hdr))) {
-      ip_addr_t fromaddr;
-      memset(&fromaddr, 0, sizeof(fromaddr));
-
-#if LWIP_IPV4
-      if(from.ss_family == AF_INET) {
-        struct sockaddr_in *from4 = (struct sockaddr_in*)&from;
-        inet_addr_to_ip4addr(ip_2_ip4(&fromaddr), &from4->sin_addr);
-        IP_SET_TYPE_VAL(fromaddr, IPADDR_TYPE_V4);
-      }
-#endif /* LWIP_IPV4 */
-
-#if LWIP_IPV6
-      if(from.ss_family == AF_INET6) {
-        struct sockaddr_in6 *from6 = (struct sockaddr_in6*)&from;
-        inet6_addr_to_ip6addr(ip_2_ip6(&fromaddr), &from6->sin6_addr);
-        IP_SET_TYPE_VAL(fromaddr, IPADDR_TYPE_V6);
-      }
-#endif /* LWIP_IPV6 */
-
-      LWIP_DEBUGF( PING_DEBUG, ("ping: recv "));
-      ip_addr_debug_print_val(PING_DEBUG, fromaddr);
-      LWIP_DEBUGF( PING_DEBUG, (" %"U32_F" ms\n", (sys_now() - ping_time)));
-
-      /* todo: support ICMP6 echo */
-#if LWIP_IPV4
-      if (IP_IS_V4_VAL(fromaddr)) {
-        struct ip_hdr *iphdr;
-        struct icmp_echo_hdr *iecho;
-
-        iphdr = (struct ip_hdr *)buf;
-        iecho = (struct icmp_echo_hdr *)(buf + (IPH_HL(iphdr) * 4));
-        if ((iecho->id == PING_ID) && (iecho->seqno == lwip_htons(ping_seq_num))) {
-          /* do some ping result processing */
-          PING_RESULT((ICMPH_TYPE(iecho) == ICMP_ER));
-          return;
-        } else {
-          LWIP_DEBUGF( PING_DEBUG, ("ping: drop\n"));
-        }
-      }
-#endif /* LWIP_IPV4 */
+    if (IP_IS_V6(addr) && !ip6_addr_isipv4mappedipv6(ip_2_ip6(addr))) {
+        /* todo: support ICMP6 echo */
+        return ERR_VAL;
     }
-    fromlen = sizeof(from);
-  }
+#endif /* LWIP_IPV6 */
 
-  if (len == 0) {
-    LWIP_DEBUGF( PING_DEBUG, ("ping: recv - %"U32_F" ms - timeout\n", (sys_now()-ping_time)));
-  }
+    iecho = (struct icmp_echo_hdr *)mem_malloc((mem_size_t)ping_size);
+    if (!iecho) {
+        return ERR_MEM;
+    }
 
-  /* do some ping result processing */
-  PING_RESULT(0);
+    ping_prepare_echo(iecho, (u16_t)ping_size);
+
+#if LWIP_IPV4
+    if (IP_IS_V4(addr)) {
+        struct sockaddr_in *to4 = (struct sockaddr_in *)&to;
+        to4->sin_len = sizeof(to4);
+        to4->sin_family = AF_INET;
+        inet_addr_from_ip4addr(&to4->sin_addr, ip_2_ip4(addr));
+    }
+#endif /* LWIP_IPV4 */
+
+#if LWIP_IPV6
+    if (IP_IS_V6(addr)) {
+        struct sockaddr_in6 *to6 = (struct sockaddr_in6 *)&to;
+        to6->sin6_len = sizeof(to6);
+        to6->sin6_family = AF_INET6;
+        inet6_addr_from_ip6addr(&to6->sin6_addr, ip_2_ip6(addr));
+    }
+#endif /* LWIP_IPV6 */
+
+    err = lwip_sendto(s, iecho, ping_size, 0, (struct sockaddr *)&to, sizeof(to));
+
+    mem_free(iecho);
+
+    return (err ? ERR_OK : ERR_VAL);
 }
 
-static void
-ping_thread(void *arg)
+static void ping_recv(int s)
 {
-  int s;
-  int ret;
+    char buf[64];
+    int len;
+    struct sockaddr_storage from;
+    int fromlen = sizeof(from);
+
+    while ((len = lwip_recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&from, (socklen_t *)&fromlen)) > 0) {
+        if (len >= (int)(sizeof(struct ip_hdr) + sizeof(struct icmp_echo_hdr))) {
+            ip_addr_t fromaddr;
+            memset(&fromaddr, 0, sizeof(fromaddr));
+
+#if LWIP_IPV4
+            if (from.ss_family == AF_INET) {
+                struct sockaddr_in *from4 = (struct sockaddr_in *)&from;
+                inet_addr_to_ip4addr(ip_2_ip4(&fromaddr), &from4->sin_addr);
+                IP_SET_TYPE_VAL(fromaddr, IPADDR_TYPE_V4);
+            }
+#endif /* LWIP_IPV4 */
+
+#if LWIP_IPV6
+            if (from.ss_family == AF_INET6) {
+                struct sockaddr_in6 *from6 = (struct sockaddr_in6 *)&from;
+                inet6_addr_to_ip6addr(ip_2_ip6(&fromaddr), &from6->sin6_addr);
+                IP_SET_TYPE_VAL(fromaddr, IPADDR_TYPE_V6);
+            }
+#endif /* LWIP_IPV6 */
+
+            LWIP_DEBUGF(PING_DEBUG, ("ping: recv "));
+            ip_addr_debug_print_val(PING_DEBUG, fromaddr);
+            LWIP_DEBUGF(PING_DEBUG, (" %" U32_F " ms\n", (sys_now() - ping_time)));
+
+            /* todo: support ICMP6 echo */
+#if LWIP_IPV4
+            if (IP_IS_V4_VAL(fromaddr)) {
+                struct ip_hdr *iphdr;
+                struct icmp_echo_hdr *iecho;
+
+                iphdr = (struct ip_hdr *)buf;
+                iecho = (struct icmp_echo_hdr *)(buf + (IPH_HL(iphdr) * 4));
+                if ((iecho->id == PING_ID) && (iecho->seqno == lwip_htons(ping_seq_num))) {
+                    /* do some ping result processing */
+                    PING_RESULT((ICMPH_TYPE(iecho) == ICMP_ER));
+                    return;
+                } else {
+                    LWIP_DEBUGF(PING_DEBUG, ("ping: drop\n"));
+                }
+            }
+#endif /* LWIP_IPV4 */
+        }
+        fromlen = sizeof(from);
+    }
+
+    if (len == 0) {
+        LWIP_DEBUGF(PING_DEBUG, ("ping: recv - %" U32_F " ms - timeout\n", (sys_now() - ping_time)));
+    }
+
+    /* do some ping result processing */
+    PING_RESULT(0);
+}
+
+static void ping_thread(void *arg)
+{
+    int s;
+    int ret;
 
 #if LWIP_SO_SNDRCVTIMEO_NONSTANDARD
-  int timeout = PING_RCV_TIMEO;
+    int timeout = PING_RCV_TIMEO;
 #else
-  struct timeval timeout;
-  timeout.tv_sec = PING_RCV_TIMEO/1000;
-  timeout.tv_usec = (PING_RCV_TIMEO%1000)*1000;
+    struct timeval timeout;
+    timeout.tv_sec = PING_RCV_TIMEO / 1000;
+    timeout.tv_usec = (PING_RCV_TIMEO % 1000) * 1000;
 #endif
-  LWIP_UNUSED_ARG(arg);
+    LWIP_UNUSED_ARG(arg);
 
 #if LWIP_IPV6
-  if(IP_IS_V4(ping_target) || ip6_addr_isipv4mappedipv6(ip_2_ip6(ping_target))) {
-    s = lwip_socket(AF_INET6, SOCK_RAW, IP_PROTO_ICMP);
-  } else {
-    s = lwip_socket(AF_INET6, SOCK_RAW, IP6_NEXTH_ICMP6);
-  }
+    if (IP_IS_V4(ping_target) || ip6_addr_isipv4mappedipv6(ip_2_ip6(ping_target))) {
+        s = lwip_socket(AF_INET6, SOCK_RAW, IP_PROTO_ICMP);
+    } else {
+        s = lwip_socket(AF_INET6, SOCK_RAW, IP6_NEXTH_ICMP6);
+    }
 #else
-  s = lwip_socket(AF_INET,  SOCK_RAW, IP_PROTO_ICMP);
+    s = lwip_socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
 #endif
-  if (s < 0) {
-    return;
-  }
+    if (s < 0) {
+        return;
+    }
 
-  ret = lwip_setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-  LWIP_ASSERT("setting receive timeout failed", ret == 0);
-  LWIP_UNUSED_ARG(ret);
+    ret = lwip_setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    LWIP_ASSERT("setting receive timeout failed", ret == 0);
+    LWIP_UNUSED_ARG(ret);
 
-  while (1) {
-    if (ping_send(s, ping_target) == ERR_OK) {
-      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
-      ip_addr_debug_print(PING_DEBUG, ping_target);
-      LWIP_DEBUGF( PING_DEBUG, ("\n"));
+    while (1) {
+        if (ping_send(s, ping_target) == ERR_OK) {
+            LWIP_DEBUGF(PING_DEBUG, ("ping: send "));
+            ip_addr_debug_print(PING_DEBUG, ping_target);
+            LWIP_DEBUGF(PING_DEBUG, ("\n"));
 
 #ifdef LWIP_DEBUG
-      ping_time = sys_now();
+            ping_time = sys_now();
 #endif /* LWIP_DEBUG */
-      ping_recv(s);
-    } else {
-      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
-      ip_addr_debug_print(PING_DEBUG, ping_target);
-      LWIP_DEBUGF( PING_DEBUG, (" - error\n"));
+            ping_recv(s);
+        } else {
+            LWIP_DEBUGF(PING_DEBUG, ("ping: send "));
+            ip_addr_debug_print(PING_DEBUG, ping_target);
+            LWIP_DEBUGF(PING_DEBUG, (" - error\n"));
+        }
+        sys_msleep(PING_DELAY);
     }
-    sys_msleep(PING_DELAY);
-  }
 }
 
 #else /* PING_USE_SOCKETS */
 
 /* Ping using the raw ip */
-static u8_t
-ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p, const ip_addr_t *addr)
+static u8_t ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p, const ip_addr_t *addr)
 {
+    icmpm_echo_hdr *iecho;
+    LWIP_UNUSED_ARG(arg);
+    LWIP_UNUSED_ARG(pcb);
+    LWIP_UNUSED_ARG(addr);
+    LWIP_ASSERT("p != NULL", p != NULL);
+    uint32_t time_ticks = 0;
+    uint8_t pbuf_hlen = 0;
 
-  icmpm_echo_hdr *iecho;
-  LWIP_UNUSED_ARG(arg);
-  LWIP_UNUSED_ARG(pcb);
-  LWIP_UNUSED_ARG(addr);
-  LWIP_ASSERT("p != NULL", p != NULL);
-  uint32_t time_ticks = 0;
-  uint8_t pbuf_hlen = 0;
-
-  if(IP_IS_V6(ping_target)){
-	  pbuf_hlen = 40;				//PBUF_TRANSPORT_HLEN for IPv6
-  }else{
-	  pbuf_hlen = 20;				//PBUF_TRANSPORT_HLEN for IPv4
-  }
-
-  if (p->tot_len >= (pbuf_hlen + sizeof(icmpm_echo_hdr))) {
-    iecho = (icmpm_echo_hdr *)((uint8_t *)p->payload + pbuf_hlen);
-
-    if ((icmpm_2_icmpg(iecho)->id == PING_ID) && ((icmpm_2_icmp(iecho)->type == ICMP_ER) || (icmpm_2_icmp6(iecho)->type == ICMP6_TYPE_EREP))) {
-
-      LWIP_DEBUGF( PING_DEBUG, ("ping: recv "));
-      time_ticks = hres_timer_curr_time_ms() - ping_send_ticks;
-    //  if((unsigned int)lwip_htons(icmpm_2_icmpg(iecho)->seqno) == 6){
-#ifndef SUPPORT_FERMION_LOGGER
-      char pbuf[100];
-      //snprintf(pbuf,sizeof(pbuf), "ping resp rcvd: seq %u response time %u\r\n", (unsigned int)lwip_htons(icmpm_2_icmpg(iecho)->seqno), (unsigned int)time_ticks);
-      snprintf(pbuf,sizeof(pbuf), "Net: %d bytes from %s: seq=%u time=%u ms\r\n",
-            p->tot_len-28, ipaddr_ntoa(addr), (unsigned int)lwip_htons(icmpm_2_icmpg(iecho)->seqno), (unsigned int)time_ticks);
-      nt_dbg_print(pbuf);
-#else
-      ping_dbg_print_pair("Net: %d bytes from %s: seq=%u time=%ums\r\n", p->tot_len-28, ipaddr_ntoa(addr), (unsigned int)lwip_htons(icmpm_2_icmpg(iecho)->seqno), (unsigned int)time_ticks);
-      //ping_dbg_print_pair("ping resp rcvd: seq %u response time %u\r\n", (unsigned int)lwip_htons(icmpm_2_icmpg(iecho)->seqno), (unsigned int)time_ticks);
-#endif //SUPPORT_FERMION_LOGGER
-
-      if (icmpm_2_icmpg(iecho)->seqno != lwip_htons(ping_seq_num))
-          ping_dbg_print_pair("packet seq received after timeout %d", lwip_htons(icmpm_2_icmpg(iecho)->seqno));
-
-      ping_rsp_rcvd++;
-      ping_rsp_flag = 1;
-      //sys_untimeout(ping_timeout, pcb);
-
-      if(0 == ping_count)
-    	  ping_complete();
-
-      ip_addr_debug_print(PING_DEBUG, addr);
-      LWIP_DEBUGF( PING_DEBUG, (" %"U32_F" ms\n", (sys_now()-ping_time)));
-
-      /* do some ping result processing */
-      PING_RESULT(1);
-      pbuf_free(p);
-      return 1; /* eat the packet */
+    if (IP_IS_V6(ping_target)) {
+        pbuf_hlen = 40;  // PBUF_TRANSPORT_HLEN for IPv6
+    } else {
+        pbuf_hlen = 20;  // PBUF_TRANSPORT_HLEN for IPv4
     }
-    /* not eaten, restore original packet */
-    /* Changed to the "_force" version because of LPC zerocopy pbufs */
-//    pbuf_add_header_force(p, PBUF_IP_HLEN);
-  }
-  return 0; /* don't eat the packet */
+
+    if (p->tot_len >= (pbuf_hlen + sizeof(icmpm_echo_hdr))) {
+        iecho = (icmpm_echo_hdr *)((uint8_t *)p->payload + pbuf_hlen);
+
+        if ((icmpm_2_icmpg(iecho)->id == PING_ID) &&
+            ((icmpm_2_icmp(iecho)->type == ICMP_ER) || (icmpm_2_icmp6(iecho)->type == ICMP6_TYPE_EREP))) {
+            LWIP_DEBUGF(PING_DEBUG, ("ping: recv "));
+            time_ticks = hres_timer_curr_time_ms() - ping_send_ticks;
+            //  if((unsigned int)lwip_htons(icmpm_2_icmpg(iecho)->seqno) == 6){
+#ifndef SUPPORT_FERMION_LOGGER
+            char pbuf[100];
+            // snprintf(pbuf,sizeof(pbuf), "ping resp rcvd: seq %u response time %u\r\n", (unsigned
+            // int)lwip_htons(icmpm_2_icmpg(iecho)->seqno), (unsigned int)time_ticks);
+            snprintf(pbuf, sizeof(pbuf), "Net: %d bytes from %s: seq=%u time=%u ms\r\n", p->tot_len - 28,
+                     ipaddr_ntoa(addr), (unsigned int)lwip_htons(icmpm_2_icmpg(iecho)->seqno),
+                     (unsigned int)time_ticks);
+            nt_dbg_print(pbuf);
+#else
+            ping_dbg_print_pair("Net: %d bytes from %s: seq=%u time=%ums\r\n", p->tot_len - 28, ipaddr_ntoa(addr),
+                                (unsigned int)lwip_htons(icmpm_2_icmpg(iecho)->seqno), (unsigned int)time_ticks);
+            // ping_dbg_print_pair("ping resp rcvd: seq %u response time %u\r\n", (unsigned
+            // int)lwip_htons(icmpm_2_icmpg(iecho)->seqno), (unsigned int)time_ticks);
+#endif  // SUPPORT_FERMION_LOGGER
+
+            if (icmpm_2_icmpg(iecho)->seqno != lwip_htons(ping_seq_num))
+                ping_dbg_print_pair("packet seq received after timeout %d", lwip_htons(icmpm_2_icmpg(iecho)->seqno));
+
+            ping_rsp_rcvd++;
+            ping_rsp_flag = 1;
+            // sys_untimeout(ping_timeout, pcb);
+
+            if (0 == ping_count)
+                ping_complete();
+
+            ip_addr_debug_print(PING_DEBUG, addr);
+            LWIP_DEBUGF(PING_DEBUG, (" %" U32_F " ms\n", (sys_now() - ping_time)));
+
+            /* do some ping result processing */
+            PING_RESULT(1);
+            pbuf_free(p);
+            return 1; /* eat the packet */
+        }
+        /* not eaten, restore original packet */
+        /* Changed to the "_force" version because of LPC zerocopy pbufs */
+        //    pbuf_add_header_force(p, PBUF_IP_HLEN);
+    }
+    return 0; /* don't eat the packet */
 }
 
-static void
-ping_send(struct raw_pcb *raw, const ip_addr_t *addr)
+static void ping_send(struct raw_pcb *raw, const ip_addr_t *addr)
 {
-  struct pbuf *p;
-  icmpm_echo_hdr *iecho;
-  size_t ping_size = sizeof(icmpm_echo_hdr) + ping_bytes;
-  err_t err;
+    struct pbuf *p;
+    icmpm_echo_hdr *iecho;
+    size_t ping_size = sizeof(icmpm_echo_hdr) + ping_bytes;
+    err_t err;
 
-  LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
-  ip_addr_debug_print(PING_DEBUG, addr);
-  LWIP_DEBUGF( PING_DEBUG, ("\n"));
-  LWIP_ASSERT("ping_size <= 0xffff", ping_size <= 0xffff);
+    LWIP_DEBUGF(PING_DEBUG, ("ping: send "));
+    ip_addr_debug_print(PING_DEBUG, addr);
+    LWIP_DEBUGF(PING_DEBUG, ("\n"));
+    LWIP_ASSERT("ping_size <= 0xffff", ping_size <= 0xffff);
 
-  p = pbuf_alloc(PBUF_IP, (u16_t)ping_size, PBUF_RAM);
-  if (!p) {
-    return;
-  }
-  if ((p->len == p->tot_len) && (p->next == NULL)) {
-    iecho = (icmpm_echo_hdr *)p->payload;
-
-    ping_prepare_echo(iecho, (u16_t)ping_size);
-	ping_send_ticks = hres_timer_curr_time_ms();
-    err = raw_sendto(raw, p, addr);
-
-    if(err == ERR_OK) {
-        ping_rsp_flag = 0;
-    	//ping_dbg_print_pair("ping sent pkt ", ping_seq_num);
+    p = pbuf_alloc(PBUF_IP, (u16_t)ping_size, PBUF_RAM);
+    if (!p) {
+        return;
     }
-    else
-    	ping_dbg_print_pair("ping pkt err reason ", err);
+    if ((p->len == p->tot_len) && (p->next == NULL)) {
+        iecho = (icmpm_echo_hdr *)p->payload;
+
+        ping_prepare_echo(iecho, (u16_t)ping_size);
+        ping_send_ticks = hres_timer_curr_time_ms();
+        err = raw_sendto(raw, p, addr);
+
+        if (err == ERR_OK) {
+            ping_rsp_flag = 0;
+            // ping_dbg_print_pair("ping sent pkt ", ping_seq_num);
+        } else
+            ping_dbg_print_pair("ping pkt err reason ", err);
 
 #ifdef LWIP_DEBUG
-    ping_time = sys_now();
+        ping_time = sys_now();
 #endif /* LWIP_DEBUG */
-  }
-  pbuf_free(p);
+    }
+    pbuf_free(p);
 }
 
-static void
-ping_timeout(void *arg)
+static void ping_timeout(void *arg)
 {
-  struct raw_pcb *pcb = (struct raw_pcb*)arg;
-  char pbuf[100];
+    struct raw_pcb *pcb = (struct raw_pcb *)arg;
+    char pbuf[100];
 
-  LWIP_ASSERT("ping_timeout: no pcb given!", pcb != NULL);
+    LWIP_ASSERT("ping_timeout: no pcb given!", pcb != NULL);
 
-  if( 0 != ping_sent_count && 1 != ping_rsp_flag)
-  {
-    snprintf(pbuf,sizeof(pbuf), "Net: Request timed out\r\n");
-    nt_dbg_print(pbuf);
-  }
+    if (0 != ping_sent_count && 1 != ping_rsp_flag) {
+        snprintf(pbuf, sizeof(pbuf), "Net: Request timed out\r\n");
+        nt_dbg_print(pbuf);
+    }
 
-  ping_sent_count++;
-  ping_count--;
+    ping_sent_count++;
+    ping_count--;
 
-  if(ping_count >= 0)
-  {
-      ping_send(pcb, ping_target);
-      sys_timeout(ping_delay, ping_timeout, pcb);
-  }
+    if (ping_count >= 0) {
+        ping_send(pcb, ping_target);
+        sys_timeout(ping_delay, ping_timeout, pcb);
+    }
 }
 
-static void
-ping_raw_init(void)
+static void ping_raw_init(void)
 {
 #if LWIP_IPV4
-  ping_pcb_v4 = raw_new(IP_PROTO_ICMP);
+    ping_pcb_v4 = raw_new(IP_PROTO_ICMP);
 
-  LWIP_ASSERT("ping_pcb_v4 != NULL", ping_pcb_v4 != NULL);
+    LWIP_ASSERT("ping_pcb_v4 != NULL", ping_pcb_v4 != NULL);
 
-  raw_recv(ping_pcb_v4, ping_recv, NULL);
-  raw_bind(ping_pcb_v4, IP_ANY_TYPE);
+    raw_recv(ping_pcb_v4, ping_recv, NULL);
+    raw_bind(ping_pcb_v4, IP_ANY_TYPE);
 #endif
 
 #if LWIP_IPV6
-  ping_pcb_v6 = raw_new(IP6_NEXTH_ICMP6);
+    ping_pcb_v6 = raw_new(IP6_NEXTH_ICMP6);
 
-  LWIP_ASSERT("ping_pcb_v6 != NULL", ping_pcb_v6 != NULL);
+    LWIP_ASSERT("ping_pcb_v6 != NULL", ping_pcb_v6 != NULL);
 
-  raw_recv(ping_pcb_v6, ping_recv, NULL);
-  raw_bind(ping_pcb_v6, IP_ANY_TYPE);
+    raw_recv(ping_pcb_v6, ping_recv, NULL);
+    raw_bind(ping_pcb_v6, IP_ANY_TYPE);
 #endif
 }
 
 #endif /* PING_USE_SOCKETS */
 
-void
-ping_init()
+void ping_init()
 {
-
 #if PING_USE_SOCKETS
-  sys_thread_new("ping_thread", ping_thread, NULL, DEFAULT_THREAD_STACKSIZE, DEFAULT_THREAD_PRIO);
-#else /* PING_USE_SOCKETS */
-  ping_raw_init();
+    sys_thread_new("ping_thread", ping_thread, NULL, DEFAULT_THREAD_STACKSIZE, DEFAULT_THREAD_PRIO);
+#else  /* PING_USE_SOCKETS */
+    ping_raw_init();
 #endif /* PING_USE_SOCKETS */
 }
 
-void
-ping(ip_addr_t *ip_addr, uint32_t no_of_bytes, uint32_t no_of_pkts, uint32_t delay) {
+void ping(ip_addr_t *ip_addr, uint32_t no_of_bytes, uint32_t no_of_pkts, uint32_t delay)
+{
+    ip_addr_copy(ping_addr, *ip_addr);
 
-	ip_addr_copy(ping_addr,*ip_addr);
+    ping_total_count = ping_count = no_of_pkts;
 
-	ping_total_count = ping_count = no_of_pkts;
+    ping_bytes = no_of_bytes;
 
-	ping_bytes = no_of_bytes;
+    ping_target = &ping_addr;
 
-	ping_target = &ping_addr;
+    ping_delay = delay;
 
-	ping_delay = delay;
-
-	ping_seq_num = 0;
-	ping_rsp_rcvd = 0;
-	ping_sent_count=0;
-        ping_rsp_flag = 0;
-
+    ping_seq_num = 0;
+    ping_rsp_rcvd = 0;
+    ping_sent_count = 0;
+    ping_rsp_flag = 0;
 
 #if LWIP_IPV4
-	if(IP_IS_V4(ping_target)){
-		ping_timeout(ping_pcb_v4);
-		//preetham sys_timeout(10, ping_timeout, ping_pcb_v4);
-	}
+    if (IP_IS_V4(ping_target)) {
+        ping_timeout(ping_pcb_v4);
+        // preetham sys_timeout(10, ping_timeout, ping_pcb_v4);
+    }
 #endif
 #if LWIP_IPV6
-	if(IP_IS_V6(ping_target)){
-    ping_pcb_v6->chksum_reqd = ICMPV6_CHECKSUM_REQUIRED;
-    ping_pcb_v6->chksum_offset = ICMPV6_CHECKSUM_POSITION_OFFSET;
-		ping_timeout(ping_pcb_v6);
-		//preetham sys_timeout(10, ping_timeout, ping_pcb_v6);
-	}
+    if (IP_IS_V6(ping_target)) {
+        ping_pcb_v6->chksum_reqd = ICMPV6_CHECKSUM_REQUIRED;
+        ping_pcb_v6->chksum_offset = ICMPV6_CHECKSUM_POSITION_OFFSET;
+        ping_timeout(ping_pcb_v6);
+        // preetham sys_timeout(10, ping_timeout, ping_pcb_v6);
+    }
 #endif
 
-	return;
+    return;
 }
 #endif /* NT_TST_PING_TOOL */
 

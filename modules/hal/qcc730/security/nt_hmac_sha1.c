@@ -318,8 +318,6 @@ int32_t hmac_sha1_known_answer_macfailed_piomode()
 
   nonce[3] = 0x00000000;
 
-
-
 #ifdef QCC
 
 ceId=0;
@@ -673,8 +671,6 @@ return 1;
 
 }
 
-
-
 #if 0
 
   //check for proper cipher output
@@ -716,7 +712,6 @@ vv_msg(SEV_INFO, ST_FUNCTION, "*** %1d out %08x != %08x exp ***", i, dout[i], ex
 #endif
 
 }
-
 
 #endif
 #endif

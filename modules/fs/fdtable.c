@@ -21,24 +21,24 @@
 #include "uart.h"
 #define MAX_BUF_LEN 200
 
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
-#define array_index_sanitize(index, size) ((index) < (size) ? (index) : (size) - 1)
+#define ARRAY_SIZE(array)                 (sizeof(array) / sizeof((array)[0]))
+#define array_index_sanitize(index, size) ((index) < (size) ? (index) : (size)-1)
 
 #ifdef FERMION_SILICON
-extern uint32_t UART_Send_direct(char *txbuf,uint32_t buflen);
-#define UART_SEND_DIRECT(str)   UART_Send_direct((str),strlen(str))
+extern uint32_t UART_Send_direct(char *txbuf, uint32_t buflen);
+#define UART_SEND_DIRECT(str) UART_Send_direct((str), strlen(str))
 #else
 #define UART_SEND_DIRECT(str)
 #endif
 
 struct fd_entry {
-	void *obj;
-	const struct fd_op_vtable *vtable;
-	SemaphoreHandle_t lock;
-        volatile char used;
+    void *obj;
+    const struct fd_op_vtable *vtable;
+    SemaphoreHandle_t lock;
+    volatile char used;
 };
 
-//static const struct fd_op_vtable stdinout_fd_op_vtable;
+// static const struct fd_op_vtable stdinout_fd_op_vtable;
 
 static struct fd_entry fdtable[CONFIG_POSIX_MAX_FDS] = {
 #if 0
@@ -58,9 +58,7 @@ static struct fd_entry fdtable[CONFIG_POSIX_MAX_FDS] = {
         .used = 1,
     },
 #endif
-	{
-	0
-	},
+    {0},
 };
 
 static SemaphoreHandle_t fdtable_lock;
@@ -79,197 +77,195 @@ void init_fdtable(void)
 
 static int z_fd_unref(int fd)
 {
-	fdtable[fd].obj = NULL;
-	fdtable[fd].vtable = NULL;
-        fdtable[fd].used = 0;
-        vSemaphoreDelete(fdtable[fd].lock);
-        fdtable[fd].lock=NULL;
+    fdtable[fd].obj = NULL;
+    fdtable[fd].vtable = NULL;
+    fdtable[fd].used = 0;
+    vSemaphoreDelete(fdtable[fd].lock);
+    fdtable[fd].lock = NULL;
 
-	return 0;
+    return 0;
 }
 
 static int _find_fd_entry(void)
 {
-	int fd;
+    int fd;
 
-	for (fd = 0; fd < (int)ARRAY_SIZE(fdtable); fd++) {
-		if (fdtable[fd].used == 0) {
-                        fdtable[fd].used = 1;
-			return fd;
-		}
-	}
+    for (fd = 0; fd < (int)ARRAY_SIZE(fdtable); fd++) {
+        if (fdtable[fd].used == 0) {
+            fdtable[fd].used = 1;
+            return fd;
+        }
+    }
 
-	errno = ENFILE;
-	return -1;
+    errno = ENFILE;
+    return -1;
 }
 
 static int _check_fd(int fd)
 {
-	if (fd < 0 || fd >= (int)ARRAY_SIZE(fdtable)) {
-		errno = EBADF;
-		return -1;
-	}
+    if (fd < 0 || fd >= (int)ARRAY_SIZE(fdtable)) {
+        errno = EBADF;
+        return -1;
+    }
 
-	fd = array_index_sanitize(fd, (int)ARRAY_SIZE(fdtable));
+    fd = array_index_sanitize(fd, (int)ARRAY_SIZE(fdtable));
 
-	if (fdtable[fd].used == 0) {
-		errno = EBADF;
-		return -1;
-	}
+    if (fdtable[fd].used == 0) {
+        errno = EBADF;
+        return -1;
+    }
 
-	return 0;
+    return 0;
 }
 
 void *z_get_fd_obj(int fd, const struct fd_op_vtable *vtable, int err)
 {
-	struct fd_entry *entry;
+    struct fd_entry *entry;
 
-	if (_check_fd(fd) < 0) {
-		return NULL;
-	}
+    if (_check_fd(fd) < 0) {
+        return NULL;
+    }
 
-	entry = &fdtable[fd];
+    entry = &fdtable[fd];
 
-	if (vtable != NULL && entry->vtable != vtable) {
-		errno = err;
-		return NULL;
-	}
+    if (vtable != NULL && entry->vtable != vtable) {
+        errno = err;
+        return NULL;
+    }
 
-	return entry->obj;
+    return entry->obj;
 }
 
-void *z_get_fd_obj_and_vtable(int fd, const struct fd_op_vtable **vtable,
-			      SemaphoreHandle_t **lock)
+void *z_get_fd_obj_and_vtable(int fd, const struct fd_op_vtable **vtable, SemaphoreHandle_t **lock)
 {
-	struct fd_entry *entry;
+    struct fd_entry *entry;
 
-	if (_check_fd(fd) < 0) {
-		return NULL;
-	}
+    if (_check_fd(fd) < 0) {
+        return NULL;
+    }
 
-	entry = &fdtable[fd];
-	*vtable = entry->vtable;
+    entry = &fdtable[fd];
+    *vtable = entry->vtable;
 
-	if (lock) {
-		*lock = &entry->lock;
-	}
+    if (lock) {
+        *lock = &entry->lock;
+    }
 
-	return entry->obj;
+    return entry->obj;
 }
 
 int z_reserve_fd(void)
 {
-	int fd;
+    int fd;
 
-        xSemaphoreTake(fdtable_lock, portMAX_DELAY);
+    xSemaphoreTake(fdtable_lock, portMAX_DELAY);
 
-	fd = _find_fd_entry();
-	if (fd >= 0) {
-		/* Mark entry as used, z_finalize_fd() will fill it in. */
-		fdtable[fd].obj = NULL;
-		fdtable[fd].vtable = NULL;
-                fdtable[fd].lock = xSemaphoreCreateMutex();
-	}
+    fd = _find_fd_entry();
+    if (fd >= 0) {
+        /* Mark entry as used, z_finalize_fd() will fill it in. */
+        fdtable[fd].obj = NULL;
+        fdtable[fd].vtable = NULL;
+        fdtable[fd].lock = xSemaphoreCreateMutex();
+    }
 
-	xSemaphoreGive(fdtable_lock);
+    xSemaphoreGive(fdtable_lock);
 
-	return fd;
+    return fd;
 }
 
 void z_finalize_fd(int fd, void *obj, const struct fd_op_vtable *vtable)
 {
-	/* Assumes fd was already bounds-checked. */
-	fdtable[fd].obj = obj;
-	fdtable[fd].vtable = vtable;
+    /* Assumes fd was already bounds-checked. */
+    fdtable[fd].obj = obj;
+    fdtable[fd].vtable = vtable;
 }
 
 void z_free_fd(int fd)
 {
-	/* Assumes fd was already bounds-checked. */
-	(void)z_fd_unref(fd);
+    /* Assumes fd was already bounds-checked. */
+    (void)z_fd_unref(fd);
 }
 
 int z_alloc_fd(void *obj, const struct fd_op_vtable *vtable)
 {
-	int fd;
+    int fd;
 
-	fd = z_reserve_fd();
-	if (fd >= 0) {
-		z_finalize_fd(fd, obj, vtable);
-	}
+    fd = z_reserve_fd();
+    if (fd >= 0) {
+        z_finalize_fd(fd, obj, vtable);
+    }
 
-	return fd;
+    return fd;
 }
 
 #ifdef CONFIG_POSIX_FS_API
 
 ssize_t _read(int fd, void *buf, size_t sz)
 {
-        //printf("in %s\n",__func__);
-	ssize_t res;
+    // printf("in %s\n",__func__);
+    ssize_t res;
 
-	if (_check_fd(fd) < 0) {
-		return -1;
-	}
+    if (_check_fd(fd) < 0) {
+        return -1;
+    }
 
-        xSemaphoreTake(fdtable[fd].lock, portMAX_DELAY);
+    xSemaphoreTake(fdtable[fd].lock, portMAX_DELAY);
 
-	res = fdtable[fd].vtable->read(fdtable[fd].obj, buf, sz);
+    res = fdtable[fd].vtable->read(fdtable[fd].obj, buf, sz);
 
-        xSemaphoreGive(fdtable[fd].lock);
+    xSemaphoreGive(fdtable[fd].lock);
 
-	return res;
+    return res;
 }
 
 ssize_t _write(int fd, const void *buf, size_t sz)
 {
-        //printf("in %s\n",__func__);
-	ssize_t res;
+    // printf("in %s\n",__func__);
+    ssize_t res;
 
-	if (_check_fd(fd) < 0) {
-		return -1;
-	}
+    if (_check_fd(fd) < 0) {
+        return -1;
+    }
 
-        if(fd>2)
-            xSemaphoreTake(fdtable[fd].lock, portMAX_DELAY);
+    if (fd > 2)
+        xSemaphoreTake(fdtable[fd].lock, portMAX_DELAY);
 
-	res = fdtable[fd].vtable->write(fdtable[fd].obj, buf, sz);
+    res = fdtable[fd].vtable->write(fdtable[fd].obj, buf, sz);
 
-        if(fd>2)
-            xSemaphoreGive(fdtable[fd].lock);
+    if (fd > 2)
+        xSemaphoreGive(fdtable[fd].lock);
 
-	return res;
+    return res;
 }
 
 int _close(int fd)
 {
-	int res;
-        //printf("in %s\n",__func__);
+    int res;
+    // printf("in %s\n",__func__);
 
-	if (_check_fd(fd) < 0) {
-		return -1;
-	}
+    if (_check_fd(fd) < 0) {
+        return -1;
+    }
 
-        xSemaphoreTake(fdtable[fd].lock, portMAX_DELAY);
+    xSemaphoreTake(fdtable[fd].lock, portMAX_DELAY);
 
-	res = fdtable[fd].vtable->close(fdtable[fd].obj);
+    res = fdtable[fd].vtable->close(fdtable[fd].obj);
 
-        xSemaphoreGive(fdtable[fd].lock);
+    xSemaphoreGive(fdtable[fd].lock);
 
-	z_free_fd(fd);
+    z_free_fd(fd);
 
-	return res;
+    return res;
 }
 
 off_t _lseek(int fd, off_t offset, int whence)
 {
-        //printf("in %s\n",__func__);
-	if (_check_fd(fd) < 0) {
-		return -1;
-	}
+    // printf("in %s\n",__func__);
+    if (_check_fd(fd) < 0) {
+        return -1;
+    }
 
-	return z_fdtable_call_ioctl(fdtable[fd].vtable, fdtable[fd].obj, ZFD_IOCTL_LSEEK,
-			  offset, whence);
+    return z_fdtable_call_ioctl(fdtable[fd].vtable, fdtable[fd].obj, ZFD_IOCTL_LSEEK, offset, whence);
 }
 
 #if 0

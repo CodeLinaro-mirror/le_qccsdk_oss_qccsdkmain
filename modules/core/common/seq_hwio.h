@@ -40,24 +40,20 @@
 #include <HALhwio.h>
 
 /**** Register Ref Read ****/
-#define SEQ_INH(base, regtype, reg) \
-    SEQ_##regtype##_INH(base, reg)
+#define SEQ_INH(base, regtype, reg) SEQ_##regtype##_INH(base, reg)
 
 /**** Masked Register Read ****/
-#define SEQ_INMH(base, regtype, reg, mask) \
-    SEQ_##regtype##_INMH(base, reg, mask)
+#define SEQ_INMH(base, regtype, reg, mask) SEQ_##regtype##_INMH(base, reg, mask)
 
 /**** Ref Reg Field Read ****/
 #define SEQ_INFH(base, regtype, reg, fld) \
     (SEQ_##regtype##_INMH(base, reg, HWIO_FMSK(regtype, fld)) >> HWIO_SHFT(regtype, fld))
 
 /**** Ref Register  Write ****/
-#define SEQ_OUTH(base, regtype, reg, val) \
-    SEQ_##regtype##_OUTH(base, reg, val)
+#define SEQ_OUTH(base, regtype, reg, val) SEQ_##regtype##_OUTH(base, reg, val)
 
 /**** Ref Register Masked Write ****/
-#define SEQ_OUTMH(base, regtype, reg, mask, val) \
-    SEQ_##regtype##_OUTMH(base, reg, mask, val)
+#define SEQ_OUTMH(base, regtype, reg, mask, val) SEQ_##regtype##_OUTMH(base, reg, mask, val)
 
 /**** Ref Register Field Write ****/
 #define SEQ_OUTFH(base, regtype, reg, fld, val) \
@@ -79,16 +75,12 @@
 
 /************ seq_wait() ************/
 
-typedef enum {
-    SEC,
-    MS,
-    US,
-    NS
-} SEQ_TimeUnit;
+typedef enum { SEC, MS, US, NS } SEQ_TimeUnit;
 
 void seq_wait(uint32_t time_value, SEQ_TimeUnit time_unit);
 
 /************ seq_poll() ************/
-uint32_t seq_poll(uint32_t reg_offset, uint32_t expect_value, uint32_t value_mask, uint32_t value_shift, uint32_t max_poll_cnt);
+uint32_t seq_poll(uint32_t reg_offset, uint32_t expect_value, uint32_t value_mask, uint32_t value_shift,
+                  uint32_t max_poll_cnt);
 
 #endif /* _SEQ_HWIO_H_ */

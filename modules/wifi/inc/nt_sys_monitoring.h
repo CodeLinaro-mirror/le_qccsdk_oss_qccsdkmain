@@ -1,8 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ */
 
 #ifndef CORE_SYSTEM_INC_NT_sysmon_H_
 #define CORE_SYSTEM_INC_NT_sysmon_H_
@@ -11,28 +10,19 @@
 /*apart from the wifi_app_task , sysmon_task is another app level task to provide the policy, to
  * handle system and safety of neutrino, to have all the policies that it will provide,
  *  this stack depth is chosen, based on approximation  */
-#define NT_SYSMON_STACK_SIZE	400
-#define NT_SYSMON_TASK_PRIO		7
+#define NT_SYSMON_STACK_SIZE 400
+#define NT_SYSMON_TASK_PRIO  7
 
 /*
  * @Sensor selection
  * */
-typedef enum
-{
-	DHT11=0,
-	IN_NEUT_T
-}temperature_sensor;
+typedef enum { DHT11 = 0, IN_NEUT_T } temperature_sensor;
 
 /*
  * @PMIC Sensor selection (Voltage sensor / Temperature sensor) as input to HKADC
  */
 
-typedef enum
-{
-	HKADC_VOLTAGE = 0,
-	HKADC_TEMPERATURE = 1
-}HKADC_sensor_sel_t;
-
+typedef enum { HKADC_VOLTAGE = 0, HKADC_TEMPERATURE = 1 } HKADC_sensor_sel_t;
 
 /**
  * @Function: nt_sysmon_cc_hkadc_avg_voltage_get
@@ -97,7 +87,7 @@ void nt_sysmon_hkadc_input_snr_sel(HKADC_sensor_sel_t hkadc_input_snr);
  * @parm: none
  * @Return : register value of battery voltage of neutrino  in 32 bit integer format
  */
-uint32_t  nt_sysmon_updated_batt_voltage_reg_val_get_from_isr(void);
+uint32_t nt_sysmon_updated_batt_voltage_reg_val_get_from_isr(void);
 
 /**
  * @Function: nt_system_sw_reset
@@ -106,6 +96,6 @@ uint32_t  nt_sysmon_updated_batt_voltage_reg_val_get_from_isr(void);
  * @parm: none
  * @Return :none
  */
-void nt_system_sw_reset( void );
+void nt_system_sw_reset(void);
 
 #endif /* CORE_SYSTEM_INC_NT_sysmon_H_ */

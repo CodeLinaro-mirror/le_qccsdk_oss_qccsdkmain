@@ -16,8 +16,8 @@
 
 // ==================== General Configuration Overrides ====================
 
-#define INET_CONFIG_NUM_TCP_ENDPOINTS 4 
+#define INET_CONFIG_NUM_TCP_ENDPOINTS 4
 
 #define IPV6_MULTICAST_IMPLEMENTED
 
-#define INET_CONFIG_NUM_UDP_ENDPOINTS 4 
+#define INET_CONFIG_NUM_UDP_ENDPOINTS 4

@@ -1,12 +1,11 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
-
- /*
-  * @brief HAL API library control interface specification
-  */
+/*
+ * @brief HAL API library control interface specification
+ */
 
 #ifndef _HAL_API_CTL_H_
 #define _HAL_API_CTL_H_
@@ -16,11 +15,11 @@
 #include "hal_int_cfg.h"
 
 #ifdef HAL_CFG_INC_TEST_THREAD
-	// TODO: temp test thread for HAL
-	#define NT_HAL_TEST_THREAD()  nt_hal_test_thread()
-	uint32_t nt_hal_test_thread(void);
+// TODO: temp test thread for HAL
+#define NT_HAL_TEST_THREAD() nt_hal_test_thread()
+uint32_t nt_hal_test_thread(void);
 #else
-	#define NT_HAL_TEST_THREAD()
+#define NT_HAL_TEST_THREAD()
 #endif
 
 nt_status_t nt_hal_init(void);
@@ -32,5 +31,4 @@ nt_status_t nt_hal_start(void);
 nt_status_t nt_hal_stop(void);
 nt_status_t nt_hal_deinit(void);
 
-
-#endif // _HAL_API_CTL_H_
+#endif  // _HAL_API_CTL_H_

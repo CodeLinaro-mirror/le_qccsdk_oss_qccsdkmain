@@ -19,7 +19,6 @@
 
 // ==================== Security Adaptations ====================
 
-
 // ==================== General Configuration Overrides ====================
 /**
  *  @def CHIP_CONFIG_MAX_FABRICS
@@ -36,6 +35,5 @@
 //#define CHIP_CONFIG_ENABLE_SERVER_IM_EVENT 0
 
 // ==================== Security Configuration Overrides ====================
-
 
 // ==================== FreeRTOS Configuration Overrides ====================

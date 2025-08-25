@@ -7,7 +7,7 @@ config WIFILIB_6GHZ
 config MGMT_FILTER_DEMO 
     bool "enable management frames filter DEMO"
     default n
-    
+
 config ACK_TIMEOUT_MODIFY_ENABLE
     bool "enable set ack timeout"
     default y
@@ -84,4 +84,12 @@ config SRRC_BAND_EDGE_SUPPORT
     bool "enable band edge adjust for ch12 and ch13"
     default y
 
-endmenu
+config ENABLE_P2P_MODE
+    bool "enable p2p support"
+    default n
+
+config ENABLE_P2P_LIB
+    bool "enable p2p lib support"
+    default n
+
+            endmenu

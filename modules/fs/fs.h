@@ -33,23 +33,23 @@ extern "C" {
 #undef ENOTEMPTY
 #undef EFBIG
 
-#define ENOSPC 28
-#define EINVAL 22
-#define EBUSY  16
-#define ENOENT 2
-#define ENOTSUP 95
-#define ENOMEM  12
-#define EBADF   9
-#define EROFS 30
-#define EEXIST 17
-#define  EIO              5  /* I/O error */
-#define  EFAULT          14  /* Bad address */
-#define  ENOTDIR         20  /* Not a directory */
-#define  EISDIR          21  /* Is a directory */
-#define  ENOTEMPTY       39  /* Directory not empty */
-#define  EFBIG           27  /* File too large */
+#define ENOSPC    28
+#define EINVAL    22
+#define EBUSY     16
+#define ENOENT    2
+#define ENOTSUP   95
+#define ENOMEM    12
+#define EBADF     9
+#define EROFS     30
+#define EEXIST    17
+#define EIO       5  /* I/O error */
+#define EFAULT    14 /* Bad address */
+#define ENOTDIR   20 /* Not a directory */
+#define EISDIR    21 /* Is a directory */
+#define ENOTEMPTY 39 /* Directory not empty */
+#define EFBIG     27 /* File too large */
 
-#define BIT(n)  (1 << (n))
+#define BIT(n) (1 << (n))
 
 /**
  * @brief File System APIs
@@ -59,10 +59,10 @@ extern "C" {
 struct fs_file_system_t;
 
 enum fs_dir_entry_type {
-	/** Identifier for file entry */
-	FS_DIR_ENTRY_FILE = 0,
-	/** Identifier for directory entry */
-	FS_DIR_ENTRY_DIR
+    /** Identifier for file entry */
+    FS_DIR_ENTRY_FILE = 0,
+    /** Identifier for directory entry */
+    FS_DIR_ENTRY_DIR
 };
 
 /** @brief Enumeration to uniquely identify file system types.
@@ -80,14 +80,14 @@ enum fs_dir_entry_type {
  * used by the application.
  */
 enum {
-	/** Identifier for in-tree FatFS file system. */
-	FS_FATFS = 0,
+    /** Identifier for in-tree FatFS file system. */
+    FS_FATFS = 0,
 
-	/** Identifier for in-tree LittleFS file system. */
-	FS_LITTLEFS,
+    /** Identifier for in-tree LittleFS file system. */
+    FS_LITTLEFS,
 
-	/** Base identifier for external file systems. */
-	FS_TYPE_EXTERNAL_BASE,
+    /** Base identifier for external file systems. */
+    FS_TYPE_EXTERNAL_BASE,
 };
 
 /** Flag prevents formatting device if requested file system not found */
@@ -123,15 +123,15 @@ enum {
  * @param flags Mount flags
  */
 struct fs_mount_t {
-        ListItem_t node;
-	int type;
-	const char *mnt_point;
-	void *fs_data;
-	void *storage_dev;
-	/* fields filled by file system core */
-	size_t mountp_len;
-	const struct fs_file_system_t *fs;
-	uint8_t flags;
+    ListItem_t node;
+    int type;
+    const char *mnt_point;
+    void *fs_data;
+    void *storage_dev;
+    /* fields filled by file system core */
+    size_t mountp_len;
+    const struct fs_file_system_t *fs;
+    uint8_t flags;
 };
 
 /**
@@ -147,9 +147,9 @@ struct fs_mount_t {
  * @param size Size of file. 0 if directory
  */
 struct fs_dirent {
-	enum fs_dir_entry_type type;
-	char name[MAX_FILE_NAME + 1];
-	size_t size;
+    enum fs_dir_entry_type type;
+    char name[MAX_FILE_NAME + 1];
+    size_t size;
 };
 
 /**
@@ -164,35 +164,34 @@ struct fs_dirent {
  * @param f_bfree Number of free blocks
  */
 struct fs_statvfs {
-	unsigned long f_bsize;
-	unsigned long f_frsize;
-	unsigned long f_blocks;
-	unsigned long f_bfree;
+    unsigned long f_bsize;
+    unsigned long f_frsize;
+    unsigned long f_blocks;
+    unsigned long f_bfree;
 };
-
 
 /**
  * @name fs_open open and creation mode flags
  * @{
  */
 /** Open for read flag */
-#define FS_O_READ       0x01
+#define FS_O_READ 0x01
 /** Open for write flag */
-#define FS_O_WRITE      0x02
+#define FS_O_WRITE 0x02
 /** Open for read-write flag combination */
-#define FS_O_RDWR       (FS_O_READ | FS_O_WRITE)
+#define FS_O_RDWR (FS_O_READ | FS_O_WRITE)
 /** Bitmask for read and write flags */
-#define FS_O_MODE_MASK  0x03
+#define FS_O_MODE_MASK 0x03
 
 /** Create file if it does not exist */
-#define FS_O_CREATE     0x10
+#define FS_O_CREATE 0x10
 /** Open/create file for append */
-#define FS_O_APPEND     0x20
+#define FS_O_APPEND 0x20
 /** Bitmask for open/create flags */
 #define FS_O_FLAGS_MASK 0x30
 
 /** Bitmask for open flags */
-#define FS_O_MASK       (FS_O_MODE_MASK | FS_O_FLAGS_MASK)
+#define FS_O_MASK (FS_O_MODE_MASK | FS_O_FLAGS_MASK)
 /**
  * @}
  */
@@ -203,15 +202,15 @@ struct fs_statvfs {
  */
 #ifndef FS_SEEK_SET
 /** Seek from the beginning of file */
-#define FS_SEEK_SET	0
+#define FS_SEEK_SET 0
 #endif
 #ifndef FS_SEEK_CUR
 /** Seek from a current position */
-#define FS_SEEK_CUR	1
+#define FS_SEEK_CUR 1
 #endif
 #ifndef FS_SEEK_END
 /** Seek from the end of file */
-#define FS_SEEK_END	2
+#define FS_SEEK_END 2
 #endif
 /**
  * @}
@@ -226,11 +225,11 @@ struct fs_statvfs {
  * @return a value suitable for initializing an fs_mount_t flags
  * member.
  */
-#define FSTAB_ENTRY_DT_MOUNT_FLAGS(node_id)				\
-	((DT_PROP(node_id, automount) ? FS_MOUNT_FLAG_AUTOMOUNT : 0)	\
-	 | (DT_PROP(node_id, read_only) ? FS_MOUNT_FLAG_READ_ONLY : 0)	\
-	 | (DT_PROP(node_id, no_format) ? FS_MOUNT_FLAG_NO_FORMAT : 0)  \
-	 | (DT_PROP(node_id, disk_access) ? FS_MOUNT_FLAG_USE_DISK_ACCESS : 0))
+#define FSTAB_ENTRY_DT_MOUNT_FLAGS(node_id)                        \
+    ((DT_PROP(node_id, automount) ? FS_MOUNT_FLAG_AUTOMOUNT : 0) | \
+     (DT_PROP(node_id, read_only) ? FS_MOUNT_FLAG_READ_ONLY : 0) | \
+     (DT_PROP(node_id, no_format) ? FS_MOUNT_FLAG_NO_FORMAT : 0) | \
+     (DT_PROP(node_id, disk_access) ? FS_MOUNT_FLAG_USE_DISK_ACCESS : 0))
 
 #endif
 
@@ -245,7 +244,7 @@ struct fs_statvfs {
  */
 static inline void fs_file_t_init(struct fs_file_t *zfp)
 {
-	*zfp = (struct fs_file_t){ 0 };
+    *zfp = (struct fs_file_t){0};
 }
 
 /**
@@ -259,7 +258,7 @@ static inline void fs_file_t_init(struct fs_file_t *zfp)
  */
 static inline void fs_dir_t_init(struct fs_dir_t *zdp)
 {
-	*zdp = (struct fs_dir_t){ 0 };
+    *zdp = (struct fs_dir_t){0};
 }
 
 /**
@@ -675,8 +674,7 @@ int vfs_unregister(int type, const struct fs_file_system_t *fs);
  * @}
  */
 
-
-//add for fs shell
+// add for fs shell
 void ls_func(const char *path);
 int read_func(const char *name, off_t offset, size_t len);
 int write_func(const char *name, off_t offset, const void *buf, size_t sz);

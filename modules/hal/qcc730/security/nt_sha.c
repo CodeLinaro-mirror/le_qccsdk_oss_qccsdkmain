@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
-
 #include "nt_hw.h"
 #include "nt_logger_api.h"
 #include "nt_crypto.h"
@@ -23,92 +22,89 @@ extern void wifi_crypto_secip_request(uint8_t enable_secip_module);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int32_t sha1_known_answer_initvector_piomode(const uint8_t *p_start, uint32_t *p_iv, uint32_t size, uint8_t *output)
 #ifdef WIFI_HW_SHA_WPA2
-{    
+{
     uint32_t *p_din = NULL;
     uint32_t final_auth_iv[5] = {0};
     uint32_t input_size;
     uint32_t val = 0;
-    
+
     /*uint32_t initial_auth_iv[8] = { 0x01234567, \
                                     0x89ABCDEF, \
                                     0xFEDCBA98, \
                                     0x76543210, \
-									0xF0E1D2C3, \
+                                    0xF0E1D2C3, \
                                   };*/
-    p_din = (uint32_t*)p_start;
+    p_din = (uint32_t *)p_start;
     input_size = size / 4;
 
-    (void)p_iv; 
-    (void)val; 
-    //SW mode for crypto core
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG,0x2);
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_BYTECNT0_REG,0x0);
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_BYTECNT1_REG,0x0);
- 
-    //segment configuration - Hash SHA
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_SEG_CFG_REG,0x30001);
- 
-    //segment configuration
-    //HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, );
- 
-    //authorization segment configuration
+    (void)p_iv;
+    (void)val;
+    // SW mode for crypto core
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_CORE_CFG_REG, 0x2);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_BYTECNT0_REG, 0x0);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_BYTECNT1_REG, 0x0);
+
+    // segment configuration - Hash SHA
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_SEG_CFG_REG, 0x30001);
+
+    // segment configuration
+    // HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_CFG_REG, );
+
+    // authorization segment configuration
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_SEG_SIZE_REG, size);
- 
-    
+
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SEG_SIZE_REG, size);
- 
+
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_SEG_START_REG, 0);
- 
-    //Authentication initial Vector - write counter IV
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV0_REG,  p_iv[0]);
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV1_REG,  p_iv[1]);
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV2_REG,  p_iv[2]);
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV3_REG,  p_iv[3]);
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV4_REG,  p_iv[4]);/*
+
+    // Authentication initial Vector - write counter IV
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV0_REG, p_iv[0]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV1_REG, p_iv[1]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV2_REG, p_iv[2]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV3_REG, p_iv[3]);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV4_REG, p_iv[4]); /*
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV5_REG,  initial_auth_iv[5]);
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV6_REG,  initial_auth_iv[6]);
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV7_REG,  initial_auth_iv[7]);*/
- 
+
     // lets start hashing
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_REG, 1 << QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_GO_OFFSET);
- 
-    for(uint32_t i = 0; i < input_size; i++) 
-    {
+
+    for (uint32_t i = 0; i < input_size; i++) {
         HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_IN_REG, p_din[i]);
     }
     /* last few bytes needs to push to HW */
     uint32_t byte_remain = size & 3;
-    if(byte_remain)
-    {
+    if (byte_remain) {
         HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_DATA_IN_REG, p_din[input_size]);
     }
-    //Wait for Crypto to finish prossessing
-        val = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_REG);
-	//NT_LOG_PRINT(MLM, ERR, "Crypto done:%d\n",val);
- 
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_SEG_SIZE_REG,0);
+    // Wait for Crypto to finish prossessing
+    val = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_STATUS_REG);
+    // NT_LOG_PRINT(MLM, ERR, "Crypto done:%d\n",val);
+
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_SEG_SIZE_REG, 0);
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_SIZE_REG, 0);
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_SEG_SIZE_REG, 0);
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_SEG_START_REG,  0);
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_SEG_START_REG, 0);
     HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_ENCR_SEG_START_REG, 0);
     final_auth_iv[0] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV0_REG);
     final_auth_iv[1] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV1_REG);
     final_auth_iv[2] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV2_REG);
     final_auth_iv[3] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV3_REG);
     final_auth_iv[4] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV4_REG);
-    //HAL_DBG_PRINT("Abhishek- output 1\n",final_auth_iv[4],0,0);
+    // HAL_DBG_PRINT("Abhishek- output 1\n",final_auth_iv[4],0,0);
     /*final_auth_iv[5] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV5_REG);
     final_auth_iv[6] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV6_REG);
     final_auth_iv[7] = HAL_REG_RD(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_AUTH_IV7_REG);*/
     memscpy(output, 20, (uint8_t *)final_auth_iv, sizeof(final_auth_iv));
     return 0;
 }
-#else 
+#else
 {
-	(void)p_start;
-	(void)p_iv;
-	(void)size;
-	(void)output;
+    (void)p_start;
+    (void)p_iv;
+    (void)size;
+    (void)output;
 #if 0
 	int32_t cnt=0;
 	uint32_t read_data;
@@ -367,7 +363,6 @@ HWIO_OUTF(GCC_GCC_QCC_AHB_BCR_REG,BLK_ARES, 0x0);
 
 #endif
 
-
 #ifdef NT_FN_REG_MODE
 	crypto_result = crypto_arm(din, dout, input_size, output_size, 1000, ceId);
 #endif
@@ -403,9 +398,9 @@ HWIO_OUTF(GCC_GCC_QCC_AHB_BCR_REG,BLK_ARES, 0x0);
 	//actual_auth_iv[6] = HWIO_IN(QCC_CRYPTO_AUTH_IV6);
 	//actual_auth_iv[7] = HWIO_IN(QCC_CRYPTO_AUTH_IV7);
 
-#endif 
-	return 0;
+#endif
+    return 0;
 }
-#endif //WIFI_HW_SHA_WPA2
+#endif  // WIFI_HW_SHA_WPA2
 
-#endif //NT_FN_HW_CRYPTO
+#endif  // NT_FN_HW_CRYPTO

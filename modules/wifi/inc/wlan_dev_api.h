@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #ifndef _WLAN_DEV_API_H_
 #define _WLAN_DEV_API_H_
@@ -15,10 +15,10 @@ extern "C" {
 struct devh_s;
 
 nt_status_t wlan_dev_start(struct devh_s *dev, bss_t *bss, channel_t *ch, CSERV_COMPLETION_CB startCb);
-void    wlan_dev_stop(struct devh_s *dev);
-nt_status_t    wlan_dev_conn_start(struct devh_s *dev);
+void wlan_dev_stop(struct devh_s *dev);
+nt_status_t wlan_dev_conn_start(struct devh_s *dev);
 
-NT_BOOL  wlan_dev_no_ap_mode_dev(devh_t* dev);
+NT_BOOL wlan_dev_no_ap_mode_dev(devh_t *dev);
 
 #ifdef SUPPORT_COEX
 // TODO: Move to coex header files
@@ -46,4 +46,3 @@ uint16_t nt_wifi_get_set_sap_bcn_interval(uint16_t beacon_interval, NT_BOOL set_
 #endif
 
 #endif /* _WLAN_DEV_API_H_ */
-

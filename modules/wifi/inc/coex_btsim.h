@@ -1,12 +1,13 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
+ * SPDX-License-Identifier:
+ * BSD-3-Clause-Clear
 */
 /*========================================================================
-*
-* @file coex_brsim.h
-* @brief BTSIM related function headerfile
-*========================================================================*/
+ *
+ * @file coex_brsim.h
+ * @brief BTSIM related function headerfile
+ *========================================================================*/
 
 #ifndef COEX_BTSIM_H
 #define COEX_BTSIM_H
@@ -17,24 +18,23 @@
 /*-------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
  * ----------------------------------------------------------------------*/
-enum mci_msg_inject
-{
-	MCI_CONT_INFO_MESSAGE = 0,
-	MCI_CONT_INFO_V2_MESSAGE,
-	MCI_CONT_RST_MESSAGE,
-	MCI_SCHD_INFO_MESSAGE,
-	MCI_INVALID_MESSAGE,
+enum mci_msg_inject {
+    MCI_CONT_INFO_MESSAGE = 0,
+    MCI_CONT_INFO_V2_MESSAGE,
+    MCI_CONT_RST_MESSAGE,
+    MCI_SCHD_INFO_MESSAGE,
+    MCI_INVALID_MESSAGE,
 };
 
 /*-------------------------------------------------------------------------
  * Function Declarations
  * ----------------------------------------------------------------------*/
 
-void coex_set_btsim_timers_seq0(uint32_t * timer_values);
-void coex_set_btsim_timers_seq1(uint32_t * timer_values);
+void coex_set_btsim_timers_seq0(uint32_t *timer_values);
+void coex_set_btsim_timers_seq1(uint32_t *timer_values);
 
-void coex_msg_ctrl_seq0(uint32_t * msg_ctrl);
-void coex_msg_ctrl_seq1(uint32_t * msg_ctrl);
+void coex_msg_ctrl_seq0(uint32_t *msg_ctrl);
+void coex_msg_ctrl_seq1(uint32_t *msg_ctrl);
 
 void coex_config_and_enable_btsim(uint8_t seq0_en, uint8_t seq1_en);
 void coex_config_and_enable_btsim_for_timer(void);

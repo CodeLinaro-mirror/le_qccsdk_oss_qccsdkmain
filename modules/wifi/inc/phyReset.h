@@ -6,53 +6,53 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define _PHY_RESET_H_
 
 typedef enum cal_type_id {
-	NO_CAL = 0x00000000,
-	PROCESS_CAL = 0x00000001,
-	RXDCO_CAL = 0x00000002,
-	TXLO_CAL = 0x00000004,
-	TXIQ_CAL = 0x00000008,
-	RXIQ_CAL = 0x00000010,
-	DPD_CAL = 0x00000020,
-	EDET_CAL = 0x00000040,
-	RTT_CAL = 0x00000080,
-	ALL_CALS = (RXDCO_CAL | TXLO_CAL | TXIQ_CAL | RXIQ_CAL | DPD_CAL)
+    NO_CAL = 0x00000000,
+    PROCESS_CAL = 0x00000001,
+    RXDCO_CAL = 0x00000002,
+    TXLO_CAL = 0x00000004,
+    TXIQ_CAL = 0x00000008,
+    RXIQ_CAL = 0x00000010,
+    DPD_CAL = 0x00000020,
+    EDET_CAL = 0x00000040,
+    RTT_CAL = 0x00000080,
+    ALL_CALS = (RXDCO_CAL | TXLO_CAL | TXIQ_CAL | RXIQ_CAL | DPD_CAL)
 } cal_type_id_t;
 
 #if !defined(BIT_0)
-#define BIT_NUM(x) BIT_##x=(1 << x)
+#define BIT_NUM(x) BIT_##x = (1 << x)
 typedef enum bit_number_s {
-	BIT_NUM(0),
-	BIT_NUM(1),
-	BIT_NUM(2),
-	BIT_NUM(3),
-	BIT_NUM(4),
-	BIT_NUM(5),
-	BIT_NUM(6),
-	BIT_NUM(7),
-	BIT_NUM(8),
-	BIT_NUM(9),
-	BIT_NUM(10),
-	BIT_NUM(11),
-	BIT_NUM(12),
-	BIT_NUM(13),
-	BIT_NUM(14),
-	BIT_NUM(15),
-	BIT_NUM(16),
-	BIT_NUM(17),
-	BIT_NUM(18),
-	BIT_NUM(19),
-	BIT_NUM(20),
-	BIT_NUM(21),
-	BIT_NUM(22),
-	BIT_NUM(23),
-	BIT_NUM(24),
-	BIT_NUM(25),
-	BIT_NUM(26),
-	BIT_NUM(27),
-	BIT_NUM(28),
-	BIT_NUM(29),
-	BIT_NUM(30),
-	BIT_NUM(31),
+    BIT_NUM(0),
+    BIT_NUM(1),
+    BIT_NUM(2),
+    BIT_NUM(3),
+    BIT_NUM(4),
+    BIT_NUM(5),
+    BIT_NUM(6),
+    BIT_NUM(7),
+    BIT_NUM(8),
+    BIT_NUM(9),
+    BIT_NUM(10),
+    BIT_NUM(11),
+    BIT_NUM(12),
+    BIT_NUM(13),
+    BIT_NUM(14),
+    BIT_NUM(15),
+    BIT_NUM(16),
+    BIT_NUM(17),
+    BIT_NUM(18),
+    BIT_NUM(19),
+    BIT_NUM(20),
+    BIT_NUM(21),
+    BIT_NUM(22),
+    BIT_NUM(23),
+    BIT_NUM(24),
+    BIT_NUM(25),
+    BIT_NUM(26),
+    BIT_NUM(27),
+    BIT_NUM(28),
+    BIT_NUM(29),
+    BIT_NUM(30),
+    BIT_NUM(31),
 
 } bit_number_t;
 
@@ -73,7 +73,7 @@ void ferm_disable_cpr(void);
 #if defined(EMULATION_BUILD) && defined(PLATFORM_FERMION)
 void inject_impairment(cal_type_id_t calMask);  // for FPGA emulation
 void remove_impairment(cal_type_id_t calMask);  // for FPGA emulation
-int8_t bFermion20Emu(void); // return true for F2.0 emulation
+int8_t bFermion20Emu(void);                     // return true for F2.0 emulation
 #else
 #define inject_impairment(calMask)
 #define remove_impairment(calMask)

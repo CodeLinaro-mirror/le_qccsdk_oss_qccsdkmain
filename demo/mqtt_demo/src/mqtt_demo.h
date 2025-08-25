@@ -8,7 +8,7 @@
 
 /**
  * @brief The AP SSID.
- * 
+ *
  * #define WLAN_AP_SSID         ".....insert here...."
  */
 #define WLAN_AP_SSID "D-Link_DIR-816"

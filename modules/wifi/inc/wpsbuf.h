@@ -23,33 +23,32 @@
  */
 #include "wps_api.h"
 
-#define broadcast_ether_addr (const uint8_t *) "\xff\xff\xff\xff\xff\xff"
+#define broadcast_ether_addr (const uint8_t *)"\xff\xff\xff\xff\xff\xff"
 
-struct wpsbuf * wpsbuf_alloc(size_t len);
-struct wpsbuf * wpsbuf_alloc_copy(const void *data, size_t len);
-struct wpsbuf * wpsbuf_dup(const struct wpsbuf *src);
+struct wpsbuf *wpsbuf_alloc(size_t len);
+struct wpsbuf *wpsbuf_alloc_copy(const void *data, size_t len);
+struct wpsbuf *wpsbuf_dup(const struct wpsbuf *src);
 void wpsbuf_free(struct wpsbuf *buf);
-void * wpsbuf_put(struct wpsbuf *buf, size_t len);
-struct wpsbuf * wpsbuf_zeropad(struct wpsbuf *buf, size_t len);
+void *wpsbuf_put(struct wpsbuf *buf, size_t len);
+struct wpsbuf *wpsbuf_zeropad(struct wpsbuf *buf, size_t len);
 
-
-//NEUTRINO FIX-ME: The following functions are originally
-//defined as inline static functions but they are throwing
-//unused error warnings, hence making them non-static functions
-//and moved them to wpsbuf.c file, once wpa/wpa2 in place
-//these functions can be changed backed to inline functions
+// NEUTRINO FIX-ME: The following functions are originally
+// defined as inline static functions but they are throwing
+// unused error warnings, hence making them non-static functions
+// and moved them to wpsbuf.c file, once wpa/wpa2 in place
+// these functions can be changed backed to inline functions
 size_t wpsbuf_len(const struct wpsbuf *buf);
 size_t wpsbuf_tailroom(const struct wpsbuf *buf);
-const void * wpsbuf_head(const struct wpsbuf *buf);
-const uint8_t * wpsbuf_head_u8(const struct wpsbuf *buf);
-void * wpsbuf_mhead(struct wpsbuf *buf);
-uint8_t * wpsbuf_mhead_u8(struct wpsbuf *buf);
+const void *wpsbuf_head(const struct wpsbuf *buf);
+const uint8_t *wpsbuf_head_u8(const struct wpsbuf *buf);
+void *wpsbuf_mhead(struct wpsbuf *buf);
+uint8_t *wpsbuf_mhead_u8(struct wpsbuf *buf);
 void wpsbuf_put_u8(struct wpsbuf *buf, uint8_t data);
 void wpsbuf_put_be16(struct wpsbuf *buf, uint16_t data);
 void wpsbuf_put_be24(struct wpsbuf *buf, uint32_t data);
 void wpsbuf_put_be32(struct wpsbuf *buf, uint32_t data);
-void wpsbuf_put_data(struct wpsbuf *buf, const void *data,size_t len);
-void wpsbuf_put_buf(struct wpsbuf *dst,const struct wpsbuf *src);
+void wpsbuf_put_data(struct wpsbuf *buf, const void *data, size_t len);
+void wpsbuf_put_buf(struct wpsbuf *dst, const struct wpsbuf *src);
 void wpsbuf_set(struct wpsbuf *buf, const void *data, size_t len);
 
 #ifdef ATH_KF
@@ -88,14 +87,14 @@ static inline size_t wpsbuf_tailroom(const struct wpsbuf *buf)
  * @buf: wpsbuf buffer
  * Returns: Pointer to the head of the buffer data
  */
-static inline const void * wpsbuf_head(const struct wpsbuf *buf)
+static inline const void *wpsbuf_head(const struct wpsbuf *buf)
 {
     if (buf->ext_data)
         return buf->ext_data;
     return buf + 1;
 }
 
-static inline const uint8_t * wpsbuf_head_u8(const struct wpsbuf *buf)
+static inline const uint8_t *wpsbuf_head_u8(const struct wpsbuf *buf)
 {
     return wpsbuf_head(buf);
 }
@@ -105,14 +104,14 @@ static inline const uint8_t * wpsbuf_head_u8(const struct wpsbuf *buf)
  * @buf: wpsbuf buffer
  * Returns: Pointer to the head of the buffer data
  */
-static inline void * wpsbuf_mhead(struct wpsbuf *buf)
+static inline void *wpsbuf_mhead(struct wpsbuf *buf)
 {
     if (buf->ext_data)
         return buf->ext_data;
     return buf + 1;
 }
 
-static inline uint8_t * wpsbuf_mhead_u8(struct wpsbuf *buf)
+static inline uint8_t *wpsbuf_mhead_u8(struct wpsbuf *buf)
 {
     return wpsbuf_mhead(buf);
 }
@@ -147,22 +146,20 @@ static inline void wpsbuf_put_be32(struct wpsbuf *buf, uint32_t data)
     WPA_PUT_BE32(pos, data);
 }
 
-static inline void wpsbuf_put_data(struct wpsbuf *buf, const void *data,
-        size_t len)
+static inline void wpsbuf_put_data(struct wpsbuf *buf, const void *data, size_t len)
 {
     if (data)
         memcpy(wpsbuf_put(buf, len), data, len);
 }
 
-static inline void wpsbuf_put_buf(struct wpsbuf *dst,
-        const struct wpsbuf *src)
+static inline void wpsbuf_put_buf(struct wpsbuf *dst, const struct wpsbuf *src)
 {
     wpsbuf_put_data(dst, wpsbuf_head(src), wpsbuf_len(src));
 }
 
 static inline void wpsbuf_set(struct wpsbuf *buf, const void *data, size_t len)
 {
-    buf->ext_data = (uint8_t *) data;
+    buf->ext_data = (uint8_t *)data;
     buf->size = buf->used = len;
 }
 
@@ -170,6 +167,6 @@ static inline void wpsbuf_put_str(struct wpsbuf *dst, const char *str)
 {
     wpsbuf_put_data(dst, str, strlen(str));
 }
-#endif //ATH_KF
+#endif  // ATH_KF
 
 #endif /* WPSBUF_H */

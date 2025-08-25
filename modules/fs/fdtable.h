@@ -22,10 +22,10 @@ extern "C" {
  * Currently all operations beyond read/write/close go thru ioctl method.
  */
 struct fd_op_vtable {
-	ssize_t (*read)(void *obj, void *buf, size_t sz);
-	ssize_t (*write)(void *obj, const void *buf, size_t sz);
-	int (*close)(void *obj);
-	int (*ioctl)(void *obj, unsigned int request, va_list args);
+    ssize_t (*read)(void *obj, void *buf, size_t sz);
+    ssize_t (*write)(void *obj, const void *buf, size_t sz);
+    int (*close)(void *obj);
+    int (*ioctl)(void *obj, unsigned int request, va_list args);
 };
 
 /**
@@ -105,8 +105,7 @@ void *z_get_fd_obj(int fd, const struct fd_op_vtable *vtable, int err);
  *
  * @return Object pointer or NULL, with errno set
  */
-void *z_get_fd_obj_and_vtable(int fd, const struct fd_op_vtable **vtable,
-			      SemaphoreHandle_t **lock);
+void *z_get_fd_obj_and_vtable(int fd, const struct fd_op_vtable **vtable, SemaphoreHandle_t **lock);
 
 /**
  * @brief Call ioctl vmethod on an object using varargs.
@@ -120,17 +119,16 @@ void *z_get_fd_obj_and_vtable(int fd, const struct fd_op_vtable **vtable,
  * @param request ioctl request number
  * @param ... Variadic arguments to ioctl
  */
-static inline int z_fdtable_call_ioctl(const struct fd_op_vtable *vtable, void *obj,
-				       unsigned long request, ...)
+static inline int z_fdtable_call_ioctl(const struct fd_op_vtable *vtable, void *obj, unsigned long request, ...)
 {
-	va_list args;
-	int res;
+    va_list args;
+    int res;
 
-	va_start(args, request);
-	res = vtable->ioctl(obj, request, args);
-	va_end(args);
+    va_start(args, request);
+    res = vtable->ioctl(obj, request, args);
+    va_end(args);
 
-	return res;
+    return res;
 }
 
 /**
@@ -142,13 +140,13 @@ static inline int z_fdtable_call_ioctl(const struct fd_op_vtable *vtable, void *
  * "well-known" POSIX/Linux ioctl numbers, and not clash with them.
  */
 enum {
-	/* Codes below 0x100 are reserved for fcntl() codes. */
-	ZFD_IOCTL_FSYNC = 0x100,
-	ZFD_IOCTL_LSEEK,
-	ZFD_IOCTL_POLL_PREPARE,
-	ZFD_IOCTL_POLL_UPDATE,
-	ZFD_IOCTL_POLL_OFFLOAD,
-	ZFD_IOCTL_SET_LOCK,
+    /* Codes below 0x100 are reserved for fcntl() codes. */
+    ZFD_IOCTL_FSYNC = 0x100,
+    ZFD_IOCTL_LSEEK,
+    ZFD_IOCTL_POLL_PREPARE,
+    ZFD_IOCTL_POLL_UPDATE,
+    ZFD_IOCTL_POLL_OFFLOAD,
+    ZFD_IOCTL_SET_LOCK,
 };
 
 #ifdef __cplusplus

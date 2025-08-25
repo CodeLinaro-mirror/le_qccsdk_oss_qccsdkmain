@@ -1,8 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
-
+ */
 
 #ifndef _PHY_DEVLIB_API_H
 #define _PHY_DEVLIB_API_H
@@ -86,7 +85,8 @@ PHYDEVLIB_API RECIPE_RC phyClkSwitch(void *phy_input, void *clk_switch_input, vo
 PHYDEVLIB_API RECIPE_RC phyNFCal(void *phy_input, void *nf_cal_input, void *nf_cal_output);
 PHYDEVLIB_API RECIPE_RC phyForcedGainMode(void *phy_input, void *forceGainModeInput, void *forceGainModeOutput);
 PHYDEVLIB_API RECIPE_RC phyRxDCOCal(void *phy_input, void *rxdco_cal_input, void *rxdco_cal_output);
-PHYDEVLIB_API RECIPE_RC phyRssiDbToDbmOffset(void *phy_input, void *rssi_db_to_dbm_offset_input, void *rssi_db_to_dbm_offset_output);
+PHYDEVLIB_API RECIPE_RC phyRssiDbToDbmOffset(void *phy_input, void *rssi_db_to_dbm_offset_input,
+                                             void *rssi_db_to_dbm_offset_output);
 PHYDEVLIB_API RECIPE_RC phyCombinedCal(void *phy_input, void *combined_cal_input, void *combined_cal_output);
 PHYDEVLIB_API RECIPE_RC phyPDCCal(void *phy_input, void *pdc_cal_input, void *pdc_cal_output);
 PHYDEVLIB_API RECIPE_RC phyBypassXlnaInListen(void *phy_input, void *lna_input, void *lna_output);
@@ -97,9 +97,13 @@ PHYDEVLIB_API RECIPE_RC phyGetRdlVersion(void *phy_input, void *get_rdl_version_
 PHYDEVLIB_API RECIPE_RC phySetRU26DisableTx(void *phy_input, void *ru26disabletx_input, void *ru26disabletx_output);
 PHYDEVLIB_API RECIPE_RC phySetM3TxBfParams(void *phy_input, void *m3txbf_input, void *m3txbf_output);
 PHYDEVLIB_API RECIPE_RC phyGetM3TxBfParams(void *phy_input, void *m3txbf_input, void *m3txbf_output);
-PHYDEVLIB_API RECIPE_RC phyLatestAccumulatedCLPCError(void *phy_input, void *latest_accumulated_clpc_error_input, void *latest_accumulated_clpc_error_output);
-PHYDEVLIB_API RECIPE_RC phyLatestAccumulatedCLPCErrorPerChain(void *phy_input, void *latest_accumulated_clpc_error_input, void *latest_accumulated_clpc_error_output);
-PHYDEVLIB_API RECIPE_RC phyLatestThermValue(void *phy_input, void *latest_therm_value_input, void *latest_therm_value_output);
+PHYDEVLIB_API RECIPE_RC phyLatestAccumulatedCLPCError(void *phy_input, void *latest_accumulated_clpc_error_input,
+                                                      void *latest_accumulated_clpc_error_output);
+PHYDEVLIB_API RECIPE_RC phyLatestAccumulatedCLPCErrorPerChain(void *phy_input,
+                                                              void *latest_accumulated_clpc_error_input,
+                                                              void *latest_accumulated_clpc_error_output);
+PHYDEVLIB_API RECIPE_RC phyLatestThermValue(void *phy_input, void *latest_therm_value_input,
+                                            void *latest_therm_value_output);
 PHYDEVLIB_API RECIPE_RC phyGetXoCdacin(void *phy_input, void *xo_cdacin_input, void *xo_cdacin_output);
 PHYDEVLIB_API RECIPE_RC phySetXoCdacin(void *phy_input, void *xo_cdacin_input, void *xo_cdacin_output);
 PHYDEVLIB_API RECIPE_RC phyGetXoCdacout(void *phy_input, void *xo_cdacout_input, void *xo_cdacout_output);
@@ -109,15 +113,18 @@ PHYDEVLIB_API RECIPE_RC phyRtt(void *phy_input, void *rtt_input, void *rtt_outpu
 PHYDEVLIB_API RECIPE_RC phyCfrCirCap(void *phy_input, void *cfrCirCap_input, void *cfrCirCap_output);
 PHYDEVLIB_API RECIPE_RC phyRccCfrCirCap(void *phy_input, void *cfrCirCap_input, void *cfrCirCap_output);
 PHYDEVLIB_API RECIPE_RC phySpurMitigation(void *phy_input, void *spur_mitigation_input, void *spur_mitigation_output);
-PHYDEVLIB_API RECIPE_RC phyEnableDynSpurMitigation(void *phy_input, void *spur_mitigation_input, void *spur_mitigation_output);
+PHYDEVLIB_API RECIPE_RC phyEnableDynSpurMitigation(void *phy_input, void *spur_mitigation_input,
+                                                   void *spur_mitigation_output);
 PHYDEVLIB_API RECIPE_RC phyAdfsEnableDisable(void *phy_input, void *adfs_input, void *adfs_output);
 PHYDEVLIB_API RECIPE_RC phySkipVreg(void *phy_input, void *adfs_input, void *adfs_output);
 PHYDEVLIB_API RECIPE_RC phyAdfsSbsPhySel(void *phy_input, void *adfs_input, void *adfs_output);
 PHYDEVLIB_API RECIPE_RC phyProgINI(void *phy_input, void *prog_ini_input, void *prog_ini_output);
 PHYDEVLIB_API RECIPE_RC phyRxBBFCal(void *phy_input, void *rx_bbf_cal_input, void *rx_bbf_cal_output);
 PHYDEVLIB_API RECIPE_RC phyTxBBFCal(void *phy_input, void *tx_bbf_cal_input, void *tx_bbf_cal_output);
-PHYDEVLIB_API RECIPE_RC phyRegRxtdAgcPwrHigh(void *phy_input, void *rxtd_agc_pwr_high_input, void *rxtd_agc_pwr_high_output);
-PHYDEVLIB_API RECIPE_RC phyRegRxtdAgcPwrThrs(void *phy_input, void *rxtd_agc_pwr_thrs_input, void *rxtd_agc_pwr_thrs_output);
+PHYDEVLIB_API RECIPE_RC phyRegRxtdAgcPwrHigh(void *phy_input, void *rxtd_agc_pwr_high_input,
+                                             void *rxtd_agc_pwr_high_output);
+PHYDEVLIB_API RECIPE_RC phyRegRxtdAgcPwrThrs(void *phy_input, void *rxtd_agc_pwr_thrs_input,
+                                             void *rxtd_agc_pwr_thrs_output);
 PHYDEVLIB_API RECIPE_RC phySetDynSmps(void *phy_input, void *dynsmps_input, void *dynsmps_output);
 PHYDEVLIB_API RECIPE_RC phyDACCal(void *phy_input, void *dac_cal_input, void *dac_cal_output);
 PHYDEVLIB_API RECIPE_RC phyIM2Cal(void *phy_input, void *im2_cal_input, void *im2_cal_output);
@@ -179,7 +186,8 @@ PHYDEVLIB_API RECIPE_RC phyPaprdDeviceSavePhydbgSettings(void *phy_input, void *
 PHYDEVLIB_API RECIPE_RC phyPaprdDeviceRestorePhydbgSettings(void *phy_input, void *paprd_input, void *paprd_output);
 PHYDEVLIB_API RECIPE_RC phyPaprdDeviceGetGlutIdxFromTgtPwr(void *phy_input, void *paprd_input, void *paprd_output);
 PHYDEVLIB_API RECIPE_RC phyCorePaprdEnableDPD(void *phy_input, void *paprd_input, void *paprd_output);
-PHYDEVLIB_API RECIPE_RC phyCorePaprdWarmPacketSupport(void *phy_input, void *paprd_warm_packet_support_input, void *paprd_warm_packet_support_output);
+PHYDEVLIB_API RECIPE_RC phyCorePaprdWarmPacketSupport(void *phy_input, void *paprd_warm_packet_support_input,
+                                                      void *paprd_warm_packet_support_output);
 PHYDEVLIB_API RECIPE_RC phyCorePaprdLoopbackTrainingComplete(void *phy_input, void *paprd_input, void *paprd_output);
 PHYDEVLIB_API RECIPE_RC phyDPDCalInitTrainingData(void *phy_input, void *paprd_input, void *paprd_output);
 PHYDEVLIB_API RECIPE_RC phyPaprdMemDpdTrain(void *phy_input, void *paprd_input, void *paprd_output);
@@ -196,7 +204,8 @@ PHYDEVLIB_API RECIPE_RC phyProgFemCtrl(void *phy_input, void *fem_input, void *f
 PHYDEVLIB_API RECIPE_RC phySetRxDeaf(void *phy_input, void *rxdeaf_input, void *rxdeaf_output);
 PHYDEVLIB_API RECIPE_RC phyRetention(void *phy_input, void *retention_input, void *retention_output);
 PHYDEVLIB_API RECIPE_RC phyCalRetention(void *phy_input, void *cal_retention_input, void *cal_retention_output);
-PHYDEVLIB_API RECIPE_RC phySetTempCompensation(void *phy_input, void *temp_compensation_input, void *temp_compensation_output);
+PHYDEVLIB_API RECIPE_RC phySetTempCompensation(void *phy_input, void *temp_compensation_input,
+                                               void *temp_compensation_output);
 PHYDEVLIB_API RECIPE_RC phyConfigWsi(void *phy_input);
 PHYDEVLIB_API RECIPE_RC phyStartPcssClocks(void *phy_input);
 PHYDEVLIB_API RECIPE_RC phyM3Init(void *phy_input);
@@ -264,7 +273,8 @@ PHYDEVLIB_API RECIPE_RC phySnifferMode(void *phy_input, void *sniffer_mode_input
 PHYDEVLIB_API RECIPE_RC phySetCfoParams(void *phy_input, void *cfo_input, void *cfo_output);
 PHYDEVLIB_API RECIPE_RC phyGetCfoParams(void *phy_input, void *cfo_input, void *cfo_output);
 PHYDEVLIB_API RECIPE_RC phyGetState(void *phy_input, void *phy_state_input, void *phy_state_output);
-PHYDEVLIB_API RECIPE_RC phySetDssWarCFODeltaThreshold(void *phy_input, void *dss_war_cfo_input, void *dss_war_cfo_output);
+PHYDEVLIB_API RECIPE_RC phySetDssWarCFODeltaThreshold(void *phy_input, void *dss_war_cfo_input,
+                                                      void *dss_war_cfo_output);
 PHYDEVLIB_API RECIPE_RC phyEnableDssWarCFO(void *phy_input, void *dss_war_cfo_input, void *dss_war_cfo_output);
 PHYDEVLIB_API RECIPE_RC phyRfaToggle(void *phy_input, void *rfa_input, void *rfa_output);
 PHYDEVLIB_API RECIPE_RC phyGetPaMuteState(void *phy_input, void *rfa_input, void *rfa_output);
@@ -361,11 +371,12 @@ PHYDEVLIB_API RECIPE_RC phyWsiNmiWar(void *phy_input, void *wsi_input, void *wsi
 PHYDEVLIB_API RECIPE_RC phyForceRxGainTbl(void *phy_input, void *prog_reg_input, void *prog_reg_output);
 PHYDEVLIB_API RECIPE_RC phyEnablePhyNOC(void *phy_input, void *prog_reg_input, void *prog_reg_output);
 PHYDEVLIB_API RECIPE_RC phyGetSetRxDeSense(void *phy_input, void *prog_reg_input, void *prog_reg_output);
-PHYDEVLIB_API RECIPE_RC phyGetOTPPatchStatus(void *phy_input,  void *input, void *output);
+PHYDEVLIB_API RECIPE_RC phyGetOTPPatchStatus(void *phy_input, void *input, void *output);
 PHYDEVLIB_API RECIPE_RC phyConfigHwDtimSlna(void *phy_input, void *rfa_input, void *rfa_output);
 PHYDEVLIB_API RECIPE_RC phyDisableSynth(void *phy_input, void *rfa_input, void *rfa_output);
 PHYDEVLIB_API RECIPE_RC phyDebugCmdHandler(void *phy_input, void *cmd_input, void *cmd_output);
-PHYDEVLIB_API RECIPE_RC phySetSpectralShapingSelect(void *phy_input, void *spectral_shaping_select_input, void *spectral_shaping_select_output);
+PHYDEVLIB_API RECIPE_RC phySetSpectralShapingSelect(void *phy_input, void *spectral_shaping_select_input,
+                                                    void *spectral_shaping_select_output);
 PHYDEVLIB_API RECIPE_RC phyCoexConfigSemaphore(void *phy_input, void *coex_input, void *coex_output);
 PHYDEVLIB_API RECIPE_RC phyConfigTd320(void *phy_input, void *reset_input, void *reset_output);
 PHYDEVLIB_API RECIPE_RC phyEventCapture(void *phy_input, void *event_capture_input, void *event_capture_output);
@@ -390,13 +401,15 @@ PHYDEVLIB_API RECIPE_RC phyCxmDbgCount(void *phy_input, void *cxm_input, void *c
 PHYDEVLIB_API RECIPE_RC phyProgDacOsr(void *phy_input, void *prog_dacosr_input, void *prog_dacosr_output);
 PHYDEVLIB_API RECIPE_RC phyProgDeltaSlope(void *phy_input, void *prog_delta_slope_input, void *prog_delta_slope_output);
 PHYDEVLIB_API RECIPE_RC phyProgFEM(void *phy_input, void *prog_fem_input, void *prog_fem_output);
-PHYDEVLIB_API RECIPE_RC phyProgFreqDepINI(void *phy_input, void *prog_freq_dep_ini_input, void *prog_freq_dep_ini_output);
+PHYDEVLIB_API RECIPE_RC phyProgFreqDepINI(void *phy_input, void *prog_freq_dep_ini_input,
+                                          void *prog_freq_dep_ini_output);
 PHYDEVLIB_API RECIPE_RC phyResetHw(void *phy_input, void *reset_hw_input, void *reset_hw_output);
 PHYDEVLIB_API RECIPE_RC phySetBW(void *phy_input, void *set_bw_input, void *set_bw_output);
 PHYDEVLIB_API RECIPE_RC phySetMode(void *phy_input, void *set_mode_input, void *set_mode_output);
 PHYDEVLIB_API RECIPE_RC phySetPhyClk(void *phy_input, void *set_phy_clk_input, void *set_phy_clk_output);
 PHYDEVLIB_API RECIPE_RC phyCombCal(void *phy_input, void *comb_cal_input, void *comb_cal_output);
-PHYDEVLIB_API RECIPE_RC phyIterCalMultitone(void *phy_input, void *iter_cal_multitone_input, void *iter_cal_multitone_output);
+PHYDEVLIB_API RECIPE_RC phyIterCalMultitone(void *phy_input, void *iter_cal_multitone_input,
+                                            void *iter_cal_multitone_output);
 PHYDEVLIB_API RECIPE_RC phyIterCombCal(void *phy_input, void *iter_comb_cal_input, void *iter_comb_cal_output);
 PHYDEVLIB_API RECIPE_RC phyLoadBDF(void *phy_input, void *load_bdf_input, void *load_bdf_output);
 PHYDEVLIB_API RECIPE_RC phySysTx(void *phy_input, void *sys_tx_input, void *sys_tx_output);
@@ -412,12 +425,16 @@ PHYDEVLIB_API RECIPE_RC phyTlvCapture(void *phy_input, void *tlv_capture_input, 
 PHYDEVLIB_API RECIPE_RC phyFixRxGain(void *phy_input, void *fix_rxgain_input, void *fix_rxgain_output);
 PHYDEVLIB_API RECIPE_RC phyInitChanMemo(void *phy_input, void *init_chan_memo_input, void *init_chan_memo_output);
 PHYDEVLIB_API RECIPE_RC phyAgcHistory(void *phy_input, void *agc_history_input, void *agc_history_output);
-PHYDEVLIB_API RECIPE_RC phyAdcCaptInMemConfig(void *phy_input, void *adc_capt_in_mem_config_input, void *adc_capt_in_mem_config_output);
-PHYDEVLIB_API RECIPE_RC phyAdcCaptInMemDump(void *phy_input, void *adc_capt_in_mem_dump_input, void *adc_capt_in_mem_dump_output);
-PHYDEVLIB_API RECIPE_RC phyDPDIterCalMultitone(void *phy_input, void *dpd_iter_cal_multitone_input, void *dpd_iter_cal_multitone_output);
+PHYDEVLIB_API RECIPE_RC phyAdcCaptInMemConfig(void *phy_input, void *adc_capt_in_mem_config_input,
+                                              void *adc_capt_in_mem_config_output);
+PHYDEVLIB_API RECIPE_RC phyAdcCaptInMemDump(void *phy_input, void *adc_capt_in_mem_dump_input,
+                                            void *adc_capt_in_mem_dump_output);
+PHYDEVLIB_API RECIPE_RC phyDPDIterCalMultitone(void *phy_input, void *dpd_iter_cal_multitone_input,
+                                               void *dpd_iter_cal_multitone_output);
 PHYDEVLIB_API RECIPE_RC phyDacPlayback(void *phy_input, void *dac_playback_input, void *dac_playback_output);
 PHYDEVLIB_API RECIPE_RC phyRFPkDetDcoCal(void *phy_input, void *rf_pkdet_dco_cal_input, void *rf_pkdet_dco_cal_output);
-PHYDEVLIB_API RECIPE_RC phyPCSSEventLogging(void *phy_input, void *pcss_event_logging_input, void *pcss_event_logging_output);
+PHYDEVLIB_API RECIPE_RC phyPCSSEventLogging(void *phy_input, void *pcss_event_logging_input,
+                                            void *pcss_event_logging_output);
 PHYDEVLIB_API RECIPE_RC phyTxFDCapture(void *phy_input, void *txfd_capture_input, void *txfd_capture_output);
 PHYDEVLIB_API RECIPE_RC phyDFSViTest(void *phy_input, void *dfs_vi_test_input, void *dfs_vi_test_output);
 PHYDEVLIB_API RECIPE_RC phyRxTDCapture(void *phy_input, void *rxtd_capture_input, void *rxtd_capture_output);
@@ -447,14 +464,16 @@ PHYDEVLIB_API uint32_t phyGetM3IpcMemLocOffset(PHYDEVLIB_PHY_INPUT *phyInput);
 
 PHYDEVLIB_API RECIPE_RC phySetRssiOffset(PHYDEVLIB_PHY_INPUT *phyInput, int8_t rssiDbToDbmOffset);
 PHYDEVLIB_API uint8_t phyGetRssiOffset(PHYDEVLIB_PHY_INPUT *phyInput);
-PHYDEVLIB_API void phyRssiTempCompensation(PHYDEVLIB_PHY_INPUT *phyInput, PHYDEVLIB_RSSI_DB_TO_DBM_INPUT *rssiDbToDbmInput);
+PHYDEVLIB_API void phyRssiTempCompensation(PHYDEVLIB_PHY_INPUT *phyInput,
+                                           PHYDEVLIB_RSSI_DB_TO_DBM_INPUT *rssiDbToDbmInput);
 
 PHYDEVLIB_API void phyGetPhyBase(PHYDEVLIB_PHY_INPUT *phyInput);
 PHYDEVLIB_API uint32_t phyGetPhyOffset(uint32_t phyId);
 PHYDEVLIB_API void phyGetRfaChainUsage(PHYDEVLIB_PHY_INPUT *phyInput, uint32_t *parm1, uint32_t *parm2);
 PHYDEVLIB_API int phyRegPollDisable(void);
 
-PHYDEVLIB_API uint8_t phyGetPrimaryChanCode(uint8_t bwCode, uint16_t freq, uint16_t band_center_freq1, uint16_t band_center_freq2);
+PHYDEVLIB_API uint8_t phyGetPrimaryChanCode(uint8_t bwCode, uint16_t freq, uint16_t band_center_freq1,
+                                            uint16_t band_center_freq2);
 
 PHYDEVLIB_API RECIPE_RC phyConfigDCM(void *phy_input, void *dcm_input, void *dcm_output);
 
@@ -481,6 +500,4 @@ PHYDEVLIB_API void phyScatterWrite(uint32_t *addr, uint32_t *data, uint32_t size
 
 PHYDEVLIB_API RECIPE_RC phyDevLibDebugCmd_handler(void *phy_input, void *cmd_input, void *cmd_output);
 
-
 #endif /* _PHY_DEVLIB_API_H */
-

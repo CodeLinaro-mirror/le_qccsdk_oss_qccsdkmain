@@ -65,7 +65,7 @@
 
 #ifdef NT_FN_CPR
 #include "nt_cpr_driver.h"
-#endif // NT_FN_CPR
+#endif  // NT_FN_CPR
 
 #include "qtmr.h"
 #ifdef IMAGE_FERMION
@@ -101,8 +101,7 @@ static volatile uint32_t ulTickFlag = pdFALSE;
 // To save systick current count before going to sleep
 static uint32_t _socpm_systick_save;
 
-void _socpm_systick_off(
-    void)
+void _socpm_systick_off(void)
 {
     // disable the systick
     _socpm_systick_save = portNVIC_SYSTICK_CURRENT_VALUE_REG;
@@ -110,11 +109,9 @@ void _socpm_systick_off(
 }
 
 /*-----------------------------------------------------------*/
-void _socpm_systick_on(
-    void)
+void _socpm_systick_on(void)
 {
-    if (nt_socpm_resume_f == 0)
-    {
+    if (nt_socpm_resume_f == 0) {
         nt_socpm_resume_f = 2;
         /* Restart from whatever is left in the count register to complete
          this tick period. */
@@ -122,8 +119,7 @@ void _socpm_systick_on(
         portNVIC_SYSTICK_CURRENT_VALUE_REG = 0;
         /* Restart SysTick. */
         portNVIC_SYSTICK_CTRL_REG = (_SOCPM_SYSTICK_CLK_BIT | portNVIC_SYSTICK_INT_BIT | portNVIC_SYSTICK_ENABLE_BIT);
-    }
-    else
+    } else
         portNVIC_SYSTICK_CTRL_REG |= portNVIC_SYSTICK_ENABLE_BIT;
 
     /* The CPU woke because of a tick. */
@@ -134,8 +130,7 @@ void _socpm_systick_on(
  defined in the FreeRTOS Cortex-M3 port layer with a version that manages the
  asynchronous timer (Sleep timer), as the tick is generated from the low power Sleep timer and
  not the SysTick as would normally be the case on a Cortex-M. */
-void vPortSuppressTicksAndSleep(
-    TickType_t xExpectedIdleTime)
+void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 {
     eSleepModeStatus eSleepAction;
     uint64_t slp_val = 0;
@@ -143,8 +138,7 @@ void vPortSuppressTicksAndSleep(
     FDI_NODE_START_NULL(FDI_DBG_PWR_W2S_IDLE_TASK_KICK_IN);
     /* THIS FUNCTION IS CALLED WITH THE SCHEDULER SUSPENDED. */
     /* Mget ake sure the Sleep timer reload value does not overflow the counter. */
-    if (xExpectedIdleTime > xMaximumPossibleSuppressedTicks)
-    {
+    if (xExpectedIdleTime > xMaximumPossibleSuppressedTicks) {
         xExpectedIdleTime = xMaximumPossibleSuppressedTicks;
     }
 
@@ -157,21 +151,19 @@ void vPortSuppressTicksAndSleep(
     /* Calculate the reload value required to wait xExpectedIdleTime tick
      periods. */
     slp_val = xExpectedIdleTime;
-    if (slp_val > _SOCPM_STOP_TMR_COMP)
-    {
+    if (slp_val > _SOCPM_STOP_TMR_COMP) {
         /* Compensate for the fact that the Sleep timer is going to be stopped
          momentarily. */
         slp_val -= _SOCPM_STOP_TMR_COMP;
     }
 #ifdef NT_DEBUG
-    //store the pending interrupts before sleep
+    // store the pending interrupts before sleep
     g_socpm_struct.pre_sleep_nvic_icpr_status[0] = NT_REG_RD(NT_CM4_NVIC_ISER0_CLEAR_PENDING_REG);
     g_socpm_struct.pre_sleep_nvic_icpr_status[1] = NT_REG_RD(NT_CM4_NVIC_ISER1_CLEAR_PENDING_REG);
     g_socpm_struct.pre_sleep_nvic_icpr_status[2] = NT_REG_RD(NT_CM4__NVIC_ISER2_CLEAR_PENDING_REG);
     g_socpm_struct.pre_sleep_nvic_icpr_status[3] = NT_REG_RD(NT_CM4_NVIC_ISER3_CLEAR_PENDING_REG);
 #endif /*NT_DEBUG*/
-    __asm volatile("dsb" ::
-                       : "memory");
+    __asm volatile("dsb" ::: "memory");
     __asm volatile("isb");
     /* Enter a critical section but don't use the taskENTER_CRITICAL() method as
      that will mask interrupts that should exit sleep mode. */
@@ -186,14 +178,12 @@ void vPortSuppressTicksAndSleep(
      the context switch might have been pended by an external interrupt that
      requires processing. */
     eSleepAction = eTaskConfirmSleepModeStatus();
-    if (eSleepAction == eAbortSleep)
-    {
+    if (eSleepAction == eAbortSleep) {
         /* Restart tick. */
         _socpm_systick_on();
         /* Re-enable interrupts */
         NT_SOCPM_IRQ_ENABLE();
-    }
-    else {
-       nt_socpm_soc_sleep_processing(slp_val);
+    } else {
+        nt_socpm_soc_sleep_processing(slp_val);
     }
 }

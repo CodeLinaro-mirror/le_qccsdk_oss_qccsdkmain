@@ -66,8 +66,6 @@
 #include "nt_osal.h"
 #include "hal_int_sys.h"
 
-
-
 #define QCC 1
 
 
@@ -166,8 +164,6 @@ int32_t aes128_cmac_known_answer()
   expected_mac[2] = 0xf79bdd9d;
   expected_mac[3] = 0xd04a287c;
 
-
-
 #ifdef QCC
 
   ceId=0;
@@ -254,7 +250,6 @@ int32_t aes128_cmac_known_answer()
 	HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_REG, 1 << QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_GOPROC_GO_OFFSET);
 
 #endif
-
 
 #ifdef NT_FN_REG_MODE
 	crypto_result = crypto_arm(din, dout, input_size, output_size, 1000, ceId);
@@ -522,8 +517,6 @@ int32_t aes256_cmac_known_answer_macfailed()
   expected_mac[2] = 0xf79bdd9d;
 
   expected_mac[3] = 0xd04a287c;
-
-
 
 #ifdef QCC
 
@@ -795,10 +788,6 @@ return 0;
   //return 0;
 
 }
-
-
-
-
 
 #endif
 

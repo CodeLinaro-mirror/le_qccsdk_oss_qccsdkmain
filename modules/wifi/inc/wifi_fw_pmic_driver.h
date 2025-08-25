@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /**********************************************************************************************
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved. 
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  * @file wifi_fw_pmic_driver.h
@@ -16,7 +16,6 @@
 
 #define _WIFI_FW_PMIC_DRIVER_H_
 
-
 #ifdef PLATFORM_FERMION
 
 #include "fermion_hw_reg.h"
@@ -24,12 +23,11 @@
 #include "nt_common.h"
 #include "nt_socpm_sleep.h"
 
+/********************************************************************************************
 
- /********************************************************************************************
+* Function Declaration
 
- * Function Declaration
-
- ********************************************************************************************/
+********************************************************************************************/
 
 void wifi_fw_pmic_init(cpr_mode_e cpr_mode);
 

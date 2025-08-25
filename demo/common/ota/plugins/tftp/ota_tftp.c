@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,34 +22,34 @@
 /* Preprocessor Definitions and Constants											                      */
 /**********************************************************************************************************/
 /* TFTP misc */
-#define TFTP_TIMEOUT		    5000   //in milliseconds
-#define TFTP_RECV_TIMEOUT       1      //in seconds
-#define TFTP_SERVER_PORT        69
-#define TFTP_CLIENT_PORT	    5260
-#define TFTP_PAYLOAD_SIZE	    512
-#define TFTP_HEADER_SIZE	    4
-#define TFTP_RX_SIZE            (TFTP_PAYLOAD_SIZE + TFTP_HEADER_SIZE)
-#define TFTP_MAX_RETRY_COUNT    3
-#define TFTP_RCV_BUF_NUM        4
-#define TFTP_RCV_BUF_SIZE       (TFTP_RCV_BUF_NUM * TFTP_PAYLOAD_SIZE)
-#define TFTP_SEND_RCV_BUF_SIZE  1024
-#define TFTP_FILE_NAME_LENGTH   128
+#define TFTP_TIMEOUT           5000  // in milliseconds
+#define TFTP_RECV_TIMEOUT      1     // in seconds
+#define TFTP_SERVER_PORT       69
+#define TFTP_CLIENT_PORT       5260
+#define TFTP_PAYLOAD_SIZE      512
+#define TFTP_HEADER_SIZE       4
+#define TFTP_RX_SIZE           (TFTP_PAYLOAD_SIZE + TFTP_HEADER_SIZE)
+#define TFTP_MAX_RETRY_COUNT   3
+#define TFTP_RCV_BUF_NUM       4
+#define TFTP_RCV_BUF_SIZE      (TFTP_RCV_BUF_NUM * TFTP_PAYLOAD_SIZE)
+#define TFTP_SEND_RCV_BUF_SIZE 1024
+#define TFTP_FILE_NAME_LENGTH  128
 
 /* TFTP operations. */
-#define TFTP_OP_RRQ		1
-#define TFTP_OP_WRQ	 	2
-#define TFTP_OP_DATA	3
-#define TFTP_OP_ACK		4
-#define TFTP_OP_ERROR	5
-#define TFTP_OP_OACK    6
+#define TFTP_OP_RRQ   1
+#define TFTP_OP_WRQ   2
+#define TFTP_OP_DATA  3
+#define TFTP_OP_ACK   4
+#define TFTP_OP_ERROR 5
+#define TFTP_OP_OACK  6
 
 /* TFTP states */
-#define TFTP_ST_RRQ			1
-#define TFTP_ST_DATA		2
-#define TFTP_ST_TOO_LARGE	3
-#define TFTP_ST_BAD_MAGIC	4
-#define TFTP_ST_ERROR 		5
-#define TFTP_ST_OACK        6
+#define TFTP_ST_RRQ       1
+#define TFTP_ST_DATA      2
+#define TFTP_ST_TOO_LARGE 3
+#define TFTP_ST_BAD_MAGIC 4
+#define TFTP_ST_ERROR     5
+#define TFTP_ST_OACK      6
 
 /*  TFTP ERROR States */
 #define TFTP_FILE_NOT_FOUND      1
@@ -68,10 +68,10 @@
 #define TFTP_RX_ALL_SIG_MASK        (TFTP_RX_DATA_READY_SIG_MASK | TFTP_RX_ERROR_SIG_MASK | TFTP_RX_FINISH_SIG_MASK)
 
 #ifndef MIN
-#define MIN(a, b)   (((a) < (b)) ? (a) : (b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-#define UNUSED(x)   (void)(x)
+#define UNUSED(x) (void)(x)
 
 /**********************************************************************************************************/
 /* Type Declarations																                      */
@@ -116,7 +116,7 @@ static void ota_tftp_fin()
 {
     if (ota_tftp_sess != NULL) {
         if (ota_tftp_sess->sock >= 0) {
-             closesocket(ota_tftp_sess->sock);
+            closesocket(ota_tftp_sess->sock);
         }
 
         if (ota_tftp_sess->signal != 0) {
@@ -155,28 +155,28 @@ static int32_t ota_tftp_pkt_rrq(const char *file_name)
     memset(&ota_tftp_sess->snd_rcv_buffer[0], 0, rrq_len);
     rrq = (unsigned short *)&ota_tftp_sess->snd_rcv_buffer[0];
     *rrq++ = htons(TFTP_OP_RRQ);
-	p = (unsigned char *) rrq;
+    p = (unsigned char *)rrq;
     memscpy((void *)p, strlen(file_name), file_name, strlen(file_name));
-	p += strlen(file_name);
-	*p++ = '\0';
+    p += strlen(file_name);
+    *p++ = '\0';
     memscpy((void *)p, strlen("octet"), "octet", strlen("octet"));
-	p += 5;
-	*p = '\0';
+    p += 5;
+    *p = '\0';
 
     if (ota_tftp_sess->foreign_addr.ss_family == AF_INET) {
         tolen = sizeof(struct sockaddr_in);
-    }
-	else {
+    } else {
 #if LWIP_IPV6
         tolen = sizeof(struct sockaddr_in6);
 #else
-		return -1;
+        return -1;
 #endif
     }
 
     ota_tftp_sess->send_time = hres_timer_curr_time_ms();
 
-    return sendto(ota_tftp_sess->sock, &ota_tftp_sess->snd_rcv_buffer[0], rrq_len, 0, (struct sockaddr *)(&ota_tftp_sess->foreign_addr), tolen);
+    return sendto(ota_tftp_sess->sock, &ota_tftp_sess->snd_rcv_buffer[0], rrq_len, 0,
+                  (struct sockaddr *)(&ota_tftp_sess->foreign_addr), tolen);
 }
 
 static int32_t ota_tftp_pkt_error(uint32_t error_code, char *error_message)
@@ -184,12 +184,12 @@ static int32_t ota_tftp_pkt_error(uint32_t error_code, char *error_message)
     int32_t err_len = 0;
     unsigned short *err;
 
-    err_len = 4 + strlen(error_message) + 1;/*2 byte opcode ,2byte block number, ErrMsg + 1 */
+    err_len = 4 + strlen(error_message) + 1; /*2 byte opcode ,2byte block number, ErrMsg + 1 */
     memset(&ota_tftp_sess->snd_rcv_buffer[0], 0, err_len);
     err = (unsigned short *)&ota_tftp_sess->snd_rcv_buffer[0];
     *err++ = htons(TFTP_OP_ERROR);
-	*err++ = htons(error_code);
-	memscpy((void *)err, strlen(error_message) + 1, error_message, strlen(error_message) + 1);
+    *err++ = htons(error_code);
+    memscpy((void *)err, strlen(error_message) + 1, error_message, strlen(error_message) + 1);
 
     return send(ota_tftp_sess->sock, &ota_tftp_sess->snd_rcv_buffer[0], err_len, 0);
 }
@@ -203,7 +203,7 @@ static int32_t ota_tftp_pkt_ack(uint16_t block_seq)
     memset(&ota_tftp_sess->snd_rcv_buffer[0], 0, ack_len);
     ack = (unsigned short *)&ota_tftp_sess->snd_rcv_buffer[0];
     *ack++ = htons(TFTP_OP_ACK);
-	*ack++ = htons(block_seq);
+    *ack++ = htons(block_seq);
 
     ota_tftp_sess->send_time = hres_timer_curr_time_ms();
 
@@ -222,31 +222,31 @@ static void ota_tftp_pkt_parse(uint8_t *pkt_ptr, int32_t pkt_len, int32_t *pkt_s
     len -= 2;
 
     s = (unsigned short *)pkt;
-	opcode = *s++;
-	pkt = (unsigned char *)s;
+    opcode = *s++;
+    pkt = (unsigned char *)s;
 
-	switch (ntohs(opcode)) {
-		case TFTP_OP_RRQ:
-		case TFTP_OP_WRQ:
-		case TFTP_OP_ACK:
-			break;
-		case TFTP_OP_OACK:
-			*pkt_state = TFTP_ST_OACK;
-			break;
-		case TFTP_OP_DATA:
-			if (len < 2)
-				return;
-			*pkt_seq = ntohs(*(unsigned short *)pkt);
-			if (*pkt_state == TFTP_ST_RRQ || *pkt_state == TFTP_ST_OACK) {
-				*pkt_state = TFTP_ST_DATA;
-			}
-			break;
-		case TFTP_OP_ERROR:
-			*pkt_state = TFTP_ST_ERROR;
-			break;
-		default:
-			break;
-	}
+    switch (ntohs(opcode)) {
+        case TFTP_OP_RRQ:
+        case TFTP_OP_WRQ:
+        case TFTP_OP_ACK:
+            break;
+        case TFTP_OP_OACK:
+            *pkt_state = TFTP_ST_OACK;
+            break;
+        case TFTP_OP_DATA:
+            if (len < 2)
+                return;
+            *pkt_seq = ntohs(*(unsigned short *)pkt);
+            if (*pkt_state == TFTP_ST_RRQ || *pkt_state == TFTP_ST_OACK) {
+                *pkt_state = TFTP_ST_DATA;
+            }
+            break;
+        case TFTP_OP_ERROR:
+            *pkt_state = TFTP_ST_ERROR;
+            break;
+        default:
+            break;
+    }
 }
 
 static void ota_tftp_timeout()
@@ -256,27 +256,27 @@ static void ota_tftp_timeout()
     }
     /* timeout happens. send rrq again */
     if (ota_tftp_sess->tftp_state == TFTP_ST_RRQ) {
-       if (ota_tftp_sess->retry_count < TFTP_MAX_RETRY_COUNT) {
-           ota_tftp_sess->retry_count++;
-           ota_tftp_pkt_rrq(ota_tftp_sess->filename);
-       } else {
-           /* error status */
-           ota_tftp_sess->status = OTA_STATUS_STOP;
-           ota_tftp_sess->error_code = QAPI_FW_UPGRADE_ERR_TFTP_SERVER_RESP_TIMEOUT;
-       }
+        if (ota_tftp_sess->retry_count < TFTP_MAX_RETRY_COUNT) {
+            ota_tftp_sess->retry_count++;
+            ota_tftp_pkt_rrq(ota_tftp_sess->filename);
+        } else {
+            /* error status */
+            ota_tftp_sess->status = OTA_STATUS_STOP;
+            ota_tftp_sess->error_code = QAPI_FW_UPGRADE_ERR_TFTP_SERVER_RESP_TIMEOUT;
+        }
     } else if (ota_tftp_sess->tftp_state == TFTP_ST_DATA) {
-       if (ota_tftp_sess->retry_count < TFTP_MAX_RETRY_COUNT) {
-           ota_tftp_sess->retry_count++;
-           ota_tftp_pkt_ack(ota_tftp_sess->pkt_seq);
-       } else {
-           /* error status */
-           ota_tftp_sess->status = OTA_STATUS_STOP;
-           ota_tftp_sess->error_code = QAPI_FW_UPGRADE_ERR_TFTP_SERVER_RESP_TIMEOUT;
-       }
+        if (ota_tftp_sess->retry_count < TFTP_MAX_RETRY_COUNT) {
+            ota_tftp_sess->retry_count++;
+            ota_tftp_pkt_ack(ota_tftp_sess->pkt_seq);
+        } else {
+            /* error status */
+            ota_tftp_sess->status = OTA_STATUS_STOP;
+            ota_tftp_sess->error_code = QAPI_FW_UPGRADE_ERR_TFTP_SERVER_RESP_TIMEOUT;
+        }
     }
 }
 
-static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
+static void ota_tftp_recv(void __attribute__((__unused__)) * pvParameters)
 {
     fd_set sockset, master;
     int32_t conn_sock;
@@ -300,9 +300,8 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
     tv.tv_sec = TFTP_RECV_TIMEOUT;
     tv.tv_usec = 0;
 
-    while (ota_tftp_sess->status == OTA_STATUS_RUNNING
-		|| ota_tftp_sess->status == OTA_STATUS_RUNNING_WAITING_FOR_STOP) {
-
+    while (ota_tftp_sess->status == OTA_STATUS_RUNNING ||
+           ota_tftp_sess->status == OTA_STATUS_RUNNING_WAITING_FOR_STOP) {
         /* check if there are enough buffer to store data */
         if ((ota_tftp_sess->receive_data + TFTP_PAYLOAD_SIZE) > TFTP_RCV_BUF_SIZE) {
             qurt_signal_wait(&ota_tftp_sess->signal, TFTP_RX_BUF_READY_SIG_MASK, QURT_SIGNAL_ATTR_CLEAR_MASK);
@@ -317,30 +316,27 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
             ota_tftp_sess->status = OTA_STATUS_STOP;
             ota_tftp_sess->error_code = QAPI_FW_UPGRADE_ERR_TFTP_CONNECT_FAIL;
             break;
-        } else if ((conn_sock > 0) && FD_ISSET(ota_tftp_sess->sock,&sockset)) {
-            received = recvfrom(ota_tftp_sess->sock,
-                                (char *)(&ota_tftp_sess->snd_rcv_buffer[0]),
-                                TFTP_SEND_RCV_BUF_SIZE, 0,
-                                (struct sockaddr *)&from, &fromlen);
+        } else if ((conn_sock > 0) && FD_ISSET(ota_tftp_sess->sock, &sockset)) {
+            received = recvfrom(ota_tftp_sess->sock, (char *)(&ota_tftp_sess->snd_rcv_buffer[0]),
+                                TFTP_SEND_RCV_BUF_SIZE, 0, (struct sockaddr *)&from, &fromlen);
 
             if (received > 0) {
-
                 /* check address */
                 if (ota_tftp_sess->tftp_state == TFTP_ST_RRQ) {
                     addr_match = 0;
                     if (from.ss_family == ota_tftp_sess->foreign_addr.ss_family) {
                         if (from.ss_family == AF_INET) {
                             if (memcmp(&(((struct sockaddr_in *)&from)->sin_addr),
-                                &(((struct sockaddr_in *)&ota_tftp_sess->foreign_addr)->sin_addr),
-                                sizeof(((struct sockaddr_in *)&from)->sin_addr)) == 0) {
+                                       &(((struct sockaddr_in *)&ota_tftp_sess->foreign_addr)->sin_addr),
+                                       sizeof(((struct sockaddr_in *)&from)->sin_addr)) == 0) {
                                 addr_match = 1;
                             }
                         }
 #if LWIP_IPV6
-						else {
+                        else {
                             if (memcmp(&(((struct sockaddr_in6 *)&from)->sin6_addr),
-                                &(((struct sockaddr_in6 *)&ota_tftp_sess->foreign_addr)->sin6_addr),
-                                sizeof(((struct sockaddr_in6 *)&from)->sin6_addr)) == 0) {
+                                       &(((struct sockaddr_in6 *)&ota_tftp_sess->foreign_addr)->sin6_addr),
+                                       sizeof(((struct sockaddr_in6 *)&from)->sin6_addr)) == 0) {
                                 addr_match = 1;
                             }
                         }
@@ -367,7 +363,7 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
 
                 state_before = ota_tftp_sess->tftp_state;
                 ota_tftp_pkt_parse(&ota_tftp_sess->snd_rcv_buffer[0], received, &(ota_tftp_sess->pkt_seq),
-                               &(ota_tftp_sess->tftp_state));
+                                   &(ota_tftp_sess->tftp_state));
 
                 if (ota_tftp_sess->tftp_state == TFTP_ST_ERROR) {
                     /* response: 0x1002 (file download fail) */
@@ -442,19 +438,18 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
                 } else if (ota_tftp_sess->pkt_seq == ota_tftp_sess->pkt_seq_last) {
                     /* Server resent the last packt again. It might not have received ACK.
                        Re-send ACK */
-                    if(ota_tftp_sess->status == OTA_STATUS_RUNNING_WAITING_FOR_STOP){
-						/*continue to receive*/
-						continue;
-                    }
-					else
-                    	ota_tftp_pkt_ack(ota_tftp_sess->pkt_seq);
+                    if (ota_tftp_sess->status == OTA_STATUS_RUNNING_WAITING_FOR_STOP) {
+                        /*continue to receive*/
+                        continue;
+                    } else
+                        ota_tftp_pkt_ack(ota_tftp_sess->pkt_seq);
                 } else {
                     if (cur_time - ota_tftp_sess->send_time >= TFTP_TIMEOUT) {
                         ota_tftp_timeout();
                     }
                 }
 
-            } else if (received == 0){
+            } else if (received == 0) {
                 /* finish */
                 ota_tftp_sess->status = OTA_STATUS_STOP;
                 break;
@@ -464,12 +459,12 @@ static void ota_tftp_recv(void __attribute__((__unused__))*pvParameters)
                 break;
             }
         } else {
-            if (cur_time - ota_tftp_sess->send_time >= TFTP_TIMEOUT) {		
-				if(ota_tftp_sess->status == OTA_STATUS_RUNNING_WAITING_FOR_STOP){
-					/*no pkt to receive*/
-					ota_tftp_sess->status = OTA_STATUS_STOP;
-				}else
-                	ota_tftp_timeout();
+            if (cur_time - ota_tftp_sess->send_time >= TFTP_TIMEOUT) {
+                if (ota_tftp_sess->status == OTA_STATUS_RUNNING_WAITING_FOR_STOP) {
+                    /*no pkt to receive*/
+                    ota_tftp_sess->status = OTA_STATUS_STOP;
+                } else
+                    ota_tftp_timeout();
             }
         }
     }
@@ -554,9 +549,8 @@ qapi_Status_t plugin_tftp_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t 
             }
 
             if (signal & TFTP_RX_FINISH_SIG_MASK) {
-
             }
-        } while(0);
+        } while (0);
     }
 
     return QAPI_OK;
@@ -568,7 +562,7 @@ qapi_Status_t plugin_tftp_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t 
  *            url:    parameters, format: <server>/<url>
  *      int param:    optional init parameters
  */
-qapi_Status_t plugin_tftp_init(const char* interface_name, const char *url, void *init_param)
+qapi_Status_t plugin_tftp_init(const char *interface_name, const char *url, void *init_param)
 {
     qapi_Status_t ret;
     char *ptr;
@@ -625,13 +619,13 @@ qapi_Status_t plugin_tftp_init(const char* interface_name, const char *url, void
         ret = QAPI_FW_UPGRADE_ERR_TFTP_URL_FORMAT;
         goto tftp_init_end;
     }
-    memscpy(ota_tftp_sess->filename, (strlen(ptr)+1), ptr, (strlen(ptr)+1));
+    memscpy(ota_tftp_sess->filename, (strlen(ptr) + 1), ptr, (strlen(ptr) + 1));
 
     ptr = strchr((char *)ip_addr, ':');
-    if (ptr != NULL) { //IPV6
+    if (ptr != NULL) {  // IPV6
 #if LWIP_IPV6
         family = AF_INET6;
-        foreign_addr6 = (struct sockaddr_in6*)(&ota_tftp_sess->foreign_addr);
+        foreign_addr6 = (struct sockaddr_in6 *)(&ota_tftp_sess->foreign_addr);
         if (inet_pton(family, ip_addr, &foreign_addr6->sin6_addr) != 1) {
             ret = QAPI_FW_UPGRADE_ERR_TFTP_URL_FORMAT;
             goto tftp_init_end;
@@ -646,13 +640,13 @@ qapi_Status_t plugin_tftp_init(const char* interface_name, const char *url, void
         addr = (struct sockaddr *)&local_addr6;
         addrlen = sizeof(struct sockaddr_in6);
 #else
-		ret = QAPI_FW_UPGRADE_ERR_TFTP_URL_FORMAT;
-		goto tftp_init_end;
+        ret = QAPI_FW_UPGRADE_ERR_TFTP_URL_FORMAT;
+        goto tftp_init_end;
 #endif
     } else {
 #if LWIP_IPV4
         family = AF_INET;
-        foreign_addr = (struct sockaddr_in*)(&ota_tftp_sess->foreign_addr);
+        foreign_addr = (struct sockaddr_in *)(&ota_tftp_sess->foreign_addr);
         if (inet_pton(family, ip_addr, &foreign_addr->sin_addr) != 1) {
             ret = QAPI_FW_UPGRADE_ERR_TFTP_URL_FORMAT;
             goto tftp_init_end;
@@ -666,8 +660,8 @@ qapi_Status_t plugin_tftp_init(const char* interface_name, const char *url, void
         addr = (struct sockaddr *)&local_addr;
         addrlen = sizeof(struct sockaddr_in);
 #else
-		ret = QAPI_FW_UPGRADE_ERR_TFTP_URL_FORMAT;
-		goto tftp_init_end;
+        ret = QAPI_FW_UPGRADE_ERR_TFTP_URL_FORMAT;
+        goto tftp_init_end;
 #endif
     }
 
@@ -691,7 +685,8 @@ qapi_Status_t plugin_tftp_init(const char* interface_name, const char *url, void
     qurt_mutex_create(&ota_tftp_sess->mutex);
 
     /* create a thread to receive data and send ack */
-    if (nt_qurt_thread_create(ota_tftp_recv, "tftp_receive", 1024, NULL, TCPIP_THREAD_PRIO, &ota_tftp_sess->task_handle) == -1) {
+    if (nt_qurt_thread_create(ota_tftp_recv, "tftp_receive", 1024, NULL, TCPIP_THREAD_PRIO,
+                              &ota_tftp_sess->task_handle) == -1) {
         ret = QAPI_FW_UPGRADE_ERR_TFTP_THREAD_FAIL;
         goto tftp_init_end;
     }
@@ -711,19 +706,19 @@ tftp_init_end:
 
 qapi_Status_t plugin_tftp_fin(void)
 {
-	uint8_t *buffer = NULL;
-	uint32_t *ret_size = 0; 
+    uint8_t *buffer = NULL;
+    uint32_t *ret_size = 0;
 
-	/*When finish, receive one last time, if server sent something, just drop it*/
+    /*When finish, receive one last time, if server sent something, just drop it*/
     if ((buffer = malloc(TFTP_RCV_BUF_SIZE)) == NULL) {
         printf("Out of memory error\r\n");
         return QAPI_FW_UPGRADE_ERR_TFTP_NO_MEMORY;
     }
-	
-	plugin_tftp_recv_data(buffer, TFTP_RCV_BUF_SIZE, ret_size, NULL);
-	free(buffer);
-	
-	ota_tftp_fin();
+
+    plugin_tftp_recv_data(buffer, TFTP_RCV_BUF_SIZE, ret_size, NULL);
+    free(buffer);
+
+    ota_tftp_fin();
     return QAPI_OK;
 }
 
@@ -734,11 +729,10 @@ qapi_Status_t plugin_tftp_abort(void)
 }
 
 /* TFTP doesn't support resume. */
-qapi_Status_t plugin_tftp_resume(const char* interface_name, const char *url, uint32_t offset)
+qapi_Status_t plugin_tftp_resume(const char *interface_name, const char *url, uint32_t offset)
 {
     UNUSED(interface_name);
     UNUSED(url);
     UNUSED(offset);
     return QAPI_OK;
 }
-

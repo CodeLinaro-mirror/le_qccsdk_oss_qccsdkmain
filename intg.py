@@ -56,6 +56,7 @@ if args.nrepo == False:
         shutil.copy(cur_dir + "/../prebuilt_HY11/libwifi_core.a", qccsdkpy_bin_dir)
     else:
         cUtils.python_script_op(script='build.py -i FERMION_WIFI_LIB -o output/wifi_lib')
+        cUtils.python_script_op(script='build.py -i FERMION_WIFI_LIB -o output/wifi_lib -p')
     apps_build(board_name='qcc730v2_evb11_hostless')
     apps_build(board_name='qcc730v2_evb13_hostless')
 	#cUtils.python_script_op(script='qccsdk.py set -S=001lcli build')

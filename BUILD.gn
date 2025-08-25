@@ -228,7 +228,10 @@ config("linker_config") {
         ldflags += [ "--start-group", "regdb.o", "--end-group" ]
         if (CONFIG_LIBWIFI_CORE) {
             libs += [ "wifi_core"]
-            if (is_sdk) {
+            if (is_sdk && CONFIG_ENABLE_P2P_MODE) {
+                lib_dirs += [ "//modules/wifi/bin/p2p" ]
+            }
+            else if (is_sdk) {
                 lib_dirs += [ "//modules/wifi/bin" ]
             }
             else {

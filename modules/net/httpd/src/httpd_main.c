@@ -36,8 +36,8 @@
 #endif
 
 static const int DEFAULT_KEEP_ALIVE_IDLE = 5;
-static const int DEFAULT_KEEP_ALIVE_INTERVAL= 5;
-static const int DEFAULT_KEEP_ALIVE_COUNT= 3;
+static const int DEFAULT_KEEP_ALIVE_INTERVAL = 5;
+static const int DEFAULT_KEEP_ALIVE_COUNT = 3;
 
 typedef struct {
     fd_set *fdset;
@@ -48,14 +48,14 @@ static const char *TAG = "httpd";
 
 ESP_EVENT_DEFINE_BASE(ESP_HTTP_SERVER_EVENT);
 
-void esp_http_server_dispatch_event(int32_t event_id, const void* event_data, size_t event_data_size)
+void esp_http_server_dispatch_event(int32_t event_id, const void *event_data, size_t event_data_size)
 {
 #if 0
 	esp_err_t err = esp_event_post(ESP_HTTP_SERVER_EVENT, event_id, event_data, event_data_size, ESP_HTTP_SERVER_EVENT_POST_TIMEOUT);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to post esp_http_server event: %s", esp_err_to_name(err));
     }
-#endif	
+#endif
 }
 
 static esp_err_t httpd_accept_conn(struct httpd_data *hd, int listen_fd)
@@ -102,19 +102,20 @@ static esp_err_t httpd_accept_conn(struct httpd_data *hd, int listen_fd)
     }
 #endif
 
-	int keep_alive_enable = 1;
-	if (setsockopt(new_fd, SOL_SOCKET, SO_KEEPALIVE, &keep_alive_enable, sizeof(keep_alive_enable)) < 0) {
-		ESP_LOGE(TAG, LOG_FMT("error in setsockopt SO_KEEPALIVE (%d)"), errno);
-		goto exit;
-	}
-
+    int keep_alive_enable = 1;
+    if (setsockopt(new_fd, SOL_SOCKET, SO_KEEPALIVE, &keep_alive_enable, sizeof(keep_alive_enable)) < 0) {
+        ESP_LOGE(TAG, LOG_FMT("error in setsockopt SO_KEEPALIVE (%d)"), errno);
+        goto exit;
+    }
 
     if (hd->config.keep_alive_enable) {
         int keep_alive_enable = 1;
         int keep_alive_idle = hd->config.keep_alive_idle ? hd->config.keep_alive_idle : DEFAULT_KEEP_ALIVE_IDLE;
-        int keep_alive_interval = hd->config.keep_alive_interval ? hd->config.keep_alive_interval : DEFAULT_KEEP_ALIVE_INTERVAL;
+        int keep_alive_interval =
+            hd->config.keep_alive_interval ? hd->config.keep_alive_interval : DEFAULT_KEEP_ALIVE_INTERVAL;
         int keep_alive_count = hd->config.keep_alive_count ? hd->config.keep_alive_count : DEFAULT_KEEP_ALIVE_COUNT;
-        ESP_LOGD(TAG, "Enable TCP keep alive. idle: %d, interval: %d, count: %d", keep_alive_idle, keep_alive_interval, keep_alive_count);
+        ESP_LOGD(TAG, "Enable TCP keep alive. idle: %d, interval: %d, count: %d", keep_alive_idle, keep_alive_interval,
+                 keep_alive_count);
 
         if (setsockopt(new_fd, SOL_SOCKET, SO_KEEPALIVE, &keep_alive_enable, sizeof(keep_alive_enable)) < 0) {
             ESP_LOGE(TAG, LOG_FMT("error in setsockopt SO_KEEPALIVE (%d)"), errno);
@@ -133,12 +134,12 @@ static esp_err_t httpd_accept_conn(struct httpd_data *hd, int listen_fd)
             ESP_LOGE(TAG, LOG_FMT("error in setsockopt TCP_KEEPCNT (%d)"), errno);
             goto exit;
         }
-#else // __APPLE__
+#else   // __APPLE__
         if (setsockopt(new_fd, IPPROTO_TCP, TCP_KEEPALIVE, &keep_alive_idle, sizeof(keep_alive_idle)) < 0) {
             ESP_LOGE(TAG, LOG_FMT("error in setsockopt TCP_KEEPALIVE (%d)"), errno);
             goto exit;
         }
-#endif // __APPLE__
+#endif  // __APPLE__
     }
     if (ESP_OK != httpd_sess_new(hd, new_fd)) {
         ESP_LOGE(TAG, LOG_FMT("session creation failed"));
@@ -167,7 +168,7 @@ esp_err_t httpd_queue_work(httpd_handle_t handle, httpd_work_fn_t work, void *ar
         return ESP_ERR_INVALID_ARG;
     }
 
-    struct httpd_data *hd = (struct httpd_data *) handle;
+    struct httpd_data *hd = (struct httpd_data *)handle;
     struct httpd_ctrl_data msg = {
         .hc_msg = HTTPD_CTRL_WORK,
         .hc_work = work,
@@ -195,7 +196,7 @@ esp_err_t httpd_queue_work(httpd_handle_t handle, httpd_work_fn_t work, void *ar
 
 esp_err_t httpd_get_client_list(httpd_handle_t handle, size_t *fds, int *client_fds)
 {
-    struct httpd_data *hd = (struct httpd_data *) handle;
+    struct httpd_data *hd = (struct httpd_data *)handle;
     if (hd == NULL || fds == NULL || *fds == 0 || client_fds == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
@@ -223,7 +224,6 @@ void *httpd_get_global_transport_ctx(httpd_handle_t handle)
     return ((struct httpd_data *)handle)->config.global_transport_ctx;
 }
 
-
 static void httpd_process_ctrl_msg(struct httpd_data *hd)
 {
     struct httpd_ctrl_data msg;
@@ -244,18 +244,18 @@ static void httpd_process_ctrl_msg(struct httpd_data *hd)
     }
 
     switch (msg.hc_msg) {
-    case HTTPD_CTRL_WORK:
-        if (msg.hc_work) {
-            ESP_LOGD(TAG, LOG_FMT("work"));
-            (*msg.hc_work)(msg.hc_work_arg);
-        }
-        break;
-    case HTTPD_CTRL_SHUTDOWN:
-        ESP_LOGD(TAG, LOG_FMT("shutdown"));
-        hd->hd_td.status = THREAD_STOPPING;
-        break;
-    default:
-        break;
+        case HTTPD_CTRL_WORK:
+            if (msg.hc_work) {
+                ESP_LOGD(TAG, LOG_FMT("work"));
+                (*msg.hc_work)(msg.hc_work_arg);
+            }
+            break;
+        case HTTPD_CTRL_SHUTDOWN:
+            ESP_LOGD(TAG, LOG_FMT("shutdown"));
+            hd->hd_td.status = THREAD_STOPPING;
+            break;
+        default:
+            break;
     }
 #if CONFIG_HTTPD_QUEUE_WORK_BLOCKING
     xSemaphoreGive(hd->ctrl_sock_semaphore);
@@ -284,7 +284,7 @@ static int httpd_process_session(struct sock_db *session, void *context)
     if (FD_ISSET(fd, ctx->fdset) || httpd_sess_pending(ctx->hd, session)) {
         ESP_LOGD(TAG, LOG_FMT("processing socket %d"), fd);
         if (httpd_sess_process(ctx->hd, session) != ESP_OK) {
-            httpd_sess_delete(ctx->hd, session); // Delete session
+            httpd_sess_delete(ctx->hd, session);  // Delete session
         }
     }
     return 1;
@@ -301,7 +301,7 @@ static esp_err_t httpd_server(struct httpd_data *hd)
          * older connections will be closed) */
         FD_SET(hd->listen_fd, &read_set);
     }
-	
+
     FD_SET(hd->ctrl_fd, &read_set);
 
     int tmp_max_fd;
@@ -330,10 +330,7 @@ static esp_err_t httpd_server(struct httpd_data *hd)
 
     /* Case1: Do we have any activity on the current data
      * sessions? */
-    process_session_context_t context = {
-        .fdset = &read_set,
-        .hd = hd
-    };
+    process_session_context_t context = {.fdset = &read_set, .hd = hd};
     httpd_sess_enum(hd, httpd_process_session, &context);
 
     /* Case2: Do we have any incoming connection requests to
@@ -351,7 +348,7 @@ static esp_err_t httpd_server(struct httpd_data *hd)
 static void httpd_thread(void *arg)
 {
     int ret;
-    struct httpd_data *hd = (struct httpd_data *) arg;
+    struct httpd_data *hd = (struct httpd_data *)arg;
     hd->hd_td.status = THREAD_RUNNING;
 
     ESP_LOGD(TAG, LOG_FMT("web server started"));
@@ -363,7 +360,7 @@ static void httpd_thread(void *arg)
     }
 
     ESP_LOGD(TAG, LOG_FMT("web server exiting"));
-	
+
     close(hd->msg_fd);
     cs_free_ctrl_sock(hd->ctrl_fd);
 
@@ -378,19 +375,13 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
     int fd = 0;
     int ret = 0;
 
-    if ((fd=socket(AF_INET6, SOCK_STREAM, 0)) >= 0)
-    {
+    if ((fd = socket(AF_INET6, SOCK_STREAM, 0)) >= 0) {
         /* is valid IPV6 */
         struct in6_addr inaddr_any = IN6ADDR_ANY_INIT;
         struct sockaddr_in6 serv_addr = {
-            .sin6_family  = PF_INET6,
-            .sin6_addr    = inaddr_any,
-            .sin6_port    = htons(hd->config.server_port)
-        };
+            .sin6_family = PF_INET6, .sin6_addr = inaddr_any, .sin6_port = htons(hd->config.server_port)};
         ret = bind(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     }
-
-
 #if 0
     if ((fd=socket(AF_INET, SOCK_STREAM, 0))>=0)
     {
@@ -412,7 +403,6 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
         return ESP_FAIL;
     }
 
-
 #if 0
     /* Enable SO_REUSEADDR to allow binding to the same
      * address and port when restarting the server */
@@ -432,7 +422,7 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
     ret = listen(fd, hd->config.backlog_conn);
     if (ret < 0) {
         ESP_LOGE(TAG, LOG_FMT("error in listen (%d)"), errno);
-		printf("Sock listen error!\r\n");
+        printf("Sock listen error!\r\n");
         close(fd);
         return ESP_FAIL;
     }
@@ -455,7 +445,7 @@ static esp_err_t httpd_server_init(struct httpd_data *hd)
     hd->listen_fd = fd;
 
     hd->ctrl_fd = ctrl_fd;
-    hd->msg_fd  = msg_fd;
+    hd->msg_fd = msg_fd;
 
     return ESP_OK;
 }
@@ -535,9 +525,11 @@ esp_err_t httpd_start(httpd_handle_t *handle, const httpd_config_t *config)
      * So the total number of required sockets is max_open_sockets + 3
      */
     if (HTTPD_MAX_SOCKETS < config->max_open_sockets + 3) {
-        ESP_LOGE(TAG, "Config option max_open_sockets is too large (max allowed %d, 3 sockets used by HTTP server internally)\n\t"
-                 "Either decrease this or configure LWIP_MAX_SOCKETS to a larger value",
-                 HTTPD_MAX_SOCKETS - 3);
+        ESP_LOGE(
+            TAG,
+            "Config option max_open_sockets is too large (max allowed %d, 3 sockets used by HTTP server internally)\n\t"
+            "Either decrease this or configure LWIP_MAX_SOCKETS to a larger value",
+            HTTPD_MAX_SOCKETS - 3);
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -565,12 +557,8 @@ esp_err_t httpd_start(httpd_handle_t *handle, const httpd_config_t *config)
     }
 
     httpd_sess_init(hd);
-    if (httpd_os_thread_create(&hd->hd_td.handle, "httpd",
-                               hd->config.stack_size,
-                               hd->config.task_priority,
-                               httpd_thread, hd,
-                               hd->config.core_id,
-                               hd->config.task_caps) != ESP_OK) {
+    if (httpd_os_thread_create(&hd->hd_td.handle, "httpd", hd->config.stack_size, hd->config.task_priority,
+                               httpd_thread, hd, hd->config.core_id, hd->config.task_caps) != ESP_OK) {
         /* Failed to launch task */
         httpd_delete(hd);
         return ESP_ERR_HTTPD_TASK;
@@ -584,7 +572,7 @@ esp_err_t httpd_start(httpd_handle_t *handle, const httpd_config_t *config)
 
 esp_err_t httpd_stop(httpd_handle_t handle)
 {
-    struct httpd_data *hd = (struct httpd_data *) handle;
+    struct httpd_data *hd = (struct httpd_data *)handle;
     if (hd == NULL) {
         return ESP_ERR_INVALID_ARG;
     }

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 /*
  * test_dpm.h
@@ -12,7 +12,6 @@
 
 #ifndef CORE_WIFI_DPM_INC_TEST_DPM_H_
 #define CORE_WIFI_DPM_INC_TEST_DPM_H_
-
 
 #include "fwconfig_wlan.h"
 #include "nt_flags.h"
@@ -28,8 +27,5 @@
  * */
 uint32_t nt_append_bd_to_frame_test(void *frame, uint32_t length, void **ret_frame, uint8_t testvar);
 #endif
-
-
-
 
 #endif /* CORE_WIFI_DPM_INC_TEST_DPM_H_ */

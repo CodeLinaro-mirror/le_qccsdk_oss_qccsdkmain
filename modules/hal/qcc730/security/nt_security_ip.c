@@ -94,33 +94,28 @@ void wifi_crypto_svc_hw_init()
 
 int8_t nt_secure_ip_pwr_status(void)
 {
+    if (HAL_REG_RD(QWLAN_PMU_SECIP_GDSCR_REG) & QWLAN_PMU_SECIP_GDSCR_GDS_CTL_PWR_STATUS_MASK) {
+        HAL_DBG_PRINT("Security IP module is ON", 0, 0, 0);
+        return 0;
+    } else {
+        HAL_DBG_PRINT("Security IP module is OFF and powering ON..", 0, 0, 0);
+        uint32_t boot_cmpl_reg = 0;
+        boot_cmpl_reg = HAL_REG_RD(QWLAN_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ_REG);
+        HAL_REG_WR(QWLAN_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ_REG,
+                   (boot_cmpl_reg |
+                    QWLAN_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ_PD_SECIP_CNTL_BIT_MASK));
 
-	if(HAL_REG_RD(QWLAN_PMU_SECIP_GDSCR_REG) & QWLAN_PMU_SECIP_GDSCR_GDS_CTL_PWR_STATUS_MASK)
-	{
-		HAL_DBG_PRINT("Security IP module is ON",0,0,0);
-		return 0;
-	}
-	else
-	{
-		HAL_DBG_PRINT("Security IP module is OFF and powering ON..",0,0,0);
-		uint32_t boot_cmpl_reg = 0;
-		boot_cmpl_reg = HAL_REG_RD(QWLAN_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ_REG);
-		HAL_REG_WR(QWLAN_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ_REG,
-				(boot_cmpl_reg | QWLAN_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ_PD_SECIP_CNTL_BIT_MASK));
+        // delay
+        nt_normal_delay(10);
 
-		//delay
-		nt_normal_delay(10);
+        // again check gdscr
+        if (HAL_REG_RD(QWLAN_PMU_SECIP_GDSCR_REG) & QWLAN_PMU_SECIP_GDSCR_GDS_CTL_PWR_STATUS_MASK) {
+            HAL_DBG_PRINT("Security IP module is ON", 0, 0, 0);
+            return 0;
+        }
+    }
 
-		// again check gdscr
-		if(HAL_REG_RD(QWLAN_PMU_SECIP_GDSCR_REG) & QWLAN_PMU_SECIP_GDSCR_GDS_CTL_PWR_STATUS_MASK)
-		{
-			HAL_DBG_PRINT("Security IP module is ON",0,0,0);
-			return 0;
-		}
-
-	}
-
-	return 0;
+    return 0;
 }
 
 #endif

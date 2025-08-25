@@ -8,8 +8,8 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #ifndef APPS_RINGIF_API_H
 #define APPS_RINGIF_API_H
 /*------------------------------------------------------------------------
-* Include Files
-* ----------------------------------------------------------------------*/
+ * Include Files
+ * ----------------------------------------------------------------------*/
 #include <stdbool.h>
 #include <com_dtypes.h>
 
@@ -22,8 +22,8 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "wifi_fw_ring_api.h"
 
 /*------------------------------------------------------------------------
-* Function Declarations and Documentation
-* ----------------------------------------------------------------------*/
+ * Function Declarations and Documentation
+ * ----------------------------------------------------------------------*/
 bool apps_ringif_f2a_ring_read(uint8_t num_args, uint32_t *args);
 bool apps_ringif_a2f_ring_write(uint16_t num_args, uint32_t *args);
 bool apps_ringif_start_stop_traffic_test(uint8_t test_mode, uint32_t durSec_sizeKB);

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*============================================================================
 @file unpa.c
 
@@ -11,7 +11,7 @@ Init, resource definition routines in the UNPA framework
 ============================================================================*/
 
 #include "unpa_internal.h"
-#include "nt_osal.h" // added for replacing malloc with nt_osal_allocate_memory
+#include "nt_osal.h"  // added for replacing malloc with nt_osal_allocate_memory
 /*----------------------------------------------------------------------------
  * Globals
  * -------------------------------------------------------------------------*/
@@ -26,58 +26,42 @@ unpa_struct unpa;
  * <!-- unpa_init -->
  * @brief Initializes the uNPA framework.
  */
-void unpa_init( void )
+void unpa_init(void)
 {
-	qurt_mutex_create( &unpa.lock );
+    qurt_mutex_create(&unpa.lock);
 
-  // Init log
+    // Init log
 
-  unpa.resources = NULL;
+    unpa.resources = NULL;
 }
 
 /*----------------------------------------------------------------------------
  * Stub resources
  * -------------------------------------------------------------------------*/
 #if unpa_stub
-static unpa_resource_state
-unpa_stub_update_fcn( unpa_resource *resource, unpa_client *client )
+static unpa_resource_state unpa_stub_update_fcn(unpa_resource *resource, unpa_client *client)
 {
-	//peter warning ignore
-//	warning_ignore(client);
-//	warning_ignore(resource);
-  return 0;
+    // peter warning ignore
+    //	warning_ignore(client);
+    //	warning_ignore(resource);
+    return 0;
 }
 
-static unpa_resource_state
-unpa_stub_driver_fcn( unpa_resource *resource, unpa_client *client,
-                      unpa_resource_state state )
+static unpa_resource_state unpa_stub_driver_fcn(unpa_resource *resource, unpa_client *client, unpa_resource_state state)
 {
-	//warning_ignore(client);
-	//warning_ignore(resource);
-	//warning_ignore(state);
-  return 0;
+    // warning_ignore(client);
+    // warning_ignore(resource);
+    // warning_ignore(state);
+    return 0;
 }
 
 static unpa_resource_definition unpa_stub_resrc_defn = {
-  "STUB",
-  unpa_stub_update_fcn,
-  unpa_stub_driver_fcn,
-  0xFFFFFFFF,
-  UNPA_ALL_CLIENT_TYPES,
-  UNPA_RESOURCE_DEFAULT,
+    "STUB", unpa_stub_update_fcn, unpa_stub_driver_fcn, 0xFFFFFFFF, UNPA_ALL_CLIENT_TYPES, UNPA_RESOURCE_DEFAULT,
 };
-//qurt_mutex_t *stubptr;
+// qurt_mutex_t *stubptr;
 void *stubnext;
 static unpa_resource unpa_stub_resrc = {
-  &unpa_stub_resrc_defn,
-  NULL,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  stubnext,
+    &unpa_stub_resrc_defn, NULL, 0, 0, 0, 0, 0, 0, stubnext,
 };
 #endif
 /*----------------------------------------------------------------------------
@@ -88,51 +72,44 @@ static unpa_resource unpa_stub_resrc = {
  * <!-- unpa_resource_has_attribute -->
  * @brief Returns TRUE if the resource has the given attribute.
  */
-uint32_t
-unpa_resource_has_attribute( unpa_resource *resource, uint32_t attribute )
+uint32_t unpa_resource_has_attribute(unpa_resource *resource, uint32_t attribute)
 {
-  return ( resource->definition->attributes & attribute );
+    return (resource->definition->attributes & attribute);
 }
 
 /**
  * <!-- unpa_get_resource -->
  * Returns the unpa_resource* with the given name or NULL.
  */
-unpa_resource* unpa_get_resource( const char *resource_name )
+unpa_resource *unpa_get_resource(const char *resource_name)
 {
-  unpa_resource *resource;
+    unpa_resource *resource;
 
-  qurt_mutex_lock( &unpa.lock );
+    qurt_mutex_lock(&unpa.lock);
 
-  resource = unpa.resources;
+    resource = unpa.resources;
 
-  while ( resource )
-  {
-    if ( 0 == strncmp( resource_name, resource->definition->name,
-                       UNPA_MAX_NAME_LEN+1 ) )
-    {
-      break;
+    while (resource) {
+        if (0 == strncmp(resource_name, resource->definition->name, UNPA_MAX_NAME_LEN + 1)) {
+            break;
+        }
+        resource = resource->next;
     }
-    resource = resource->next;
-  }
 #if unpa_stub
-  /* If we don't see a defined resource, look among stubs */
-  if ( !resource )
-  {
-    int i;
-    for ( i = 0; i < UNPA_MAX_STUBS && unpa.stubs[i] != NULL; ++i )
-    {
-      if ( 0 == strncmp( resource_name, unpa.stubs[i], UNPA_MAX_NAME_LEN+1 ) )
-      {
-        resource = &unpa_stub_resrc;
-        break;
-      }
+    /* If we don't see a defined resource, look among stubs */
+    if (!resource) {
+        int i;
+        for (i = 0; i < UNPA_MAX_STUBS && unpa.stubs[i] != NULL; ++i) {
+            if (0 == strncmp(resource_name, unpa.stubs[i], UNPA_MAX_NAME_LEN + 1)) {
+                resource = &unpa_stub_resrc;
+                break;
+            }
+        }
     }
-  }
 #endif
-  qurt_mutex_unlock( &unpa.lock );
+    qurt_mutex_unlock(&unpa.lock);
 
-  return resource;
+    return resource;
 }
 
 /**
@@ -152,49 +129,47 @@ unpa_resource* unpa_get_resource( const char *resource_name )
  *
  * @return Returns a pointer to the created unpa_resource data structure.
  */
-unpa_resource* unpa_create_resource( unpa_resource_definition *definition,
-                                     unpa_resource_state initial_state )
+unpa_resource *unpa_create_resource(unpa_resource_definition *definition, unpa_resource_state initial_state)
 {
-  unpa_client client;
-  unpa_resource *resource;
+    unpa_client client;
+    unpa_resource *resource;
 
-  CORE_VERIFY_PTR( definition );
-  CORE_VERIFY( strlen( definition->name ) < UNPA_MAX_NAME_LEN );
+    CORE_VERIFY_PTR(definition);
+    CORE_VERIFY(strlen(definition->name) < UNPA_MAX_NAME_LEN);
 
-  qurt_mutex_lock( &unpa.lock );
+    qurt_mutex_lock(&unpa.lock);
 
-  /* Verify that no resource with the given name is already defined/stubbed */
-  resource = unpa_get_resource( definition->name );
-  CORE_VERIFY( resource == NULL );
+    /* Verify that no resource with the given name is already defined/stubbed */
+    resource = unpa_get_resource(definition->name);
+    CORE_VERIFY(resource == NULL);
 
-  resource = (unpa_resource *) nt_osal_calloc(1, sizeof(unpa_resource) );
-  if (resource == NULL) {
-  	qurt_mutex_unlock( &unpa.lock );
-  	return NULL;
-  }
-  memset( resource, 0, sizeof(unpa_resource) );
+    resource = (unpa_resource *)nt_osal_calloc(1, sizeof(unpa_resource));
+    if (resource == NULL) {
+        qurt_mutex_unlock(&unpa.lock);
+        return NULL;
+    }
+    memset(resource, 0, sizeof(unpa_resource));
 
-  resource->definition = definition;
-  resource->active_max = definition->max;
+    resource->definition = definition;
+    resource->active_max = definition->max;
 
-  /* Initialize the resource's own lock */
-  qurt_mutex_create( &resource->lock );
+    /* Initialize the resource's own lock */
+    qurt_mutex_create(&resource->lock);
 
-  /* Call into resource with the special INITIALIZE client */
-  memset( &client, 0, sizeof(unpa_client) );
-  client.type = UNPA_CLIENT_INITIALIZE;
-  client.pending_request.val = initial_state;
+    /* Call into resource with the special INITIALIZE client */
+    memset(&client, 0, sizeof(unpa_client));
+    client.type = UNPA_CLIENT_INITIALIZE;
+    client.pending_request.val = initial_state;
 
-  resource->active_state =
-    definition->driver_fcn( resource, &client, initial_state );
+    resource->active_state = definition->driver_fcn(resource, &client, initial_state);
 
-  /* Link in resource */
-  resource->next = unpa.resources;
-  unpa.resources = resource;
+    /* Link in resource */
+    resource->next = unpa.resources;
+    unpa.resources = resource;
 
-  qurt_mutex_unlock( &unpa.lock );
+    qurt_mutex_unlock(&unpa.lock);
 
-  return resource;
+    return resource;
 }
 
 /**
@@ -209,31 +184,29 @@ unpa_resource* unpa_create_resource( unpa_resource_definition *definition,
  * @param resource_name: Name of the resource to be stubbed. Length of
  * the name, incl. the '\0', must be < UNPA_MAX_NAME_LEN.
  */
-void unpa_stub_resource( const char *resource_name )
+void unpa_stub_resource(const char *resource_name)
 {
-  unpa_resource *resource;
-  int i;
+    unpa_resource *resource;
+    int i;
 
-  CORE_VERIFY_PTR( resource_name );
-  CORE_VERIFY( strlen( resource_name ) < UNPA_MAX_NAME_LEN );
+    CORE_VERIFY_PTR(resource_name);
+    CORE_VERIFY(strlen(resource_name) < UNPA_MAX_NAME_LEN);
 
-  qurt_mutex_lock( &unpa.lock );
+    qurt_mutex_lock(&unpa.lock);
 
-  /* Verify that no such resource is already defined/stubbed */
-  resource = unpa_get_resource( resource_name );
-  CORE_VERIFY( resource == NULL );
+    /* Verify that no such resource is already defined/stubbed */
+    resource = unpa_get_resource(resource_name);
+    CORE_VERIFY(resource == NULL);
 
-  for ( i = 0; i < UNPA_MAX_STUBS; ++i )
-  {
-    if ( unpa.stubs[i] == NULL )
-    {
-      unpa.stubs[i] = resource_name;
-      break;
+    for (i = 0; i < UNPA_MAX_STUBS; ++i) {
+        if (unpa.stubs[i] == NULL) {
+            unpa.stubs[i] = resource_name;
+            break;
+        }
     }
-  }
 
-  /* If we didn't find a slot, we have too many stubs */
-  CORE_VERIFY( i != UNPA_MAX_STUBS );
+    /* If we didn't find a slot, we have too many stubs */
+    CORE_VERIFY(i != UNPA_MAX_STUBS);
 
-  qurt_mutex_unlock( &unpa.lock );
+    qurt_mutex_unlock(&unpa.lock);
 }

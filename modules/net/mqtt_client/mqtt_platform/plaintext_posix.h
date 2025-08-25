@@ -42,10 +42,10 @@
 /* Logging configuration for the transport interface implementation which uses
  * Sockets. */
 #ifndef LIBRARY_LOG_NAME
-    #define LIBRARY_LOG_NAME     "Transport_Plaintext_Sockets"
+#define LIBRARY_LOG_NAME "Transport_Plaintext_Sockets"
 #endif
 #ifndef LIBRARY_LOG_LEVEL
-    #define LIBRARY_LOG_LEVEL    LOG_DEBUG
+#define LIBRARY_LOG_LEVEL LOG_DEBUG
 #endif
 
 #include "logging_stack.h"
@@ -54,7 +54,7 @@
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
 #endif
 /* *INDENT-ON* */
 
@@ -66,8 +66,7 @@
  * @brief Parameters for the transport-interface
  * implementation that uses plaintext POSIX sockets.
  */
-typedef struct PlaintextParams
-{
+typedef struct PlaintextParams {
     int32_t socketDescriptor;
 } PlaintextParams_t;
 
@@ -84,10 +83,8 @@ typedef struct PlaintextParams
  * @return #SOCKETS_SUCCESS if successful;
  * #SOCKETS_INVALID_PARAMETER, #SOCKETS_DNS_FAILURE, #SOCKETS_CONNECT_FAILURE on error.
  */
-SocketStatus_t Plaintext_Connect( NetworkContext_t * pNetworkContext,
-                                  const ServerInfo_t * pServerInfo,
-                                  uint32_t sendTimeoutMs,
-                                  uint32_t recvTimeoutMs );
+SocketStatus_t Plaintext_Connect(NetworkContext_t *pNetworkContext, const ServerInfo_t *pServerInfo,
+                                 uint32_t sendTimeoutMs, uint32_t recvTimeoutMs);
 
 /**
  * @brief Close TCP connection to server.
@@ -96,7 +93,7 @@ SocketStatus_t Plaintext_Connect( NetworkContext_t * pNetworkContext,
  *
  * @return #SOCKETS_SUCCESS if successful; #SOCKETS_INVALID_PARAMETER on error.
  */
-SocketStatus_t Plaintext_Disconnect( const NetworkContext_t * pNetworkContext );
+SocketStatus_t Plaintext_Disconnect(const NetworkContext_t *pNetworkContext);
 
 /**
  * @brief Receives data over an established TCP connection.
@@ -110,9 +107,7 @@ SocketStatus_t Plaintext_Disconnect( const NetworkContext_t * pNetworkContext );
  *
  * @return Number of bytes received if successful; negative value on error.
  */
-int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
-                        void * pBuffer,
-                        size_t bytesToRecv );
+int32_t Plaintext_Recv(NetworkContext_t *pNetworkContext, void *pBuffer, size_t bytesToRecv);
 
 /**
  * @brief Sends data over an established TCP connection.
@@ -126,13 +121,11 @@ int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
  *
  * @return Number of bytes sent if successful; negative value on error.
  */
-int32_t Plaintext_Send( NetworkContext_t * pNetworkContext,
-                        const void * pBuffer,
-                        size_t bytesToSend );
+int32_t Plaintext_Send(NetworkContext_t *pNetworkContext, const void *pBuffer, size_t bytesToSend);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus
-    }
+}
 #endif
 /* *INDENT-ON* */
 

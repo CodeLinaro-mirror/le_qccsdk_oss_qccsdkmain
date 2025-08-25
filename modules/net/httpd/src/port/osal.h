@@ -3,13 +3,13 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
- 
- /*
-  * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
-  * SPDX-License-Identifier: BSD-3-Clause-Clear
-  *
-  * NOT A CONTRIBUTION
-  */
+
+/*
+ * Copyright (c) Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * NOT A CONTRIBUTION
+ */
 
 #ifndef _OSAL_H_
 #define _OSAL_H_
@@ -29,16 +29,15 @@ extern "C" {
 #define OS_SUCCESS ESP_OK
 #define OS_FAIL    ESP_FAIL
 
-#define othread_t TaskHandle_t 
+#define othread_t TaskHandle_t
 
-static inline int httpd_os_thread_create(othread_t *thread,
-                                 const char *name, uint16_t stacksize, int prio,
-                                 void (*thread_routine)(void *arg), void *arg,
-                                 BaseType_t core_id, uint32_t caps)
+static inline int httpd_os_thread_create(othread_t *thread, const char *name, uint16_t stacksize, int prio,
+                                         void (*thread_routine)(void *arg), void *arg, BaseType_t core_id,
+                                         uint32_t caps)
 {
     int ret = 0;
-	
-	ret = xTaskCreate(thread_routine, name, stacksize, arg, prio, thread);
+
+    ret = xTaskCreate(thread_routine, name, stacksize, arg, prio, thread);
     if (ret == pdPASS) {
         return OS_SUCCESS;
     }

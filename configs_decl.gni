@@ -30,7 +30,7 @@ declare_args() {
     CONFIG_QTIMER = false
     CONFIG_PROF = false
     CONFIG_WPS = false
-    CONFIG_P2P = false
+    CONFIG_ENABLE_P2P_MODE = false
     CONFIG_COEX_MCI = false
     CONFIG_COEX_PTA = false
     CONFIG_6GHZ = false
@@ -148,4 +148,6 @@ declare_args() {
     CONFIG_LWIP_MULTIPLE_STREAMS = false
 
     CONFIG_WIFI_FW_COREDUMP_SUPPORT= false
+
+    CONFIG_SUPPORT_LWIP_RAW_SOCKET = false
 }

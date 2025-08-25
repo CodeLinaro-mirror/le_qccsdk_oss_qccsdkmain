@@ -206,60 +206,56 @@ int32_t kdf_op9_aes128_ecb(void)
 
 int lock_wrapper_req(void)
 {
-	uint32 data;
+    uint32 data;
 
-	HAL_DBG_PRINT("Lock wrapper request \n",0,0,0);
-	HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_REQUEST_REG_REG,0x1);
+    HAL_DBG_PRINT("Lock wrapper request \n", 0, 0, 0);
+    HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_REQUEST_REG_REG, 0x1);
 
-	data = HAL_REG_RD(QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_REG);
+    data = HAL_REG_RD(QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_REG);
 
-	while(data != 0x80000004)
-		data = HAL_REG_RD(QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_REG);
-	return 0;
+    while (data != 0x80000004)
+        data = HAL_REG_RD(QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_REG);
+    return 0;
 }
 
 int lock_wrapper_release(void)
 {
-	HAL_DBG_PRINT("Lock wrapper release \n",0,0,0);
-	HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_RELEASE_REG_REG, 0x1);
-	return 0;
+    HAL_DBG_PRINT("Lock wrapper release \n", 0, 0, 0);
+    HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_RELEASE_REG_REG, 0x1);
+    return 0;
 }
-
-
 
 int kdf_op9_operation(void)
 {
-
-
-	lock_wrapper_req();
+    lock_wrapper_req();
 #if 0
 	oem_op9();
 #endif
-	//otp_qc_op9();
+    // otp_qc_op9();
 
-	HAL_REG_WR(QWLAN_KDF_CSR_R_INTR_EN_REG, 0x30000);
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INTR_EN_REG, 0x30000);
 
-	HAL_REG_WR(QWLAN_KDF_CSR_R_OP_CODE_REG, 0x9);
+    HAL_REG_WR(QWLAN_KDF_CSR_R_OP_CODE_REG, 0x9);
 
-	HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_0_REG, 0x01234567);
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_0_REG, 0x01234567);
 
-	HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_1_REG, 0X89abcdef);
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_1_REG, 0X89abcdef);
 
-	HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_2_REG, 0Xfedcba98);
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_2_REG, 0Xfedcba98);
 
-	HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_3_REG, 0X76543210);
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_3_REG, 0X76543210);
 
-	HAL_REG_WR(QWLAN_KDF_CSR_R_OP_GO_REG, 0x1);
+    HAL_REG_WR(QWLAN_KDF_CSR_R_OP_GO_REG, 0x1);
 
+    HAL_DBG_PRINT("Before KDF_OP_STATUS \n", 0, 0, 0);
+    while (HAL_REG_RD(QWLAN_KDF_CSR_R_OP_STATUS_REG) != 0x1)
+        ;
 
-	HAL_DBG_PRINT("Before KDF_OP_STATUS \n",0,0,0);
-	while(HAL_REG_RD(QWLAN_KDF_CSR_R_OP_STATUS_REG) != 0x1) ;
+    HAL_DBG_PRINT("After KDF_OP_STATUS \n", 0, 0, 0);
 
-	HAL_DBG_PRINT("After KDF_OP_STATUS \n",0,0,0);
+    lock_wrapper_release();
 
-	lock_wrapper_release();
-
-	return 0;
+    return 0;
 }
 
 #endif

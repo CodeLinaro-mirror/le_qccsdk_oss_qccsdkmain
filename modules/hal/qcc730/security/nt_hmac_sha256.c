@@ -348,7 +348,7 @@ printf("*** %1d iv %08x  ***", i, actual_auth_iv[i]);
 return 1;
 }
 
-#if 0 //HMAC does not require comparisons
+#if 0  // HMAC does not require comparisons
   //check for proper cipher output
   if (memcmp(dout, expected_dout, output_size)) {
     for (i = 0; i < (output_size >> 2); i++) {
@@ -604,8 +604,6 @@ int32_t hmac_sha256_known_answer()
 
   nonce[3] = 0x00000000;
 
-
-
 #ifdef QCC
 
 ceId=0;
@@ -741,8 +739,6 @@ ceId=0;
 
   //This register does not have an index defined in the address file.
 
-
-
 #if 0
 
   for (i=0; i<4; i++) {
@@ -848,8 +844,6 @@ printf( "*** %1d out %08x != %08x exp ***", i, dout[i], expected_dout[i]);
   return 0;
 
 }
-
-
 
 #endif
 

@@ -34,9 +34,9 @@ struct fs_mount_t;
  * @param mp Pointer to mount point structure
  */
 struct fs_file_t {
-	void *filep;
-	const struct fs_mount_t *mp;
-	fs_mode_t flags;
+    void *filep;
+    const struct fs_mount_t *mp;
+    fs_mode_t flags;
 };
 
 /**
@@ -48,8 +48,8 @@ struct fs_file_t {
  * @param mp Pointer to mount point structure
  */
 struct fs_dir_t {
-	void *dirp;
-	const struct fs_mount_t *mp;
+    void *dirp;
+    const struct fs_mount_t *mp;
 };
 
 /**

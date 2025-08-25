@@ -16,18 +16,18 @@
 #include <platform/fermion/DiagnosticDataProviderImpl.h>
 
 namespace chip {
-namespace DeviceLayer {
+    namespace DeviceLayer {
 
-DiagnosticDataProviderImpl & DiagnosticDataProviderImpl::GetDefaultInstance()
-{
-    static DiagnosticDataProviderImpl sInstance;
-    return sInstance;
-}
+        DiagnosticDataProviderImpl &DiagnosticDataProviderImpl::GetDefaultInstance()
+        {
+            static DiagnosticDataProviderImpl sInstance;
+            return sInstance;
+        }
 
-DiagnosticDataProvider & GetDiagnosticDataProviderImpl()
-{
-    return DiagnosticDataProviderImpl::GetDefaultInstance();
-}
+        DiagnosticDataProvider &GetDiagnosticDataProviderImpl()
+        {
+            return DiagnosticDataProviderImpl::GetDefaultInstance();
+        }
 
-} // namespace DeviceLayer
-} // namespace chip
+    }  // namespace DeviceLayer
+}  // namespace chip

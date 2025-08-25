@@ -12,11 +12,10 @@
 #include "unpa.h"
 
 struct pka_state_s {
-    ecc_lock_state_t    lock_ctxt;
-    struct pka_state    elppka_ctxt;
-    qurt_mutex_t        mutex; // used so that only a single SW thread can lock PKA at a time
-    unpa_client * unpa_client_ctxt;
+    ecc_lock_state_t lock_ctxt;
+    struct pka_state elppka_ctxt;
+    qurt_mutex_t mutex;  // used so that only a single SW thread can lock PKA at a time
+    unpa_client *unpa_client_ctxt;
 };
 
-#endif // __PKA_INTERNAL_H__
-
+#endif  // __PKA_INTERNAL_H__

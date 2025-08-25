@@ -48,28 +48,23 @@
 */
 qbool_t QAT_Hex_Nibble_To_Int(uint8_t Nibble, uint8_t *Output)
 {
-   qbool_t Ret_Val;
+    qbool_t Ret_Val;
 
-   /* Convert the number to lower case to simplify the check for
-      characters 'a' through 'f'. */
-   Nibble |= 0x20;
+    /* Convert the number to lower case to simplify the check for
+       characters 'a' through 'f'. */
+    Nibble |= 0x20;
 
-   if((Nibble >= '0') && (Nibble <= '9'))
-   {
-      *Output = Nibble - '0';
-      Ret_Val = true;
-   }
-   else if((Nibble >= 'a') && (Nibble <= 'f'))
-   {
-      *Output = Nibble - 'a' + 10;
-      Ret_Val = true;
-   }
-   else
-   {
-      Ret_Val = false;
-   }
+    if ((Nibble >= '0') && (Nibble <= '9')) {
+        *Output = Nibble - '0';
+        Ret_Val = true;
+    } else if ((Nibble >= 'a') && (Nibble <= 'f')) {
+        *Output = Nibble - 'a' + 10;
+        Ret_Val = true;
+    } else {
+        Ret_Val = false;
+    }
 
-   return(Ret_Val);
+    return (Ret_Val);
 }
 
 /**
@@ -91,53 +86,44 @@ qbool_t QAT_Hex_Nibble_To_Int(uint8_t Nibble, uint8_t *Output)
 */
 qbool_t QAT_Hex_String_To_Array(char *String, uint32_t *OutputSize, uint8_t *Output)
 {
-   qbool_t  Ret_Val;
-   uint8_t  Temp_Val1;
-   uint8_t  Temp_Val2;
-   uint32_t InputSize;
+    qbool_t Ret_Val;
+    uint8_t Temp_Val1;
+    uint8_t Temp_Val2;
+    uint32_t InputSize;
 
-   /* Strip off the leading "0x" if present. */
-   if((String[0] == '0') && ((String[1] | 0x20) == 'x'))
-   {
-      String += 2;
-   }
+    /* Strip off the leading "0x" if present. */
+    if ((String[0] == '0') && ((String[1] | 0x20) == 'x')) {
+        String += 2;
+    }
 
-   memset(Output, 0, *OutputSize);
-   InputSize = 0;
-   Ret_Val   = true;
+    memset(Output, 0, *OutputSize);
+    InputSize = 0;
+    Ret_Val = true;
 
-   /* Loop until the end of the string is reached or the number is flagged as
-      invalid. */
-   while((String[0] != '\0') && (Ret_Val) && (InputSize < *OutputSize))
-   {
-      /* Make sure the next Nibble is also not NULL. */
-      if(String[1] != '\0')
-      {
-         Ret_Val = QAT_Hex_Nibble_To_Int(String[0], &Temp_Val1) && QAT_Hex_Nibble_To_Int(String[1], &Temp_Val2);
-         if(Ret_Val)
-         {
-            *Output = (Temp_Val1 << 4) | Temp_Val2;
+    /* Loop until the end of the string is reached or the number is flagged as
+       invalid. */
+    while ((String[0] != '\0') && (Ret_Val) && (InputSize < *OutputSize)) {
+        /* Make sure the next Nibble is also not NULL. */
+        if (String[1] != '\0') {
+            Ret_Val = QAT_Hex_Nibble_To_Int(String[0], &Temp_Val1) && QAT_Hex_Nibble_To_Int(String[1], &Temp_Val2);
+            if (Ret_Val) {
+                *Output = (Temp_Val1 << 4) | Temp_Val2;
 
-            Output ++;
-            InputSize ++;
-            String += 2;
-         }
-      }
-      else
-      {
-         Ret_Val = false;
-      }
-   }
+                Output++;
+                InputSize++;
+                String += 2;
+            }
+        } else {
+            Ret_Val = false;
+        }
+    }
 
-   if(Ret_Val)
-   {
-      *OutputSize = InputSize;
-   }
+    if (Ret_Val) {
+        *OutputSize = InputSize;
+    }
 
-   return(Ret_Val);
+    return (Ret_Val);
 }
-
-
 
 /**
    @brief Verifies if a given command line parameter is a valid integer in the
@@ -153,11 +139,11 @@ qbool_t QAT_Hex_String_To_Array(char *String, uint32_t *OutputSize, uint8_t *Out
 */
 qbool_t QAT_Verify_Integer_Parameter(int Parameter, int32_t MinValue, int32_t MaxValue)
 {
-   qbool_t Ret_Val;
+    qbool_t Ret_Val;
 
-   Ret_Val = (qbool_t)((Parameter >= MinValue) && (Parameter <= MaxValue));
+    Ret_Val = (qbool_t)((Parameter >= MinValue) && (Parameter <= MaxValue));
 
-   return(Ret_Val);
+    return (Ret_Val);
 }
 
 /**
@@ -177,11 +163,9 @@ qbool_t QAT_Verify_Integer_Parameter(int Parameter, int32_t MinValue, int32_t Ma
 */
 qbool_t QAT_Verify_Unsigned_Integer_Parameter(uint32_t Parameter, uint32_t MinValue, uint32_t MaxValue)
 {
-   qbool_t Ret_Val;
+    qbool_t Ret_Val;
 
-   Ret_Val = (qbool_t)((Parameter >= MinValue) && (Parameter <= MaxValue));
+    Ret_Val = (qbool_t)((Parameter >= MinValue) && (Parameter <= MaxValue));
 
-   return(Ret_Val);
+    return (Ret_Val);
 }
-
-

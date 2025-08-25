@@ -696,9 +696,21 @@ void __attribute__ ((section(".after_ram_vectors"),weak))
 MemManage_Handler (void)
 {
 #ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
-  ERR_FATAL_EXCEPTION("Exception Detected: Memory Management Fault", __LINE__, __FILE__);
+  asm volatile(
+    " tst lr,#4       \n"
+    " ite eq          \n"
+    " mrseq r0,msp    \n"
+    " mrsne r0,psp    \n"
+    " mov r1,lr       \n"
+    " ldr r2,=MemManage_Handler_C \n"
+    " bx r2"
+
+    : /* Outputs */
+    : /* Inputs */
+    : /* Clobbers */
+  );
 #else
-	MemManage_Handler_C();
+  MemManage_Handler_C();
 #if defined(DEBUG)
   __DEBUG_BKPT();
 #endif
@@ -707,11 +719,13 @@ MemManage_Handler (void)
     }
 #endif
 }
-
 void __attribute__ ((section(".after_ram_vectors"),weak,used))
 MemManage_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
                     uint32_t lr __attribute__((unused)))
 {
+#ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
+  ERR_FATAL_EXCEPTION("Exception Detected: Memory Management Fault", __LINE__, __FILE__);
+#else
 	uint32_t * mmfar = SCB->MMFAR; // MemManage Fault Address.
 	uint32_t * bfar = SCB->BFAR; // Bus Fault Address.
 	uint32_t cfsr = SCB->CFSR; // Configurable Fault Status Registers.
@@ -725,6 +739,7 @@ MemManage_Handler_C (ExceptionStackFrame* frame __attribute__((unused)),
 	snprintf((char *)interrupt_string, 200, "\r\nMMFAR  =  %08X\r\nBFAR  =  %08X\r\nCFSR  =  %08X",&mmfar,&bfar,cfsr);
 	UART_Send_direct(interrupt_string,sizeof(interrupt_string));
 	memset(interrupt_string,0,200);
+#endif  // ifdef CONFIG_WIFI_FW_COREDUMP_SUPPORT
 }
 
 void __attribute__ ((section(".after_ram_vectors"),weak,naked))

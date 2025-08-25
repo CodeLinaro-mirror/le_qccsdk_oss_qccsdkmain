@@ -25,30 +25,29 @@ void MatterTimeSynchronizationPluginServerInitCallback();
 void MatterUserLabelPluginServerInitCallback();
 void MatterWiFiNetworkDiagnosticsPluginServerInitCallback();
 
-#define MATTER_PLUGINS_INIT \
-    MatterAccessControlPluginServerInitCallback(); \
+#define MATTER_PLUGINS_INIT                                     \
+    MatterAccessControlPluginServerInitCallback();              \
     MatterAdministratorCommissioningPluginServerInitCallback(); \
-    MatterBasicInformationPluginServerInitCallback(); \
-    MatterBindingPluginServerInitCallback(); \
-    MatterDescriptorPluginServerInitCallback(); \
-    MatterDiagnosticLogsPluginServerInitCallback(); \
+    MatterBasicInformationPluginServerInitCallback();           \
+    MatterBindingPluginServerInitCallback();                    \
+    MatterDescriptorPluginServerInitCallback();                 \
+    MatterDiagnosticLogsPluginServerInitCallback();             \
     MatterEthernetNetworkDiagnosticsPluginServerInitCallback(); \
-    MatterFixedLabelPluginServerInitCallback(); \
-    MatterGeneralCommissioningPluginServerInitCallback(); \
-    MatterGeneralDiagnosticsPluginServerInitCallback(); \
-    MatterGroupKeyManagementPluginServerInitCallback(); \
-    MatterGroupsPluginServerInitCallback(); \
-    MatterIcdManagementPluginServerInitCallback(); \
-    MatterIdentifyPluginServerInitCallback(); \
-    MatterLocalizationConfigurationPluginServerInitCallback(); \
-    MatterNetworkCommissioningPluginServerInitCallback(); \
-    MatterOperationalCredentialsPluginServerInitCallback(); \
+    MatterFixedLabelPluginServerInitCallback();                 \
+    MatterGeneralCommissioningPluginServerInitCallback();       \
+    MatterGeneralDiagnosticsPluginServerInitCallback();         \
+    MatterGroupKeyManagementPluginServerInitCallback();         \
+    MatterGroupsPluginServerInitCallback();                     \
+    MatterIcdManagementPluginServerInitCallback();              \
+    MatterIdentifyPluginServerInitCallback();                   \
+    MatterLocalizationConfigurationPluginServerInitCallback();  \
+    MatterNetworkCommissioningPluginServerInitCallback();       \
+    MatterOperationalCredentialsPluginServerInitCallback();     \
     MatterOtaSoftwareUpdateRequestorPluginServerInitCallback(); \
-    MatterSoftwareDiagnosticsPluginServerInitCallback(); \
-    MatterSwitchPluginServerInitCallback(); \
-    MatterThreadNetworkDiagnosticsPluginServerInitCallback(); \
-    MatterTimeFormatLocalizationPluginServerInitCallback(); \
-    MatterTimeSynchronizationPluginServerInitCallback(); \
-    MatterUserLabelPluginServerInitCallback(); \
+    MatterSoftwareDiagnosticsPluginServerInitCallback();        \
+    MatterSwitchPluginServerInitCallback();                     \
+    MatterThreadNetworkDiagnosticsPluginServerInitCallback();   \
+    MatterTimeFormatLocalizationPluginServerInitCallback();     \
+    MatterTimeSynchronizationPluginServerInitCallback();        \
+    MatterUserLabelPluginServerInitCallback();                  \
     MatterWiFiNetworkDiagnosticsPluginServerInitCallback();
-

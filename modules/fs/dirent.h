@@ -22,8 +22,8 @@ extern "C" {
 typedef void DIR;
 
 struct dirent {
-	unsigned int d_ino;
-	char d_name[PATH_MAX + 1];
+    unsigned int d_ino;
+    char d_name[PATH_MAX + 1];
 };
 
 /* Directory related operations */
@@ -37,4 +37,4 @@ extern struct dirent *readdir(DIR *dirp);
 
 #endif /* CONFIG_POSIX_FS */
 
-#endif	/* ZEPHYR_INCLUDE_POSIX_DIRENT_H_ */
+#endif /* ZEPHYR_INCLUDE_POSIX_DIRENT_H_ */

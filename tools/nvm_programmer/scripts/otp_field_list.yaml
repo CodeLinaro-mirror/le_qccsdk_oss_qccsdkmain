@@ -112,3 +112,23 @@
   length: '48'
   access: READ_WRITE
      
+#MODULE_PART_NUMBER
+- name: MODULE_PART_NUMBER
+  address: '0x00000264'
+  offset: '0'
+  length: '192'
+  access: READ_WRITE
+
+#MANUFACTURING_Yr/Week
+- name: MANUFACTURING_Yr/Week
+  address: '0x00000260'
+  offset: '0'
+  length: '16'
+  access: READ_WRITE
+
+#BOM_CONFIGURATION
+- name: BOM_CONFIGURATION
+  address: '0x00000260'
+  offset: '16'
+  length: '16'
+  access: READ_WRITE

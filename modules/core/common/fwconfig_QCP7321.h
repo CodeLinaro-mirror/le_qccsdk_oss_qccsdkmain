@@ -1,24 +1,24 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 /*========================================================================
-* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved. 
-* SPDX-License-Identifier: BSD-3-Clause-Clear
-*
-* @file fwconfig_QCP7321.h
-* @brief feature flag definitions of NT code base required for Fermion
-* ======================================================================*/
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
+ * @file fwconfig_QCP7321.h
+ * @brief feature flag definitions of NT code base required for Fermion
+ * ======================================================================*/
 #ifndef _QCP7321_H_
 #define _QCP7321_H_
 /*------------------------------------------------------------------------
-* Include Files
-* ----------------------------------------------------------------------*/
+ * Include Files
+ * ----------------------------------------------------------------------*/
 /* None*/
 
 /*------------------------------------------------------------------------
-* Preprocessor Definitions and Constants
-* ----------------------------------------------------------------------*/
+ * Preprocessor Definitions and Constants
+ * ----------------------------------------------------------------------*/
 
 #ifdef IMAGE_FERMION
 
@@ -59,7 +59,8 @@
 #endif
 
 #ifdef CONFIG_SAP_POWERSAVE
-#define SUPPORT_SAP_POWERSAVE /* This flags enables changing beacon interval to supports sap powersave when it is conneced to EB*/
+#define SUPPORT_SAP_POWERSAVE    /* This flags enables changing beacon interval to supports sap powersave when it is \
+                                    conneced to EB*/
 #endif
 
 /* Enables Random Backoff for QoS Null frames triggered using SW template method */
@@ -70,8 +71,9 @@
 #ifdef SUPPORT_RING_IF
 #define SUPPORT_DATA_LOOPBACK /* Use this flag to enable data loopback */
 
-#define SUPPORT_BEACON_MISS_THRESHOLD_TIME /* This flags enables BMTT configuration to calculate the number of acceptable beacon miss threshold */
-#define SUPPORT_PERIODIC_TSF_SYNC /* Feature flag to support periodic TSF sync */
+#define SUPPORT_BEACON_MISS_THRESHOLD_TIME    /* This flags enables BMTT configuration to calculate the number of \
+                                                 acceptable beacon miss threshold */
+#define SUPPORT_PERIODIC_TSF_SYNC             /* Feature flag to support periodic TSF sync */
 #ifdef SUPPORT_PERIODIC_TSF_SYNC
 #define ENABLE_TSF_SYNC_STATS /*Enable tsf stats to be printed */
 #endif
@@ -94,7 +96,7 @@
 #define SUPPORT_QCSPI_ON_DWSPI /* Neutrino SPI slave that simulates the QCSPI functionalities */
 #else
 #define SUPPORT_QCSPI_SLAVE /*Flag to enable QcSPI Slave driver*/
-#endif //PLATFORM_NT
+#endif                      // PLATFORM_NT
 
 #define NT_FN_SPI
 #endif
@@ -112,38 +114,38 @@
 /* I2C module support flag */
 #define I2C_SUPPORT
 #ifdef I2C_SUPPORT
-#define	I2C_DEMO
-#define	I2C_DEMO_DBG
+#define I2C_DEMO
+#define I2C_DEMO_DBG
 #define I2C_QAPI
-#define	I2C_DRV
+#define I2C_DRV
 //#define	I2C_DRV_DBG
-#define	I2C_HAL
+#define I2C_HAL
 #endif
 
 /* UART module support flag */
-#if defined (CONFIG_UART_SHELL) || (CONFIG_UART_QAPI)
+#if defined(CONFIG_UART_SHELL) || (CONFIG_UART_QAPI)
 #define UART_SUPPORT
 #endif
 
 #ifdef UART_SUPPORT
 #define UART_QAPI
-#define	UART_DRV
+#define UART_DRV
 #endif
 
 #ifdef CONFIG_QTIMER
 #define QTMR_SUPPORT
-#define	QTMR_DEMO
-#define	QTMR_DRV
-#define	QTMR_HAL
+#define QTMR_DEMO
+#define QTMR_DRV
+#define QTMR_HAL
 #endif
 
 #ifdef CONFIG_PROF
 #define PROF_DEMO
 #ifdef PROF_DEMO
-#define	PROF_DRV
-#define	PROF_TEST_INST
+#define PROF_DRV
+#define PROF_TEST_INST
 #endif
-#define	PROF_DRV
+#define PROF_DRV
 #ifdef PROF_DRV
 #define PROF_DRV_OS_REMOVE_IRQ
 #endif
@@ -156,15 +158,15 @@
 #define SUPPORT_5GHZ
 #define SUPPORT_TWT_STA
 #define SUPPORT_TWT_AP
-#define TWT_WAR // WAR Added for TWT Changes
+#define TWT_WAR  // WAR Added for TWT Changes
 
-#define NT_DXE_TX_HANG_WAR_FERM_727 // WAR for Dxe mgmt Tx channel hang - FERM727
+#define NT_DXE_TX_HANG_WAR_FERM_727  // WAR for Dxe mgmt Tx channel hang - FERM727
 
-#define DXE_ERROR_WAR // WAR added for DXE error seen in powersave
+#define DXE_ERROR_WAR  // WAR added for DXE error seen in powersave
 //#define FERMION_CONFIG_HCF //Get config from INI region
 
 #define FERMION_ANI_SW_SUPPORT /* Use this flag to enable ANI SW support */
-#define FERMION_ANI_DEBUG /* Disable this flag to disable ANI asserts /debug logs */
+#define FERMION_ANI_DEBUG      /* Disable this flag to disable ANI asserts /debug logs */
 /* to enable dynamic EDCCA adaptation with NF variance, disabled as per system's team recommendation */
 //#define ANI_EDCCA_ADAPTATION
 
@@ -214,7 +216,6 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 
 #ifdef PLATFORM_FERMION
 
-
 #define MEM_CPY_VIA_DXE /*use dxe to do cpy */
 
 #ifdef SUPPORT_RING_IF
@@ -239,11 +240,11 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 
 /*Feature flag to support acknowlegement from hardware when a frame is sent out*/
 //#define FEATURE_TX_COMPLETE
-#define FERMION_ANI_HW_SUPPORT /* Use this flag to enable ANI HW support for Fermion */
+#define FERMION_ANI_HW_SUPPORT  /* Use this flag to enable ANI HW support for Fermion */
 #define FERMION_ANI_DEBUG_STATS /* use this flag to enable additional stats collection for interference debug*/
 
 /* Implemented for CR3763141 to avoid collision between Null-Tx and DL data at lower RSSIs
- * Currently disabling it as BMPS ITO enhancements will help avoiding this collision 
+ * Currently disabling it as BMPS ITO enhancements will help avoiding this collision
  * To be revisited in case if the issue hit again */
 #if (defined(FERMION_ANI_SW_SUPPORT) && defined(FERMION_ANI_HW_SUPPORT))
 //#define HALPHY_CS20_ADAPTATION /* Done under A2NI beacon handlers */
@@ -265,17 +266,16 @@ WAR_COEX_HEAVY_BT_WL_CONNECTING_FREERUN
 #define FORCE_BBPLL_LOCK
 
 /* This flags enables rssi brach threshold monitor in DTIM sleep and exit with the same reason to give event for host */
-#define SUPPORT_RSSI_BREACH_THRESHOLD_MONITOR 
+#define SUPPORT_RSSI_BREACH_THRESHOLD_MONITOR
 
-
-/* EVM is degrading by 2dB for 5G/6G channels in Fermion 2.0.2 if CX voltage is set to 545mv 
+/* EVM is degrading by 2dB for 5G/6G channels in Fermion 2.0.2 if CX voltage is set to 545mv
     during Cold Boot Calibration
     WAR for VIFERMION-490 where CPR will be initialized after Cold Boot Calibration
 */
 #define CBC_CX_VOLTAGE_WAR
 
 /*
-When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs, 
+When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs,
  default WQ need to be switched back to WQ12 to prevent transferring MGMT frames to WQ11
 */
 #define WAR_RESTORE_DPU_DEFAULT_WQ_12_ON_EXIT_FROM_BMPS
@@ -292,8 +292,8 @@ When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs,
  * doing top's down wakeup to flush the datapath
  */
 #define SUPPORT_DATAPATH_FLUSH_BEFORE_BMPS_SLEEP
-#define SUPPORT_SWTMR_TO_WKUP_FROM_BMPS /* Support timers to wake up from BMPS */
-#define SUPPORT_SLEEP_LIST_IMPROVEMENTS /* Support sleep list improvements */
+#define SUPPORT_SWTMR_TO_WKUP_FROM_BMPS   /* Support timers to wake up from BMPS */
+#define SUPPORT_SLEEP_LIST_IMPROVEMENTS   /* Support sleep list improvements */
 #define SUPPORT_SLEEP_DEBUG_UNIT_TEST_CMD /* Support to test sleep list and SWDTIM improvements features */
 
 /* Support IMPS timer after disconnection(if no connection happens for recnx_wait_time_ms
@@ -312,13 +312,12 @@ When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs,
 
 //#define WAR_NO_TXC_FOR_TWT_ACTION
 
-
 /* Feature flag to co-ordinate with host for wake up and sleep using A2F and F2A signals
  * Supported only on PLATFORM_FERMION */
 #define FIRMWARE_APPS_INFORMED_WAKE
 
 /* Basic light sleep soc and hal mac receipes are not under any flag
-* its enabled by default */
+ * its enabled by default */
 
 /* Feature flag to enable light sleep for TWT*/
 //#define SUPPORT_LIGHT_SLEEP_FOR_TWT
@@ -327,7 +326,7 @@ When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs,
  * initiate RRI parallel to CPU reset*/
 #define SUPPORT_HDM_INITIATED_RRI
 
-#if defined (SUPPORT_LIGHT_SLEEP_FOR_TWT)
+#if defined(SUPPORT_LIGHT_SLEEP_FOR_TWT)
 /* Feature flag to consider going to different sleep
  * modes - clk gated, mcu, light sleep based on sleep time at mlme level
  * this needs to be enabled with TWT */
@@ -353,7 +352,7 @@ When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs,
 #ifdef EMULATION_BUILD
 
 #define EMULATION_WAR
-#define FERMION_EMU_CLK_SCALING         16
+#define FERMION_EMU_CLK_SCALING 16
 
 #else
 #define PMU_TS_CONFIGURATION /* APIs to configure and get temperature */
@@ -367,22 +366,23 @@ When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs,
 #define SLEEP_CLK_CAL_IN_SLEEP_MODE
 #endif /* SLEEP_CLK_CAL_IN_ACTIVE_MODE */
 #ifdef SLEEP_CLK_CAL_IN_ACTIVE_MODE
-/* WAR flag to compensate the RC clock division error for 
+/* WAR flag to compensate the RC clock division error for
  * Fermion 2.0 new timer implementation */
 #define COMPENSATE_RC_DIVISION_ERROR_WAR
 #endif /* SLEEP_CLK_CAL_IN_ACTIVE_MODE */
 
 #define FERMION_TEMP_COMP_SUPPORT /* Adjust the SCPC finegain offset based on temperature to maintain TPC accuracy */
-#define TEMP_BASED_TARGET_POWER /* Target Power will be changed based on temperature by changing the SCPC offset */
-#define FERMION_ANI_SW_SUPPORT /* Use this flag to enable ANI SW support */
+#define TEMP_BASED_TARGET_POWER   /* Target Power will be changed based on temperature by changing the SCPC offset */
+#define FERMION_ANI_SW_SUPPORT    /* Use this flag to enable ANI SW support */
 
 #define PLATFORM_INIT_PMIC
 
 /*For PS purpose, default WIFI_SS will be RXB_LISTEN and WIFI_SS will be controlled by HW.
-Changes for SW to configure WIFI_SS in right mode(CFG/RXB_LISTEN/RXA/TX) before any PHY register access are under this flag */
+Changes for SW to configure WIFI_SS in right mode(CFG/RXB_LISTEN/RXA/TX) before any PHY register access are under this
+flag */
 #define PHY_POWER_SWITCH
 
-#endif // EMULATION_BUILD
+#endif  // EMULATION_BUILD
 
 //#define SUPPORT_STA_TWT_RENEG
 //#define SUPPORT_AP_TWT_RENEG
@@ -391,10 +391,10 @@ Changes for SW to configure WIFI_SS in right mode(CFG/RXB_LISTEN/RXA/TX) before 
  * occurs in parallel to other SW execution*/
 #define SUPPORT_SW_NON_POLLED_RRI
 
-#endif // PLATFORM_FERMION
+#endif  // PLATFORM_FERMION
 
 #ifndef NT_GPIO_FLAG
-    #define NT_GPIO_FLAG
+#define NT_GPIO_FLAG
 #endif
 
 /* Use this flag to enable Fermion Debug Infra */
@@ -404,7 +404,7 @@ Changes for SW to configure WIFI_SS in right mode(CFG/RXB_LISTEN/RXA/TX) before 
 
 #ifndef FEATURE_FPCI
 #define FEATURE_FPCI
-#define FPCI_DEBUG                  (0)
+#define FPCI_DEBUG (0)
 #endif
 
 /* This flag enables recovery of BMU once a BMU error occurs */
@@ -413,6 +413,4 @@ Changes for SW to configure WIFI_SS in right mode(CFG/RXB_LISTEN/RXA/TX) before 
 /* Check data activity after DPM stop during BMPS entry and abort sleep if necessary */
 #define BMPS_ENTRY_ABORT_ON_ACTIVITY_POST_ITO
 
-#endif // _QCP7321_H_
-
-
+#endif  // _QCP7321_H_

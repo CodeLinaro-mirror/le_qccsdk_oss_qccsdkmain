@@ -8,20 +8,16 @@
 struct AppEvent;
 typedef void (*EventHandler)(AppEvent *);
 
-struct AppEvent
-{
-    enum AppEventTypes
-    {
+struct AppEvent {
+    enum AppEventTypes {
         kEventType_Button = 0,
         kEventType_Timer,
     };
 
     uint16_t Type;
 
-    union
-    {
-        struct
-        {
+    union {
+        struct {
             uint8_t Action;
         } ButtonEvent;
     };
