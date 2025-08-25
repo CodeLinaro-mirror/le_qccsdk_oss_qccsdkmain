@@ -171,7 +171,7 @@ extern uint8_t ignore_bcmc_in_bmps;
 #define CTX_RESTORE_TO_SCHED_RESTART_US 290
 
 /* Upper limit on sleep slop offset time */
-#define SLEEP_SLOP_OFFSET_UPPER_LIMIT_US 1500
+#define SLEEP_SLOP_OFFSET_UPPER_LIMIT_US 3000
 
 #if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
 #define XO_CLOCK_CYCLES_FOR_REF_CNT_256 \
