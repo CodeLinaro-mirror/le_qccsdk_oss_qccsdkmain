@@ -413,7 +413,7 @@ int main(
 #endif
 
 #ifdef CONFIG_MPU_ENABLE
-	ferm_mpu_config();
+	ferm_mpu_init();
 #endif
 
 #ifndef CONFIG_UART_SHELL
