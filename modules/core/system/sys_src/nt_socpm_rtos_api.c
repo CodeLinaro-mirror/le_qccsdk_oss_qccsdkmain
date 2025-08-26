@@ -141,10 +141,9 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
     if (xExpectedIdleTime > xMaximumPossibleSuppressedTicks) {
         xExpectedIdleTime = xMaximumPossibleSuppressedTicks;
     }
-
+    hres_time_pre_sleep = hres_timer_curr_time_us();
     /* Stop the SysTick momentarily  */
     _socpm_systick_off();
-    hres_time_pre_sleep = hres_timer_curr_time_us();
 #ifdef COMPENSATE_AON_PROG_DELAY
     g_socpm_struct.systick_off_time_us = (uint32_t)hres_timer_curr_time_us();
 #endif /* COMPENSATE_AON_PROG_DELAY */
