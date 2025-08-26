@@ -1316,20 +1316,22 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         /* Re-enable the interrupts*/
         // GC:TODO
         NT_SOCPM_IRQ_ENABLE();
+        /**
+        * nt_socpm_slp_time_total sometimes is smaller than the real passing sleep time during Systick closed,
+        *because it does not calculate the time when receive beacon, use the delta of hres timer is more accurate
+        *
+        **/
+        uint64_t delta_hres_time_us = hres_timer_curr_time_us() - hres_time_pre_sleep + g_socpm_struct.unapplied_systick_err_us;
+        uint64_t delta_hres_time_ms = 0;
 
-        if (nt_socpm_slp_time_total > 0) {
-            /**
-             * nt_socpm_slp_time_total sometimes is smaller than the real passing sleep time during Systick closed,
-             *because it does not calculate the time when receive beacon, use the delta of hres timer is more accurate
-             *
-             **/
-            uint64_t delta_hres_time_us = hres_timer_curr_time_us() - hres_time_pre_sleep;
-            uint64_t delta_hres_time_ms = 0;
+        NT_LOG_PRINT(SOCPM, INFO, " nt_socpm_slp_time_total %d delta_rtos %d", (uint32_t)nt_socpm_slp_time_total,
+                        (uint32_t)delta_hres_time_us);
 
-            NT_LOG_PRINT(SOCPM, INFO, " nt_socpm_slp_time_total %d delta_rtos %d", (uint32_t)nt_socpm_slp_time_total,
-                         (uint32_t)delta_hres_time_us);
+        delta_hres_time_ms = US_TO_MS(delta_hres_time_us);
+        g_socpm_struct.unapplied_systick_err_us = (delta_hres_time_us - 1000 * delta_hres_time_ms);
 
-            delta_hres_time_ms = US_TO_MS(delta_hres_time_us);
+        if (delta_hres_time_ms > 0) {
+            
             vTaskStepTick(delta_hres_time_ms);
         } else if (nt_socpm_resume_f == 2) {
             vTaskStepTick(slp_exp);
@@ -3833,6 +3835,7 @@ void nt_socpm_init(void)
     // Initializing the SOCPM_STRUCT
     g_socpm_struct.clk_latency_us = DEFAULT_CLK_LATENCY_US; /* Setting default clk latency to 3ms */
     g_socpm_struct.in_warm_boot = FALSE;
+    g_socpm_struct.unapplied_systick_err_us = 0;
     g_socpm_struct.unapplied_err_us = 0;
     g_socpm_struct.aon_program_time_us = 0;
     g_socpm_struct.systick_off_time_us = 0;

@@ -268,6 +268,7 @@ typedef struct {
 #endif  /* SUPPORT_BMU_ERROR_RECOVERY */
 #endif  // NT_SOCPM_SW_MTUSR
     uint32_t unapplied_err_us;
+    uint32_t unapplied_systick_err_us;
     uint32_t systick_off_time_us;
     uint32_t aon_program_time_us;
 #if defined(COMPENSATE_RC_DIVISION_ERROR_WAR)
