@@ -402,8 +402,8 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         *os/freertos/libraries/3rdparty/lwip/src/api\/*.o(.text .text.*)
         *core/system/sys_src\/timer.o(.text .text.*)
         *core/system/sys_src\/qtmr.o(.text .text.*)
-        *core/system/sys_src\/ferm_flash.o(.text .text.*)
-        *core/system/sys_src\/ferm_qspi.o(.text .text.*)
+        *ferm_flash.o(.text .text.*)
+        *ferm_qspi.o(.text .text.*)
 
         EXCLUDE_FILE(*ipv4/icmp.o *ipv4/igmp.o *ipv4/dhcp.o *ipv6/icmp6.o *ipv6/nd6.o *ipv6/mld6.o *ipv6/dhcp6.o *dns.o) os/freertos/libraries/3rdparty/lwip/src/core\/*.o(.text .text.*)
 
@@ -422,8 +422,8 @@ The above ASSERT is temporarily disabled for the performance measurements, as it
         *os/freertos/freertos_kernel\/*.o(.rodata .rodata.* .constdata .constdata.*)
         *core/system/sys_src\/timer.o(.rodata .rodata.* .constdata .constdata.*)
         *core/system/sys_src\/qtmr.o(.rodata .rodata.* .constdata .constdata.*)
-        *core/system/sys_src\/ferm_flash.o(.rodata .rodata.* .constdata .constdata.*)
-        *core/system/sys_src\/ferm_qspi.o(.rodata .rodata.* .constdata .constdata.*)
+        *ferm_flash.o(.rodata .rodata.* .constdata .constdata.*)
+        *ferm_qspi.o(.rodata .rodata.* .constdata .constdata.*)
 
         *os/freertos/libraries/3rdparty/lwip/src/api\/*.o(.rodata .rodata.* .constdata .constdata.*)
         EXCLUDE_FILE(*ipv4/icmp.o *ipv4/igmp.o *ipv4/dhcp.o *ipv6/icmp6.o *ipv6/nd6.o *ipv6/mld6.o *ipv6/dhcp6.o *dns.o) os/freertos/libraries/3rdparty/lwip/src/core\/*.o(.rodata .rodata.* .constdata .constdata.*)
