@@ -355,9 +355,6 @@ void nt_watchdog_timer_power_state_change_cb(uint8_t evt, void *p_args)
 
 void nt_watchdog_timer_init(void)
 {
-#if (CONFIG_WATCH_DOG_BARK_TIME <= 0)
-#error "Please correct the watchdog time for the bark and bite value!"
-#endif
 
     bark_time = CONFIG_WATCH_DOG_BITE_TIME * 1000;
     bite_time = CONFIG_WATCH_DOG_BITE_TIME * 1000;
