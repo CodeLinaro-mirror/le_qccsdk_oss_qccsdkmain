@@ -139,6 +139,7 @@ qapi_Status_t qapi_WLAN_Commit (uint8_t  __attribute__((__unused__)) device_ID)
         (authMode==WMI_WPA2_PSK_AUTH)  || 
         (authMode==WMI_WPA3_SHA256_AUTH) || 
         (authMode==(WMI_WPA2_PSK_AUTH | WMI_WPA3_SHA256_AUTH)) || 
+        (authMode==(WMI_WPA_PSK_AUTH | WMI_WPA2_PSK_AUTH)) ||
         (authMode==(WMI_WPA3_SHA256_AUTH | WMI_WPA2_PSK_AUTH | WMI_WPA_PSK_AUTH))) {
         wmi_set_passphrase();
     }
