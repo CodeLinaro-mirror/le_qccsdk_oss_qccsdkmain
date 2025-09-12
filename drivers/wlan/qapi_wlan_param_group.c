@@ -240,6 +240,10 @@ qapi_Status_t qapi_WLAN_Set_Param(uint8_t __attribute__((__unused__)) device_ID,
                     p_cmd->dot11AuthMode = (SAE_AUTH | OPEN_AUTH);
                     p_cmd->authMode = (WMI_WPA3_SHA256_AUTH | WMI_WPA2_PSK_AUTH);
                     break;
+                case QAPI_WLAN_AUTH_WPA_WPA2_MIXED_E:
+                    p_cmd->dot11AuthMode = OPEN_AUTH;
+                    p_cmd->authMode = (WMI_WPA2_PSK_AUTH | WMI_WPA_PSK_AUTH);
+                    break;
                 case QAPI_WLAN_AUTH_WPA_WPA2_SAE_MIXED_E:
                     p_cmd->dot11AuthMode = (SAE_AUTH | OPEN_AUTH);
                     p_cmd->authMode = (WMI_WPA3_SHA256_AUTH | WMI_WPA2_PSK_AUTH | WMI_WPA_PSK_AUTH);
