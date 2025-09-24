@@ -26,6 +26,12 @@ config HEAVY_CLIP_ENABLE
     bool "enable heavy_clip adjust"
     default n
 
+config HEAVY_CLIP_BOARDS_TYPE
+    int "select xPA=0 or iPA=1"
+    depends on HEAVY_CLIP_ENABLE
+    range 0 1
+    default 0
+
 config HEAVY_CLIP_LEVEL_2G
     int "select heavy_clip level in 2g"
     depends on HEAVY_CLIP_ENABLE
@@ -41,16 +47,22 @@ config HEAVY_CLIP_LEVEL_5G
 config PEAKW_11N_0_2G
     hex "peak windowing clip thresolds for 11n packets in 2g"
     depends on HEAVY_CLIP_ENABLE
-    default 0x5D47473C if HEAVY_CLIP_LEVEL_2G = 0
-    default 0x64584E2E if HEAVY_CLIP_LEVEL_2G = 1
-    default 0xFFFFFFFF if HEAVY_CLIP_LEVEL_2G = 2
+    default 0x5D47473C if HEAVY_CLIP_LEVEL_2G = 0 && HEAVY_CLIP_BOARDS_TYPE = 0
+    default 0x64584E2E if HEAVY_CLIP_LEVEL_2G = 1 && HEAVY_CLIP_BOARDS_TYPE = 0
+    default 0xFFFFFFFF if HEAVY_CLIP_LEVEL_2G = 2 && HEAVY_CLIP_BOARDS_TYPE = 0
+    default 0x5D47473C if HEAVY_CLIP_LEVEL_2G = 0 && HEAVY_CLIP_BOARDS_TYPE = 1
+    default 0x64584E3C if HEAVY_CLIP_LEVEL_2G = 1 && HEAVY_CLIP_BOARDS_TYPE = 1
+    default 0xFFFFFFFF if HEAVY_CLIP_LEVEL_2G = 2 && HEAVY_CLIP_BOARDS_TYPE = 1
 
 config PEAKW_11A_0_2G
     hex "peak windowing clip thresolds for 11a packets in 2g"
     depends on HEAVY_CLIP_ENABLE
-    default 0x564E4739 if HEAVY_CLIP_LEVEL_2G = 0
-    default 0x64584E2E if HEAVY_CLIP_LEVEL_2G = 1
-    default 0xFFFFFFFF if HEAVY_CLIP_LEVEL_2G = 2
+    default 0x564E4739 if HEAVY_CLIP_LEVEL_2G = 0 && HEAVY_CLIP_BOARDS_TYPE = 0
+    default 0x64584E2E if HEAVY_CLIP_LEVEL_2G = 1 && HEAVY_CLIP_BOARDS_TYPE = 0
+    default 0xFFFFFFFF if HEAVY_CLIP_LEVEL_2G = 2 && HEAVY_CLIP_BOARDS_TYPE = 0
+    default 0x564E4739 if HEAVY_CLIP_LEVEL_2G = 0 && HEAVY_CLIP_BOARDS_TYPE = 1
+    default 0x64584E39 if HEAVY_CLIP_LEVEL_2G = 1 && HEAVY_CLIP_BOARDS_TYPE = 1
+    default 0xFFFFFFFF if HEAVY_CLIP_LEVEL_2G = 2 && HEAVY_CLIP_BOARDS_TYPE = 1
 
 config PEAKW_11A_1_2G
     hex "peak windowing clip thresolds for 11a packets in 2g"
