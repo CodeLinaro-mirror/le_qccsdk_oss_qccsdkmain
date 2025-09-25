@@ -3199,9 +3199,16 @@ void P2P_Event_Handler_Go_Neg_Result(CMD_P2P_EVENT_INFO *pEventInfo)
         wps_start.wps_Mode = QAPI_WLAN_WPS_PBC_MODE_E;
     }
 
+    if (p2pNeg->freq < 3000) {
+        chnl = (p2pNeg->freq - 2412) / 5 + 1;
+    }
+    else {
+        chnl = (p2pNeg->freq - 5000) / 5;
+    }
+
     memcpy(wpsCreden.ssid, p2pNeg->ssid, sizeof(p2pNeg->ssid));
     memcpy(wpsCreden.mac_Addr, p2pNeg->peer_Interface_Addr, __QAPI_WLAN_MAC_LEN);
-    wpsCreden.ap_Channel  = p2pNeg->freq;
+    wpsCreden.ap_Channel  = chnl;
     wpsCreden.ssid_Length = p2pNeg->ssid_Len;
 
     if (0 != qapi_WLAN_Set_Param(deviceId,
@@ -3229,9 +3236,6 @@ void P2P_Event_Handler_Go_Neg_Result(CMD_P2P_EVENT_INFO *pEventInfo)
     {
         info_printf("WPS failed\r\n");
         return;
-    }
-    else {
-        info_printf("WPS success\r\n");
     }
 
 set_temp_device:
