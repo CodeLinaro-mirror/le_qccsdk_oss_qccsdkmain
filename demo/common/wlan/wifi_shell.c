@@ -3493,21 +3493,20 @@ static qapi_Status_t P2p_disable(uint32_t __attribute__((__unused__)) Parameter_
         deviceId = 0;
     }
 
-    if(qapi_WLAN_P2P_Enable(deviceId, false) != 0)
+    if(!wlan_p2p_enable(deviceId, false))
     {
         info_printf("Disabling P2P mode failed.\r\n");
         return -1;
     }
-
     opMode = DEV_MODE_STATION_E;
     qapi_WLAN_Set_Param(deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS,
             __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
-            &opMode, sizeof(qapi_WLAN_Dev_Mode_e), FALSE);
-
+            &opMode, sizeof(opMode), FALSE);
     /* Free the event queue and destroy the mutex before disabling P2P. */
-    app_free_p2p_pending_events();
+    // app_free_p2p_pending_events();
 
     pg_wifi_shell_cxt->p2pMode = FALSE;
+    pg_wifi_shell_cxt->connected = FALSE;
     pg_wifi_shell_cxt->set_channel_p2p = 0;
     return QAPI_OK;
 }
@@ -3558,6 +3557,12 @@ static qapi_Status_t P2p_find(uint32_t __attribute__((__unused__)) Parameter_Cou
     qapi_WLAN_P2P_Find_Cmd_t find_params;
 
     uint32_t deviceId = get_active_device();
+
+    if (0 == pg_wifi_shell_cxt->p2pMode)
+    {
+        info_printf("Enable P2P before p2p find\r\n");
+        return QAPI_ERROR;
+    }
 
     if(deviceId != 0)
     {
@@ -3662,7 +3667,6 @@ uint8_t P2P_Check_Peer_Is_Found(const uint8_t *peer_addr, uint8_t p2p_operation)
         return FALSE;
     }
     local_ptr = p2pNodeList.node_List_Buffer;
-    printf("local_ptr is %d, peer_addr id %d\r\n", ((qapi_WLAN_P2P_Device_Lite_t *)(local_ptr))->p2p_Device_Addr, peer_addr);
 
     temp_val = *local_ptr;
     local_ptr++;
@@ -3710,6 +3714,12 @@ static qapi_Status_t P2p_connect(uint32_t __attribute__((__unused__)) Parameter_
         deviceId = 0;
     }
 
+    if (0 == pg_wifi_shell_cxt->p2pMode)
+    {
+        info_printf("Enable P2P before p2p connect\r\n");
+        return QAPI_ERROR;
+    }
+
     memset(&p2p_connect, 0, sizeof(qapi_WLAN_P2P_Connect_Cmd_t));
 
     if (0 != qapi_WLAN_Get_Param(deviceId,
@@ -3737,7 +3747,7 @@ static qapi_Status_t P2p_connect(uint32_t __attribute__((__unused__)) Parameter_
         return -1;
     }
 
-    info_printf("\r\nPeer MAC addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+    info_printf("Peer MAC addr : %02x:%02x:%02x:%02x:%02x:%02x \r\n",
             p2p_connect.peer_Addr[0], p2p_connect.peer_Addr[1],
             p2p_connect.peer_Addr[2], p2p_connect.peer_Addr[3],
             p2p_connect.peer_Addr[4], p2p_connect.peer_Addr[5]);
