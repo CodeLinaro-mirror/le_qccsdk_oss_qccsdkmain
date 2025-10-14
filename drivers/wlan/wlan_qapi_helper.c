@@ -1099,7 +1099,7 @@ qapi_Status_t wlan_p2p_enable(uint8_t device_id, uint32_t enable)
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
     WMI_P2P_SET_PROFILE_CMD *p2p = &p_cxt->p2p_fw_set_conf;
 
-    memset(&p2p, 0, sizeof(WMI_P2P_SET_PROFILE_CMD));
+    memset(p2p, 0, sizeof(WMI_P2P_SET_PROFILE_CMD));
 
     p2p->enable = enable;
 
