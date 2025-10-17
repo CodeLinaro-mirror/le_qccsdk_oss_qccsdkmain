@@ -334,6 +334,7 @@ typedef struct {
     uint8_t powerModeModuleWakeupCount[PM_MODULE_ID_MAX]; /* per module power reference count */
     uint8_t bPmEnable;                                    /* PM Enabled or disabled */
     uint8_t bConnected;                                   /* conneced or disconnected */
+    bool qos_null_with_pm0_sent;                          /* set to 1 when pm=0 sent */
     uint16_t powerModeWakeupCount;                        /* Ref. count to track per device power mode wakeups */
     nt_status_t fakeSleepStatus;                          /* current status of fake sleep state */
     PM_TIMER pspollTimer;                                 /* ps poll timer */
