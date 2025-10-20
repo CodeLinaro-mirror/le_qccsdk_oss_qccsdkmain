@@ -13,6 +13,7 @@
 #include "lowpower_internal.h"
 #include "wlan_power.h"
 #include "wifi_fw_pwr_cb_infra.h"
+#include "wmi.h"
 
 lpr_wmi_t g_lowpower_wmi;
 extern ppm_common_t g_ppm_common_struct;
@@ -174,6 +175,30 @@ qapi_Status_t qapi_bmps_log_enable(uint8_t enable)
     memset(pdata, 0, sizeof(*pdata));
     pdata->enable = enable;
     wmi_cmd_send(WMI_BMPS_LOG_ENABLE_CMDID, pdata, sizeof(*pdata));
+}
+
+qapi_Status_t qapi_bmps_power_optimization_enable(uint8_t enable)
+{
+    if (enable != 0 && enable != 1) {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    WMI_BMPS_PWR_OPT_ENABLE *pdata = (WMI_BMPS_PWR_OPT_ENABLE *)&g_lowpower_wmi.bmps_cfg.bmps_pwr_opt_enable;
+    memset(pdata, 0, sizeof(*pdata));
+    pdata->enable = enable;
+    wmi_cmd_send(WMI_BMPS_PWR_OPT_ENABLE_CMDID, pdata, sizeof(*pdata));
+}
+
+qapi_Status_t qapi_bmps_compress_qos_null_enable(uint8_t enable)
+{
+    if (enable != 0 && enable != 1) {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    WMI_BMPS_CMPR_QOS_NULL_ENABLE *pdata = (WMI_BMPS_CMPR_QOS_NULL_ENABLE *)&g_lowpower_wmi.bmps_cfg.bmps_cmpr_qos_null_enable;
+    memset(pdata, 0, sizeof(*pdata));
+    pdata->enable = enable;
+    wmi_cmd_send(WMI_BMPS_CMPR_QOS_NULL_ENABLE_CMDID, pdata, sizeof(*pdata));
 }
 
 qapi_Status_t qapi_bmps_rx_filter_enable(uint8_t enable)

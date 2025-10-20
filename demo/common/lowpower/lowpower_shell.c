@@ -12,6 +12,7 @@
 #include "nt_hw.h"
 #include "nt_hw_support.h"
 #include "nt_socpm_sleep.h"
+#include "timer.h"
 #include "wlan_drv.h"
 #include "wlan_power.h"
 #include "wmi_api.h"
@@ -50,6 +51,7 @@ static uint32_t bmps_cb_exit_start;
 static nt_osal_timer_handle_t bmps_cb_exit_timer;
 qurt_signal_t bmps_lowpower_cb_exit_task_signal;
 uint8_t bmps_cb_uc_bc_wakeup = 0;
+bool bmps_lowpower_infinite_task_created = false;
 
 extern lpr_wmi_t g_lowpower_wmi;
 
@@ -627,6 +629,45 @@ static qapi_Status_t cpr_enable(uint32_t Parameter_Count, QAPI_Console_Parameter
 }
 #endif  // CONFIG_CPR_ENABLE
 
+void bmps_lowpower_infinite_task(void __attribute__((__unused__)) * pvParameters)
+{
+    while (bmps_lowpower_infinite_task_created) {
+        vTaskDelay(10);
+    }
+    printf("bmps_lowpower_infinite_task deleted\n");
+    vTaskDelete(NULL);
+}
+static qapi_Status_t bmps_infinite_task(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if ((Parameter_Count != 1) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    if(Parameter_List[0].Integer_Value && bmps_lowpower_infinite_task_created == 0){
+        bmps_lowpower_infinite_task_created = true;
+        printf("bmps_lowpower_infinite_task created\n");
+        nt_qurt_thread_create(bmps_lowpower_infinite_task, "bmps_lowpower_infinite_task", 300, NULL, 5, NULL);
+    }
+    else if(Parameter_List[0].Integer_Value == 0){
+        bmps_lowpower_infinite_task_created = false;
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t bmps_power_optimization_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if ((Parameter_Count != 1) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    return qapi_bmps_power_optimization_enable(Parameter_List[0].Integer_Value ? 1 : 0);
+}
+
+static qapi_Status_t bmps_compress_qos_null_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if ((Parameter_Count != 1) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    return qapi_bmps_compress_qos_null_enable(Parameter_List[0].Integer_Value ? 1 : 0);
+}
 const QAPI_Console_Command_t lowpower_shell_cmds[] = {
     // cmd_function    cmd_string               usage_string             description
     {pm_enable, "pm_enable", "<1/0>", "Enable/disable system power management\n"},
@@ -657,6 +698,9 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] = {
     {bmps_cb_register, "bmps_cb_regiser", "<1|0>", "register|deregister callback function when pre-sleep/post-awake\n"},
     {bmps_period_awake, "bmps_period_awake", "<1/0> [period in ms to awake]", "Enable BMPS(DTIM) period awake\n"},
     {bmps_log_enable, "bmps_log_enable", "<1/0>", "Enable BMPS(DTIM) Logs\n"},
+    {bmps_infinite_task, "bmps_infinite_task", "<1/0>", "bmps_infinite_task\n"},
+    {bmps_power_optimization_enable, "bmps_power_optimization_enable", "<1/0>", "bmps_power_optimization_enable\n"},
+    {bmps_compress_qos_null_enable, "bmps_compress_qos_null_enable", "<1/0>", "bmps_compress_qos_null_enable\n"},
 };
 
 const QAPI_Console_Command_Group_t lowpower_shell_cmd_group = {

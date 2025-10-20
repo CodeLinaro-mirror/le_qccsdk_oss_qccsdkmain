@@ -29,6 +29,10 @@ typedef union {
         /**< To enable/disable BMPS, used in qapi_bmps_cfg. */
         WMI_BMPS_LOG_ENABLE bmps_log_enable;
         /**< To enable/disable BMPS Log, used in qapi_bmps_log_enable. */
+        WMI_BMPS_PWR_OPT_ENABLE bmps_pwr_opt_enable;
+        /**< To enable/disable BMPS power optimization. */
+        WMI_BMPS_CMPR_QOS_NULL_ENABLE bmps_cmpr_qos_null_enable;
+        /**< To enable/disable compressing qos-null sending */
     } bmps_cfg;
     /**< BMPS cfg, used in qapi_bmps_cfg. */
     WMI_BMPS_IGNORE_BCMC bmps_ignore_bcmc;

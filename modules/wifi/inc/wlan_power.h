@@ -379,6 +379,8 @@ typedef struct {
     uint64_t last_sleep_time;
     uint8_t bmps_enabled;     /* BMPS Enabled or disabled */
     uint8_t bmps_log_enabled; /* BMPS log enabled or disabled */
+    bool bmps_pwr_opt_enabled; /* BMPS power optimization enabled or disabled */
+    bool bmps_compress_qos_null_enabled; /* BMPS power optimization enabled or disabled */
     uint8_t bmps_rx_filter_enabled;
     // IMPS_STRUCT imps_struct;
     uint64_t next_dtim_tbtt_time_us; /*next dtim tbtt time value in microseconds*/
@@ -453,6 +455,10 @@ typedef struct {
     uint32_t total_slp_bcn_miss_count;              /* number of beacons missed while in mcu sleep */
     chan_activity_t chan_stats;                     /* Channel activities structure for qpower feature*/
     PROTOCOL_SLP_EXIT_REASON sleep_exit_reason;     /* protocol sleep exit reason */
+    uint16_t dxe_tx_count_after_awake;              /* tx count after waking up */
+    bool  first_qos_null_pm1_sent;
+    bool  bmps_timer_registered_when_awake;
+    bool  mybeacon_received;
 } PM_STRUCT;
 
 /**
@@ -828,4 +834,5 @@ uint64_t ptsm_compute_s2w_compensation_time(PM_STRUCT *pPmStruct, sleep_mode mod
  */
 void nt_wpm_wakeup_channel_restore(devh_t *dev, halphy_cal_profile_t profile);
 
+uint8_t nt_pm_check_if_wkup_from_network_activity(PM_STRUCT *pPmStruct);
 #endif  // _WLAN_POWER_H_
