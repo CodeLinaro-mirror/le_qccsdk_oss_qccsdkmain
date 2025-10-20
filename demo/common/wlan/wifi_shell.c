@@ -3149,7 +3149,6 @@ void P2P_Event_Handler_Go_Neg_Result(CMD_P2P_EVENT_INFO *pEventInfo)
         }
         printf("p2p startt go end\r\n");
     }
-
     else if(p2pNeg->role_Go == 0)
     {
         uint8_t ssid[__QAPI_WLAN_MAX_SSID_LENGTH];
@@ -3228,6 +3227,8 @@ void P2P_Event_Handler_Go_Neg_Result(CMD_P2P_EVENT_INFO *pEventInfo)
     /* Start WPS on the Aheros wifi */
     
     wps_mode = QAPI_WLAN_WPS_PBC_MODE_E;
+    /* Initialize context */
+    wps_context.wps_in_progress = 0;
     /* Connect flag */
     wps_context.connect_flag = 1;
     info_printf("WPS started.\r\n");
@@ -3444,9 +3445,16 @@ void app_free_p2p_pending_events()
 static qapi_Status_t P2p_enable(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
     uint32_t deviceId = get_active_device();
+    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+
     if(deviceId != 0)
     {
         deviceId = 0;
+    }
+
+    if(!p_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
     }
 
     /* Following call sets the wlan_callback_handler() as the callback for asynchronous events */
@@ -3485,12 +3493,18 @@ static qapi_Status_t P2p_enable(uint32_t __attribute__((__unused__)) Parameter_C
 static qapi_Status_t P2p_disable(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
     qapi_WLAN_Dev_Mode_e opMode;
+    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
 
     uint32_t deviceId = get_active_device();
 
     if(deviceId != 0)
     {
         deviceId = 0;
+    }
+
+    if(!p_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
     }
 
     if(!wlan_p2p_enable(deviceId, false))
@@ -3514,16 +3528,30 @@ static qapi_Status_t P2p_disable(uint32_t __attribute__((__unused__)) Parameter_
 static qapi_Status_t P2p_set_config(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
     qapi_WLAN_P2P_Config_Params_t p2pConfig;
+    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+
+    if(!p_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
 
     uint32_t deviceId = get_active_device();
     if((Parameter_Count < 5))
     {
-		 return QAPI_ERROR;
+        info_printf("Usage: \n");
+        info_printf("wlan p2p setconfig <GO_intent> <listen channel> <operating channel> <country> <node_timeout> \n");
+		return QAPI_ERROR;
     }
 
      if(deviceId != 0)
     {
         deviceId = 0;
+    }
+
+    if(!wlan_p2p_enable(deviceId, false))
+    {
+        info_printf("Disabling P2P mode failed.\r\n");
+        return -1;
     }
 
     pg_wifi_shell_cxt->set_channel_p2p = Parameter_List[2].Integer_Value; // for autogo
@@ -3555,6 +3583,12 @@ static qapi_Status_t P2p_set_config(uint32_t __attribute__((__unused__)) Paramet
 static qapi_Status_t P2p_find(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
     qapi_WLAN_P2P_Find_Cmd_t find_params;
+    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+
+    if(!p_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
 
     uint32_t deviceId = get_active_device();
 
@@ -3706,6 +3740,12 @@ static qapi_Status_t P2p_connect(uint32_t __attribute__((__unused__)) Parameter_
     uint32_t deviceId = 0; 
     uint32_t dataLen = __QAPI_WLAN_MAC_LEN;
     qapi_WLAN_P2P_Connect_Cmd_t p2p_connect;
+    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+
+    if(!p_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
 
     deviceId = get_active_device();
 
