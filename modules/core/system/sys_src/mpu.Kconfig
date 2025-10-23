@@ -211,7 +211,7 @@ menu "MPU Setting"
             config FERM_MPU_7_SUBREGION
                 hex "MPU 7 subregion mask"
                 depends on MPU_ENABLE 
-        	default 0x01
+        	default 0x07
         
         endmenu
 

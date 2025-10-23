@@ -67,5 +67,5 @@ typedef struct MPU_s {
 #define MPU_DEP (*((volatile MPU_t *)(0xE000ED90)))
 
 void ferm_mpu_config(void);
-
+void ferm_mpu_init(void);
 #endif
