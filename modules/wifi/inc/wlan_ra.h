@@ -19,6 +19,7 @@
 
 //#define NT_RA_SAMPLING_PERIOD      10000       /* RA Sampling Period */
 #define NT_RA_ON 1 /* Rate Adapt Algorithm is enabled */
+#define NT_RA_OFF 0 /* Rate Adapt Algorithm is disabled */
 //#define NT_RA_MIN_PKT_TX_THRES     10          /* Min Pkt Txmitted to consider for RA */
 //#define NT_RA_FAST_JUMP_THRES      100         /* Tertiary rate failures to consider fast jump */
 #define NT_RA_MIN_UPRATE_CNT 1000 /* Min Pkt Txmitter to consider uprate sampling */
