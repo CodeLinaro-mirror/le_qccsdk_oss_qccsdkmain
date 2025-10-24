@@ -164,6 +164,7 @@
 
 #define DXE_ERROR_WAR  // WAR added for DXE error seen in powersave
 //#define FERMION_CONFIG_HCF //Get config from INI region
+#define BTQM_ERROR_WAR  // WAR added for BTQM error
 
 #define FERMION_ANI_SW_SUPPORT /* Use this flag to enable ANI SW support */
 #define FERMION_ANI_DEBUG      /* Disable this flag to disable ANI asserts /debug logs */
