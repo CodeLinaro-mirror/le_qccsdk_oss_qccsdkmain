@@ -1551,6 +1551,7 @@ typedef PREPACK struct {
     uint8_t short_GI_40MHz;
     uint8_t intolerance_40MHz;
     uint8_t max_ampdu_len_exp;
+    uint8_t mpdu_density;
 } POSTPACK WMI_SET_HT_CAP_CMD;
 
 typedef PREPACK struct {

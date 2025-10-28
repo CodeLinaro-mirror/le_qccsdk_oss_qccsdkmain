@@ -260,10 +260,16 @@ qapi_Status_t wlan_set_phy_mode(uint8_t device_id, uint32_t phy_mode)
     return error;
 }
 
-int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig)
+int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig, uint8_t is_sgi, uint8_t mpdu_density)
 {
     int32_t error = QAPI_OK;
     WMI_SET_HT_CAP_CMD *cmd;
+    if (is_sgi != 0 && is_sgi != 1) {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    if (mpdu_density != 0 && (mpdu_density < 4 || mpdu_density > 7)) {
+        return QAPI_ERR_INVALID_PARAM;
+    }
     cmd = malloc(sizeof(WMI_SET_HT_CAP_CMD));
     if (cmd == NULL)
         return QAPI_ERROR;
@@ -272,8 +278,9 @@ int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t h
     do {
         if (QAPI_WLAN_11N_DISABLED_E != htconfig) {
             cmd->enable = 1;
-            cmd->short_GI_20MHz = 1;
             cmd->max_ampdu_len_exp = 2;
+            cmd->short_GI_20MHz = is_sgi;
+            cmd->mpdu_density = mpdu_density;
             if (QAPI_WLAN_11N_HT40_E == htconfig) {
                 cmd->chan_width_40M_supported = 1;
                 cmd->short_GI_40MHz = 1;
