@@ -40,6 +40,7 @@
 #include "tcpip.h"
 #include "nt_timer.h"
 #include "wmi.h"
+#include "wlan_drv.h"
 
 #define DEFAULT_NETIF_IDX netif_get_index(netif_default) /* Default netif idx */
 
@@ -58,22 +59,165 @@ extern uint32_t UART_Send_direct(char *txbuf, uint32_t buflen);
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 /**********************************************************************/
+
+/**
+Data structure used by the api layer to pass lowpower configurations to the driver.
+*/
+typedef union {
+    WMI_IMPS_CFG imps_cfg;
+    /**< IMPS cfg, used in qapi_imps_cfg. */
+    struct {
+        WMI_BMPS_IDLE_TIME bmps_idle_time;
+        /**< The idle timeout in ms, used in qapi_bmps_cfg. */
+        WMI_BMPS_ENABLE bmps_enable;
+        /**< To enable/disable BMPS, used in qapi_bmps_cfg. */
+        WMI_BMPS_LOG_ENABLE bmps_log_enable;
+        /**< To enable/disable BMPS Log, used in qapi_bmps_log_enable. */
+    } bmps_cfg;
+    /**< BMPS cfg, used in qapi_bmps_cfg. */
+    WMI_BMPS_IGNORE_BCMC bmps_ignore_bcmc;
+    /**< To config ignore group-cast traffic during BMPS. */
+    WMI_BMPS_TIMING_CFG bmps_timing;
+    /**< Internal timing parameters in BMPS. */
+    WMI_SLP_CLK_CAL_CFG slp_clk_cal;
+    /**< Enable/disable 32k clock calibration in sleep mode. */
+    WMI_SLP_CLK_CAL_ACT slp_clk_cal_act;
+    /**< Enable/disable 32k clock calibration in active mode. */
+    uint32_t force_dtim;
+    /**< Force dtim period */
+} lpr_wmi_t;
+
+typedef struct wifi_shell_cxt_s {
+    qurt_mutex_t    wifi_shell_cxt_mutex;
+    int32_t         scan_mode;
+    qapi_WLAN_Auth_Mode_e auth;
+    qapi_WLAN_Phy_Mode_e phy_mode;
+    qapi_WLAN_11n_HT_Config_e htcfg;
+    qbool_t         connected;
+    char            ssid[__QAPI_WLAN_MAX_SSID_LEN+1];
+    int32_t         ssid_length;
+    uint8           bssid[6];
+    uint16_t        channel_frequency;
+    uint8_t         active_device;
+    uint8_t         wlan_enabled;
+} wifi_shell_cxt_t;
+
+/**
+Data structure used by the api layer to store the connection info.
+*/
+typedef struct wifi_demo_cxt_s {
+    char    ssid[__QAPI_WLAN_MAX_SSID_LEN+1];
+    uint32_t ssid_len;
+    uint8_t passphrase[WMI_PASSPHRASE_LEN+1];
+    uint8_t passphrase_len;
+    uint8_t dot11AuthMode;
+    uint8_t authMode;
+    uint8_t pairwiseCryptoType;
+    uint8_t groupCryptoType;
+} wifi_demo_cxt_t;
+
 QAPI_Console_Group_Handle_t powertest_shell_cmd_group_handle;
 TimerHandle_t iperf_timer;
+TimerHandle_t roaming_timer;
+TaskHandle_t net_send_task_handle;
 THROUGHPUT_CXT *dtim_iperf_tCxt = NULL;
+static wifi_shell_cxt_t *pg_wifi_shell_cxt;
+static wifi_demo_cxt_t pg_wifi_demo_cxt;
+uint8_t g_wifi_ready = 0;
+extern lpr_wmi_t g_lowpower_wmi;
+extern wlan_qapi_cxt_t *gp_wlan_qapi_cxt;
 
 extern qapi_Status_t qapi_pm_enable(uint8_t enable);
 extern qapi_Status_t wmi_cmd_send(WMI_COMMAND_ID cmd_id, void *p_data, uint32_t data_len);
 extern void qurt_thread_sleep(uint32 duration);
 
-extern union {
-    WMI_SLP_CLK_CAL_CFG slp_clk_cal;
-    WMI_BMPS_ENABLE bmps_enable;
-    WMI_BMPS_IGNORE_BCMC bmps_ignore_bcmc;
-    WMI_BMPS_IDLE_TIME bmps_idle_time;
-    WMI_BMPS_TIMING_CFG bmps_timing;
-    WMI_IMPS_CFG imps_cfg;
-} g_lowpower_wmi;
+uint8_t get_demo_active_device()
+{
+	return DEV_STA_ID;
+}
+
+static void wlan_shell_event_handler(__unused uint8_t deviceId, uint32_t cbId, void __unused *pApplicationContext, void *payload, uint32_t payload_Length)
+{
+    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+
+    switch(cbId) {
+    case QAPI_WLAN_SCAN_COMPLETE_CB_E: {
+        if (!payload || !payload_Length) {
+            info_printf("QAPI_WLAN_SCAN_COMPLETE_CB_E event error\n");
+            break;
+        }
+
+        qapi_WLAN_Scan_Comp_Evt_t *p_scan_compl_evt = (qapi_WLAN_Scan_Comp_Evt_t*)payload;
+        info_printf("Received Scan complete event, found bss count:%d\n", p_scan_compl_evt->num_bss_cur);
+        break;
+    }
+    case QAPI_WLAN_CONNECT_CB_E: {
+        qapi_WLAN_Join_Comp_Evt_t *cxnInfo  = (qapi_WLAN_Join_Comp_Evt_t *)(payload);
+        uint8_t * mac = cxnInfo->bssid;
+		if(cxnInfo->ssid_Length) {
+			memscpy(p_cxt->ssid, cxnInfo->ssid_Length, cxnInfo->ssid, cxnInfo->ssid_Length);
+			p_cxt->ssid[cxnInfo->ssid_Length] = 0;
+			p_cxt->ssid_length = cxnInfo->ssid_Length;
+			memscpy(p_cxt->bssid, 6, cxnInfo->bssid, 6);
+		}
+        p_cxt->channel_frequency = cxnInfo->channel_frequency;
+        if(cxnInfo->evt_hdr.status == QAPI_OK){
+            qapi_WLAN_Auth_Mode_e e_wpa_ver = p_cxt->auth;
+			if(cxnInfo->bss_Connection_Status)
+				p_cxt->connected = true;
+            info_printf("devid - %d %d CONNECTED MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n",
+                DEV_STA_ID, cxnInfo->bss_Connection_Status, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+            if (e_wpa_ver==QAPI_WLAN_AUTH_WPA_PSK_E || e_wpa_ver==QAPI_WLAN_AUTH_WPA2_PSK_E) {
+                info_printf("4 way handshake success for device=1\n");
+            }
+            g_wifi_ready = 1;
+            if(roaming_timer != NULL) {
+                nt_stop_timer(roaming_timer);
+            }	
+        } else {
+			info_printf("WiFi disconnect reason code is %d\n", cxnInfo->reason_code);
+			if(cxnInfo->bss_Connection_Status) {
+				p_cxt->connected = false;
+                g_wifi_ready = 0;
+                qapi_WLAN_Disconnect(get_demo_active_device());
+				info_printf("devId %d Disconnected MAC addr %02x:%02x:%02x:%02x:%02x:%02x \n",
+					DEV_STA_ID, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+                if(roaming_timer != NULL) {
+                    nt_start_timer(roaming_timer);
+                }
+			} else {
+				info_printf("REF_STA Disconnected MAC addr %02x:%02x:%02x:%02x:%02x:%02x devId %d\r\n",
+                     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], p_cxt->active_device);
+			}
+        }
+        info_printf("channel_frequency=%d\n", cxnInfo->channel_frequency);
+        info_printf("ssid = %s\n", p_cxt->ssid);
+        info_printf("assoc_id=%d\n", cxnInfo->assoc_id);
+        info_printf("host_initiated=%d\n", cxnInfo->host_initiated);		
+        break;
+    }
+    case QAPI_WLAN_DISCONNECT_CB_E: {
+        qapi_WLAN_Join_Comp_Evt_t *cxnInfo = (qapi_WLAN_Join_Comp_Evt_t *)(payload);
+		if(cxnInfo->bss_Connection_Status) {
+            p_cxt->connected = false;
+        }
+        
+        if(p_cxt->ssid_length) 
+            info_printf("devId %d disconnected from ssid = %s\n", p_cxt->active_device, p_cxt->ssid);	
+        break;
+    }
+	case QAPI_WLAN_CHANNEL_SWITCH_CB_E: {
+		qapi_WLAN_Chan_Switch_Evt_t *ecsa = (qapi_WLAN_Chan_Switch_Evt_t *)payload;
+		if(ecsa->evt_hdr.status == QAPI_OK) {
+			p_cxt->channel_frequency = ecsa->freq;
+			info_printf("devId %d channel switch to %d success\n", p_cxt->active_device, ecsa->freq);
+		} else {
+			info_printf("devId %d channel switch fail, reason %d\n", p_cxt->active_device, ecsa->reason);
+		}
+		break;
+	}
+    }
+}
 
 void pm_enable()
 {
@@ -91,24 +235,61 @@ void pm_enable()
     wmi_cmd_send(WMI_BMPS_ENABLE_CMDID, pdata2, sizeof(*pdata2));
 }
 
-int function_net_send_cb()
+void function_net_send_cb()
 {
+    xTaskNotify(net_send_task_handle, 1, eSetBits);
+}
+
+uint8_t function_reconnect_cb()
+{
+    uint8_t ret;
+    uint8_t deviceId = DEV_STA_ID;
+
+    if(!g_wifi_ready) {
+        qapi_WLAN_Set_Param (deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+            __QAPI_WLAN_PARAM_GROUP_SECURITY_PASSPHRASE,
+            (void *)pg_wifi_demo_cxt.passphrase, pg_wifi_demo_cxt.passphrase_len, FALSE);
+
+        /* Set auth mode and encryption type */
+        gp_wlan_qapi_cxt->connect_cmd.authMode = pg_wifi_demo_cxt.authMode;
+        gp_wlan_qapi_cxt->connect_cmd.dot11AuthMode = pg_wifi_demo_cxt.dot11AuthMode;
+        gp_wlan_qapi_cxt->connect_cmd.pairwiseCryptoType = pg_wifi_demo_cxt.pairwiseCryptoType;
+        gp_wlan_qapi_cxt->connect_cmd.groupCryptoType = pg_wifi_demo_cxt.groupCryptoType;
+
+        qapi_WLAN_Set_Param (0, __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+            __QAPI_WLAN_PARAM_GROUP_WIRELESS_SSID,
+            (void *)pg_wifi_demo_cxt.ssid, pg_wifi_demo_cxt.ssid_len, FALSE);
+
+        ret = qapi_WLAN_Commit(deviceId);
+        info_printf("connect to ssid return %d\n", ret);
+    }
+    return ret;
+}
+
+void function_net_send_task()
+{
+    BaseType_t xResult;
+	uint32_t notified_value = 0;
     int32_t send_bytes;
 
-    info_printf("===== send data =====\r\n");
-
-    if (dtim_iperf_tCxt->buffer == NULL) {
-        while ((dtim_iperf_tCxt->buffer = malloc(dtim_iperf_tCxt->params.tx_params.packet_size)) == NULL) {
-            qurt_thread_sleep(100);
+    while(1) {
+        xResult = xTaskNotifyWait( pdFALSE, ULONG_MAX, &notified_value, portMAX_DELAY);
+        if (xResult == pdPASS) {
+            if (notified_value && g_wifi_ready) {
+                if (dtim_iperf_tCxt->buffer == NULL) {
+                    while ((dtim_iperf_tCxt->buffer = malloc(dtim_iperf_tCxt->params.tx_params.packet_size)) == NULL) {
+                        qurt_thread_sleep(100);
+                    }
+                }
+                pattern(dtim_iperf_tCxt->buffer, dtim_iperf_tCxt->params.tx_params.packet_size);
+                send_bytes =
+                    send(dtim_iperf_tCxt->sock_peer, dtim_iperf_tCxt->buffer, dtim_iperf_tCxt->params.tx_params.packet_size, 0);
+                info_printf("===== sent %u bytes =====\r\n", send_bytes); 
+            }
         }
     }
-    pattern(dtim_iperf_tCxt->buffer, dtim_iperf_tCxt->params.tx_params.packet_size);
 
-    send_bytes =
-        send(dtim_iperf_tCxt->sock_peer, dtim_iperf_tCxt->buffer, dtim_iperf_tCxt->params.tx_params.packet_size, 0);
-    info_printf("===== sent %u bytes =====\r\n", send_bytes);
-
-    return QAPI_OK;
+    vTaskDelete(NULL);
 }
 
 qapi_Status_t iperf_for_powertest(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
@@ -117,10 +298,30 @@ qapi_Status_t iperf_for_powertest(uint32_t Parameter_Count, QAPI_Console_Paramet
     uint32_t notified_value = 0;
     unsigned int index = 0;
     TickType_t dtim_time = 0;
+    TickType_t roaming_time = 5000;
     char *receiver_ip;
     unsigned int ipAddress = 0;
     unsigned int pktSize = 0;
+    g_wifi_ready = 1;
 
+    gp_wlan_qapi_cxt->qapi_event_handler = NULL;
+    qapi_WLAN_Set_Callback(wlan_shell_event_handler, NULL);
+
+    /* Save connection info for potential reconnection */
+    memscpy(pg_wifi_demo_cxt.ssid, __QAPI_WLAN_MAX_SSID_LEN+1, gp_wlan_qapi_cxt->connect_cmd.ssid, __QAPI_WLAN_MAX_SSID_LEN+1);
+    pg_wifi_demo_cxt.ssid_len = gp_wlan_qapi_cxt->connect_cmd.ssidLength;
+    memscpy(pg_wifi_demo_cxt.passphrase, WMI_PASSPHRASE_LEN+1, gp_wlan_qapi_cxt->passphrase_cmd.passphrase, WMI_PASSPHRASE_LEN+1);
+    pg_wifi_demo_cxt.passphrase_len = gp_wlan_qapi_cxt->passphrase_cmd.passphrase_len;
+    pg_wifi_demo_cxt.authMode = gp_wlan_qapi_cxt->connect_cmd.authMode;
+    pg_wifi_demo_cxt.dot11AuthMode = gp_wlan_qapi_cxt->connect_cmd.dot11AuthMode;
+    pg_wifi_demo_cxt.groupCryptoType = gp_wlan_qapi_cxt->connect_cmd.groupCryptoType;
+    pg_wifi_demo_cxt.pairwiseCryptoType = gp_wlan_qapi_cxt->connect_cmd.pairwiseCryptoType;
+
+    if (nt_qurt_thread_create(function_net_send_task, "net_send_task", STA_TASK_STACK_SIZE, NULL, 5, &net_send_task_handle) != pdPASS) {
+        info_printf("net_send_task create fail\n");
+        goto ERROR_1;
+    }
+	
     dtim_iperf_tCxt = malloc(sizeof(THROUGHPUT_CXT));
     if (dtim_iperf_tCxt == NULL) {
         info_printf("Memory alloc failed\n");
@@ -175,6 +376,7 @@ qapi_Status_t iperf_for_powertest(uint32_t Parameter_Count, QAPI_Console_Paramet
     }
 
     iperf_timer = nt_create_timer(function_net_send_cb, NULL, NT_MS_TO_TICKS(dtim_time), TRUE);
+    roaming_timer = nt_create_timer(function_reconnect_cb, NULL, NT_MS_TO_TICKS(roaming_time), TRUE);
 
     if (dtim_iperf_tCxt->protocol == TCP) {
         if ((dtim_iperf_tCxt->sock_peer = socket(AF_INET, SOCK_STREAM, 0)) == A_ERROR) {
