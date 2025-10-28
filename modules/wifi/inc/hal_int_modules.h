@@ -1001,5 +1001,6 @@ typedef enum _tsf_mode { TSF_BSS_MODE = 0, TSF_IBSS_MODE, TSF_P2P_GO_MODE, TSF_P
 /* BMU recovery sequence for recoevering from BMU errors */
 void hal_bmu_error_recovery(void);
 #endif /* SUPPORT_BMU_ERROR_RECOVERY */
+void hal_set_ampdu_density(nt_hal_bss_t *bss, uint8_t mpdu_density);
 
 #endif

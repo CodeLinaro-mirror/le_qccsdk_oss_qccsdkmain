@@ -811,6 +811,17 @@ typedef enum {
     QAPI_WLAN_11N_HT40_E = 0x3,     /**< 802.11n with bandwith 40M. */
 } qapi_WLAN_11n_HT_Config_e;
 
+/**
+@ingroup qapi_wlan
+Data structure to set 11n HT configurations.
+*/
+typedef struct // qapi_WLAN_HT_Config_s
+{
+    qapi_WLAN_11n_HT_Config_e htconfig;   /**< Enumeration that provides 11n HT configurations. */
+    uint8_t sgi; /**< 20M short GI enable flag. */
+    uint8_t mpdu_density;   /**< MPDU density (aka Minimum MPDU Start Spacing). */
+} qapi_WLAN_11n_HT_Config_t;
+
 /** @cond */
 /**
 @ingroup qapi_wlan

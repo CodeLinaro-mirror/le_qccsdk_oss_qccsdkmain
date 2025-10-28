@@ -957,12 +957,12 @@ __QAPI_WLAN_MAX_NUM_FILTERED_EVENTS
 Command ID to set wireless 11n HT parameters of a given virtual device. The set
 operation for this should be done before establishing a connection.
 
-@note1hang This parameter can be used with qapi_WLAN_Set_Param() and qapi_WLAN_Get_Param().
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
 
-@param[in,out] qapi_WLAN_11n_HT_Config_e    Required 11n HT configuration must be specified.
+@param[in] qapi_WLAN_11n_HT_Config_s    Required 11n HT configuration must be specified.
 
 @sa
-qapi_WLAN_11n_HT_Config_e
+qapi_WLAN_11n_HT_Config_s
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_11N_HT 60
 
@@ -1266,7 +1266,7 @@ qapi_WLAN_MGMT_FRAME_e
 /**
 Command ID to enable/disable RTS/CTS protection when operating in Station mode.
 
-@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+@note1hang This parameter can be used with qapi_WLAN_Get_Param().
 
 @param[in] uint32_t        Set 1 to enable RTS/CTS protection, 0 to be disabled.
 */
@@ -1275,7 +1275,7 @@ Command ID to enable/disable RTS/CTS protection when operating in Station mode.
 /**
 Command ID to fix RTS rate in 2G when operating in Station mode.
 
-@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+@note1hang This parameter can be used with qapi_WLAN_Get_Param().
 
 @param[in] uint32_t        0: 1Mbps  1: 6Mbps
 */
@@ -1284,7 +1284,7 @@ Command ID to fix RTS rate in 2G when operating in Station mode.
 /**
 Command ID to adjust edca parameters when operating in Station mode.
 
-@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+@note1hang This parameter can be used with qapi_WLAN_Get_Param().
 
 @param[in] qapi_WLAN_Edca_Params_t  Set edca parameters for queue 0-7.
 
@@ -1296,7 +1296,7 @@ Command ID to adjust edca parameters when operating in Station mode.
 /**
 Command ID to adjust PER upper threshold when operating in Station mode.
 
-@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+@note1hang This parameter can be used with qapi_WLAN_Get_Param().
 
 @param[in] uint32_t  Set PER upper threshold to 0-100.
 */
@@ -1305,7 +1305,7 @@ Command ID to adjust PER upper threshold when operating in Station mode.
 /**
 Command ID to adjust BA window size when operating in Station mode.
 
-@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+@note1hang This parameter can be used with qapi_WLAN_Get_Param().
 
 @param[in] qapi_WLAN_BA_Window_Params_t  Set BA window size.
 
@@ -1317,7 +1317,7 @@ Command ID to adjust BA window size when operating in Station mode.
 /**
 Command ID to adjust BA window size when operating in Station mode.
 
-@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+@note1hang This parameter can be used with qapi_WLAN_Get_Param().
 
 @param[in] uint32_t  change slot time to 9us/20us.
 */
@@ -1326,7 +1326,7 @@ Command ID to adjust BA window size when operating in Station mode.
 /**
 Command ID to adjust EDCCA threshold when operating in Station mode.
 
-@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+@note1hang This parameter can be used with qapi_WLAN_Get_Param().
 
 Set EDCCA threshold to 0-100.
 */

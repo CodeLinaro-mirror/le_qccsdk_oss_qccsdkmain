@@ -22,7 +22,7 @@ extern void wlan_preset_specific_param(void);
 extern qapi_Status_t wlan_set_channel(uint8_t device_id, uint16_t channel, qbool_t is_6g_index);
 extern qapi_Status_t wlan_set_country_code(uint8_t device_id, uint8_t *country_code);
 extern qapi_Status_t wlan_set_phy_mode(uint8_t device_id, uint32_t phy_mode);
-extern int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig);
+extern int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig, uint8_t is_sgi, uint8_t mpdu_density);
 extern int32_t wlan_set_op_mode(uint8_t mode);
 extern qapi_Status_t wlan_get_mac_address(uint8_t __attribute__((__unused__)) device_ID,
                                           uint8_t mac_addr[__QAPI_WLAN_MAC_LEN]);
