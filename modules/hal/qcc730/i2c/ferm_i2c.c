@@ -622,6 +622,9 @@ static i2c_status i2c_data_read(i2c_dev *dev)
         if (xfr->flag & I2C_MSG_RESTART) {
             read_cmd |= I2C_DATA_CMD_RESTART;
             xfr->flag &= ~(I2C_MSG_RESTART);
+        } 
+        else if ((read_cmd & I2C_DATA_CMD_RESTART)) {
+            read_cmd &= ~ (I2C_DATA_CMD_RESTART);
         }
 
         /* Send STOP if needed */
