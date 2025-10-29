@@ -878,18 +878,23 @@ static int32_t qat_set_11nht_cap(char *ht_config)
     qapi_Status_t ret = QAPI_OK;
     QAT_Command_Status_t rc = QAT_STATUS_SUCCESS_E;
     uint8_t deviceId = qat_get_active_device();
-    qapi_WLAN_11n_HT_Config_e htconfig;
 
-    if (!strcmp(ht_config, "disable"))
-        htconfig = QAPI_WLAN_11N_DISABLED_E;
-    else if (!strcmp(ht_config, "ht20"))
-        htconfig = QAPI_WLAN_11N_HT20_E;
-    else {
-        QAT_Response_Str(QAT_RC_ERROR, "Unknown ht config, only support disable/ht20");
-        return 1;
-    }
+	qapi_WLAN_11n_HT_Config_t config;
+
+
+
+	if(!strcmp(ht_config,"disable"))
+		config.htconfig = QAPI_WLAN_11N_DISABLED_E;
+	else if(!strcmp(ht_config,"ht20")) {
+		config.htconfig = QAPI_WLAN_11N_HT20_E;
+        config.sgi = 1;
+        config.mpdu_density = 0;
+    } else {
+		QAT_Response_Str(QAT_RC_ERROR, "Unknown ht config, only support disable/ht20");
+		return 1;
+	}
     ret = qapi_WLAN_Set_Param(deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS, __QAPI_WLAN_PARAM_GROUP_WIRELESS_11N_HT,
-                              &htconfig, sizeof(htconfig), FALSE);
+                              &config, sizeof(config), FALSE);
     if (ret != QAPI_OK) {
         QAT_Response_Str(QAT_RC_ERROR, NULL);
         return 1;
