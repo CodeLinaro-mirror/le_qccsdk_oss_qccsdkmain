@@ -122,6 +122,7 @@ TimerHandle_t roaming_timer;
 TaskHandle_t net_send_task_handle;
 THROUGHPUT_CXT *dtim_iperf_tCxt = NULL;
 static wifi_shell_cxt_t *pg_wifi_shell_cxt;
+static wifi_shell_cxt_t g_wifi_shell_cxt;
 static wifi_demo_cxt_t pg_wifi_demo_cxt;
 uint8_t g_wifi_ready = 0;
 extern lpr_wmi_t g_lowpower_wmi;
@@ -270,21 +271,29 @@ void function_net_send_task()
 {
     BaseType_t xResult;
 	uint32_t notified_value = 0;
-    int32_t send_bytes;
+    uint32_t send_bytes;
+    uint32_t send_times = 0;
 
     while(1) {
         xResult = xTaskNotifyWait( pdFALSE, ULONG_MAX, &notified_value, portMAX_DELAY);
         if (xResult == pdPASS) {
             if (notified_value && g_wifi_ready) {
-                if (dtim_iperf_tCxt->buffer == NULL) {
-                    while ((dtim_iperf_tCxt->buffer = malloc(dtim_iperf_tCxt->params.tx_params.packet_size)) == NULL) {
-                        qurt_thread_sleep(100);
+                do {
+                    if (dtim_iperf_tCxt->buffer == NULL) {
+                        while ((dtim_iperf_tCxt->buffer = malloc(dtim_iperf_tCxt->params.tx_params.packet_size)) == NULL) {
+                            qurt_thread_sleep(100);
+                        }
                     }
-                }
-                pattern(dtim_iperf_tCxt->buffer, dtim_iperf_tCxt->params.tx_params.packet_size);
-                send_bytes =
-                    send(dtim_iperf_tCxt->sock_peer, dtim_iperf_tCxt->buffer, dtim_iperf_tCxt->params.tx_params.packet_size, 0);
-                info_printf("===== sent %u bytes =====\r\n", send_bytes); 
+                    pattern(dtim_iperf_tCxt->buffer, dtim_iperf_tCxt->params.tx_params.packet_size);
+                    send_bytes =
+                        send(dtim_iperf_tCxt->sock_peer, dtim_iperf_tCxt->buffer, dtim_iperf_tCxt->params.tx_params.packet_size, 0);
+                    send_times++;
+                    info_printf("===== sent %u bytes for %u times =====\r\n", send_bytes, send_times); 
+                    if ((dtim_iperf_tCxt->params.tx_params.interval_us > 0) && (send_times < dtim_iperf_tCxt->params.tx_params.packet_number)) {
+                        qurt_thread_sleep(dtim_iperf_tCxt->params.tx_params.interval_us);
+                    }
+                } while (send_times < dtim_iperf_tCxt->params.tx_params.packet_number);
+                send_times = 0;
             }
         }
     }
@@ -304,6 +313,11 @@ qapi_Status_t iperf_for_powertest(uint32_t Parameter_Count, QAPI_Console_Paramet
     unsigned int pktSize = 0;
     g_wifi_ready = 1;
 
+    /* Wifi shell init*/
+    pg_wifi_shell_cxt = &g_wifi_shell_cxt;
+    memset(&g_wifi_shell_cxt, 0, sizeof(wifi_shell_cxt_t));
+    pg_wifi_shell_cxt->auth = QAPI_WLAN_AUTH_NONE_E;
+    
     gp_wlan_qapi_cxt->qapi_event_handler = NULL;
     qapi_WLAN_Set_Callback(wlan_shell_event_handler, NULL);
 
@@ -356,6 +370,14 @@ qapi_Status_t iperf_for_powertest(uint32_t Parameter_Count, QAPI_Console_Paramet
             pktSize = Parameter_List[index].Integer_Value;
             index++;
             pktSize = pktSize < 12 ? 12 : pktSize;
+        } else if (0 == strcmp(Parameter_List[index].String_Value, "-n")) {
+            index++;
+            dtim_iperf_tCxt->params.tx_params.packet_number = Parameter_List[index].Integer_Value;
+            index++;
+        } else if (0 == strcmp(Parameter_List[index].String_Value, "-i")) {
+            index++;
+            dtim_iperf_tCxt->params.tx_params.interval_us = Parameter_List[index].Integer_Value;
+            index++;
         } else {
             index++;
         }
