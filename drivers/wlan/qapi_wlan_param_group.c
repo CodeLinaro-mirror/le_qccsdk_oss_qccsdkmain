@@ -182,6 +182,10 @@ qapi_Status_t qapi_WLAN_Set_Param(uint8_t __attribute__((__unused__)) device_ID,
             ret = wlan_set_bmiss_threshold(device_ID, bmiss_threshold);
             break;
         }
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSP_RATE: {
+            ret = (qapi_Status_t)wlan_set_rsp_rate(device_ID, (*(uint8_t *)data));
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSP_RATE */
+        }
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;

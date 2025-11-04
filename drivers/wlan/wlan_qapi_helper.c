@@ -1088,6 +1088,31 @@ qapi_Status_t wlan_wps_set_credentials(uint8_t device_id, qapi_WLAN_WPS_Credenti
 }
 #endif
 
+qapi_Status_t wlan_set_rsp_rate(uint8_t device_id, uint8_t rate_idx)
+{
+    qapi_Status_t error = QAPI_OK;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+    if (rate_idx != 8)
+        return QAPI_ERR_INVALID_PARAM;
+
+    memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+    cmd->pdev_param_id = WIFI_PARAM_SET_RSP_RATE;
+    cmd->pdev_param_value = rate_idx;
+
+    wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_id, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+    if (p_cxt->wlan_set_param_block_mode) {
+        p_cxt->param_id = WIFI_PARAM_SET_RSP_RATE;
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+    error = get_wlan_qapi_error();
+    return error;
+}
+
 #ifdef CONFIG_ENABLE_P2P_MODE
 /*FUNCTION*-----------------------------------------------------------------
  *

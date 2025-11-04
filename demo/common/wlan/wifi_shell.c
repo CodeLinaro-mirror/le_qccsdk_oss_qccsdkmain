@@ -2578,6 +2578,35 @@ static qapi_Status_t wpsPushSetup(uint32_t __attribute__((__unused__)) Parameter
     return QAPI_ERROR;
 }
 #endif
+static qapi_Status_t setRspRate(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    uint8_t deviceId = get_active_device();
+    uint8_t rate_idx;
+    if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_List[0].Integer_Value != 8) {
+        info_printf("RspRate only support set to 8:6Mbps\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    rate_idx = Parameter_List[0].Integer_Value;
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSP_RATE,
+                                &rate_idx,
+                                sizeof(rate_idx),
+                                FALSE))
+    {
+        info_printf("set RspRate fail, check the wlan connection or data validation\r\n");
+        return QAPI_ERROR;
+    }
+    info_printf("RspRate is set to 6Mbps\n");
+    return QAPI_OK;
+}
+
 
 #ifdef CONFIG_ENABLE_P2P_MODE
 void app_p2p_process_persistent_list_event(uint8_t *pData)
@@ -4756,6 +4785,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 #ifdef CONFIG_WPS
     { wpsPushSetup, 	 "WpsPush", 		  "<connectFlag> [<ssid> <mac> <channel>]",    "Setup and start a WPS connection using the Push method"   },
 #endif
+    { setRspRate, 	 "setRspRate", 		  "<rate_idx = 8:6Mbps>",    "setRspRate to 6Mbps"   },
 
 };
 
