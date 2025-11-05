@@ -1332,6 +1332,17 @@ Set EDCCA threshold to 0-100.
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_EDCCA_THRESHOLD 90
 
+/**
+Command ID to set rsp rate in Station mode. The set
+operation for this should be done after establishing a connection.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] uint8_t  RspRate idx, only support 8:6Mbps.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSP_RATE 91
+
+
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE                0
 
 /**

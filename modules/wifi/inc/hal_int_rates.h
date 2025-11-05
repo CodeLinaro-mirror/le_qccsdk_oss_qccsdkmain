@@ -374,6 +374,7 @@ nt_status_t hal_rates_init(void);
 void nt_hal_sta_tx_rate_update(nt_hal_bss_t *bss, nt_hal_sta_t *sta);
 void nt_hal_sta_rate_stats_get(nt_hal_bss_t *bss, nt_hal_sta_t *sta, nt_hal_sta_rate_stat_t *rate_stat);
 void nt_hal_rtbl_tx_pwr_update(uint8_t tx_power);
+void nt_hal_rtbl_rsp_rate_update(uint8_t rate_idx);
 void nt_hal_r2p_tbl_update(void);
 void nt_hal_fix_rts_rate(uint32_t write, uint32_t fix_rate);
 void hal_reduce_tx_pwr_if_wired(uint8_t reduce_by);
