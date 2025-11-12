@@ -38,6 +38,7 @@ when         who     what, where, why
 #include "CeEL_Env.h"
 #include "CeEL_Dm.h"
 #include "nt_common.h"
+#include "nt_logger_api.h"
 
 #define CECL_HW_SEC_ACC_DIN_SIZE 16
 //#define CECL_HW_SEC_CE_STATUS_DIN_RDY (HW_REG_RD(CECL_CE_STATUS) & (1<<CECL_CE_STATUS_DIN_RDY_SHFT))
@@ -436,7 +437,7 @@ CeCLErrorType CeCLIOCtlSetCipherCntx(CeCLCipherCntxType *ctx_ptr)
         }
 
         /* For counter mode operation we need to run the engine in encrypt mode
-         the XOR “undoes" the encrypted data into decrypted data.*/
+         the XOR Â“undoes" the encrypted data into decrypted data.*/
         if (ctx_ptr->mode == CECL_CIPHER_MODE_CTR) {
             seg_cfg_val |= (1 << CECL_CE_ENCR_SEG_CFG_ENCODE_SHFT);
         }
@@ -717,4 +718,147 @@ CeCLErrorType CeCLIOCtlGetCipherCntx(CeCLCipherCntxType *ctx_ptr)
 CeCLErrorType CeCLIOCtlCipherRegXfer(CeCLCipherXferType *pBufOut)
 {
     return CECL_ERROR_NOT_SUPPORTED;
+}
+
+/**
+ * @brief This function sets various SHA/AES registers 
+ *
+ * @param
+ *
+ * @return 
+ *
+ * @see 
+ *
+ */
+
+CeCLErrorType CeCL_hw_kdf 
+(
+  CeCLCipherCntxType *ctx_ptr, 
+  CeCLKdfOpCode opCode, 
+  uint8    *user_input, 
+  uint32   user_input_len, 
+  uint64  password,
+  uint32   *result,
+  uint32 result_len_in_words
+)
+{
+    CeCLErrorType retVal = CECL_ERROR_SUCCESS;
+    uint32 kdf_status = 0;
+    uint32 seg_cfg_val = 0;
+    uint32 kdf_lock_state = 0;
+    uint32 kdf_lock_vmid = 0;
+    uint32 regVal;
+
+    /* ctx_ptr is not used right now, but will be reserved for future developments */ 	
+
+    if(HAL_REG_RD(QWLAN_KDF_CSR_R_OP_STATUS_REG) != 0){	
+        regVal =  HAL_REG_RD(QWLAN_CCU_R_CCU_SOFT_RESET_REG);
+        HAL_REG_WR(QWLAN_CCU_R_CCU_SOFT_RESET_REG, regVal | (QWLAN_CCU_R_CCU_SOFT_RESET_KDF_SOFT_RESET_MASK)); 
+        nt_normal_delay(1);
+		HAL_REG_WR(QWLAN_CCU_R_CCU_SOFT_RESET_REG, regVal & ~(QWLAN_CCU_R_CCU_SOFT_RESET_KDF_SOFT_RESET_MASK | QWLAN_CCU_R_CCU_SOFT_RESET_QCC_SOFT_RESET_MASK));
+    }
+
+
+    //Request lock of access of KDF registers to lock wrapper
+    // 1)	Write 1 to LOCK_REQUEST[31] to request locking
+    // 2)	Read LOCK_STATUS.  The request is granted if LOCK_STATUS[31]=1 and LOCK_STATUS[4:0] match it?s own VMID. When LOCK_STATUS[4:0] doesn?t match VMID, the request is rejected. Master should wait some time and retry from step 1).
+    HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_REQUEST_REG_REG,0x1);
+    kdf_lock_state = (HAL_REG_RD(QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_REG) & QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_LOCK_STATUS_LOCKED_STATUS_MASK) >> QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_LOCK_STATUS_LOCKED_STATUS_OFFSET;
+    kdf_lock_vmid = (HAL_REG_RD(QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_REG) & QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_LOCK_STATUS_LOCKED_VMID_MASK) >> QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_LOCK_STATUS_LOCKED_VMID_OFFSET;	  
+    NT_LOG_PRINT(SECURITY, INFO, "kdf_lock_state %d, kdf_lock_vmid %d\n", kdf_lock_state, kdf_lock_vmid);
+	nt_normal_delay(1);
+	  
+    //Program KDF core to perform operation
+  
+    //1)	Enable or disable interrupt. M0 should write register INTR_EN[1:0] and M4 should write register INTR_EN[17:16].
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INTR_EN_REG, 0x30000);
+  
+    //2)	Write operation code into SW_OP_CODE[5:0] and enable debug mode
+    HAL_REG_WR(QWLAN_KDF_CSR_R_OP_CODE_REG, opCode);
+	
+	HAL_REG_WR(QWLAN_KDF_CSR_R_DEBUG_MODE_EN_REG, 1);
+
+    //3)  When operation code is 1, 6, 7, 8, write 64-bit software password into SW_PASSWORD_LOW and SW_PASSWORD_HIGH. These registers are not needed by other operations.
+    if ( opCode == CECL_KDF_QCDEBUG_PASSWORD || opCode == CECL_KDF_OEM_DEBUG_PASSWORD || 
+       opCode == CECL_KDF_ROT_ACTIVATION || opCode == CECL_KDF_ROT_RESERVATION) {
+        HAL_REG_WR(QWLAN_KDF_CSR_R_PASSWORD_LOW_REG, password);
+        HAL_REG_WR(QWLAN_KDF_CSR_R_PASSWORD_HIGH_REG, password >> 32);
+    }
+
+    //4)	Write 128-bit software parameter into SW_INPUT_0, SW_INPUT_1, SW_INPUT_2 and SW_INPUT_3.
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_0_REG, *(uint32*)(user_input));
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_1_REG, *(uint32*)(user_input+4));
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_2_REG, *(uint32*)(user_input+8));	
+    HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_3_REG, *(uint32*)(user_input+12));
+
+    //5)	Write 1 to SW_OP_GO to start the operation.
+    HAL_REG_WR(QWLAN_KDF_CSR_R_OP_GO_REG, QWLAN_KDF_CSR_R_OP_GO_SW_OP_GO_MASK);
+
+    //6)	Wait for the completion of operation. If interrupt has been enabled, it is generated when operation completes. Otherwise, M0, M4 and JTAG should poll read-only register SW_OP_STATUS[1:0] to check whether operation has completed.
+    while(1)
+    {
+        kdf_status = HAL_REG_RD(QWLAN_KDF_CSR_R_OP_STATUS_REG);
+        /* Operation Status:
+         * * * 0: KDF is idle and no operation is in process
+         * * * 1: Operation completes successfully
+         * * * 2: Operation is invalid and not executed
+         * * * 3: Reserved
+         */
+        if(kdf_status & QWLAN_KDF_CSR_R_OP_STATUS_SW_OP_STATUS_MASK) {
+            break;
+        }
+    }
+
+    if ((kdf_status & QWLAN_KDF_CSR_R_OP_STATUS_SW_OP_STATUS_MASK) != 1) {
+        NT_LOG_PRINT(SECURITY, ERR, "KDF operation failed with status: %d\n", kdf_status);
+        HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_RELEASE_REG_REG, 0x1);
+        return CECL_ERROR_FAILURE;
+    }
+	
+    switch (opCode){
+        case CECL_KDF_SECURE_STORAGE:
+            seg_cfg_val = 0x4;
+            break;
+        case CECL_KDF_ENCRYPTION_KEY:
+            seg_cfg_val = 0x5;
+            break;
+        case CECL_KDF_PRODUCT_WRAPPED_KEY:
+        case CECL_KDF_DEVICE_WRAPPED_KEY:	
+            seg_cfg_val = 0x6;
+            break;
+        case CECL_KDF_QC_ID_TOKEN:
+        case CECL_KDF_ATTESTATION:
+        case CECL_KDF_OTA_SHARD_KEY:    
+            seg_cfg_val = 0x7;
+            break;	  
+        case CECL_KDF_QCDEBUG_PASSWORD:
+        case CECL_KDF_OEM_DEBUG_PASSWORD:
+        case CECL_KDF_ROT_ACTIVATION:
+        case CECL_KDF_ROT_RESERVATION:
+            seg_cfg_val = 0;    
+            break;	  
+	  
+        default: 
+            break;
+    }	
+
+    seg_cfg_val = seg_cfg_val | seg_cfg_val<<4;
+    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_KEY_TABLE_CFG_REG, seg_cfg_val); 
+
+    if(seg_cfg_val != 0) {
+        result[0] = HAL_REG_RD(QWLAN_KDF_CSR_R_DEBUG_DATA__MREG);
+        result[1] = HAL_REG_RD(QWLAN_KDF_CSR_R_DEBUG_DATA__MREG+4);
+        result[2] = HAL_REG_RD(QWLAN_KDF_CSR_R_DEBUG_DATA__MREG+8);
+        result[3] = HAL_REG_RD(QWLAN_KDF_CSR_R_DEBUG_DATA__MREG+12);  
+    }
+    else {
+        if(1 != HAL_REG_RD(QWLAN_KDF_CSR_R_PASSWORD_STATUS_REG)) {
+            retVal = CECL_ERROR_FAILURE;
+        }
+    }
+
+    //Write 1 to LOCK_RELEASE[31] in lock wrapper to release KDF access.
+    HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_RELEASE_REG_REG, 0x1);
+  
+    return retVal;
 }
