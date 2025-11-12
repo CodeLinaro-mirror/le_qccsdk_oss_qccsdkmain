@@ -29,6 +29,7 @@ when         who     what, where, why
 #include <stdlib.h>
 #include "nt_common.h"
 #include <unistd.h>
+#include "nt_logger_api.h"
 
 /*===========================================================================
 
@@ -2774,32 +2775,30 @@ static CeMLErrorType CeMLCCMStarAuth(CeMLCntxHandle *ceMlHandle, CeMLIovecListTy
 }
 
 /**
- * @brief Hardware KDF function does three things: (1) Configure M0/M4 crypto key based on VMID (2) Enable debug based
- * on provided password & derived password from Hardware KDF (3) Activate/revocate RoT (Root of Trust) More specifically
- * KDF op code 2~5 and 9~11 are key derivation operations. KDF generates the key and route it to key table in Crypto
- * Core of M0 or M4 according to the VMID of the AHB master. KDF op code 1, 6, 7 and 8 are password involved operations.
- * Master enter a password and other parameter and then start the operation. KDF generates a HW password and compare it
- * with the one from master. Debug enable vector, RoT activation and revocation vector is valid only when passwords
- * match.
- *
- * @param[in] cntx             : Pointer to a CEML cntx. Needed if key is routed to the Key Table
- * @param[in] client_name      : Name of client
- * @param[in] opCode	        : KDF command to run
- * @param[in] user_input	    : Pointer to use input for KDF operation
- * @param[in] user_input_len	: Length (Bytes) of user input. It must be max of 16 bytes
- * @param[in] password	        : Password to match against (for operations that results in password)
- * @param[out]result	        : Success/fail for opcode that requires password matching
- * @param[in] result_len_in_words : length of result pointer in words.
- *
- *
- * @return CEML_ERROR_SUCCESS if successful,
- *         CEML_ERROR_FAILURE otherwise
- *
- * @dependenies -
- *
- * @sideeffects
- *
- */
+  * @brief Hardware KDF function does three things: (1) Configure M4 crypto key based on VMID (2) Enable debug based on provided password & derived password from Hardware KDF
+  *                                                 (3) Activate/revocate RoT (Root of Trust)
+  *                                                 More specifically KDF op code 2~5 and 9~11 are key derivation operations. KDF generates the key and route it to key table in Crypto Core of
+  *                                                 M4 according to the VMID of the AHB master.
+  *                                                 KDF op code 1, 6, 7 and 8 are password involved operations. Master enter a password and other parameter and then start the operation.
+  *                                                 KDF generates a HW password and compare it with the one from master. Debug enable vector, RoT activation and revocation vector is valid only when passwords match.
+  *
+  * @param[in] cntx             : It is not used right now. Reserved for future extension
+  * @param[in] opCode	        : KDF command to run
+  * @param[in] user_input	    : Pointer to use input for KDF operation
+  * @param[in] user_input_len	: Length (Bytes) of user input. It must be max of 16 bytes
+  * @param[in] password	        : Password to match against (for operations that results in password)
+  * @param[out]result	        : KDF output
+  * @param[in] result_len_in_words : length of result pointer in words.
+  *
+  *
+  * @return CEML_ERROR_SUCCESS if successful,
+  *         CEML_ERROR_FAILURE otherwise
+  *
+  * @dependenies -
+  *
+  * @sideeffects
+  *
+  */
 
 CeMLErrorType CeML_hw_kdf(CeMLCntxHandle *ceMlHandle, CeMLKdfOpCode opCode, uint8 *user_input, uint32 user_input_len,
                           uint64 password, uint32 *result, uint32 result_len_in_words)
@@ -2814,9 +2813,9 @@ CeMLErrorType CeML_hw_kdf(CeMLCntxHandle *ceMlHandle, CeMLKdfOpCode opCode, uint
     }
 
     CeElMutexEnter();
-
     ret = (CeMLErrorType)CeElEnableKDFClock();
     if (CEML_ERROR_SUCCESS != ret) {
+        CeElMutexExit();
         return ret;
     }
 
