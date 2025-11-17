@@ -2679,26 +2679,36 @@ typedef struct // qapi_WLAN_Reg_s
 } qapi_WLAN_Reg_t;
 
 typedef struct {
-    uint8_t alpha[3];
-    uint8_t num_2g_reg_rules;
-    uint8_t num_5g_reg_rules;
-    qapi_WLAN_Reg_t reg_rules[QAPI_MAX_REG_RULES];
+    uint8_t alpha[3];                               /**The region code*/
+    uint8_t num_2g_reg_rules;                       /**Numbers of rules for 2g in the region*/
+    uint8_t num_5g_reg_rules;                       /**Numbers of rules for 5g in the region*/
+    qapi_WLAN_Reg_t reg_rules[QAPI_MAX_REG_RULES];  /** The rule of the region for certain bands*/
 } qapi_WLAN_Reg_Evt_t;
 
 typedef struct {
-    uint8_t reg_power;
-    uint8_t ctl_power;
-    uint16_t target_power;
-    uint16_t real_power;
+    uint8_t reg_power;                              /** Regulatory power*/
+    uint8_t ctl_power;                              /** Conformance test limit power*/
+    uint16_t target_power;                          /** The targeted maximum TX power*/
+    uint16_t real_power;                            /** The power that is set to driver.*/
 } qapi_WLAN_Get_Power_Evt_t;
 
-// set_rate
+/**
+@ingroup qapi_wlan
+Set Rate.
+*/
 typedef struct {
-    uint8_t ra_ON;
-    uint8_t rate_staid;
-    uint8_t rate_p_rate;
-    uint8_t rate_s_rate;
-    uint8_t rate_t_rate;
+    uint8_t ra_ON;              /** Flag indicating whether automatic rate adaptation is enabled.
+                                   Use NT_RA_OFF to disable or NT_RA_ON to enable. */
+    uint8_t rate_staid;         /** Station ID for which the rate configuration applies. */
+    uint8_t rate_p_rate;        /** Primary transmission rate.
+                                   If transmission fails NT_DEVCFG_RETRY_THRESHOLD0 times (configurable; see rate_adaptation_debug.xml),
+                                   the secondary rate will be attempted. */
+    uint8_t rate_s_rate;        /** Secondary transmission rate.
+                                   If transmission fails an additional (NT_DEVCFG_RETRY_THRESHOLD1 - NT_DEVCFG_RETRY_THRESHOLD0) times,
+                                   the tertiary rate will be attempted. */
+    uint8_t rate_t_rate;        /** Tertiary transmission rate.
+                                   If transmission fails a further (NT_DEVCFG_RETRY_THRESHOLD2 - NT_DEVCFG_RETRY_THRESHOLD0) times,
+                                   the transmission will be considered failed. */
 } qapi_WLAN_Set_Rate_Params_t;
 
 /**
@@ -2706,8 +2716,8 @@ typedef struct {
 Set STA Listen interval.
 */
 typedef struct {
-    uint32_t time;
-    uint32_t round_type;
+    uint32_t time;                      /** Listen interval in Time Units (TU), where 1 TU = 1024 microseconds. */
+    uint32_t round_type;                /** Determines how the beacon interval is rounded when calculating (time / beacon interval). */
 } qapi_WLAN_Listen_Interval_Params_t;
 
 /**
@@ -2715,11 +2725,11 @@ typedef struct {
 Set STA edca param, including aifsn/cw_min/cw_max/txoplimit.
 */
 typedef struct {
-    uint8_t qid;
-    uint8_t aifsn;
-    uint16_t cw_min;
-    uint16_t cw_max;
-    uint16_t txop_limit;
+    uint8_t qid;                        /** The queue id*/
+    uint8_t aifsn;                      /** Arbitration Inter Frame Spacing Number*/
+    uint16_t cw_min;                    /** Minimum value of contention window*/
+    uint16_t cw_max;                    /** Maximum value of contention window*/
+    uint16_t txop_limit;                /** Transmission Opportunity Limit*/
 } qapi_WLAN_Edca_Params_t;
 
 /**
@@ -2727,8 +2737,8 @@ typedef struct {
 Set STA BA window size.
 */
 typedef struct {
-    uint16_t ack_timeout;
-    uint16_t delay;
+    uint16_t ack_timeout;               /** BA window size ack timeout in us*/
+    uint16_t delay;                     /** Propagation time in numbers of SM clock cycles */
 } qapi_WLAN_BA_Window_Params_t;
 
 /**
