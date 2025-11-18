@@ -28,6 +28,7 @@ struct libwifi_qos_null_kconfig_t {
 
 struct libwifi_kconfig_t g_libwifi_kconfig;
 struct libwifi_qos_null_kconfig_t g_libwifi_qos_null_kconfig_t;
+uint32_t total_beacon_wait_time;
 
 void libwifi_kconfig_install(void)
 {
@@ -64,6 +65,13 @@ void libwifi_kconfig_install(void)
 #else
     g_libwifi_kconfig.srrc_band_edge_enable = FALSE;
 #endif
+
+#ifdef CONFIG_TOTAL_BEACON_WAIT_TIME
+  total_beacon_wait_time = CONFIG_TOTAL_BEACON_WAIT_TIME;
+#else
+  total_beacon_wait_time = 25000;
+#endif
+
 }
 
 NT_BOOL wmi_pdev_utf_cmd(wmi_msg_struct_t *msg)
