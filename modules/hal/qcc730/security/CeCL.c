@@ -773,17 +773,11 @@ CeCLErrorType CeCL_hw_kdf
     //1)	Enable or disable interrupt. M0 should write register INTR_EN[1:0] and M4 should write register INTR_EN[17:16].
     HAL_REG_WR(QWLAN_KDF_CSR_R_INTR_EN_REG, 0x30000);
   
-    //2)	Write operation code into SW_OP_CODE[5:0] and enable debug mode
+    //2)	Write operation code into SW_OP_CODE[5:0]
     HAL_REG_WR(QWLAN_KDF_CSR_R_OP_CODE_REG, opCode);
 	
+    //3)	enable debug mode	
 	HAL_REG_WR(QWLAN_KDF_CSR_R_DEBUG_MODE_EN_REG, 1);
-
-    //3)  When operation code is 1, 6, 7, 8, write 64-bit software password into SW_PASSWORD_LOW and SW_PASSWORD_HIGH. These registers are not needed by other operations.
-    if ( opCode == CECL_KDF_QCDEBUG_PASSWORD || opCode == CECL_KDF_OEM_DEBUG_PASSWORD || 
-       opCode == CECL_KDF_ROT_ACTIVATION || opCode == CECL_KDF_ROT_RESERVATION) {
-        HAL_REG_WR(QWLAN_KDF_CSR_R_PASSWORD_LOW_REG, password);
-        HAL_REG_WR(QWLAN_KDF_CSR_R_PASSWORD_HIGH_REG, password >> 32);
-    }
 
     //4)	Write 128-bit software parameter into SW_INPUT_0, SW_INPUT_1, SW_INPUT_2 and SW_INPUT_3.
     HAL_REG_WR(QWLAN_KDF_CSR_R_INPUT_0_REG, *(uint32*)(user_input));
@@ -818,26 +812,7 @@ CeCLErrorType CeCL_hw_kdf
     switch (opCode){
         case CECL_KDF_SECURE_STORAGE:
             seg_cfg_val = 0x4;
-            break;
-        case CECL_KDF_ENCRYPTION_KEY:
-            seg_cfg_val = 0x5;
-            break;
-        case CECL_KDF_PRODUCT_WRAPPED_KEY:
-        case CECL_KDF_DEVICE_WRAPPED_KEY:	
-            seg_cfg_val = 0x6;
-            break;
-        case CECL_KDF_QC_ID_TOKEN:
-        case CECL_KDF_ATTESTATION:
-        case CECL_KDF_OTA_SHARD_KEY:    
-            seg_cfg_val = 0x7;
             break;	  
-        case CECL_KDF_QCDEBUG_PASSWORD:
-        case CECL_KDF_OEM_DEBUG_PASSWORD:
-        case CECL_KDF_ROT_ACTIVATION:
-        case CECL_KDF_ROT_RESERVATION:
-            seg_cfg_val = 0;    
-            break;	  
-	  
         default: 
             break;
     }	

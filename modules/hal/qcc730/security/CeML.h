@@ -633,4 +633,43 @@ CeMLErrorType CeML_hw_kdf(CeMLCntxHandle *cntx, CeMLKdfOpCode opCode, uint8 *use
 
 CeMLErrorType CeMLBISTverify(void);  // stub fuction
 
+/**
+  Encrypts the user data with KDF key or SW key.   
+
+  @param[in] key_type				type of key. 0 is for KDF key, other is for SW key
+  @param[in] key					Pointer to the KDF key input or SW key.
+  @param[in] key_len				Byte length of the KDF key input or SW key. It should be 16	
+  @param[in] iv_ptr					Pointer to the IV.
+  @param[in] iv_len					Byte length of the IV. It suggest to be 16	
+  @param[in] pt_ptr_in				Pointer to the plaintext data.
+  @param[in] input_data_len			Byte length of the plaintext data, in multiples of 16 bytes.
+  @param[out] pt_ptr_out			Pointer to the ciphertext data. 
+  @param[out] output_data_len_ptr	Pointer to hold the byte length of the ciphertext data. 
+
+  @return 
+  CeMLErrorType 
+
+  @dependencies
+  None.
+*/
+CeMLErrorType CeML_util_encrypt_with_key (uint8 key_type, uint8 *key, uint8 key_len, uint8 *iv_ptr, uint8 iv_len, void *pt_ptr_in, uint32 input_data_len, void  *pt_ptr_out, uint32  *output_data_len_ptr);
+
+/**
+  Decrypts the user data with KDF key or SW key.   
+
+  @param[in] key_type				type of key. 0 is for KDF key, other is for SW key
+  @param[in] key					Pointer to the KDF key input or SW key.
+  @param[in] key_len				Byte length of the KDF key input or SW key. It should be 16	
+  @param[in] pt_ptr_in				Pointer to the ciphertext data.
+  @param[in] input_data_len			Byte length of the ciphertext data, in multiples of 16 bytes.
+  @param[out] pt_ptr_out			Pointer to the plaintext data. 
+  @param[out] output_data_len_ptr	Pointer to hold the byte length of the plaintext data. 
+
+  @return 
+  CeMLErrorType 
+
+  @dependencies
+  None.
+*/
+CeMLErrorType CeML_util_decrypt_with_key (uint8 key_type, uint8 *key, uint8 key_len, void *pt_ptr_in, uint32 input_data_len, void  *pt_ptr_out, uint32  *output_data_len_ptr);
 #endif  // CE_ML_H
