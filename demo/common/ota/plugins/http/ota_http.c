@@ -47,6 +47,10 @@ struct ota_http_client_demo_s {
 
 #define OTA_HTTPC_PRINTF(...) printf(__VA_ARGS__)
 
+#ifdef CONFIG_QAT_OTA_DEMO
+#define OTA_CHUNK_SIZE 512
+extern void ota_http_client_timer(void);
+#endif
 /**********************************************************************************************************/
 /* Type Declarations																                      */
 /**********************************************************************************************************/
@@ -108,6 +112,45 @@ static void ota_http_fin()
     }
 }
 
+qapi_Status_t ota_httpc_get_with_offset(uint32_t offset, uint32_t max_len) 
+{
+    qapi_Status_t ret;
+    uint8_t header_index = 0;
+
+    uint32_t remain = ota_http_sess->total_len - offset;
+    uint32_t expected_len = (remain < max_len) ? remain : max_len;
+
+    qapi_Net_HTTPc_Clear_Header(ota_http_sess->client);
+    g_https_cfg.header_field[header_index].name  = malloc(QAT_HTTP_HEADER_NAME_LEN);
+    g_https_cfg.header_field[header_index].value = malloc(QAT_HTTP_HEADER_VALUE_LEN);
+    memset(g_https_cfg.header_field[header_index].name, 0, QAT_HTTP_HEADER_NAME_LEN);
+    memset(g_https_cfg.header_field[header_index].value, 0, QAT_HTTP_HEADER_VALUE_LEN);
+    strlcpy(g_https_cfg.header_field[header_index].name, "Range", QAT_HTTP_HEADER_NAME_LEN);
+    snprintf(g_https_cfg.header_field[header_index].value, QAT_HTTP_HEADER_VALUE_LEN, "bytes=%u-%u", offset, offset + expected_len - 1);
+
+    // add header field
+    ret = at_httpc_addheaderfield(header_index);
+    if (ret != QAPI_OK) {
+        OTA_HTTPC_PRINTF("[HTTP] Failed to add Range header\r\n");
+        free(g_https_cfg.header_field[header_index].name);
+        free(g_https_cfg.header_field[header_index].value);
+        return QAPI_FW_UPGRADE_ERR_HTTP_GET;
+    }
+
+    // send get request
+    ret = ota_httpc_get();
+    if (ret != QAPI_OK) {
+        OTA_HTTPC_PRINTF("[HTTP] GET with offset failed\r\n");
+        free(g_https_cfg.header_field[header_index].name);
+        free(g_https_cfg.header_field[header_index].value);
+        return QAPI_FW_UPGRADE_ERR_HTTP_GET;
+    }
+
+    free(g_https_cfg.header_field[header_index].name);
+    free(g_https_cfg.header_field[header_index].value);
+    return QAPI_OK;
+}
+
 /**********************************************************************************************************/
 /*      															                                      */
 /**********************************************************************************************************/
@@ -125,10 +168,11 @@ qapi_Status_t plugin_http_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t 
     uint32_t signal;
     uint32_t http_ota_recv_start_ms = 0;
     uint32_t http_ota_recv_curr_ms = 0;
+    
+    char buf[HTTP_STR_BUFFER_LENGTH] = {0};
+    uint32_t offset = 0;
 
-    UNUSED(init_param);
-
-    if (buffer == NULL || buf_len == 0) {
+    if (buffer == NULL || buf_len == 0 || init_param == NULL) {
         return QAPI_FW_UPGRADE_ERR_INVALID_PARAM;
     }
 
@@ -144,12 +188,23 @@ qapi_Status_t plugin_http_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t 
         *ret_size = 0;
     }
 
-    if (ota_http_sess->getting_started == 0) {
-        ret = ota_httpc_get();
+    if (ota_http_sess->flags & QAPI_FW_UPGRADE_FLAG_RANGE_HEADER) {
+        if (ota_http_sess->http_range_offset >= ota_http_sess->total_len) {
+            return QAPI_OK;
+        }
+        ret = ota_httpc_get_with_offset(ota_http_sess->http_range_offset, OTA_CHUNK_SIZE);
         if (ret != QAPI_OK) {
             return ret;
         }
-        ota_http_sess->getting_started = 1;
+    } else {
+        if (ota_http_sess->getting_started == 0) {
+            // If it is the first request, a Range field can be added to the HTTP request header to specify the starting position
+            ret = ota_httpc_get();
+            if (ret != QAPI_OK) {
+                return ret;
+            }
+            ota_http_sess->getting_started = 1;
+        }
     }
 
     if (ota_http_sess->status == HTTP_OTA_STATUS_RUNNING) {
@@ -157,9 +212,26 @@ qapi_Status_t plugin_http_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t 
 
         while (ota_http_sess->http_rx_queue->front == NULL) {
             http_ota_recv_curr_ms = (uint32_t)hres_timer_curr_time_us() / 1000;
-
             if (http_ota_recv_curr_ms - http_ota_recv_start_ms > ota_http_sess->http_timeout) {
-                return QAPI_FW_UPGRADE_ERR_HTTP_RX_QUEUE_EMPTY;
+                if (ota_http_sess->flags & QAPI_FW_UPGRADE_FLAG_RANGE_HEADER) {
+                    uint32_t remain = ota_http_sess->total_len - ota_http_sess->http_range_offset;
+                    uint32_t expected_len = (remain < OTA_CHUNK_SIZE) ? remain : OTA_CHUNK_SIZE;
+                    ota_http_sess->retry_count++;
+                    if (ota_http_sess->retry_count == 1) {
+                        offset +=
+                            snprintf(buf + offset, HTTP_STR_BUFFER_LENGTH - offset, "+EVT:OTAFWUP_RETRY:It was timeout once and retry...");
+                        QAT_Response_Str(QAT_RC_QUIET_NO_CR, buf);
+                        ret = ota_httpc_get_with_offset(ota_http_sess->http_range_offset, expected_len);
+                        if (ret != QAPI_OK) return ret;
+                        http_ota_recv_start_ms = (uint32_t)hres_timer_curr_time_us() / 1000;
+                    } else {
+                        OTA_HTTPC_PRINTF("[HTTP] Second timeout, aborting.\r\n");
+                        ota_http_sess->retry_count = 0;
+                        return QAPI_FW_UPGRADE_ERR_HTTP_RX_QUEUE_EMPTY;
+                    }
+                } else {
+                    return QAPI_FW_UPGRADE_ERR_HTTP_RX_QUEUE_EMPTY;
+                }        
             }
 
             /*No MACRO for resp_code for http client now, just use magic number for now*/
@@ -167,20 +239,38 @@ qapi_Status_t plugin_http_recv_data(uint8_t *buffer, uint32_t buf_len, uint32_t 
             if (ota_http_sess->resp_code == 404) {
                 return QAPI_FW_UPGRADE_ERR_IMAGE_NOT_FOUND;
             }
+
             qurt_thread_sleep(5);
         }
 
+        if (ota_http_sess->http_rx_queue->front == NULL) {
+            return QAPI_FW_UPGRADE_ERR_HTTP_RX_QUEUE_EMPTY;
+        }
+
         temp = ota_http_sess->http_rx_queue->front;
+        if (temp == NULL || temp->buffer == NULL || temp->buffer_len == 0) {
+            return QAPI_ERROR;
+        }
+
+        // Check if the buffer is large enough to hold the data
+        if (buf_len < temp->buffer_len) {
+            return QAPI_ERROR;
+        }
+
         *ret_size = temp->buffer_len;
         memscpy(buffer, temp->buffer_len, temp->buffer, temp->buffer_len);
 
-        ota_http_sess->http_rx_queue->front = ota_http_sess->http_rx_queue->front->next;
+        // ota_http_sess->http_rx_queue->front = ota_http_sess->http_rx_queue->front->next;
+        ota_http_sess->http_rx_queue->front = temp->next;
 
         if (ota_http_sess->http_rx_queue->front == NULL) {
             ota_http_sess->http_rx_queue->rear = NULL;
         }
         free(temp->buffer);
         free(temp);
+
+        ota_http_sess->http_range_offset += *ret_size;
+        ota_http_sess->retry_count = 0;
     }
 
     return QAPI_OK;
@@ -201,6 +291,8 @@ void http_client_cb_ota(void *arg, int32_t state, void *http_resp)
         OTA_HTTPC_PRINTF("HTTP Client Demo arg error %d\n", state);
         return;
     }
+
+    qapi_Net_HTTPc_Clear_Header(hc->client);
 
     if (state >= QAPI_NET_HTTPC_RX_FINISHED) {
         int32_t resp_code = temp->resp_Code;
@@ -249,7 +341,6 @@ void http_client_cb_ota(void *arg, int32_t state, void *http_resp)
             *ptotal_len += temp->length;
             contentlength = temp->contentlength;
         }
-
         if (state == QAPI_NET_HTTPC_RX_TUNNEL_ESTABLISHED) {
             OTA_HTTPC_PRINTF("#### TUNNEL ESTABLISHED: received %d bytes ####\n", *ptotal_len);
             *ptotal_len = 0;
@@ -493,7 +584,8 @@ qapi_Status_t plugin_http_init(const char *interface_name, const char *url, void
 
     if (init_param != NULL) {
         /*we will use init_param as timeout time of http*/
-        ota_http_sess->http_timeout = *(uint32_t *)init_param;
+        ota_http_sess->http_timeout = ((qat_fw_upgrade_params_t *)init_param)->timeout_time;
+        ota_http_sess->flags = ((qat_fw_upgrade_params_t *)init_param)->flags;
     } else {
         ota_http_sess->http_timeout = HTTP_TIMEOUT;
     }
@@ -516,6 +608,9 @@ qapi_Status_t plugin_http_init(const char *interface_name, const char *url, void
 
     ota_http_sess->status = HTTP_OTA_STATUS_RUNNING;
     ota_http_sess->getting_started = 0;
+    if (ota_http_sess->flags & QAPI_FW_UPGRADE_FLAG_RANGE_HEADER) {
+        ota_http_sess->total_len = ((qat_fw_upgrade_params_t *)init_param)->total_len;
+    }
 
     // httpc connect
     while (http_connect_retry_count--) {
@@ -535,7 +630,7 @@ qapi_Status_t plugin_http_init(const char *interface_name, const char *url, void
         }
 
         // httpc new session
-        ret = ota_httpc_new_session(url, ota_http_sess->http_timeout);
+        ret = ota_httpc_new_session(url, ota_http_sess->http_timeout * 2);
         if (ret) {
             ret = QAPI_FW_UPGRADE_ERR_HTTP_START_NEW_SESS_FAIL;
             goto http_init_end;

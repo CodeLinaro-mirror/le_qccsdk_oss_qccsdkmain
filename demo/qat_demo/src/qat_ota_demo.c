@@ -24,15 +24,6 @@
 /**********************************************************************************************************/
 /* Type Declarations											                                          */
 /**********************************************************************************************************/
-typedef struct {
-    char *interface_name;
-    char *url;
-    char *cfg_file;
-    uint32_t flags;
-    uint32_t timeout_time;
-    uint32_t process_state_cnt;
-} qat_fw_upgrade_params_t;
-
 /*-------------------------------------------------------------------------
  * Function Declarations
  *-----------------------------------------------------------------------*/
@@ -109,22 +100,20 @@ void qat_fw_upgrade_callback(int32_t state, int32_t status)
         offset += snprintf(buffer + offset, DISPLAY_FWD_BUFFER_LENGTH - offset,
                            "+EVT:OTAFWUP_START: OTA started, please wait");
     } else if (state == FW_UPGRADE_STATE_CONNECT_SERVER_E) {
-        // offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_INIT: Connecting to
-        // Server");
+        // offset += snprintf(buffer + offset, DISPLAY_FWD_BUFFER_LENGTH - offset, "+EVT:OTAFWUP_INIT: Connecting to Server");
     } else if ((state == FW_UPGRADE_STATE_RECEIVE_DATA_E) || (state == FW_UPGRADE_STATE_PROCESS_CONFIG_FILE_E) ||
                (state == FW_UPGRADE_STATE_PROCESS_IMAGE_E)) {
         if (qat_upgrade_params->process_state_cnt == 0) {
-            // offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_RUN: Firmware
-            // downloading, please wait...");
+            // offset += snprintf(buffer + offset, DISPLAY_FWD_BUFFER_LENGTH - offset, "+EVT:OTAFWUP_RUN: Firmware downloading, please wait...");
         } else if (qat_upgrade_params->process_state_cnt % 20 == 0) {
-            // offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, ".");
+            // offset += snprintf(buffer + offset, DISPLAY_FWD_BUFFER_LENGTH - offset, ".");
         }
         qat_upgrade_params->process_state_cnt++;
     }
     /*
     else
     {
-        offset += snprintf(buffer+offset, DISPLAY_FWD_BUFFER_LENGTH-offset, "+EVT:OTAFWUP_RUN:%d,%d", state, status);
+        offset += snprintf(buffer + offset, DISPLAY_FWD_BUFFER_LENGTH - offset, "+EVT:OTAFWUP_RUN: %d, %d", state, status);
     }
     */
     rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
@@ -164,7 +153,7 @@ static void qat_fw_upgrade_HTTP_upgrade_task(void __attribute__((__unused__)) * 
     }
     resp_code = qapi_Fw_Upgrade(qat_upgrade_params->interface_name, &plugin, qat_upgrade_params->url,
                                 qat_upgrade_params->cfg_file, qat_upgrade_params->flags, qat_fw_upgrade_callback,
-                                &qat_upgrade_params->timeout_time);
+                                qat_upgrade_params);
 
     if (QAPI_OK != resp_code) {
         offset += snprintf(buffer + offset, DISPLAY_FWD_BUFFER_LENGTH - offset,
@@ -349,10 +338,10 @@ static QAT_Command_Status_t Extend_Command_OTA_FWUP(uint32_t Op_Type, uint32_t P
             uint32_t interface_len;
             uint32_t url_len;
             uint32_t cfg_len;
-            uint32_t flags = (QAPI_FW_UPGRADE_FLAG_AUTO_REBOOT | QAPI_FW_UPGRADE_FLAG_DUPLICATE_ACTIVE_FS);
+            uint32_t flags = (QAPI_FW_UPGRADE_FLAG_AUTO_REBOOT | QAPI_FW_UPGRADE_FLAG_DUPLICATE_ACTIVE_FS | QAPI_FW_UPGRADE_FLAG_RANGE_HEADER);
             char *cmd = NULL;
 
-            if (Parameter_Count > 5) {
+            if (Parameter_Count > 6) {
                 rc = QAT_Response_Str(
                     QAT_RC_ERROR,
                     "AT+OTAFWUP=<protocol(only http now)>,<url>,<fw filename>,[flag],[timeout(in ms)]\r\n");
@@ -417,7 +406,32 @@ static QAT_Command_Status_t Extend_Command_OTA_FWUP(uint32_t Op_Type, uint32_t P
                     qat_upgrade_params->timeout_time = Parameter_List[4].Integer_Value;
                     ;
                 }
-
+                else if (Parameter_Count == 6) {
+                    if (Parameter_List[3].Integer_Is_Valid) {
+                        qat_upgrade_params->flags = Parameter_List[3].Integer_Value;
+                    }
+                    else {
+                        qat_upgrade_params->flags = QAPI_FW_UPGRADE_FLAG_AUTO_REBOOT;
+                    }
+                    if (qat_upgrade_params->flags & QAPI_FW_UPGRADE_FLAG_RANGE_HEADER) {
+                        if (Parameter_List[5].Integer_Is_Valid) {
+                            qat_upgrade_params->total_len = Parameter_List[5].Integer_Value;
+                        } else {
+                            rc = QAT_Response_Str(QAT_RC_ERROR, "AT+OTAFWUP: Invalid size parameter\r\n");
+                            goto qat_fw_upgrade_end;
+                        }
+                    }
+                    
+                    if (Parameter_List[4].Integer_Is_Valid) {
+                        qat_upgrade_params->timeout_time = Parameter_List[4].Integer_Value;
+                    } else {
+                        qat_upgrade_params->timeout_time = HTTP_TIMEOUT;
+                    }
+                }
+                else {
+                    rc = QAT_Response_Str(QAT_RC_ERROR, "AT+OTAFWUP: Invalid parameter\r\n");
+                    goto qat_fw_upgrade_end;
+                }
                 rc = QAT_Response_Str(QAT_RC_OK, NULL);
 
                 nt_qurt_thread_create(qat_fw_upgrade_HTTP_upgrade_task, "qat_fw_upgrade_demo", 1024 * 4, NULL, 7,

@@ -2031,6 +2031,31 @@ static void http_client_timer(void)
     return;
 }
 
+void ota_http_client_timer(void)
+{
+    uint32_t index;
+    httpclient_sess *sess;
+    uint32_t timeout;
+    rx_cb_t *cb;
+
+    if (!g_httpc_ctxt)
+        return;
+
+    /* If there is no http client session, just return */
+    for (index = 0; index < httpc_max_num_con; index++) {
+        qurt_mutex_lock(g_httpc_ctxt->lh);
+        sess = (httpclient_sess *)g_httpc_ctxt->httpc_sess[index];
+
+        cb = &(sess->cb);
+
+        cb->pending_req = FALSE;
+        g_httpc_ctxt->timer_lasttime = HTTPCTICKS;
+
+        qurt_mutex_unlock(g_httpc_ctxt->lh);
+    }
+    return;
+}
+
 /* FUNCTION: http_client_rx_cb()
  *
  * process callback funtion which define by user

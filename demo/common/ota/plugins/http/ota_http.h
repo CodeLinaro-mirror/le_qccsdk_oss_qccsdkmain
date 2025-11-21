@@ -29,7 +29,7 @@
 #define QAPI_FW_UPGRADE_ERR_HTTP_RX_QUEUE_EMPTY        __QAPI_ERROR(QAPI_MOD_FWUP, 110)
 
 /* HTTP misc */
-#define HTTP_TIMEOUT           10000  // in milliseconds
+#define HTTP_TIMEOUT           20000  // in milliseconds
 #define HTTP_PAYLOAD_SIZE      512
 #define HTTP_FILE_NAME_LENGTH  128
 #define HTTPC_OTA_DEMO_MAX_NUM 1
@@ -51,6 +51,15 @@ qapi_Status_t plugin_http_resume(const char *interface_name, const char *url, ui
 /**********************************************************************************************************/
 /* Strcut Declarations                											                      */
 /**********************************************************************************************************/
+typedef struct {
+    char *interface_name;
+    char *url;
+    char *cfg_file;
+    uint32_t flags;
+    uint32_t timeout_time;
+    uint32_t process_state_cnt;
+    uint64_t total_len;
+} qat_fw_upgrade_params_t;
 
 typedef struct HTTP_Queue_Node_s {
     uint8_t *buffer;
@@ -85,6 +94,8 @@ typedef struct {
     HTTP_Queue_t *http_rx_queue;
     uint32_t http_timeout;
     int32_t resp_code;
+    int32_t http_range_offset;
+    int8_t flags;
 } http_session_info_t;
 
 #endif /*_OTA_HTTP_H_ */
