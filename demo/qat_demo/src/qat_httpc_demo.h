@@ -39,6 +39,8 @@
 #define QAT_HTTPC_MAX_HEADER_FIELD 10
 #define QAT_MAX_CHUNK_SIZE         1000
 #define QAT_CHUNK_INTERVAL         10  // ms
+#define QAT_HTTP_HEADER_NAME_LEN   32
+#define QAT_HTTP_HEADER_VALUE_LEN  128
 #define QATHTTPC_PRINTF(...)       printf(__VA_ARGS__)
 
 struct at_header_field {
