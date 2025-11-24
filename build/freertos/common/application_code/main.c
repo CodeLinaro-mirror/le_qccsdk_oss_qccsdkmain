@@ -816,7 +816,8 @@ qcspi_hfc_init();
 #ifdef PLATFORM_FERMION
 #ifdef FIRMWARE_APPS_INFORMED_WAKE
     /* Initialize A2F interrupt */
-    init_aon_ext_wakeup_int();
+    /* The interrupt should be enabled only before going to sleep*/
+    //init_aon_ext_wakeup_int();
 
 #ifdef SUPPORT_RING_IF
     /* F2A signal on cold boot */
