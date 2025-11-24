@@ -26,6 +26,7 @@ if (CONFIG_MPU_DEMO) {
         "//demo/common/mpu",
     ]
 }
+
 config("_config") {
     if (image_name == "FERMION_QCLI_DEMO" || image_name == "FERMION_IOE_QCLI_DEMO") {
         include_dirs = qcli_demo_inc
