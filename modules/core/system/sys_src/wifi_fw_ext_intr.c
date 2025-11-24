@@ -55,7 +55,7 @@
  * Global Data Definitions
  * ----------------------------------------------------------------------*/
 extern SOCPM_STRUCT g_socpm_struct;
-static SemaphoreHandle_t _socpm_mutex;
+static SemaphoreHandle_t _socpm_mutex = NULL;
 
 /*-------------------------------------------------------------------------
  * Static Function Definitions
@@ -217,38 +217,40 @@ void aon_ext_wakeup_set_lvl_trigger(void)
 void init_aon_ext_wakeup_int(void)
 {
     uint32_t en_ext_int = 0;
-    // Enable ext wakeup interrupt and ext wakeup pos edge interrupt
-    HWIO_OUTX2F(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_EN, EXT_WAKEUP_INTR_EN,
-                EXT_WAKEUP_POS_EDGE_DETECT_INTR_EN, 1, 1);
+    if(_socpm_mutex == NULL){
+        // Enable ext wakeup interrupt and ext wakeup pos edge interrupt
+        HWIO_OUTX2F(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_EN, EXT_WAKEUP_INTR_EN,
+                    EXT_WAKEUP_POS_EDGE_DETECT_INTR_EN, 1, 1);
 
-    // Set external wakeup interrupt polarity to active low
-    HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_POL, EXT_WAKEUP_INTR_POL, 0);
+        // Set external wakeup interrupt polarity to active low
+        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_POL, EXT_WAKEUP_INTR_POL, 0);
 
-    // Enable external wakeup pos edge interrupt
-    HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_POS_EDGE_EN,
-               EXT_WAKEUP_INTR_POS_EDGE_EN, 1);
+        // Enable external wakeup pos edge interrupt
+        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_POS_EDGE_EN,
+                EXT_WAKEUP_INTR_POS_EDGE_EN, 1);
 
-    // Enable external wakeup neg edge interrupt
-    HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_NEG_EDGE_EN,
-               EXT_WAKEUP_INTR_NEG_EDGE_EN, 1);
+        // Enable external wakeup neg edge interrupt
+        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_NEG_EDGE_EN,
+                EXT_WAKEUP_INTR_NEG_EDGE_EN, 1);
 
-    // External wakeup interrupt ack generation disable
-    HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_ACK_EN, EXT_WAKEUP_INTR_ACK_EN, 0);
+        // External wakeup interrupt ack generation disable
+        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_ACK_EN, EXT_WAKEUP_INTR_ACK_EN, 0);
 
-    // External wakeup interrupt sticky disable
-    HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_STICKY_EN, EXT_WAKEUP_INTR_STICKY_EN,
-               0);
+        // External wakeup interrupt sticky disable
+        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_STICKY_EN, EXT_WAKEUP_INTR_STICKY_EN,
+                0);
 
-    // Enable NVIC interrupts
-    en_ext_int = NT_REG_RD(NVIC_ISER1);
-    en_ext_int |= A2F_ASSERT_INTR_NVIC1_MASK;
-    NT_REG_WR(NVIC_ISER1, en_ext_int);
+        // Enable NVIC interrupts
+        en_ext_int = NT_REG_RD(NVIC_ISER1);
+        en_ext_int |= A2F_ASSERT_INTR_NVIC1_MASK;
+        NT_REG_WR(NVIC_ISER1, en_ext_int);
 
-    en_ext_int = NT_REG_RD(NVIC_ISER3);
-    en_ext_int |= A2F_DEASSERT_INTR_NVIC3_MASK;
-    NT_REG_WR(NVIC_ISER3, en_ext_int);
+        en_ext_int = NT_REG_RD(NVIC_ISER3);
+        en_ext_int |= A2F_DEASSERT_INTR_NVIC3_MASK;
+        NT_REG_WR(NVIC_ISER3, en_ext_int);
 
-    _socpm_mutex = xSemaphoreCreateMutex();
+        _socpm_mutex = xSemaphoreCreateMutex();
+    }
     // xSemaphoreGive(_socpm_mutex);
 }
 
