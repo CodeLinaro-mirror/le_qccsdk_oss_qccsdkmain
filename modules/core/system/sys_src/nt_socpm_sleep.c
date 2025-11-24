@@ -1606,6 +1606,14 @@ void vPreSleepProcessing(sleep_mode mode)
 #endif /* SLEEP_CLK_CAL_IN_SLEEP_MODE */
     }
 
+
+#ifdef FIRMWARE_APPS_INFORMED_WAKE
+    /*Enable the external wakeup interrupt before going to sleep*/
+    if(mode != clk_gtd_sleep && mode != Active){
+        init_aon_ext_wakeup_int();
+    }
+#endif
+
     if (mode == clk_gtd_sleep) {
         uint32_t value = NT_REG_RD(QWLAN_PMU_DIG_TOP_CFG_REG);
 #if defined(PLATFORM_FERMION)
@@ -4991,9 +4999,9 @@ void nt_enable_beacon_miss_log(bool enable)
 uint32_t nt_socpm_status(void)
 {
     if (nt_socpm_slp_time_min > 0) {
-        NT_LOG_PRINT(SOCPM, ERR, "socpm status: enabled");
+        NT_LOG_PRINT(SOCPM, INFO, "socpm status: enabled");
     } else {
-        NT_LOG_PRINT(SOCPM, ERR, "socpm status: disabled");
+        NT_LOG_PRINT(SOCPM, INFO, "socpm status: disabled");
     }
     return nt_socpm_slp_time_min;
 }
