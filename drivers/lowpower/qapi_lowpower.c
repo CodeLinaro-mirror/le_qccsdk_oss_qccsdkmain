@@ -51,7 +51,7 @@ qapi_Status_t qapi_pm_enable(uint8_t enable)
    - QAPI_OK                             --  system entering into deepsleep successfully.
 */
 qapi_Status_t qapi_deepsleep_enter(uint8_t wkup_src, uint64_t sleep_time)
-{
+{    
     if (wkup_src == 1) {
         if (sleep_time == 0)
             return QAPI_ERR_INVALID_PARAM;

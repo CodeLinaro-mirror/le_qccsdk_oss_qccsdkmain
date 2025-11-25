@@ -1130,10 +1130,26 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         /** TODO: Test with A2F asserted to see if systick needs to be adjusted
          * before restore for the time when systick was off.
          */
-        /* Restart tick. */
-        _socpm_systick_on();
+
         /* Re-enable interrupts */
         NT_SOCPM_IRQ_ENABLE();
+       
+        /* Restart tick. */
+        _socpm_systick_on();
+
+        uint64_t delta_hres_time_us = hres_timer_curr_time_us() - hres_time_pre_sleep + g_socpm_struct.unapplied_systick_err_us;
+        uint64_t delta_hres_time_ms = 0;
+
+        NT_LOG_PRINT(SOCPM, INFO, " nt_socpm_slp_time_total %d delta_rtos %d", (uint32_t)nt_socpm_slp_time_total,
+                        (uint32_t)delta_hres_time_us);
+
+        delta_hres_time_ms = US_TO_MS(delta_hres_time_us);
+        g_socpm_struct.unapplied_systick_err_us = (delta_hres_time_us - 1000 * delta_hres_time_ms);
+
+        if (delta_hres_time_ms > 0) {
+            vTaskStepTick(delta_hres_time_ms);
+        } 
+
     }
 #else  /*FIRMWARE_APPS_INFORMED_WAKE*/
     if (0) {
@@ -1606,13 +1622,6 @@ void vPreSleepProcessing(sleep_mode mode)
 #endif /* SLEEP_CLK_CAL_IN_SLEEP_MODE */
     }
 
-
-#ifdef FIRMWARE_APPS_INFORMED_WAKE
-    /*Enable the external wakeup interrupt before going to sleep*/
-    if(mode != clk_gtd_sleep && mode != Active){
-        init_aon_ext_wakeup_int();
-    }
-#endif
 
     if (mode == clk_gtd_sleep) {
         uint32_t value = NT_REG_RD(QWLAN_PMU_DIG_TOP_CFG_REG);
