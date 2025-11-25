@@ -300,6 +300,8 @@ static qapi_Status_t Command_Kdf_Crypto_Test(uint32_t Parameter_Count, QAPI_Cons
         goto crypto_demo_kdf_crypto_test_on_error;
     }
 
+    reverse_uint8_array(sw_key, 16);
+
     if(Parameter_Count > 2 && Parameter_List[2].Integer_Is_Valid){
         decrypt_len = Parameter_List[2].Integer_Value;
         if(decrypt_len % 16) {
