@@ -217,7 +217,11 @@ void aon_ext_wakeup_set_lvl_trigger(void)
 void init_aon_ext_wakeup_int(void)
 {
     uint32_t en_ext_int = 0;
+    
     if(_socpm_mutex == NULL){
+        /*_socpm_mutex should be created before enable assert interrupt*/
+        _socpm_mutex = xSemaphoreCreateMutex();
+
         // Enable ext wakeup interrupt and ext wakeup pos edge interrupt
         HWIO_OUTX2F(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_EN, EXT_WAKEUP_INTR_EN,
                     EXT_WAKEUP_POS_EDGE_DETECT_INTR_EN, 1, 1);
@@ -248,8 +252,6 @@ void init_aon_ext_wakeup_int(void)
         en_ext_int = NT_REG_RD(NVIC_ISER3);
         en_ext_int |= A2F_DEASSERT_INTR_NVIC3_MASK;
         NT_REG_WR(NVIC_ISER3, en_ext_int);
-
-        _socpm_mutex = xSemaphoreCreateMutex();
     }
     // xSemaphoreGive(_socpm_mutex);
 }
@@ -341,7 +343,6 @@ void __attribute__((section(".after_ram_vectors"))) aon_a2f_assert_isr_handler(v
     g_socpm_struct.a2f_asserted = TRUE;
     g_socpm_struct.host_supports_a2f = TRUE;
     NT_LOG_PRINT(SOCPM, INFO, "A2F assert");
-
 #ifdef SUPPORT_SWTMR_TO_WKUP_FROM_BMPS
 #if 1
     if ((nt_socpm_status() > 0) && (PM_STRUCT *)gdevp->pPmStruct != NULL &&
