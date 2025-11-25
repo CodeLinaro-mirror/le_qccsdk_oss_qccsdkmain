@@ -492,6 +492,7 @@ CeCLErrorType CeCLIOCtlSetCipherCntx(CeCLCipherCntxType *ctx_ptr)
             HAL_REG_WR(CECL_CE_SW_KEY0_5, ctx_ptr->aes_key[5]);
             HAL_REG_WR(CECL_CE_SW_KEY0_6, ctx_ptr->aes_key[6]);
             HAL_REG_WR(CECL_CE_SW_KEY0_7, ctx_ptr->aes_key[7]);
+            HAL_REG_WR(CECL_CE_KEY_TABLE_CFG, 0); 
         }
         // If CCM mode
         if (ctx_ptr->mode == CECL_CIPHER_MODE_CCM) {
