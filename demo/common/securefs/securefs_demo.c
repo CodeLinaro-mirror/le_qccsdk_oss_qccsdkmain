@@ -153,7 +153,7 @@ static uint32_t SecureStorageTest_Random(uint32_t length) {
 
   // meta data at the end
   if (CEML_ERROR_SUCCESS !=
-      (ret_val = Securefs_encrypt_authenticate(
+      (ret_val = secure_storage_encrypt_authenticate(
            g_securefs_password, USER_PASSWORD_SIZE, input_data, input_data_len,
            (void *)output_data, &output_data_len, meta_data, meta_data_len))) {
     printf("SecureStorage Test Encryption failed: %d\n", ret_val);
@@ -162,7 +162,7 @@ static uint32_t SecureStorageTest_Random(uint32_t length) {
   }
 
   if (CEML_ERROR_SUCCESS !=
-      (ret_val = Securefs_decrypt_authenticate(
+      (ret_val = secure_storage_decrypt_authenticate(
            g_securefs_password, USER_PASSWORD_SIZE, (void *)output_data,
            output_data_len, input_data1, &input_data_len, meta_data,
            meta_data_len))) {
@@ -249,7 +249,8 @@ securefs_set_password(uint32_t Parameter_Count,
         "Invalid password_in_hex, must be exactly 32 hex chars\r\n");
     return QAPI_ERR_INVALID_PARAM;
   } else {
-    SECUREFS_DEMO_PRINTF("user password success, total 32 hex chars\r\n",
+    memcpy(g_securefs_password, user_password, USER_PASSWORD_SIZE);
+    SECUREFS_DEMO_PRINTF("Set user password success, total 32 hex chars\r\n",
                          password_in_hex);
   }
 }
@@ -306,12 +307,7 @@ static qapi_Status_t securefs_ls(uint32_t Parameter_Count,
   return QAPI_OK;
 }
 
-static qapi_Status_t securefs_write(uint32_t Parameter_Count,
-                                    QAPI_Console_Parameter_t *Parameter_List) {
-  char *name = NULL;
-  int offset = 0;
-  uint8_t *buf = NULL;
-  // int sz = 0;
+int securefs_write_func(const char *name, const uint8_t *buf) {
   uint32_t len = 0;
   uint32_t len_byte = 0;
   int i = 0;
@@ -329,13 +325,6 @@ static qapi_Status_t securefs_write(uint32_t Parameter_Count,
     return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
   }
 
-  if (Parameter_Count != 2 || !Parameter_List) {
-    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
-  }
-
-  name = Parameter_List[0].String_Value;
-  offset = 0;
-  buf = (uint8_t *)Parameter_List[1].String_Value;
   len = strlen((char *)buf);
   if (len % 2 != 0) {
     printf("The length of the hex string is %d, make sure to input even number "
@@ -351,7 +340,6 @@ static qapi_Status_t securefs_write(uint32_t Parameter_Count,
     input_data_len =
         len_byte + (AES_128_BLOCK_SIZE - (len_byte % AES_128_BLOCK_SIZE));
   }
-  printf("input = %d, %d\n", len_byte, input_data_len);
   output_data_len = input_data_len;
 
   // check hex
@@ -379,12 +367,11 @@ static qapi_Status_t securefs_write(uint32_t Parameter_Count,
 
   for (i = 0; i < (int)len; i += 2) {
     value = hex_to_byte(buf + i);
-    // write_func(name, (off_t)(offset + i / 2), &value, 1);
     input_data[i / 2] = value;
   }
 
   if (CEML_ERROR_SUCCESS !=
-      (ret_val = Securefs_encrypt_authenticate(
+      (ret_val = secure_storage_encrypt_authenticate(
            g_securefs_password, USER_PASSWORD_SIZE, input_data, input_data_len,
            (void *)output_data, &output_data_len, meta_data, meta_data_len))) {
     printf("SecureStorage Test Decryption failed: %d\n", ret_val);
@@ -419,15 +406,29 @@ end:
     free(output_data);
     output_data = NULL;
   }
+
+  return 0;
+}
+
+static qapi_Status_t securefs_write(uint32_t Parameter_Count,
+                                    QAPI_Console_Parameter_t *Parameter_List) {
+  char *name = NULL;
+  int offset = 0;
+  uint8_t *buf = NULL;
+
+  if (Parameter_Count != 2 || !Parameter_List) {
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+  }
+
+  name = Parameter_List[0].String_Value;
+  buf = (uint8_t *)Parameter_List[1].String_Value;
+
+  securefs_write_func(name, buf);
+
   return QAPI_OK;
 }
 
-static qapi_Status_t securefs_read(uint32_t Parameter_Count,
-                                   QAPI_Console_Parameter_t *Parameter_List) {
-  char *name = NULL;
-  char *path = NULL;
-  int offset = 0;
-  int len_read = 0;
+int sucurefs_read_func(const char *name, size_t len_read) {
   securefs_visible_header_t securefs_visible_header;
   uint32_t input_data_len = 0;
   uint32_t output_data_len = 0;
@@ -438,21 +439,14 @@ static qapi_Status_t securefs_read(uint32_t Parameter_Count,
   uint32_t meta_data[META_DATA_SIZE];
   uint32_t meta_data_len = META_DATA_SIZE;
   CeMLErrorType ret_val = CEML_ERROR_FAILURE;
-
   if (is_fs_mounted() == 0) {
     printf("FS is not mounted, please mount FS first.\r\n");
     return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
   }
 
-  if (Parameter_Count != 2 || !Parameter_List) {
-    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
-  }
-
-  path = Parameter_List[0].String_Value;
-  len_read = Parameter_List[1].Integer_Value;
   memset(&securefs_visible_header, 0, sizeof(securefs_visible_header));
 
-  int file = open(path, O_RDONLY, 0);
+  int file = open(name, O_RDONLY, 0);
   if (file == -1) {
     printf("Error opening file:%s.\n", name);
     return -1;
@@ -492,7 +486,7 @@ static qapi_Status_t securefs_read(uint32_t Parameter_Count,
   read(file, input_data, input_data_len);
 
   if (CEML_ERROR_SUCCESS !=
-      (ret_val = Securefs_decrypt_authenticate(
+      (ret_val = secure_storage_decrypt_authenticate(
            g_securefs_password, USER_PASSWORD_SIZE, (void *)input_data,
            input_data_len, output_data, &output_data_len, meta_data,
            meta_data_len))) {
@@ -515,7 +509,6 @@ static qapi_Status_t securefs_read(uint32_t Parameter_Count,
     }
     printf("\r\n");
   }
-  close(file);
 
 end:
   if (input_data) {
@@ -527,6 +520,24 @@ end:
     free(output_data);
     output_data = NULL;
   }
+  close(file);
+
+  return 0;
+}
+
+static qapi_Status_t securefs_read(uint32_t Parameter_Count,
+                                   QAPI_Console_Parameter_t *Parameter_List) {
+  char *path = NULL;
+  int len_read = 0;
+
+  if (Parameter_Count != 2 || !Parameter_List) {
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+  }
+
+  path = Parameter_List[0].String_Value;
+  len_read = Parameter_List[1].Integer_Value;
+
+  sucurefs_read_func(path, len_read);
 
   return QAPI_OK;
 }
@@ -546,7 +557,7 @@ const QAPI_Console_Command_t securefs_cmd_list[] = {
 };
 
 const QAPI_Console_Command_Group_t securefs_cmd_group = {
-    "SecureStorage", /* Group_String: will display cmd prompt as "SecureFs> " */
+    "SecureFS", /* Group_String: will display cmd prompt as "SecureFs> " */
     sizeof(securefs_cmd_list) /
         sizeof(securefs_cmd_list[0]), /* Command_Count */
     securefs_cmd_list                 /* Command_List */

@@ -12,17 +12,17 @@
 
   @param[in] p_user_input_password    Pointer to the user input password
   @param[in] user_input_password_size user input password size in bytes
-  @param[in] input_data               Pointer to the plaintext data.
+  @param[in] pt_ptr_in                Pointer to the plaintext data.
   @param[in] input_data_len           Byte length of the plaintext data, in
                                       multiples of 16 bytes.
-  @param[out] output_data             Pointer to the ciphertext data. The output
+  @param[out] pt_ptr_out              Pointer to the ciphertext data. The output
                                       data length is equal to the input data
   length because the function expects the input data length to be an AES block
   multiple of 16 bytes with no padding.
   @param[out] output_data_len_ptr     Pointer to hold the byte length of the
                                       ciphertext data. output_data_len_ptr is
   the same value as input_data_len.
-  @param[out] meta_data_out           Pointer to the meta data, which includes
+  @param[out] meta_data_out_ptr       Pointer to the meta data, which includes
   HMAC SHA-256.
   @param[out] meta_data_out_len       Byte length of meta_data_out; 64 bytes.
 
@@ -32,10 +32,11 @@
   @dependencies
   None.
 */
-CeMLErrorType Securefs_encrypt_authenticate(
+CeMLErrorType secure_storage_encrypt_authenticate(
     uint8 *p_user_input_password, uint32 user_input_password_size,
-    void *input_data, uint32 input_data_len, void *output_data,
-    uint32 *output_data_len_ptr, void *meta_data_out, uint32 meta_data_out_len);
+    void *pt_ptr_in, uint32 input_data_len, void *pt_ptr_out,
+    uint32 *output_data_len_ptr, void *meta_data_out_ptr,
+    uint32 meta_data_out_len);
 
 /**
   Decrypts the user data and checks the authenticity/integrity of the data.
@@ -45,16 +46,16 @@ CeMLErrorType Securefs_encrypt_authenticate(
 
   @param[in] p_user_input_password    Pointer to the user input password
   @param[in] user_input_password_size user input password size in bytes
-  @param[in] input_data               Pointer to the cipherext data.
+  @param[in] pt_ptr_in                Pointer to the cipherext data.
   @param[in] input_data_len           Byte length of the ciphertext data, in
                                       multiples of 16 bytes.
-  @param[out] output_data             Pointer to the plaintext data.
+  @param[out] pt_ptr_out              Pointer to the plaintext data.
   @param[out] output_data_len_ptr     Pointer to hold the byte length of the
                                       plaintext data. output_data_len_ptr is the
                                       same value as input_data_len.
-  @param[out] meta_data_in            Pointer to the meta data, which includes
+  @param[in] meta_data_in_ptr         Pointer to the meta data, which includes
   HMAC SHA-256.
-  @param[out] meta_data_in_len        Byte length of the meta_data_out; 64
+  @param[in] meta_data_in_len         Byte length of the meta_data_out; 64
   bytes.
 
   @return
@@ -63,7 +64,8 @@ CeMLErrorType Securefs_encrypt_authenticate(
   @dependencies
   None.
 */
-CeMLErrorType Securefs_decrypt_authenticate(
+CeMLErrorType secure_storage_decrypt_authenticate(
     uint8 *p_user_input_password, uint32 user_input_password_size,
-    void *input_data, uint32 input_data_len, void *output_data,
-    uint32 *output_data_len_ptr, void *meta_data_in, uint32 meta_data_in_len);
+    void *pt_ptr_in, uint32 input_data_len, void *pt_ptr_out,
+    uint32 *output_data_len_ptr, void *meta_data_in_ptr,
+    uint32 meta_data_in_len);

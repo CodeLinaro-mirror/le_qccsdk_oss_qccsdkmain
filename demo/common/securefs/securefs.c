@@ -42,10 +42,10 @@ typedef struct {
 
   @param[in] p_user_input_password    Pointer to the user input password
   @param[in] user_input_password_size user input password size in bytes
-  @param[in] input_data               Pointer to the plaintext data.
+  @param[in] pt_ptr_in                Pointer to the plaintext data.
   @param[in] input_data_len           Byte length of the plaintext data, in
                                       multiples of 16 bytes.
-  @param[out] output_data             Pointer to the ciphertext data. The output
+  @param[out] pt_ptr_out              Pointer to the ciphertext data. The output
                                       data length is equal to the input data
   length because the function expects the input data length to be an AES block
   multiple of 16 bytes with no padding.
@@ -54,7 +54,7 @@ typedef struct {
   the same value as input_data_len.
   @param[out] meta_data_out_ptr       Pointer to the meta data, which includes
   HMAC SHA-256.
-  @param[out] meta_data_out_len       Byte length of digest_data_out; 64 bytes.
+  @param[out] meta_data_out_len       Byte length of meta_data_out; 64 bytes.
 
   @return
   CeMLErrorType
@@ -62,7 +62,7 @@ typedef struct {
   @dependencies
   None.
 */
-CeMLErrorType Securefs_encrypt_authenticate(
+CeMLErrorType secure_storage_encrypt_authenticate(
     uint8 *p_user_input_password, uint32 user_input_password_size,
     void *pt_ptr_in, uint32 input_data_len, void *pt_ptr_out,
     uint32 *output_data_len_ptr, void *meta_data_out_ptr,
@@ -215,19 +215,19 @@ CeMLErrorType Securefs_encrypt_authenticate(
         BLOCK_SIZE, (uint8 *)iv_ptr, BLOCK_SIZE);
     CeElMemScpy((uint8 *)meta_data_out, CEML_HASH_DIGEST_SIZE_SHA256,
                 (uint8 *)hash_out, CEML_HASH_DIGEST_SIZE_SHA256);
-
   } while (0);
 
   /* erase the kdf key */
-  err_code = (CeMLErrorType)CeML_hw_kdf(
-      cipher_cntx, CEML_KDF_SECURE_STORAGE, zero_array_kdf, ZERO_ARRAY_KEY_SIZE,
-      0, hmac_key, sizeof(hmac_key) / sizeof(hmac_key[0]));
+  CeML_hw_kdf(cipher_cntx, CEML_KDF_SECURE_STORAGE, zero_array_kdf,
+              ZERO_ARRAY_KEY_SIZE, 0, hmac_key,
+              sizeof(hmac_key) / sizeof(hmac_key[0]));
 
   if (cipher_cntx != NULL) {
     CeMLCipherDeInit(&cipher_cntx);
   }
 
   CeMLDeInit();
+
   *output_data_len_ptr = input_data_len;
 
   return err_code;
@@ -241,16 +241,16 @@ CeMLErrorType Securefs_encrypt_authenticate(
 
   @param[in] p_user_input_password    Pointer to the user input password
   @param[in] user_input_password_size user input password size in bytes
-  @param[in] input_data               Pointer to the cipherext data.
+  @param[in] pt_ptr_in                Pointer to the cipherext data.
   @param[in] input_data_len           Byte length of the ciphertext data, in
                                       multiples of 16 bytes.
-  @param[out] output_data             Pointer to the plaintext data.
+  @param[out] pt_ptr_out              Pointer to the plaintext data.
   @param[out] output_data_len_ptr     Pointer to hold the byte length of the
                                       plaintext data. output_data_len_ptr is the
                                       same value as input_data_len.
-  @param[out] meta_data_in_ptr        Pointer to the meta data, which includes
+  @param[in] meta_data_in_ptr         Pointer to the meta data, which includes
   HMAC SHA-256.
-  @param[out] meta_data_in_len        Byte length of the digest_data_out; 64
+  @param[in] meta_data_in_len         Byte length of the meta_data_in; 64
   bytes.
 
   @return
@@ -259,12 +259,11 @@ CeMLErrorType Securefs_encrypt_authenticate(
   @dependencies
   None.
 */
-CeMLErrorType
-Securefs_decrypt_authenticate(uint8 *p_user_input_password,
-                              uint32 user_input_password_size, void *pt_ptr_in,
-                              uint32 input_data_len, void *pt_ptr_out,
-                              uint32 *output_data_len_ptr,
-                              void *meta_data_in_ptr, uint32 meta_data_in_len) {
+CeMLErrorType secure_storage_decrypt_authenticate(
+    uint8 *p_user_input_password, uint32 user_input_password_size,
+    void *pt_ptr_in, uint32 input_data_len, void *pt_ptr_out,
+    uint32 *output_data_len_ptr, void *meta_data_in_ptr,
+    uint32 meta_data_in_len) {
   uint8 *input_data = (uint8 *)pt_ptr_in;
   uint8 *output_data = (uint8 *)pt_ptr_out;
   uint8 *meta_data_in = (uint8 *)meta_data_in_ptr;
@@ -414,13 +413,12 @@ Securefs_decrypt_authenticate(uint8 *p_user_input_password,
     if (err_code != CEML_ERROR_SUCCESS) {
       break;
     }
-
   } while (0);
 
   /* erase the kdf key */
-  err_code = (CeMLErrorType)CeML_hw_kdf(
-      cipher_cntx, CEML_KDF_SECURE_STORAGE, zero_array_kdf, ZERO_ARRAY_KEY_SIZE,
-      0, hmac_key, sizeof(hmac_key) / sizeof(hmac_key[0]));
+  CeML_hw_kdf(cipher_cntx, CEML_KDF_SECURE_STORAGE, zero_array_kdf,
+              ZERO_ARRAY_KEY_SIZE, 0, hmac_key,
+              sizeof(hmac_key) / sizeof(hmac_key[0]));
 
   if (cipher_cntx != NULL) {
     CeMLCipherDeInit(&cipher_cntx);
