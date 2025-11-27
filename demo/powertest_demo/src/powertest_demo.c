@@ -125,6 +125,7 @@ static wifi_shell_cxt_t *pg_wifi_shell_cxt;
 static wifi_shell_cxt_t g_wifi_shell_cxt;
 static wifi_demo_cxt_t pg_wifi_demo_cxt;
 uint8_t g_wifi_ready = 0;
+uint8_t log_enable = 1;
 extern lpr_wmi_t g_lowpower_wmi;
 extern wlan_qapi_cxt_t *gp_wlan_qapi_cxt;
 
@@ -288,7 +289,8 @@ void function_net_send_task()
                     send_bytes =
                         send(dtim_iperf_tCxt->sock_peer, dtim_iperf_tCxt->buffer, dtim_iperf_tCxt->params.tx_params.packet_size, 0);
                     send_times++;
-                    info_printf("===== sent %u bytes for %u times =====\r\n", send_bytes, send_times); 
+                    if(log_enable)
+                        info_printf("===== sent %u bytes for %u times =====\r\n", send_bytes, send_times); 
                     if ((dtim_iperf_tCxt->params.tx_params.interval_us > 0) && (send_times < dtim_iperf_tCxt->params.tx_params.packet_number)) {
                         qurt_thread_sleep(dtim_iperf_tCxt->params.tx_params.interval_us);
                     }
@@ -377,6 +379,10 @@ qapi_Status_t iperf_for_powertest(uint32_t Parameter_Count, QAPI_Console_Paramet
         } else if (0 == strcmp(Parameter_List[index].String_Value, "-i")) {
             index++;
             dtim_iperf_tCxt->params.tx_params.interval_us = Parameter_List[index].Integer_Value;
+            index++;
+        } else if (0 == strcmp(Parameter_List[index].String_Value, "-log")) {
+            index++;
+            log_enable = Parameter_List[index].Integer_Value;
             index++;
         } else {
             index++;
