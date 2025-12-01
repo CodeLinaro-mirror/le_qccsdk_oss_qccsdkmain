@@ -39,6 +39,7 @@ when         who     what, where, why
 #include "CeEL_Dm.h"
 #include "nt_common.h"
 #include "nt_logger_api.h"
+#include "qccx.h"
 
 #define CECL_HW_SEC_ACC_DIN_SIZE 16
 //#define CECL_HW_SEC_CE_STATUS_DIN_RDY (HW_REG_RD(CECL_CE_STATUS) & (1<<CECL_CE_STATUS_DIN_RDY_SHFT))
@@ -721,8 +722,9 @@ CeCLErrorType CeCLIOCtlCipherRegXfer(CeCLCipherXferType *pBufOut)
     return CECL_ERROR_NOT_SUPPORTED;
 }
 
+
 /**
- * @brief This function sets various SHA/AES registers 
+ * @brief This function start a KDF operation 
  *
  * @param
  *
@@ -743,10 +745,18 @@ CeCLErrorType CeCL_hw_kdf
   uint32 result_len_in_words
 )
 {
+#if CONFIG_SOC_QCC730V1
+    QCC730V1_LOCK_WRAPPER_L1_BASE_Type *lock_wrapper = QCC730V1_LOCK_WRAPPER_L1_BASE;
+#elif CONFIG_SOC_QCC730V2
+    QCC730V2_LOCK_WRAPPER_L1_BASE_Type *lock_wrapper = QCC730V2_LOCK_WRAPPER_L1_BASE;
+#else
+    return CECL_ERROR_NOT_SUPPORTED;
+#endif
+
     CeCLErrorType retVal = CECL_ERROR_SUCCESS;
     uint32 kdf_status = 0;
     uint32 seg_cfg_val = 0;
-    uint32 kdf_lock_state = 0;
+    uint32 kdf_lock_status = 0;
     uint32 kdf_lock_vmid = 0;
     uint32 regVal;
 
@@ -761,13 +771,15 @@ CeCLErrorType CeCL_hw_kdf
 
 
     //Request lock of access of KDF registers to lock wrapper
-    // 1)	Write 1 to LOCK_REQUEST[31] to request locking
-    // 2)	Read LOCK_STATUS.  The request is granted if LOCK_STATUS[31]=1 and LOCK_STATUS[4:0] match it?s own VMID. When LOCK_STATUS[4:0] doesn?t match VMID, the request is rejected. Master should wait some time and retry from step 1).
-    HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_REQUEST_REG_REG,0x1);
-    kdf_lock_state = (HAL_REG_RD(QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_REG) & QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_LOCK_STATUS_LOCKED_STATUS_MASK) >> QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_LOCK_STATUS_LOCKED_STATUS_OFFSET;
-    kdf_lock_vmid = (HAL_REG_RD(QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_REG) & QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_LOCK_STATUS_LOCKED_VMID_MASK) >> QWLAN_LOCK_WRAPPER_R_LOCK_STATUS_REG_LOCK_STATUS_LOCKED_VMID_OFFSET;	  
-    NT_LOG_PRINT(SECURITY, INFO, "kdf_lock_state %d, kdf_lock_vmid %d\n", kdf_lock_state, kdf_lock_vmid);
-	nt_normal_delay(1);
+    // 1) Write 1 to LOCK_REQUEST[0] to request locking
+    // 2) Read LOCK_STATUS.  The request is granted if LOCK_STATUS[31]=1 and LOCK_STATUS[4:0] match it�s own VMID. When LOCK_STATUS[4:0] doesn�t match VMID, the request is rejected. Master should wait some time and retry from step 1).
+    do {
+        lock_wrapper->lock_wrapper_l1.LOCK_WRAPPER_R_LOCK_REQUEST_REG.bit.LOCK_REQUEST_LOCK_REQUEST = 1;
+
+        kdf_lock_vmid = lock_wrapper->lock_wrapper_l1.LOCK_WRAPPER_R_LOCK_STATUS_REG.bit.LOCK_STATUS_LOCKED_VMID;
+        kdf_lock_status = lock_wrapper->lock_wrapper_l1.LOCK_WRAPPER_R_LOCK_STATUS_REG.bit.LOCK_STATUS_LOCKED_STATUS;
+    } while(kdf_lock_status != 1 || kdf_lock_vmid != CECL_MY_VMID);
+
 	  
     //Program KDF core to perform operation
   
@@ -806,7 +818,7 @@ CeCLErrorType CeCL_hw_kdf
 
     if ((kdf_status & QWLAN_KDF_CSR_R_OP_STATUS_SW_OP_STATUS_MASK) != 1) {
         NT_LOG_PRINT(SECURITY, ERR, "KDF operation failed with status: %d\n", kdf_status);
-        HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_RELEASE_REG_REG, 0x1);
+        lock_wrapper->lock_wrapper_l1.LOCK_WRAPPER_R_LOCK_RELEASE_REG.bit.LOCK_RELEASE_LOCK_RELEASE = 1;
         return CECL_ERROR_FAILURE;
     }
 	
@@ -819,7 +831,7 @@ CeCLErrorType CeCL_hw_kdf
     }	
 
     seg_cfg_val = seg_cfg_val | seg_cfg_val<<4;
-    HAL_REG_WR(QWLAN_PERISS_CRYPTO_CORE_R_CRYPTO_KEY_TABLE_CFG_REG, seg_cfg_val); 
+    HAL_REG_WR(CECL_CE_KEY_TABLE_CFG, seg_cfg_val); 
 
     if(seg_cfg_val != 0) {
         result[0] = HAL_REG_RD(QWLAN_KDF_CSR_R_DEBUG_DATA__MREG);
@@ -827,14 +839,9 @@ CeCLErrorType CeCL_hw_kdf
         result[2] = HAL_REG_RD(QWLAN_KDF_CSR_R_DEBUG_DATA__MREG+8);
         result[3] = HAL_REG_RD(QWLAN_KDF_CSR_R_DEBUG_DATA__MREG+12);  
     }
-    else {
-        if(1 != HAL_REG_RD(QWLAN_KDF_CSR_R_PASSWORD_STATUS_REG)) {
-            retVal = CECL_ERROR_FAILURE;
-        }
-    }
 
-    //Write 1 to LOCK_RELEASE[31] in lock wrapper to release KDF access.
-    HAL_REG_WR(QWLAN_LOCK_WRAPPER_R_LOCK_RELEASE_REG_REG, 0x1);
+    //Write 1 to LOCK_RELEASE[0] in lock wrapper to release KDF access.
+    lock_wrapper->lock_wrapper_l1.LOCK_WRAPPER_R_LOCK_RELEASE_REG.bit.LOCK_RELEASE_LOCK_RELEASE = 1;
   
     return retVal;
 }
