@@ -259,6 +259,10 @@ typedef enum {
     WMI_BMPS_CMPR_QOS_NULL_ENABLE_CMDID,
     WMI_BMPS_IGNORE_BCMC_CMDID,
     WMI_BMPS_TIMING_CFG_CMDID, // 0xa0=160
+    WMI_BMPS_GET_BWINDOW_WAIT_CLOSE_TIME_CMDID,
+    WMI_BMPS_GET_SOC_ACTIVE_SLEEP_TIME_CMDID,
+    WMI_BMPS_GET_TXRX_COUNTS_CMDID,
+    WMI_BMPS_SET_PERIOD_TO_RECORD_FOR_STATS_CMDID,
     WMI_BMPS_RX_FILTER_ENABLE_CMDID,
     WMI_IMPS_CFG_CMDID,
     WMI_GET_STATISTICS_CMDID,
@@ -348,6 +352,7 @@ typedef enum {
     WMI_P2P_INVITE_RCVD_RESULT_EVENTID,
     WMI_P2P_INVITE_SENT_RESULT_EVENTID,
     WMI_P2P_SDPD_RX_EVENTID,
+    WMI_BMPS_GET_STATS_EVENTID,
 
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
@@ -918,6 +923,57 @@ typedef PREPACK struct {
 #endif // NT_FN_DEBUG_STATS
 
 #if defined(NT_FN_PRODUCTION_STATS) || defined(NT_FN_DEBUG_STATS)
+/*
+ * WMI_SET_CHANNEL_PARAMS_CMDID
+ */
+
+
+typedef enum {
+    BWINDOW_WAIT_CLOSE_TIME,
+    SOC_ACTIVE_SLEEP_TIME
+} BMPS_STATS_TYPE;
+
+typedef struct {
+    uint16_t sleep_time;
+    uint16_t active_time;
+} active_sleep_time_record;
+
+typedef struct {
+    uint32_t accumulated_sleep_time_latest;
+    uint32_t accumulated_active_time_latest;
+    uint32_t accumulated_sleep_time_total;
+    uint32_t accumulated_active_time_total;
+    uint32_t time_recorded_latest;
+    uint32_t time_recorded_total;
+    uint16_t record_counts_latest;
+    uint16_t record_counts_total;
+    NT_BOOL get_failed;
+} pm_stats_active_sleep_time_record_buffer_t;
+
+typedef struct {
+    uint16_t tx_counts_last;
+    uint16_t rx_counts_last;
+    uint32_t tx_counts_accumulated;
+    uint32_t rx_counts_accumulated;
+    uint32_t time_last;
+    uint32_t time_recorded;
+    NT_BOOL get_failed;
+} pm_stats_tx_rx_counts_record_buffer_t;
+
+typedef PREPACK struct {
+    pm_stats_active_sleep_time_record_buffer_t *bwindow_wait_close_time;
+    pm_stats_active_sleep_time_record_buffer_t *soc_active_sleep_time;
+    pm_stats_tx_rx_counts_record_buffer_t *tx_rx_counts;
+    uint32_t period_to_record;
+    uint32_t start_time;
+    NT_BOOL expired;
+} POSTPACK WMI_BMPS_GET_STATS;
+
+typedef PREPACK struct {
+    uint8_t noise_floor;
+    uint8_t pd_threshold;
+} POSTPACK WMI_GET_NOISE_STATUS;
+
 typedef struct {
 #ifdef NT_FN_PRODUCTION_STATS
     uint16_t bmps_enter_count;
@@ -932,14 +988,19 @@ typedef struct {
     uint32_t bmps_count_minimal_code_sleep_immediate;
     uint32_t total_awake_time;
     uint32_t total_sleep_time;
-    uint64_t last_bmps_exit_time;
-    uint64_t last_bmps_enter_time;
+    uint32_t last_bmps_exit_time;
+    uint32_t last_bmps_enter_time;
+    uint32_t last_bmps_sleep_time;
+    uint32_t last_bmps_awake_time;
     uint64_t max_awake_time;
     uint64_t min_awake_time;
     uint32_t max_sleep_time;
     uint32_t min_sleep_time;
+    uint32_t bmps_beacon_wait_time;
 #endif // NT_FN_DEBUG_STATS
+    WMI_BMPS_GET_STATS bmps_stats;
 } pm_statistics_t;
+
 
 typedef struct {
 #ifdef NT_FN_PRODUCTION_STATS
@@ -2504,6 +2565,16 @@ typedef PREPACK struct {
 typedef PREPACK struct {
     uint8_t enable;
 } POSTPACK WMI_BMPS_ENABLE;
+
+typedef PREPACK struct {
+    uint8_t n_data;
+    pm_stats_active_sleep_time_record_buffer_t *record;
+} POSTPACK WMI_BMPS_GET_BWINDOW_WAIT_CLOSE_TIME;
+
+typedef PREPACK struct {
+    uint8_t n_data;
+    pm_stats_active_sleep_time_record_buffer_t *record;
+} POSTPACK WMI_BMPS_GET_SOC_ACTIVE_SLEEP_TIME;
 
 typedef PREPACK struct {
     uint8_t enable;

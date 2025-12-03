@@ -835,4 +835,9 @@ uint64_t ptsm_compute_s2w_compensation_time(PM_STRUCT *pPmStruct, sleep_mode mod
 void nt_wpm_wakeup_channel_restore(devh_t *dev, halphy_cal_profile_t profile);
 
 uint8_t nt_pm_check_if_wkup_from_network_activity(PM_STRUCT *pPmStruct);
+
+void pm_save_active_sleep_time_record(devh_t *dev, uint32_t sleep_time, uint32_t active_time, BMPS_STATS_TYPE type);
+void pm_save_tx_rx_counts_during_certain_period(devh_t *dev);
+void pm_statistic_init(pm_statistics_t * pm_statistics);
+void pm_statistic_deinit(pm_statistics_t * pm_statistics);
 #endif  // _WLAN_POWER_H_

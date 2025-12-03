@@ -149,6 +149,7 @@ int wlan_qapi_init(void)
     p_cxt->wlan_send_raw_block_mode = true;
     p_cxt->wlan_set_mgmt_filter_block_mode = true;
     p_cxt->wlan_get_tx_power_block_mode = true;
+    p_cxt->wlan_get_bmps_stats_block_mode = true;
 
     wmi_register_event_handler(wmi_event_relay, (void *)p_cxt);
     p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf_length = QAPI_EVENT_LARGE_PAYLOAD_LENGTH_MAX;
@@ -163,6 +164,10 @@ int wlan_qapi_init(void)
     p_cxt->pScanOutSize =
         sizeof(qapi_WLAN_Scan_Comp_Evt_t) + sizeof(qapi_WLAN_BSS_Scan_Info_t) * p_cxt->scanBssMaxCount;
     p_cxt->pScanOut = malloc(p_cxt->pScanOutSize);
+    p_cxt->cmd_bmps_stats.bwindow_wait_close_time = (pm_stats_active_sleep_time_record_buffer_t *)malloc(sizeof(pm_stats_active_sleep_time_record_buffer_t));
+    p_cxt->cmd_bmps_stats.soc_active_sleep_time = (pm_stats_active_sleep_time_record_buffer_t *)malloc(sizeof(pm_stats_active_sleep_time_record_buffer_t));
+    p_cxt->cmd_bmps_stats.tx_rx_counts = (pm_stats_tx_rx_counts_record_buffer_t *)malloc(sizeof(pm_stats_tx_rx_counts_record_buffer_t));
+
     p_cxt->opmode = WHAL_M_AP;
     p_cxt->conc_mode = WHAL_M_NO_CONC;
     wlan_clear_privacy();

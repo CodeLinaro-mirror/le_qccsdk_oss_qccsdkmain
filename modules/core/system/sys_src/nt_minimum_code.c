@@ -25,6 +25,7 @@
 #include "wifi_fw_pmu_ts_cfg.h"
 #include "hal_int_modules.h"
 #include "data_path.h"
+#include "wmi.h"
 
 #if defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD)
 #include "wifi_fw_cpr_driver.h"
@@ -468,14 +469,13 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
 #ifdef COMPENSATE_AON_PROG_DELAY
         /* Apply correction post wake up from deep sleep */
         /* Total sleep time = AON measured sleep time + AON programming time + US2MS error carried forward */
-        uint64_t nt_socpm_slp_time_us =
+        uint32_t nt_socpm_slp_time_us =
             (nt_socpm_get_slp_tmr_us() + g_socpm_struct.aon_program_time_us + g_socpm_struct.unapplied_err_us);
         nt_socpm_slp_time_total += US_TO_MS(nt_socpm_slp_time_us);
         g_socpm_struct.unapplied_err_us = nt_socpm_slp_time_us % 1000;
 #else  /* COMPENSATE_AON_PROG_DELAY */
         nt_socpm_slp_time_total += US_TO_MS(nt_socpm_get_slp_tmr_us());
 #endif /* COMPENSATE_AON_PROG_DELAY */
-
 #ifdef FIRMWARE_APPS_INFORMED_WAKE
         uint32_t lic_int_status = NT_REG_RD(QWLAN_PMU_AON_LIC_INT_STAT_REG);
         if (lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK) {
@@ -488,7 +488,11 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
                           : 0;
 #ifdef FIRMWARE_APPS_INFORMED_WAKE
         }
-#endif /* FIRMWARE_APPS_INFORMED_WAKE */
+        #endif /* FIRMWARE_APPS_INFORMED_WAKE */
+        if(pPmStruct->pm_statistics.bmps_stats.period_to_record > 0){
+            pm_save_active_sleep_time_record(gdevp, nt_socpm_slp_time_us, pPmStruct->pm_statistics.bmps_beacon_wait_time, BWINDOW_WAIT_CLOSE_TIME);
+        }
+
         if (test_f) {
             _minprintf("TesT", wkup_us >> 32, (unsigned int)wkup_us);
         }

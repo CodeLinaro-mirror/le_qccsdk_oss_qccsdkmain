@@ -658,6 +658,19 @@ static void wmi_get_rate_event(void *msg)
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
 
+static void wmi_get_bmps_stats_event(void *msg)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+
+    if (p_cxt->wlan_disable_block_mode) {
+        qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_BMPS_STATS);
+    }
+
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+}
+
 static void wmi_set_mgmt_filter_event(void *msg)
 {
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
@@ -1202,6 +1215,9 @@ static void wmi_event_dispatch(event_t event_id, void *data)
         wmi_wps_fail_event(data);
         break;
 #endif
+    case WMI_BMPS_GET_STATS_EVENTID:
+        wmi_get_bmps_stats_event(data);
+        break;
 
 #if CONFIG_ENABLE_P2P_MODE
     case WMI_P2P_LIST_PERSISTENT_NETWORK_EVENTID:
@@ -1666,6 +1682,54 @@ qapi_Status_t wmi_get_rate(void)
     wmi_cmd_send(WMI_GET_RATE, (void *)(&(p_cxt->rate_param)), sizeof(qapi_WLAN_Set_Rate_Params_t));
     if (p_cxt->wlan_set_rate_block_mode) {
         qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_RATE, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+
+    ret = get_wlan_qapi_error();
+    return ret;
+}
+
+qapi_Status_t  wmi_get_bmps_bwindow_wait_close_time_stats(void)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_Status_t ret = QAPI_WLAN_ERROR;
+
+    wmi_cmd_send(WMI_BMPS_GET_BWINDOW_WAIT_CLOSE_TIME_CMDID, (void *)(p_cxt->cmd_bmps_stats.bwindow_wait_close_time), sizeof(pm_stats_active_sleep_time_record_buffer_t));
+    if (p_cxt->wlan_get_bmps_stats_block_mode) {
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_BMPS_STATS, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+
+    ret = get_wlan_qapi_error();
+    return ret;
+}
+
+qapi_Status_t  wmi_get_bmps_soc_active_sleep_time_stats(void)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_Status_t ret = QAPI_WLAN_ERROR;
+
+    wmi_cmd_send(WMI_BMPS_GET_SOC_ACTIVE_SLEEP_TIME_CMDID, (void *)(p_cxt->cmd_bmps_stats.soc_active_sleep_time), sizeof(pm_stats_active_sleep_time_record_buffer_t));
+    if (p_cxt->wlan_get_bmps_stats_block_mode) {
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_BMPS_STATS, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+
+    ret = get_wlan_qapi_error();
+    return ret;
+}
+
+qapi_Status_t  wmi_get_bmps_tx_rx_counts(void)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_Status_t ret = QAPI_WLAN_ERROR;
+
+    wmi_cmd_send(WMI_BMPS_GET_TXRX_COUNTS_CMDID, (void *)(p_cxt->cmd_bmps_stats.tx_rx_counts), sizeof(pm_stats_tx_rx_counts_record_buffer_t));
+    if (p_cxt->wlan_get_bmps_stats_block_mode) {
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_BMPS_STATS, QURT_SIGNAL_ATTR_CLEAR_MASK);
     } else {
         log_printf("unblock mode, should check WMI cmd done in event cb\n");
     }
