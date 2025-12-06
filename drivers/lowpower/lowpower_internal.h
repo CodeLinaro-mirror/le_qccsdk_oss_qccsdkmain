@@ -33,6 +33,8 @@ typedef union {
         /**< To enable/disable BMPS power optimization. */
         WMI_BMPS_CMPR_QOS_NULL_ENABLE bmps_cmpr_qos_null_enable;
         /**< To enable/disable compressing qos-null sending */
+        WMI_BMPS_GET_STATS bmps_stats_record;
+        /**< Get bwindow or soc active & sleep time */
     } bmps_cfg;
     /**< BMPS cfg, used in qapi_bmps_cfg. */
     WMI_BMPS_IGNORE_BCMC bmps_ignore_bcmc;

@@ -65,6 +65,7 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t wlan_send_raw_block_mode : 1;
     uint32_t wlan_set_mgmt_filter_block_mode : 1;
     uint32_t wlan_get_tx_power_block_mode : 1;
+    uint32_t wlan_get_bmps_stats_block_mode : 1;
     qapi_Status_t wlan_qapi_error;
     dev_common_t *dev_common;
     wlan_evt_payload_t event_payload_buf[EVT_PAYLOAD_MAX];
@@ -109,6 +110,7 @@ typedef struct wlan_qapi_cxt_s {
 #ifdef CONFIG_WPS
     WMI_WPS_START_CMD wps_param;
 #endif
+    WMI_BMPS_GET_STATS cmd_bmps_stats;
 #ifdef CONFIG_ENABLE_P2P_MODE
     qapi_WLAN_P2P_Node_List_Params_t get_p2p_nodelist;
     qapi_WLAN_P2P_Event_Cb_Info_t p2p_Event_Cb_Info;
