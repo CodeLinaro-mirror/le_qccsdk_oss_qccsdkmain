@@ -32,6 +32,7 @@
 #define USER_PASSWORD_SIZE 16
 #define META_DATA_SIZE 64         // for Secure Storage tests
 #define RANDOMTEST_OPERATIONS 100 // number of operations to run in random test
+#define MAX_WRITE_BUFFER_SIZE (20 * 1024) // 20K limit
 
 /*
  * This variable is a password that is used for SecureFs when the explicit
@@ -389,10 +390,10 @@ int securefs_write_func(const char *name, const uint8_t *buf) {
   write_func(name, 0, &securefs_visible_header,
              sizeof(securefs_visible_header));
 
-  /* write the meta meta */
+  /* write the meta data */
   write_func(name, sizeof(securefs_visible_header), &meta_data, META_DATA_SIZE);
 
-  /* write the encrypted meta */
+  /* write the encrypted data */
   write_func(name, sizeof(securefs_visible_header) + META_DATA_SIZE,
              output_data, output_data_len);
 
@@ -415,15 +416,56 @@ static qapi_Status_t securefs_write(uint32_t Parameter_Count,
   char *name = NULL;
   int offset = 0;
   uint8_t *buf = NULL;
+  uint8_t *dup_hex = NULL;
+  bool should_free_buf = false;
 
-  if (Parameter_Count != 2 || !Parameter_List) {
+  if ((Parameter_Count != 2 && Parameter_Count != 3) || !Parameter_List) {
     return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
   }
 
-  name = Parameter_List[0].String_Value;
-  buf = (uint8_t *)Parameter_List[1].String_Value;
+  if (Parameter_Count == 2) {
+    name = Parameter_List[0].String_Value;
+    buf = (uint8_t *)Parameter_List[1].String_Value;
+  } else if (Parameter_Count == 3) {
+    if (!Parameter_List[2].Integer_Is_Valid) {
+      printf("Invalid buffer size parameter\n");
+      return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    dup_hex = (uint8_t *)Parameter_List[1].String_Value;
+
+    if (!dup_hex || !isxdigit((int)dup_hex[0]) || (strlen(dup_hex) != 1)) {
+      printf("hex data in hex, please enter [0-9] or [A-F]\r\n");
+      return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (Parameter_List[2].Integer_Value <= 0 ||
+        Parameter_List[2].Integer_Value > MAX_WRITE_BUFFER_SIZE) {
+      printf("Invalid buffer size. Must be between 1 and %d\n",
+             MAX_WRITE_BUFFER_SIZE);
+      return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    name = Parameter_List[0].String_Value;
+    buf = (uint8_t *)malloc(Parameter_List[2].Integer_Value + 1);
+
+    if (!buf) {
+      printf("fail to allocate memory\n");
+      return QAPI_ERROR;
+    }
+    should_free_buf = true;
+
+    for (int i = 0; i < Parameter_List[2].Integer_Value; i++) {
+      buf[i] = dup_hex[0];
+    }
+    buf[Parameter_List[2].Integer_Value] = '\0';
+  }
 
   securefs_write_func(name, buf);
+
+  if (should_free_buf) {
+    free(buf);
+  }
 
   return QAPI_OK;
 }
@@ -500,8 +542,7 @@ int sucurefs_read_func(const char *name, size_t len_read) {
       for (int i = 0; i < plain_data_len; i++) {
         printf("%02X", (unsigned char)output_data[i]);
       }
-      printf("\r\n read length exceeds plain data length, only dispaly plain "
-             "data\n");
+      printf("\r\nread length exceeds plain data length\n");
     } else {
       for (int i = 0; i < len_read; i++) {
         printf("%02X", (unsigned char)output_data[i]);
@@ -534,6 +575,11 @@ static qapi_Status_t securefs_read(uint32_t Parameter_Count,
     return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
   }
 
+  if (!Parameter_List[1].Integer_Is_Valid) {
+    printf("Invalid buffer size parameter\n");
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+  }
+
   path = Parameter_List[0].String_Value;
   len_read = Parameter_List[1].Integer_Value;
 
@@ -550,7 +596,9 @@ const QAPI_Console_Command_t securefs_cmd_list[] = {
     {securefs_read, "read", "/path <length>",
      "reads and decrypts length bytes of data from the opened file and prints "
      "it as hex"},
-    {securefs_write, "write", "/path <hex_data>",
+    {securefs_write, "write",
+     "/path <hex_data> [num of consecutive hex bytes if hex_data consists of a "
+     "single hex character]",
      "encrypts the hex data and writes it into opened file"},
     {securefs_rm, "rm", "/path", "remove file or empty folder"},
     //{securefs_run_unittest, "run_unittest", "<number_of_unittests_to_run>"},
