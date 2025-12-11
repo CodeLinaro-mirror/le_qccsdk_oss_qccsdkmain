@@ -29,6 +29,7 @@ when         who     what, where, why
 #include <stdlib.h>
 #include "nt_common.h"
 #include <unistd.h>
+#include "nt_logger_api.h"
 
 /*===========================================================================
 
@@ -2774,32 +2775,30 @@ static CeMLErrorType CeMLCCMStarAuth(CeMLCntxHandle *ceMlHandle, CeMLIovecListTy
 }
 
 /**
- * @brief Hardware KDF function does three things: (1) Configure M0/M4 crypto key based on VMID (2) Enable debug based
- * on provided password & derived password from Hardware KDF (3) Activate/revocate RoT (Root of Trust) More specifically
- * KDF op code 2~5 and 9~11 are key derivation operations. KDF generates the key and route it to key table in Crypto
- * Core of M0 or M4 according to the VMID of the AHB master. KDF op code 1, 6, 7 and 8 are password involved operations.
- * Master enter a password and other parameter and then start the operation. KDF generates a HW password and compare it
- * with the one from master. Debug enable vector, RoT activation and revocation vector is valid only when passwords
- * match.
- *
- * @param[in] cntx             : Pointer to a CEML cntx. Needed if key is routed to the Key Table
- * @param[in] client_name      : Name of client
- * @param[in] opCode	        : KDF command to run
- * @param[in] user_input	    : Pointer to use input for KDF operation
- * @param[in] user_input_len	: Length (Bytes) of user input. It must be max of 16 bytes
- * @param[in] password	        : Password to match against (for operations that results in password)
- * @param[out]result	        : Success/fail for opcode that requires password matching
- * @param[in] result_len_in_words : length of result pointer in words.
- *
- *
- * @return CEML_ERROR_SUCCESS if successful,
- *         CEML_ERROR_FAILURE otherwise
- *
- * @dependenies -
- *
- * @sideeffects
- *
- */
+  * @brief Hardware KDF function does three things: (1) Configure M4 crypto key based on VMID (2) Enable debug based on provided password & derived password from Hardware KDF
+  *                                                 (3) Activate/revocate RoT (Root of Trust)
+  *                                                 More specifically KDF op code 2~5 and 9~11 are key derivation operations. KDF generates the key and route it to key table in Crypto Core of
+  *                                                 M4 according to the VMID of the AHB master.
+  *                                                 KDF op code 1, 6, 7 and 8 are password involved operations. Master enter a password and other parameter and then start the operation.
+  *                                                 KDF generates a HW password and compare it with the one from master. Debug enable vector, RoT activation and revocation vector is valid only when passwords match.
+  *
+  * @param[in] cntx             : It is not used right now. Reserved for future extension
+  * @param[in] opCode	        : KDF command to run
+  * @param[in] user_input	    : Pointer to use input for KDF operation
+  * @param[in] user_input_len	: Length (Bytes) of user input. It must be max of 16 bytes
+  * @param[in] password	        : Password to match against (for operations that results in password)
+  * @param[out]result	        : KDF output
+  * @param[in] result_len_in_words : length of result pointer in words.
+  *
+  *
+  * @return CEML_ERROR_SUCCESS if successful,
+  *         CEML_ERROR_FAILURE otherwise
+  *
+  * @dependenies -
+  *
+  * @sideeffects
+  *
+  */
 
 CeMLErrorType CeML_hw_kdf(CeMLCntxHandle *ceMlHandle, CeMLKdfOpCode opCode, uint8 *user_input, uint32 user_input_len,
                           uint64 password, uint32 *result, uint32 result_len_in_words)
@@ -2813,10 +2812,15 @@ CeMLErrorType CeML_hw_kdf(CeMLCntxHandle *ceMlHandle, CeMLKdfOpCode opCode, uint
         return CEML_ERROR_FAILURE;
     }
 
-    CeElMutexEnter();
+    /*currently only support secure storage */
+    if (opCode != CECL_KDF_SECURE_STORAGE) {
+        return CEML_ERROR_FAILURE;
+    }
 
+    CeElMutexEnter();
     ret = (CeMLErrorType)CeElEnableKDFClock();
     if (CEML_ERROR_SUCCESS != ret) {
+        CeElMutexExit();
         return ret;
     }
 
@@ -3003,4 +3007,229 @@ CeMLErrorType CeMLCmacFinal(CeMLCntxHandle *ceMlHandle, CEMLIovecListType ioVecI
     CeElMemScpy(ioVecOut->iov->pvBase, ioVecOut->iov->dwLen, (uint8 *)hashCntx->ctx.auth_iv, ioVecOut->iov->dwLen);
 
     return CEML_ERROR_SUCCESS;
+}
+
+#define BLOCK_SIZE 16
+#define IS_32_MEM_RANGE(ptr, len) (((uint64)ptr + (uint64)len) <= 0xFFFFFFFF)
+
+typedef struct
+{
+  CeCLCipherCntxType    ctx;
+}CeMLUtilCipherAlgoCntxType;
+
+CeMLErrorType  CeML_util_encrypt_with_key (uint8 key_type, uint8 *key, uint8 key_len, uint8 *iv_ptr, uint8 iv_len, void *pt_ptr_in, uint32 input_data_len, void  *pt_ptr_out, uint32  *output_data_len_ptr)
+{
+  uint8*      input_data = (uint8*) pt_ptr_in;
+  uint8*      output_data = (uint8*) pt_ptr_out;
+  uint32      aes_key[4] = {0x0};
+  
+  CeMLIovecListType   ioVecIn;
+  CeMLIovecListType   ioVecOut;
+   
+  CeMLIovecType       IovecIn;
+  CeMLIovecType       IovecOut; 
+  CeMLCntxHandle*   cipher_cntx = NULL;
+  CeMLCntxHandle    ceMlHandle;
+  CeMLUtilCipherAlgoCntxType ClientCtxt;
+  CeMLCipherDir       cipher_direction;  
+  CeMLCipherModeType  cipher_mode;  
+  CeMLErrorType err_code = CEML_ERROR_SUCCESS;
+
+  /* Only support multiples of the block size for now.*/
+  if ((NULL == input_data) || (NULL == output_data) || (NULL == iv_ptr) || (NULL == key) ||
+      (NULL == output_data_len_ptr) || (input_data_len % BLOCK_SIZE != 0) || key_len != 16 || iv_len != 16)
+    return CEML_ERROR_INVALID_PARAM;
+
+  if ((*output_data_len_ptr < input_data_len + CEML_AES_IV_SIZE) || (!IS_32_MEM_RANGE((uint32)output_data,*output_data_len_ptr))) {
+    return CEML_ERROR_INVALID_PARAM;
+  }
+
+  cipher_cntx = &ceMlHandle;
+  cipher_cntx->pClientCtxt = &ClientCtxt;
+
+  ioVecIn.size = 1;
+  ioVecOut.size = 1;
+  ioVecIn.iov = &IovecIn;
+  ioVecOut.iov = &IovecOut;
+  ioVecIn.iov->dwLen = input_data_len;  
+  ioVecIn.iov->pvBase = (void*)input_data;
+  ioVecOut.iov->dwLen = input_data_len;  
+  ioVecOut.iov->pvBase = (void*)output_data ;
+  
+  do {
+    err_code = CeMLInit();
+    if (CEML_ERROR_SUCCESS != err_code) {   
+      break;
+    }
+
+    err_code = CeMLCipherInit(&cipher_cntx, CEML_CIPHER_ALG_AES128);
+    if(CEML_ERROR_SUCCESS != err_code) {
+       break;
+    }
+
+	cipher_mode = CEML_CIPHER_MODE_CBC;
+    err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_MODE, &cipher_mode, sizeof(CeMLCipherModeType));
+    if (CEML_ERROR_SUCCESS != err_code) {   
+      break;
+    }
+
+	if(key_type == 0) {
+        /*deriving a cipher key from HW key*/
+        err_code = CeML_hw_kdf(cipher_cntx, CEML_KDF_SECURE_STORAGE, key, key_len, 0, aes_key, 4);
+
+        if (CEML_ERROR_SUCCESS != err_code) {   
+          break;
+        }
+
+		err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_KEY, NULL, CEML_AES128_KEY_SIZE);
+    	if (CEML_ERROR_SUCCESS != err_code) {   
+      		break;
+    	}
+	}
+	else {
+		err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_KEY, key, CEML_AES128_KEY_SIZE);
+    	if (CEML_ERROR_SUCCESS != err_code) {   
+      		break;
+    	}
+	}
+
+    err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_IV, iv_ptr, BLOCK_SIZE);
+    if (CEML_ERROR_SUCCESS != err_code) {   
+      break;
+    }
+
+    /* Encrypt the data */
+    cipher_direction = CEML_CIPHER_ENCRYPT;
+    err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_DIRECTION, &cipher_direction, sizeof(CeMLCipherDir));
+    if (CEML_ERROR_SUCCESS != err_code) {   
+      break;
+    }
+
+    err_code = CeMLCipherData(cipher_cntx, ioVecIn, &ioVecOut);  
+    if( err_code != CEML_ERROR_SUCCESS ) {
+        break;
+    }      
+
+    CeElMemScpy((uint8*)((uint8*)output_data+input_data_len), BLOCK_SIZE, (uint8*)iv_ptr, BLOCK_SIZE);
+  }while(0);
+
+  if(cipher_cntx != NULL) {
+    CeMLCipherDeInit(&cipher_cntx);
+  }
+
+  CeMLDeInit(); 
+  *output_data_len_ptr = input_data_len + BLOCK_SIZE;
+
+  return err_code;
+}
+
+CeMLErrorType CeML_util_decrypt_with_key (uint8 key_type, uint8 *key, uint8 key_len, void *pt_ptr_in, uint32 input_data_len, void  *pt_ptr_out, uint32  *output_data_len_ptr)
+{
+  uint8*      input_data = (uint8*) pt_ptr_in;
+  uint8*      output_data = (uint8*) pt_ptr_out;
+  uint8       iv_ptr[CEML_AES_IV_SIZE] = {0x0};
+  uint32      aes_key[4]  = {0x0};
+  
+  CeMLIovecListType   ioVecIn;
+  CeMLIovecListType   ioVecOut;
+  CeMLIovecType       IovecIn;
+  CeMLIovecType       IovecOut;  
+  CeMLCntxHandle*   cipher_cntx = NULL;
+  CeMLCntxHandle    ceMlHandle;
+  CeMLUtilCipherAlgoCntxType ClientCtxt;
+  CeMLCipherDir       cipher_direction;  
+  CeMLCipherModeType  cipher_mode;  
+  CeMLErrorType err_code = CEML_ERROR_SUCCESS;
+
+  /* Only support multiples of the block size for now.*/
+  if ((NULL == input_data) || (NULL == output_data) ||
+      (NULL == output_data_len_ptr) || (input_data_len % BLOCK_SIZE != 0) || input_data_len <= BLOCK_SIZE || key_len != 16)
+    return CEML_ERROR_INVALID_PARAM;
+
+  //output length needs to be equal to input length and checking for wraparound
+  if ((*output_data_len_ptr < input_data_len - BLOCK_SIZE) || (!IS_32_MEM_RANGE((uint32)output_data,*output_data_len_ptr))) {
+    return CEML_ERROR_INVALID_PARAM;
+  }
+  
+  CeElMemScpy((uint8*)iv_ptr, BLOCK_SIZE, (uint8*)((uint8*)input_data+(input_data_len-BLOCK_SIZE)), BLOCK_SIZE);
+
+  cipher_cntx = &ceMlHandle;
+  cipher_cntx->pClientCtxt = &ClientCtxt;
+
+  ioVecIn.size = 1;
+  ioVecOut.size = 1;
+  ioVecIn.iov = &IovecIn;
+  ioVecOut.iov = &IovecOut;
+  ioVecIn.iov->dwLen = input_data_len - BLOCK_SIZE;  
+  ioVecIn.iov->pvBase = (void*)input_data;
+  ioVecOut.iov->dwLen = input_data_len - BLOCK_SIZE; 
+  ioVecOut.iov->pvBase = (void*)output_data;
+  do {
+
+    err_code = CeMLInit();
+    if (CEML_ERROR_SUCCESS != err_code) {   
+      break;
+    }
+
+    err_code = CeMLCipherInit(&cipher_cntx, CEML_CIPHER_ALG_AES128);
+    if(CEML_ERROR_SUCCESS!=err_code) {
+       break;
+    }
+
+	cipher_mode = CEML_CIPHER_MODE_CBC;
+    err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_MODE, &cipher_mode, sizeof(CeMLCipherModeType));
+    if (CEML_ERROR_SUCCESS != err_code) {   
+      break;
+    }
+
+
+	if(key_type == 0) {
+        /*deriving a cipher key from HW key*/
+        err_code = CeML_hw_kdf(cipher_cntx, CEML_KDF_SECURE_STORAGE, key, key_len, 0, aes_key, 4);
+        if (CEML_ERROR_SUCCESS != err_code) {   
+          break;
+        }
+
+		err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_KEY, NULL, CEML_AES128_KEY_SIZE);
+    	if (CEML_ERROR_SUCCESS != err_code) {   
+      		break;
+    	}
+	}
+	else {
+		err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_KEY, key, CEML_AES128_KEY_SIZE);
+    	if (CEML_ERROR_SUCCESS != err_code) {   
+      		break;
+    	}
+	}
+
+    err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_IV, iv_ptr, BLOCK_SIZE);
+    if (CEML_ERROR_SUCCESS != err_code) {   
+      break;
+    }
+
+      /* Decrypt the data */
+    cipher_direction = CEML_CIPHER_DECRYPT;
+    err_code = CeMLCipherSetParam(cipher_cntx, CEML_CIPHER_PARAM_DIRECTION, &cipher_direction, sizeof(CeMLCipherDir));
+
+ 	if (CEML_ERROR_SUCCESS != err_code) {   
+      break;
+    }
+
+    err_code = CeMLCipherData(cipher_cntx, ioVecIn, &ioVecOut);  
+    if( err_code != CEML_ERROR_SUCCESS ) {
+        break;
+    }      
+
+  }while(0);
+
+  if(cipher_cntx != NULL) {
+    CeMLCipherDeInit(&cipher_cntx);
+  }
+
+  CeMLDeInit();
+
+  *output_data_len_ptr = input_data_len - BLOCK_SIZE;
+
+  return err_code;
+
 }

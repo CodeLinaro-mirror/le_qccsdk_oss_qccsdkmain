@@ -10,6 +10,7 @@
 #include "nt_flags.h"
 #include "nt_logger_api.h"
 #include "ferm_mpu.h"
+#include "wifi_fw_pwr_cb_infra.h"
 
 #define ALIGN_ADDRESS(addr, size)   ((addr) & (~(size - 1)))
 #define ADDRESS_ALIGNED(addr, size) ((addr) & ((size - 1)))
@@ -24,11 +25,11 @@ mpu_region_t Fermion_MPU_Region[8] = {
         {0x00, 	0x0,		0x100000,	0x01,		0x03,		0xe0},
         {0x01, 	0x0,		0x8000,		0x00,		0x06,		0x00},
         {0x02, 	0x10000,	0x10000,	0x00,		0x06,		0x1f},
-        {0x03, 	0x20000,	0x10000,	0x00,		0x06,		0xe0},
+        {0x03, 	0x0,	    0x0,    	0x00,		0x00,		0x0},
         {0x04, 	0x200000,	0x200000,	0x00,		0x06,		0xc0},
         {0x05, 	0x200000,	0x80000,	0x01,		0x03,		0xe0},
-        {0x06, 	0x0,		0x0,		0x00,		0x00,		0x00},
-        {0x07, 	0x0,		0x0,		0x00,		0x00,		0x00},
+        {0x06, 	0x370000,	0x10000,	0x01,		0x03,		0x1f},
+        {0x07, 	0x0,	    0x400,      0x00,       0x03,       0x07}
     */
     {0x00, CONFIG_FERM_MPU_0_START, CONFIG_FERM_MPU_0_SIZE, CONFIG_FERM_MPU_0_XN, CONFIG_FERM_MPU_0_ACCESS,
      CONFIG_FERM_MPU_0_SUBREGION},
@@ -127,5 +128,26 @@ void ferm_mpu_config(void)
     /* Enable background region, Enable MPU for exception handlers
        Back ground region would cover permissions for all the device memory */
     MPU_DEP.MPU_CTRL = MPU_CTRL_ENABLE | MPU_CTRL_HFNMI_ENABLE | MPU_CTRL_PRIVDEF_ENABLE;
+
     ferm_memory_barrier();
+}
+
+void ferm_mpu_power_state_change_cb(uint8_t evt)
+{
+    if (evt == PWR_EVT_WMAC_PRE_SLEEP) {
+        MPU_DEP.MPU_CTRL = 0x0;
+        ferm_memory_barrier();
+    }
+
+    if ((evt == PWR_EVT_WMAC_POST_AWAKE) || (evt == PWR_EVT_WMAC_SLEEP_ABORT)) {
+        ferm_mpu_config();
+    }
+
+}
+
+void ferm_mpu_init(void)
+{
+    ferm_mpu_config();
+    fpci_evt_cb_reg((ps_evt_cb_t)&ferm_mpu_power_state_change_cb,
+                    PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, 10, NULL);
 }

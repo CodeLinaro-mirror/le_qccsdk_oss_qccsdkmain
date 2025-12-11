@@ -41,7 +41,7 @@
 
 #define FW_UPGRADE_FLAG_AUTO_REBOOT             (1 << 0)
 #define FW_UPGRADE_FLAG_DUPLICATE_ACTIVE_FS     (1 << 1)
-#define FW_UPGRADE_FLAG_DUPLICATE_KEEP_TRIAL_FS (1 << 2)
+#define FW_UPGRADE_FLAG_RANGE_HEADER            (1 << 2)
 
 #define UNUSED(x) (void)(x)
 
@@ -260,7 +260,12 @@ static int32_t fw_upgrade_plugin_recv_data(uint8_t *buffer, uint32_t buf_len, ui
     if (fw_upgrade_cxt == NULL)
         return FW_UPGRADE_ERR_SESSION_NOT_START_E;
 
-    ret = (int32_t)fw_upgrade_cxt->plugin.fw_upgrade_plugin_recv_data(buffer, buf_len, ret_size, init_param);
+    if (fw_upgrade_cxt->flags & FW_UPGRADE_FLAG_RANGE_HEADER) {
+        ret = (int32_t)fw_upgrade_cxt->plugin.fw_upgrade_plugin_recv_data(buffer, buf_len, ret_size, &fw_upgrade_cxt->flags);
+    } else{
+        ret = (int32_t)fw_upgrade_cxt->plugin.fw_upgrade_plugin_recv_data(buffer, buf_len, ret_size, init_param);
+    }
+
     return ret;
 }
 
@@ -901,7 +906,6 @@ static fw_upgrade_status_code_t fw_upgrade_process_receive_image(uint8_t *buffer
 
     /* get block size */
     fw_upgrade_get_mem_block_size(&block_size);
-
     while (1) {
         /* for all-in-one fw upgrade case */
         if (fw_upgrade_cxt->format != FW_UPGRADE_FORAMT_PARTIAL_UPGRADE) {
@@ -1583,8 +1587,12 @@ static int32_t fw_upgrade_session_process(void)
             case FW_UPGRADE_STATE_RECEIVE_DATA_E:
                 fw_upgrade_update_callback(fw_upgrade_get_state(), fw_upgrade_get_error_code());
                 /* Receiving data from FTP server.*/
-                ret = fw_upgrade_plugin_recv_data((uint8_t *)buffer, FW_UPGRADE_BUF_SIZE, &received,
-                                                  fw_upgrade_cxt->init_param);
+                if (fw_upgrade_cxt->flags & FW_UPGRADE_FLAG_RANGE_HEADER) {           
+                    ret = fw_upgrade_plugin_recv_data((uint8_t *)buffer, FW_UPGRADE_BUF_SIZE, &received, &fw_upgrade_cxt->flags);
+                } else {
+                    ret = fw_upgrade_plugin_recv_data((uint8_t *)buffer, FW_UPGRADE_BUF_SIZE, &received, fw_upgrade_cxt->init_param);
+                }
+
                 if ((ret == FW_UPGRADE_OK_E) && (received > 0)) {
                     /* handle data */
                     fw_upgrade_cxt->buf_len = received;
@@ -1595,6 +1603,7 @@ static int32_t fw_upgrade_session_process(void)
                     } else {
                         fw_upgrade_set_state(FW_UPGRADE_STATE_PROCESS_IMAGE_E);
                     }
+
                 } else if ((ret == FW_UPGRADE_OK_E) && (received == 0)) {
                     // no more data
                     run = 0;

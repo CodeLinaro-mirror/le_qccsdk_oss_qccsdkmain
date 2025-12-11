@@ -259,7 +259,7 @@ when       who     what, where, why
 #define CECL_SHA256_INIT_VECTOR_SIZE 8
 
 #define CECL_DISALGE_INTR() HWIO_OUTF(CECL_KDF_KDF_INTR_EN, INTERRUPT_M4_OP_DONE, 0)
-#define CECL_MY_VMID        0x1
+#define CECL_MY_VMID        0x4
 
 /* Set DATA_PATH_SEL_UP=0 which is just the POR value so no need of expnasion*/
 #define CeClLprEnable()

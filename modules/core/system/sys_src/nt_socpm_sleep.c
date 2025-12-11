@@ -303,7 +303,7 @@ static uint8_t _socpm_rram_ctl_f;
 volatile int nt_socpm_resume_f;
 // Variable to store stack pointer of current task
 volatile uint32_t nt_socpm_m4_regs[15];
-volatile uint64_t nt_socpm_slp_time_total;
+volatile uint32_t nt_socpm_slp_time_total;
 uint32_t nt_socpm_slp_time_min;
 uint32_t nt_socpm_slp_time_sby;
 int nt_socpm_sby_force = 0;

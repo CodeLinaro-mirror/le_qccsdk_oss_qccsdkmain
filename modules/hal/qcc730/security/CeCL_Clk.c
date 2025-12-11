@@ -60,10 +60,19 @@ CeCLErrorType CeClClockDisable(void)
 
 CeCLErrorType CeClKDFClockEnable(void)
 {
+    QCC730V2_CCU_BASE_Type *ccu = QCC730V2_CCU_BASE;
+    ccu->ccu.CCU_R_CCU_ENABLE_CLK.bit.KDF_ENABLE_CLK = 1;
+
+    /* Everything went well, returning success! */
     return CECL_ERROR_SUCCESS;
 }
 
 CeCLErrorType CeClKDFClockDisable(void)
 {
+    QCC730V2_CCU_BASE_Type *ccu = QCC730V2_CCU_BASE;
+    ccu->ccu.CCU_R_CCU_ENABLE_CLK.bit.KDF_ENABLE_CLK = 0;
+
+    /* Everything went well, returning success! */
     return CECL_ERROR_SUCCESS;
+
 }

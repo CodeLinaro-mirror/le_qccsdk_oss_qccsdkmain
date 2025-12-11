@@ -90,7 +90,6 @@ void wlan_wmi_set_sleep_time(devh_t *dev, uint16_t sleep_time);
  *	@Param	:	dtim time
  *	@Return	:	none
  */
-
 void wmi_sta_set_itim(devh_t *dev, uint32_t idle_time_value);
 void wmi_ap_set_dtim(devh_t *dev, uint8_t dtim);
 void wmi_set_pre_bcn_wkup(devh_t *dev, uint32_t pre_wakeup);
@@ -104,6 +103,11 @@ void wmi_bmps_enable(devh_t *dev, uint8_t data);
 void wmi_bmps_log_enable(devh_t *dev, uint8_t data);
 void wmi_bmps_rx_filter_enable(devh_t *dev, uint8_t data);
 void wmi_slp_cal_clk_act(devh_t *dev, uint8_t data);
+void wmi_bmps_pwr_opt_enable(devh_t *dev, uint8_t data);
+void wmi_bmps_compress_qos_null_enable(devh_t *dev, uint8_t data);
+bool wmi_bmps_get_active_sleep_time(devh_t *dev, pm_stats_active_sleep_time_record_buffer_t *record, BMPS_STATS_TYPE type);
+bool wmi_bmps_get_tx_rx_counts(devh_t *dev, pm_stats_tx_rx_counts_record_buffer_t *record);
+void wmi_bmps_set_period_for_recording_stats(devh_t *dev, uint32_t period_to_record);
 
 NT_BOOL wmi_wlan_receive_management_frame_message(devh_t *dev);
 

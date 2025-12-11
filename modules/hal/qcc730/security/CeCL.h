@@ -326,7 +326,7 @@ CeCLErrorType CeClIOCtlCipher(CeCLIoCtlCipherType ioCtlVal, uint8 *pBufIn, uint3
  */
 CeCLErrorType CeClReset(void);
 
-#if 0
+#if 1
 /**
  * @brief 
  *        

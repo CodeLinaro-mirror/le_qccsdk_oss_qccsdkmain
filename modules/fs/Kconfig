@@ -25,6 +25,10 @@ config FS_SHELL
     bool "FS Command Shell"
     default n
 
+config SECUREFS_DEMO
+    bool "enable secure storage demo"
+    default n
+
 endmenu
 
 endif # FILE_SYSTEM

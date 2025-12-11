@@ -31,6 +31,13 @@
  *  if this flag is set
  */
 #define QAPI_FW_UPGRADE_FLAG_DUPLICATE_ACTIVE_FS    (1<<1) 
+
+/**
+ *  Definition used by the qapi_Fw_Upgrade() API as a flag.
+ *  Fw_Upgrade get active image file with range header as a flag for ota_httpc_get_with_offset.
+ *  if this flag is set
+ */
+#define QAPI_FW_UPGRADE_FLAG_RANGE_HEADER           (1<<2) 
  
 /** @name FWD Bit Definition
  *  Definition used by the qapi_Fw_Upgrade_Get_Active_FWD() API as a return

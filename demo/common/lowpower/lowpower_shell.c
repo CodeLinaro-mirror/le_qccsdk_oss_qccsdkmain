@@ -12,8 +12,10 @@
 #include "nt_hw.h"
 #include "nt_hw_support.h"
 #include "nt_socpm_sleep.h"
+#include "timer.h"
 #include "wlan_drv.h"
 #include "wlan_power.h"
+#include "wmi.h"
 #include "wmi_api.h"
 #include "lowpower_internal.h"
 #include "ethernet.h"
@@ -50,6 +52,7 @@ static uint32_t bmps_cb_exit_start;
 static nt_osal_timer_handle_t bmps_cb_exit_timer;
 qurt_signal_t bmps_lowpower_cb_exit_task_signal;
 uint8_t bmps_cb_uc_bc_wakeup = 0;
+bool bmps_lowpower_infinite_task_created = false;
 
 extern lpr_wmi_t g_lowpower_wmi;
 
@@ -627,6 +630,213 @@ static qapi_Status_t cpr_enable(uint32_t Parameter_Count, QAPI_Console_Parameter
 }
 #endif  // CONFIG_CPR_ENABLE
 
+void bmps_lowpower_infinite_task(void __attribute__((__unused__)) * pvParameters)
+{
+    while (bmps_lowpower_infinite_task_created) {
+        vTaskDelay(10);
+    }
+    printf("bmps_lowpower_infinite_task deleted\n");
+    vTaskDelete(NULL);
+}
+static qapi_Status_t bmps_infinite_task(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if ((Parameter_Count != 1) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    if(Parameter_List[0].Integer_Value && bmps_lowpower_infinite_task_created == 0){
+        bmps_lowpower_infinite_task_created = true;
+        printf("bmps_lowpower_infinite_task created\n");
+        nt_qurt_thread_create(bmps_lowpower_infinite_task, "bmps_lowpower_infinite_task", 300, NULL, 5, NULL);
+    }
+    else if(Parameter_List[0].Integer_Value == 0){
+        bmps_lowpower_infinite_task_created = false;
+    }
+    return QAPI_OK;
+}
+
+static qapi_Status_t bmps_power_optimization_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if ((Parameter_Count != 1) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    return qapi_bmps_power_optimization_enable(Parameter_List[0].Integer_Value ? 1 : 0);
+}
+
+static qapi_Status_t bmps_compress_qos_null_enable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if ((Parameter_Count != 1) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    return qapi_bmps_compress_qos_null_enable(Parameter_List[0].Integer_Value ? 1 : 0);
+}
+
+static qapi_Status_t bmps_stats(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    WMI_BMPS_GET_STATS *cmd_bmps_stats = NULL;
+    WMI_GET_NOISE_STATUS *cmd_noise_status = NULL;
+    uint32_t total_bwindow_sleep_time = 0;
+    uint32_t total_bwindow_active_time = 0;
+    uint32_t total_soc_sleep_time = 0;
+    uint32_t total_soc_active_time = 0;
+    uint8_t index = 0;
+
+    if ((Parameter_Count < 1)) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    while (index < Parameter_Count) {
+        if (0 == strcmp(Parameter_List[index].String_Value, "set")) {
+            index++;
+            if(Parameter_List[index].Integer_Is_Valid){
+                qapi_bmps_set_period_to_record_for_stats(Parameter_List[index].Integer_Value);
+            }  
+            else{
+                return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+            }
+            return QAPI_OK;
+        }
+        else if(0 == strcmp(Parameter_List[index].String_Value, "get")){
+            index++;
+
+            cmd_noise_status = (WMI_GET_NOISE_STATUS *)malloc(sizeof(WMI_GET_NOISE_STATUS));
+            if(cmd_noise_status == NULL){
+                printf("malloc failed\n");
+                return QAPI_ERROR;
+            }
+
+            cmd_bmps_stats = (WMI_BMPS_GET_STATS *)malloc(sizeof(WMI_BMPS_GET_STATS));
+            if(cmd_bmps_stats == NULL){
+                printf("malloc failed\n");
+                free(cmd_noise_status);
+                return QAPI_ERROR;
+            }
+
+            memset(cmd_bmps_stats, 0, sizeof(WMI_BMPS_GET_STATS));
+            memset(cmd_noise_status, 0, sizeof(WMI_GET_NOISE_STATUS));
+
+            cmd_bmps_stats->bwindow_wait_close_time = NULL;
+            cmd_bmps_stats->soc_active_sleep_time = NULL;
+
+            cmd_bmps_stats->bwindow_wait_close_time = (pm_stats_active_sleep_time_record_buffer_t *)malloc(sizeof(pm_stats_active_sleep_time_record_buffer_t));
+            if(cmd_bmps_stats->bwindow_wait_close_time == NULL){
+                printf("malloc failed\n");
+                free(cmd_bmps_stats);
+                return QAPI_ERROR;
+            }
+
+            cmd_bmps_stats->soc_active_sleep_time = (pm_stats_active_sleep_time_record_buffer_t *)malloc(sizeof(pm_stats_active_sleep_time_record_buffer_t));
+            if(cmd_bmps_stats->soc_active_sleep_time == NULL){
+                printf("malloc failed\n");
+                free(cmd_bmps_stats->bwindow_wait_close_time);
+                free(cmd_bmps_stats);
+                return QAPI_ERROR;
+            }
+
+            cmd_bmps_stats->tx_rx_counts = (pm_stats_tx_rx_counts_record_buffer_t *)malloc(sizeof(pm_stats_tx_rx_counts_record_buffer_t));
+            if(cmd_bmps_stats->tx_rx_counts == NULL){
+                printf("malloc failed\n");
+                free(cmd_bmps_stats->soc_active_sleep_time);
+                free(cmd_bmps_stats->bwindow_wait_close_time);
+                free(cmd_bmps_stats);
+                return QAPI_ERROR;
+            }
+
+            memset(cmd_bmps_stats->bwindow_wait_close_time, 0, sizeof(pm_stats_active_sleep_time_record_buffer_t));
+            memset(cmd_bmps_stats->soc_active_sleep_time, 0, sizeof(pm_stats_active_sleep_time_record_buffer_t));
+            memset(cmd_bmps_stats->tx_rx_counts, 0, sizeof(pm_stats_tx_rx_counts_record_buffer_t));
+            printf("\n-----------Bwindow Closed/Wait Time Stats-----------\n");
+            if(!qapi_bmps_get_bwindow_stats(cmd_bmps_stats->bwindow_wait_close_time)){
+                
+                if(cmd_bmps_stats->bwindow_wait_close_time->get_failed == true){
+                    printf("get bwindow closed/wait time failed\n");
+                }
+                else{
+                    printf("Latest Bwindow Closed/Wait Time Stats:\n");
+                    printf("*   recorded time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->time_recorded_latest/1000);
+                    printf("*   wait time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_latest/1000);
+                    printf("*   avg wait time: %d.%dms (good env:0~3ms; medium: 3~6ms; noisy: 6ms~)\n", \
+                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_latest/(cmd_bmps_stats->bwindow_wait_close_time->record_counts_latest * 1000), \
+                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_latest%(cmd_bmps_stats->bwindow_wait_close_time->record_counts_latest * 1000));
+                    printf("*   closed time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_latest/1000);
+                    printf("*   sleep duty cycle(closed_time/recorded_time) is:%d.%d%%\n", \
+                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_latest*100/cmd_bmps_stats->bwindow_wait_close_time->time_recorded_latest, \
+                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_latest*100%cmd_bmps_stats->bwindow_wait_close_time->time_recorded_latest);
+                    
+                    printf("\nTotal Bwindow Closed/Wait Time During All Time In BMPS:\n");
+                    printf("*   recorded time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->time_recorded_total/1000);
+                    printf("*   wait time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_total/1000);
+                    printf("*   avg wait time: %d.%dms (good env:0~3ms; medium: 3~6ms; noisy: 6ms~)\n", \
+                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_total/(cmd_bmps_stats->bwindow_wait_close_time->record_counts_total * 1000), \
+                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_total%(cmd_bmps_stats->bwindow_wait_close_time->record_counts_total * 1000));
+                    printf("*   closed time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_total/1000);
+                    printf("*   bwindow closed duty cycle(closed_time/recorded_time) is:%d.%d%%\n", \
+                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_total*100/cmd_bmps_stats->bwindow_wait_close_time->time_recorded_total, \
+                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_total*100%cmd_bmps_stats->bwindow_wait_close_time->time_recorded_total);
+                }
+            }
+            printf("\n-----------SoC Active/Sleep Time Stats-----------\n");
+            if(!qapi_bmps_get_soc_stats(cmd_bmps_stats->soc_active_sleep_time)){
+                if(cmd_bmps_stats->soc_active_sleep_time->get_failed == true){
+                    printf("get soc active/sleep time failed\n");
+                }
+                else{
+                    if(cmd_bmps_stats->soc_active_sleep_time->time_recorded_latest == 0){
+                        printf("*   No data available for latest SoC stats, this may be because latest SoC sleep time exceeds the set recording period.\n");
+                    }else{
+                        printf("Latest SoC Active/Sleep Time Stats:\n");
+                        printf("*   recorded time: %dms\n", cmd_bmps_stats->soc_active_sleep_time->time_recorded_latest/1000);
+                        printf("*   active time: %dms\n", cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_latest/1000);
+                        printf("*   avg active time: %d.%dms\n", \
+                            cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_latest/(cmd_bmps_stats->soc_active_sleep_time->record_counts_latest * 1000), \
+                            cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_latest%(cmd_bmps_stats->soc_active_sleep_time->record_counts_latest * 1000));
+                        printf("*   sleep time: %dms\n", cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_latest/1000);
+                        printf("*   sleep duty cycle(sleep_time/recorded_time) is:%d.%d%%\n", \
+                            cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_latest*100/cmd_bmps_stats->soc_active_sleep_time->time_recorded_latest, \
+                            cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_latest*100%cmd_bmps_stats->soc_active_sleep_time->time_recorded_latest);
+                    }
+                    
+                    printf("\nTotal SoC Active/Sleep Time During All Time In BMPS:\n");
+                    printf("*   recorded time: %dms\n", cmd_bmps_stats->soc_active_sleep_time->time_recorded_total/1000);
+                    printf("*   active time: %dms\n", cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_total/1000);
+                    printf("*   avg active time: %d.%dms\n", \
+                        cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_total/(cmd_bmps_stats->soc_active_sleep_time->record_counts_total * 1000), \
+                        cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_total%(cmd_bmps_stats->soc_active_sleep_time->record_counts_total * 1000));
+                    printf("*   sleep time: %dms\n", cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_total/1000);
+                    printf("*   sleep duty cycle(sleep_time/recorded_time) is:%d.%d%%\n", \
+                        cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_total*100/cmd_bmps_stats->soc_active_sleep_time->time_recorded_total, \
+                        cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_total*100%cmd_bmps_stats->soc_active_sleep_time->time_recorded_total);
+                }
+            }
+            printf("\n-----------------Latest Tx Rx Counts Stats-----------------\n");
+            if(!qapi_bmps_get_tx_rx_counts(cmd_bmps_stats->tx_rx_counts)){
+                if(cmd_bmps_stats->tx_rx_counts->get_failed == true){
+                    printf("*   No Tx Rx count available, this would because of no waking up during the BMPS\n");
+                }else{
+                    printf("*   Tx:%d, Rx:%d, duration:%dms\n", cmd_bmps_stats->tx_rx_counts->tx_counts_accumulated, \
+                                                      cmd_bmps_stats->tx_rx_counts->rx_counts_accumulated, \
+                                                    cmd_bmps_stats->tx_rx_counts->time_recorded/1000); 
+                }
+            }
+            printf("\n-----------------Noise floor/PD Thr-----------------\n");
+            if(!qapi_bmps_get_noise_status(cmd_noise_status)){
+                printf("*   Noise floor -%ddbm\n", 100-cmd_noise_status->noise_floor); 
+                printf("*   PD threshold -%ddbm\n", 100-cmd_noise_status->pd_threshold); 
+            }
+
+            free(cmd_bmps_stats->bwindow_wait_close_time);
+            free(cmd_bmps_stats->soc_active_sleep_time);
+            free(cmd_bmps_stats->tx_rx_counts);
+            free(cmd_bmps_stats);
+            free(cmd_noise_status);
+            return QAPI_OK;
+        }
+        else{
+            index++;
+        }
+    }
+
+    return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+}
 const QAPI_Console_Command_t lowpower_shell_cmds[] = {
     // cmd_function    cmd_string               usage_string             description
     {pm_enable, "pm_enable", "<1/0>", "Enable/disable system power management\n"},
@@ -657,6 +867,11 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] = {
     {bmps_cb_register, "bmps_cb_regiser", "<1|0>", "register|deregister callback function when pre-sleep/post-awake\n"},
     {bmps_period_awake, "bmps_period_awake", "<1/0> [period in ms to awake]", "Enable BMPS(DTIM) period awake\n"},
     {bmps_log_enable, "bmps_log_enable", "<1/0>", "Enable BMPS(DTIM) Logs\n"},
+    {bmps_infinite_task, "bmps_infinite_task", "<1/0>", "bmps_infinite_task\n"},
+    {bmps_power_optimization_enable, "bmps_power_optimization_enable", "<1/0>", "bmps_power_optimization_enable\n"},
+    {bmps_compress_qos_null_enable, "bmps_compress_qos_null_enable", "<1/0>", "bmps_compress_qos_null_enable\n"},
+    {bmps_stats, "bmps_stats", "bmps_stats get: to get the stats\nbmps_stats set <period>: to set the period to record the stats", "bmps_stats\n"},
+
 };
 
 const QAPI_Console_Command_Group_t lowpower_shell_cmd_group = {

@@ -45,6 +45,9 @@ void app_init(void)
 #if defined(CONFIG_MBEDTLS_AES_ALT) || defined(CONFIG_MBEDTLS_CCM_ALT) || defined(CONFIG_MBEDTLS_SHA_ALT)
     Initialize_Qcc_Demo();
 #endif
+#ifdef CONFIG_SECUREFS_DEMO
+    Initialize_SecureFs_Demo();
+#endif
     UART_SEND_DIRECT("app_init over\r\n");
 }
 

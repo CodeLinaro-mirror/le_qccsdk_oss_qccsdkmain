@@ -211,5 +211,11 @@ source_set("common") {
         sources += ["//modules/net/sntp/sntp.c",]
     }
 
+    if (CONFIG_SECUREFS_DEMO) {
+        include_dirs += ["//modules/fs", "//demo/common/securefs"]
+        sources += [
+            "//demo/common/securefs/securefs_demo.c",
+            "//demo/common/securefs/securefs.c",
+        ]
+    }
 }
-

@@ -150,4 +150,6 @@ declare_args() {
     CONFIG_WIFI_FW_COREDUMP_SUPPORT= false
 
     CONFIG_SUPPORT_LWIP_RAW_SOCKET = false
+
+    CONFIG_SECUREFS_DEMO = false
 }
