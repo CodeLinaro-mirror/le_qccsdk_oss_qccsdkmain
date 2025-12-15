@@ -758,10 +758,13 @@ static qapi_Status_t bmps_stats(uint32_t Parameter_Count, QAPI_Console_Parameter
                         cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_latest/(cmd_bmps_stats->bwindow_wait_close_time->record_counts_latest * 1000), \
                         cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_latest%(cmd_bmps_stats->bwindow_wait_close_time->record_counts_latest * 1000));
                     printf("*   closed time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_latest/1000);
-                    printf("*   sleep duty cycle(closed_time/recorded_time) is:%d.%d%%\n", \
-                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_latest*100/cmd_bmps_stats->bwindow_wait_close_time->time_recorded_latest, \
-                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_latest*100%cmd_bmps_stats->bwindow_wait_close_time->time_recorded_latest);
-                    
+                    printf("*   bwindow closed duty cycle(closed_time/recorded_time) is:%u.%02u%%\n",
+                        (uint16_t)((uint64_t)cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_latest * 100ULL /
+                                        cmd_bmps_stats->bwindow_wait_close_time->time_recorded_latest),
+                        (uint16_t)(((uint64_t)cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_latest * 100ULL %
+                                        cmd_bmps_stats->bwindow_wait_close_time->time_recorded_latest) * 100ULL /
+                                        cmd_bmps_stats->bwindow_wait_close_time->time_recorded_latest));
+
                     printf("\nTotal Bwindow Closed/Wait Time During All Time In BMPS:\n");
                     printf("*   recorded time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->time_recorded_total/1000);
                     printf("*   wait time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_total/1000);
@@ -769,9 +772,12 @@ static qapi_Status_t bmps_stats(uint32_t Parameter_Count, QAPI_Console_Parameter
                         cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_total/(cmd_bmps_stats->bwindow_wait_close_time->record_counts_total * 1000), \
                         cmd_bmps_stats->bwindow_wait_close_time->accumulated_active_time_total%(cmd_bmps_stats->bwindow_wait_close_time->record_counts_total * 1000));
                     printf("*   closed time: %dms\n", cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_total/1000);
-                    printf("*   bwindow closed duty cycle(closed_time/recorded_time) is:%d.%d%%\n", \
-                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_total*100/cmd_bmps_stats->bwindow_wait_close_time->time_recorded_total, \
-                        cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_total*100%cmd_bmps_stats->bwindow_wait_close_time->time_recorded_total);
+                    printf("*   bwindow closed duty cycle(closed_time/recorded_time) is:%u.%02u%%\n",
+                        (uint16_t)((uint64_t)cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_total * 100ULL /
+                                        cmd_bmps_stats->bwindow_wait_close_time->time_recorded_total),
+                        (uint16_t)(((uint64_t)cmd_bmps_stats->bwindow_wait_close_time->accumulated_sleep_time_total * 100ULL %
+                                        cmd_bmps_stats->bwindow_wait_close_time->time_recorded_total) * 100ULL /
+                                        cmd_bmps_stats->bwindow_wait_close_time->time_recorded_total));
                 }
             }
             printf("\n-----------SoC Active/Sleep Time Stats-----------\n");
@@ -790,9 +796,13 @@ static qapi_Status_t bmps_stats(uint32_t Parameter_Count, QAPI_Console_Parameter
                             cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_latest/(cmd_bmps_stats->soc_active_sleep_time->record_counts_latest * 1000), \
                             cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_latest%(cmd_bmps_stats->soc_active_sleep_time->record_counts_latest * 1000));
                         printf("*   sleep time: %dms\n", cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_latest/1000);
-                        printf("*   sleep duty cycle(sleep_time/recorded_time) is:%d.%d%%\n", \
-                            cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_latest*100/cmd_bmps_stats->soc_active_sleep_time->time_recorded_latest, \
-                            cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_latest*100%cmd_bmps_stats->soc_active_sleep_time->time_recorded_latest);
+                        
+                        printf("*   sleep duty cycle(sleep_time/recorded_time) is:%u.%02u%%\n",
+                        (uint16_t)((uint64_t)cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_latest * 100ULL /
+                                        cmd_bmps_stats->soc_active_sleep_time->time_recorded_latest),
+                        (uint16_t)(((uint64_t)cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_latest * 100ULL %
+                                        cmd_bmps_stats->soc_active_sleep_time->time_recorded_latest) * 100ULL /
+                                        cmd_bmps_stats->soc_active_sleep_time->time_recorded_latest));
                     }
                     
                     printf("\nTotal SoC Active/Sleep Time During All Time In BMPS:\n");
@@ -802,9 +812,12 @@ static qapi_Status_t bmps_stats(uint32_t Parameter_Count, QAPI_Console_Parameter
                         cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_total/(cmd_bmps_stats->soc_active_sleep_time->record_counts_total * 1000), \
                         cmd_bmps_stats->soc_active_sleep_time->accumulated_active_time_total%(cmd_bmps_stats->soc_active_sleep_time->record_counts_total * 1000));
                     printf("*   sleep time: %dms\n", cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_total/1000);
-                    printf("*   sleep duty cycle(sleep_time/recorded_time) is:%d.%d%%\n", \
-                        cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_total*100/cmd_bmps_stats->soc_active_sleep_time->time_recorded_total, \
-                        cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_total*100%cmd_bmps_stats->soc_active_sleep_time->time_recorded_total);
+                    printf("*   sleep duty cycle(sleep_time/recorded_time) is:%u.%02u%%\n",
+                        (uint16_t)((uint64_t)cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_total * 100ULL /
+                                        cmd_bmps_stats->soc_active_sleep_time->time_recorded_total),
+                        (uint16_t)(((uint64_t)cmd_bmps_stats->soc_active_sleep_time->accumulated_sleep_time_total * 100ULL %
+                                        cmd_bmps_stats->soc_active_sleep_time->time_recorded_total) * 100ULL /
+                                        cmd_bmps_stats->soc_active_sleep_time->time_recorded_total));
                 }
             }
             printf("\n-----------------Latest Tx Rx Counts Stats-----------------\n");
