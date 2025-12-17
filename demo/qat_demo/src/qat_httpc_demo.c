@@ -18,6 +18,7 @@
 #include "qcli_api.h"
 #include "qat_httpc_demo.h"
 #include "qapi_httpc.h"
+#include "ota_http.h"
 
 /*-------------------------------------------------------------------------
  * Parameters define
@@ -30,6 +31,9 @@ static int send_num = 0;
 qbool_t global_conn_enable = FALSE;
 qbool_t global_send_finish = FALSE;
 qbool_t conn_enable = FALSE;
+#ifdef CONFIG_QAT_OTA_DEMO
+extern http_session_info_t *ota_http_sess;
+#endif
 /*-------------------------------------------------------------------------
  * Function Definitions
  *-----------------------------------------------------------------------*/
@@ -3363,7 +3367,14 @@ qbool_t getpathURL(const char *url, char *pathURL)
             rlt = TRUE;
         }
     }
+#ifdef CONFIG_QAT_OTA_DEMO
+    if(!(ota_http_sess && ota_http_sess->status == HTTP_OTA_STATUS_RUNNING)){
+        QATHTTPC_PRINTF("object URL: %s\n", pathURL);
+    }
+#else
     QATHTTPC_PRINTF("object URL: %s\n", pathURL);
+#endif
+        
     return rlt;
 }
 

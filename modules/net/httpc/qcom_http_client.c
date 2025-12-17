@@ -65,7 +65,17 @@
 extern http_session_info_t *ota_http_sess;
 #endif
 
+#ifdef CONFIG_QAT_OTA_DEMO
+extern http_session_info_t *ota_http_sess;
+#define htdbgprintf(...)                  \
+    do { \
+        if (!(ota_http_sess && ota_http_sess->status == HTTP_OTA_STATUS_RUNNING)) { \
+            printf(__VA_ARGS__); \
+        } \
+    } while (0)
+#else
 #define htdbgprintf(...) printf(__VA_ARGS__)
+#endif
 
 TaskHandle_t th_httpc = NULL;
 void http_client_task(void *pvParameters);
