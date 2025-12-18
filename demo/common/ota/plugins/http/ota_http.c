@@ -48,7 +48,7 @@ struct ota_http_client_demo_s {
 #define OTA_HTTPC_PRINTF(...) printf(__VA_ARGS__)
 
 #ifdef CONFIG_QAT_OTA_DEMO
-#define OTA_CHUNK_SIZE 512
+#define OTA_CHUNK_SIZE 1024
 extern void ota_http_client_timer(void);
 #endif
 /**********************************************************************************************************/
@@ -86,7 +86,11 @@ void ota_http_free_rcv_queue(HTTP_Queue_t *queue)
     HTTP_Queue_Node_t *next;
     while (current != NULL) {
         next = current->next;
-        free(current->buffer);
+
+        if(current->buffer){
+           free(current->buffer); 
+        }
+        
         free(current);
         current = next;
     }
@@ -94,19 +98,23 @@ void ota_http_free_rcv_queue(HTTP_Queue_t *queue)
 }
 
 static void ota_http_fin()
-{
+{   
     if (ota_http_sess != NULL) {
         if (ota_http_sess->task_handle != NULL) {
             nt_osal_thread_delete(ota_http_sess->task_handle);
+            ota_http_sess->task_handle = NULL;
         }
-
         if (ota_http_sess->url != NULL) {
-            free(ota_http_sess->task_handle);
+            free(ota_http_sess->url);
             ota_http_sess->url = NULL;
         }
-
-        ota_http_free_rcv_queue(ota_http_sess->http_rx_queue);
-
+        if (ota_http_sess->http_recv_temp_buf != NULL) {
+            free(ota_http_sess->http_recv_temp_buf);
+            ota_http_sess->http_recv_temp_buf = NULL;
+        }
+        if(ota_http_sess->http_rx_queue){
+            ota_http_free_rcv_queue(ota_http_sess->http_rx_queue);
+        }
         free(ota_http_sess);
         ota_http_sess = NULL;
     }
@@ -306,6 +314,35 @@ void http_client_cb_ota(void *arg, int32_t state, void *http_resp)
         }
 
         if (temp->length && temp->data) {
+            if (!ota_http_sess || !ota_http_sess->http_recv_temp_buf) {
+                OTA_HTTPC_PRINTF("HTTP Client Demo invalid session state\n");
+                return;
+            }
+
+            if(ota_http_sess->http_recv_count == 0){
+                memset(ota_http_sess->http_recv_temp_buf,0,OTA_CHUNK_SIZE);
+                ota_http_sess->http_recv_temp_buf_offset = 0;
+            }
+
+            if (ota_http_sess->http_recv_temp_buf_offset + temp->length > OTA_CHUNK_SIZE) {
+                OTA_HTTPC_PRINTF("HTTP Client Demo buffer overflow prevented\n");
+                if (ota_http_sess->http_recv_temp_buf) {
+                    free(ota_http_sess->http_recv_temp_buf);
+                    ota_http_sess->http_recv_temp_buf = NULL;
+                    ota_http_sess->http_recv_temp_buf_offset = 0;
+                }
+                return;
+            }
+            
+            memcpy(ota_http_sess->http_recv_temp_buf+ota_http_sess->http_recv_temp_buf_offset, temp->data, temp->length);
+            ota_http_sess->http_recv_temp_buf_offset += temp->length;
+            ota_http_sess->http_recv_count++;
+
+            *ptotal_len += temp->length;
+            contentlength = temp->contentlength;
+        }
+        if(state == QAPI_NET_HTTPC_RX_FINISHED || !(ota_http_sess->flags & QAPI_FW_UPGRADE_FLAG_RANGE_HEADER)){
+            ota_http_sess->http_recv_count = 0;
             HTTP_Queue_Node_t *node = NULL;
             node = (HTTP_Queue_Node_t *)malloc(sizeof(HTTP_Queue_Node_t));
 
@@ -316,7 +353,7 @@ void http_client_cb_ota(void *arg, int32_t state, void *http_resp)
             memset(node, 0, sizeof(HTTP_Queue_Node_t));
 
             node->buffer = NULL;
-            node->buffer = (uint8_t *)malloc(temp->length);
+            node->buffer = (uint8_t *)malloc(ota_http_sess->http_recv_temp_buf_offset);
 
             if (node->buffer == NULL) {
                 OTA_HTTPC_PRINTF("HTTP Client Demo malloc buffer error %d\n", state);
@@ -324,11 +361,11 @@ void http_client_cb_ota(void *arg, int32_t state, void *http_resp)
                 return;
             }
 
-            memset(node->buffer, 0, temp->length);
+            memset(node->buffer, 0, ota_http_sess->http_recv_temp_buf_offset);
 
-            memcpy(node->buffer, temp->data, temp->length);
+            memcpy(node->buffer, ota_http_sess->http_recv_temp_buf, ota_http_sess->http_recv_temp_buf_offset);
 
-            node->buffer_len = temp->length;
+            node->buffer_len = ota_http_sess->http_recv_temp_buf_offset;
             node->next = NULL;
 
             if (ota_http_sess->http_rx_queue->rear == NULL) {
@@ -337,11 +374,8 @@ void http_client_cb_ota(void *arg, int32_t state, void *http_resp)
                 ota_http_sess->http_rx_queue->rear->next = node;
                 ota_http_sess->http_rx_queue->rear = node;
             }
-
-            *ptotal_len += temp->length;
-            contentlength = temp->contentlength;
         }
-        if (state == QAPI_NET_HTTPC_RX_TUNNEL_ESTABLISHED) {
+        else if (state == QAPI_NET_HTTPC_RX_TUNNEL_ESTABLISHED) {
             OTA_HTTPC_PRINTF("#### TUNNEL ESTABLISHED: received %d bytes ####\n", *ptotal_len);
             *ptotal_len = 0;
         } else if (state == QAPI_NET_HTTPC_RX_DATA_FROM_TUNNEL) {
@@ -590,6 +624,7 @@ qapi_Status_t plugin_http_init(const char *interface_name, const char *url, void
         ota_http_sess->http_timeout = HTTP_TIMEOUT;
     }
 
+    ota_http_sess->url = NULL;
     ota_http_sess->url = malloc(strlen(url) + 1);
     if (ota_http_sess->url == NULL) {
         ret = QAPI_FW_UPGRADE_ERR_HTTP_NO_MEMORY;
@@ -598,6 +633,15 @@ qapi_Status_t plugin_http_init(const char *interface_name, const char *url, void
 
     memset(ota_http_sess->url, 0, strlen(url) + 1);
     memcpy(ota_http_sess->url, url, strlen(url) + 1);
+
+    ota_http_sess->http_recv_temp_buf = NULL;
+    ota_http_sess->http_recv_temp_buf = malloc(OTA_CHUNK_SIZE);
+    if (ota_http_sess->http_recv_temp_buf == NULL) {
+        ret = QAPI_FW_UPGRADE_ERR_HTTP_NO_MEMORY;
+        goto http_init_end;
+    }
+    memset(ota_http_sess->http_recv_temp_buf, 0, OTA_CHUNK_SIZE);
+    ota_http_sess->http_recv_count = 0;
 
     ota_http_sess->http_rx_queue = malloc(sizeof(HTTP_Queue_t));
     if (ota_http_sess->http_rx_queue == NULL) {
@@ -686,7 +730,9 @@ qapi_Status_t plugin_http_init(const char *interface_name, const char *url, void
     */
     return QAPI_OK;
 http_init_end:
-    ota_http_fin();
+    if (ret != QAPI_OK) {
+        ota_http_fin();
+    }
     return ret;
 }
 

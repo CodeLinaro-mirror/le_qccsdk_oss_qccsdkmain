@@ -29,7 +29,6 @@
 #pragma GCC optimize("O0")
 #endif
 
-#define HTTPC_PRINTF(...)                 printf(__VA_ARGS__)
 #define HTTPC_DEMO_MAX_NUM                (2)
 #define HTTPC_DEMO_DEFAULT_MAX_BODY_LEN   2048
 #define HTTPC_DEMO_MAX_BODY_LEN           10240
@@ -62,6 +61,15 @@ uint16_t at_rec_error_code = 0;
 #ifdef CONFIG_QAT_OTA_DEMO
 extern http_session_info_t *ota_http_sess;
 extern void http_client_cb_ota(void *arg, int32_t state, void *http_resp);
+#define HTTPC_PRINTF(...)                  \
+    do { \
+        http_session_info_t *sess = ota_http_sess; \
+        if (!(sess && sess->status == HTTP_OTA_STATUS_RUNNING)) { \
+            printf(__VA_ARGS__); \
+        } \
+    } while (0)
+#else
+#define HTTPC_PRINTF(...) printf(__VA_ARGS__)
 #endif
 
 struct http_client_demo_s {
