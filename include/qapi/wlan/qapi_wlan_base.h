@@ -2734,12 +2734,21 @@ typedef struct {
 
 /**
 @ingroup qapi_wlan
+Set STA BA window parameters.
+*/
+typedef struct {
+    uint16_t ack_timeout;               /** BA window ack timeout in us*/
+    uint16_t delay;                     /** Propagation time in numbers of SM clock cycles */
+} qapi_WLAN_BA_Window_Params_t;
+
+/**
+@ingroup qapi_wlan
 Set STA BA window size.
 */
 typedef struct {
-    uint16_t ack_timeout;               /** BA window size ack timeout in us*/
-    uint16_t delay;                     /** Propagation time in numbers of SM clock cycles */
-} qapi_WLAN_BA_Window_Params_t;
+    uint16_t tx_size;					/** TX BA window size */
+    uint16_t rx_size;					/** RX BA window size */
+} qapi_WLAN_BA_Window_Size_t;
 
 /**
 @ingroup qapi_wlan
