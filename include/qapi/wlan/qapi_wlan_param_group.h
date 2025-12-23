@@ -392,6 +392,14 @@ operation for this should be done after establishing a connection.
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSP_RATE 91
 
+/**
+Command ID to adjust BA window size when operating in Station mode. 
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] qapi_WLAN_BA_Window_Size_t  BA window size.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW_SIZE 92
 
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE                0
 

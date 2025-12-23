@@ -2607,6 +2607,38 @@ static qapi_Status_t setRspRate(uint32_t Parameter_Count, QAPI_Console_Parameter
     return QAPI_OK;
 }
 
+static qapi_Status_t setBaWinSize(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	qapi_Status_t ret= QAPI_OK;
+	uint8_t deviceId = get_active_device();
+    qapi_WLAN_BA_Window_Size_t param;
+
+	if( Parameter_Count != 2 || !Parameter_List 
+        || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+	
+	param.tx_size = Parameter_List[0].Integer_Value;
+	param.rx_size = Parameter_List[1].Integer_Value;
+	
+	if(param.tx_size > 64 || param.rx_size > 64) {
+		info_printf("Tha MAX value of tx_ba_window_size and rx_ba_window_size is 64\r\n");
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+	
+	ret = qapi_WLAN_Set_Param(deviceId, 
+               __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+               __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW_SIZE,
+               &param,
+               sizeof(qapi_WLAN_BA_Window_Size_t),
+               FALSE);
+
+    if(ret != QAPI_OK) {
+        info_printf("Set failed. WLAN should be enabled and please set the parameter before connecting.\r\n");
+	}
+
+	return ret;
+}
 
 #ifdef CONFIG_ENABLE_P2P_MODE
 void app_p2p_process_persistent_list_event(uint8_t *pData)
@@ -4840,7 +4872,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { wpsPushSetup, 	 "WpsPush", 		  "<connectFlag> [<ssid> <mac> <channel>]",    "Setup and start a WPS connection using the Push method"   },
 #endif
     { setRspRate, 	 "setRspRate", 		  "<rate_idx = 8:6Mbps>",    "setRspRate to 6Mbps"   },
-
+    { setBaWinSize, 	 "setBaWinSize", 		  "<tx_ba_window_size> <rx_ba_window_size>",    "Set BA window size of RX or TX or both."   },
 };
 
 #ifdef CONFIG_ENABLE_P2P_MODE

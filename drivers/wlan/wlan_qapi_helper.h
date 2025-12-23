@@ -62,6 +62,7 @@ extern qapi_Status_t wlan_get_tx_power(qapi_WLAN_Get_Power_Evt_t *txpower_params
 extern qapi_Status_t wlan_set_bmiss_threshold(uint8_t device_ID, uint8_t bmiss_threshold);
 extern qapi_Status_t wlan_get_bmiss_threshold(uint8_t *bmiss_threshold);
 extern qapi_Status_t wlan_set_rsp_rate(uint8_t device_id, uint8_t rate_idx);
+extern qapi_Status_t wlan_set_ba_window_size(uint8_t device_ID, uint16_t tx_size, uint16_t rx_size);
 
 #ifdef CONFIG_ENABLE_P2P_MODE
 /*Structure definition for passing Atheros specific data from App*/
