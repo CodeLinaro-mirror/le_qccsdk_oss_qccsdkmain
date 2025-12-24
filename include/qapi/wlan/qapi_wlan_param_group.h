@@ -20,12 +20,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "qapi_status.h"
 
 /**
-Macro that indicates the group ID that can be used to configure system parameters of
-the WLAN subsystem.
-*/
-#define __QAPI_WLAN_PARAM_GROUP_SYSTEM 0
-
-/**
 Macro that indicates the group ID that can be used to configure wireless parameters of
 the WLAN subsystem.
 */
