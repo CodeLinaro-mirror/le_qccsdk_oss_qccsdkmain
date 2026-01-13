@@ -84,6 +84,10 @@ config SRRC_BAND_EDGE_SUPPORT
     bool "enable band edge adjust for ch12 and ch13"
     default y
 
+config XO_USE_BDF_OVERRIDE
+    bool "enable using BDF to override OTP XO calibration result"
+    default n
+
 config ENABLE_P2P_MODE
     bool "enable p2p support"
     default y

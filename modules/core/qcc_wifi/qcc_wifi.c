@@ -18,6 +18,7 @@ struct libwifi_kconfig_t {
     uint32_t hc_11a_1_5g;
     uint32_t hc_11n_5g;
     uint8_t srrc_band_edge_enable;
+    uint8_t xo_use_bdf_override;
 };
 
 struct libwifi_qos_null_kconfig_t {
@@ -64,6 +65,12 @@ void libwifi_kconfig_install(void)
     g_libwifi_kconfig.srrc_band_edge_enable = TRUE;
 #else
     g_libwifi_kconfig.srrc_band_edge_enable = FALSE;
+#endif
+
+#ifdef CONFIG_XO_USE_BDF_OVERRIDE
+    g_libwifi_kconfig.xo_use_bdf_override = TRUE;
+#else
+    g_libwifi_kconfig.xo_use_bdf_override = FALSE;
 #endif
 
 #ifdef CONFIG_TOTAL_BEACON_WAIT_TIME
