@@ -4148,6 +4148,17 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode)
      * moved it to SYSTEM_BOOT_COMPLETE state.
      */
     nt_socpm_switch_mcuss_to_active();
+#ifndef PLATFORM_NT
+    /* Reset the PSS */
+    nt_gpio_init();
+#ifdef IMAGE_FERMION
+    wifi_fw_gpio_init(TRUE);
+#endif /* IMAGE_FERMION */
+#endif /* PLATFORM_NT */
+#ifdef GPIO_RETENTION_IN_SLP
+    /* Disable the GPIO retension */
+    NT_REG_WR(QWLAN_PMU_CFG_IO_RET_CNTL_REG, QWLAN_PMU_CFG_IO_RET_CNTL_DEFAULT);
+#endif /* GPIO_RETENTION_IN_SLP */
     uart_init();
 
     HAL_REG_WR(QWLAN_PMU_CFG_WIFI_SS_STATE_REG, NT_PMU_CFG_WIFI_CONFIG_OFFSET);  // Set wifi config state
