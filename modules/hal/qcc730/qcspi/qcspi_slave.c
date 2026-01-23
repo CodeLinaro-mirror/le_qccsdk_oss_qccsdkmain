@@ -178,6 +178,9 @@ void __attribute__((section(".__sect_ps_txt"))) qcspi_slv_deinit(void)
                QCSPI_SLAVE_DISABLE);
 }
 
+#if CONFIG_AMBIENT_POWER_ENABLE
+extern void spi_rx_data_indication();
+#endif
 /**
  *@func.    nt_spi_slv_interrupt
  *@brief
@@ -216,6 +219,10 @@ void __attribute__((section(".after_ram_vectors"))) nt_spi_slv_interrupt(void)
     if (qcspi_status & QCSPI_SLAVE_HOST_INT0_MASK) {
 #if defined(SUPPORT_RING_IF) || defined(SUPPORT_RING_IF_ONLY)
         ringif_apps_ring_update_isr();
+#endif
+
+#if CONFIG_AMBIENT_POWER_ENABLE
+        spi_rx_data_indication();
 #endif
     }
     // If the source of interrupt is SW RESET command from master, the SW_RESET register is set

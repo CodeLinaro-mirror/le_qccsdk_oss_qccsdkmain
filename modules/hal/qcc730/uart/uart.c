@@ -140,6 +140,10 @@ void ftm_diag_msg_tx(void *buf, int len)
 
 void myputchar(uint8_t ch)
 {
+#if CONFIG_AMBIENT_POWER_ENABLE
+    return;
+#endif
+
 #ifdef FTM_OVER_UART
     char txbuf[2];
     txbuf[0] = (char)ch;

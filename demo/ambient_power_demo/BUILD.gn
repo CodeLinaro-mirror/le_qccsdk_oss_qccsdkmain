@@ -1,0 +1,37 @@
+# Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries. 
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+import("//configs_decl.gni")
+
+ambient_power_demo_inc = [
+    "src",
+    "//drivers/wlan/",
+    #"//lib/net/"
+]
+ 
+ambient_power_demo_src = [
+    "src/ambient_power_main.c",
+    "src/ambient_power_demo.c",
+
+    "//drivers/wlan/wlan_drv.c",
+    "//drivers/wlan/qapi_wlan_base.c",
+    "//drivers/wlan/qapi_wlan_param_group.c",
+    "//drivers/wlan/wmi_api.c",
+    "//drivers/wlan/wlan_qapi_helper.c",
+]
+
+not_needed("*", [ ])
+
+config("_config") {
+    if (image_name == "FERMION_AMBIENT_POWER_DEMO") {
+        include_dirs = ambient_power_demo_inc
+    }
+}
+
+source_set("ambient_power_demo") {
+    if (image_name == "FERMION_AMBIENT_POWER_DEMO") {
+        sources = ambient_power_demo_src
+    }
+}
+
