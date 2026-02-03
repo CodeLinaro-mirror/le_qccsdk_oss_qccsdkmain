@@ -100,6 +100,38 @@ config XO_USE_BDF_OVERRIDE
     bool "enable using BDF to override OTP XO calibration result"
     default n
 
+config SAT_STEP_MANUAL_ADJUSTMENT
+    bool "enable sat step manual adjustment function"
+    default n
+
+if SAT_STEP_MANUAL_ADJUSTMENT
+
+config SAT_STEP_2G_SS
+	hex "2G SS (Slow-Slow) chip SAT Step value"
+	default 0x00000060
+
+config SAT_STEP_2G_TT
+	hex "2G TT (Typical-Typical) chip SAT Step value"
+	default 0x00000060
+
+config SAT_STEP_2G_FF
+	hex "2G FF (Fast-Fast) chip SAT Step value"
+	default 0x00000066
+
+config SAT_STEP_5G_SS
+	hex "5G SS (Slow-Slow) chip SAT Step value"
+	default 0x00000064
+
+config SAT_STEP_5G_TT
+	hex "5G TT (Typical-Typical) chip SAT Step value"
+	default 0x00000064
+
+config SAT_STEP_5G_FF
+	hex "5G FF (Fast-Fast) chip SAT Step value"
+	default 0x00000064
+
+endif # SAT_STEP_MANUAL_ADJUSTMENT
+
 config ENABLE_P2P_MODE
     bool "enable p2p support"
     default n
