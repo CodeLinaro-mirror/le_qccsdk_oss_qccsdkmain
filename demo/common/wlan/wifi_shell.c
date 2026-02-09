@@ -2640,6 +2640,44 @@ static qapi_Status_t setBaWinSize(uint32_t __attribute__((__unused__)) Parameter
 	return ret;
 }
 
+static qapi_Status_t EnableCtsToSelf(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	qapi_Status_t ret = QAPI_OK;
+	uint8_t deviceId = get_active_device();
+	uint32_t enable;
+
+	if(!pg_wifi_shell_cxt->wlan_enabled) {
+		info_printf("wlan is not enabled \n");
+		return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+	}
+
+	if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+
+	enable = Parameter_List[0].Integer_Value;
+
+	if(enable != 0 && enable != 1) {
+		info_printf("Invalid parameter. Use 0 to disable or 1 to enable CTS-to-self\r\n");
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+
+	ret = qapi_WLAN_Set_Param(deviceId,
+				__QAPI_WLAN_PARAM_GROUP_WIRELESS,
+				__QAPI_WLAN_PARAM_GROUP_WIRELESS_PROTECTION_MODE,
+				&enable,
+				sizeof(enable),
+				FALSE);
+
+	if(ret != QAPI_OK) {
+		info_printf("Set CTS-to-self failed\r\n");
+	} else {
+		info_printf("CTS-to-self %s successfully\r\n", enable ? "enabled" : "disabled");
+	}
+
+	return ret;
+}
+
 #ifdef CONFIG_ENABLE_P2P_MODE
 void app_p2p_process_persistent_list_event(uint8_t *pData)
 {
@@ -4873,6 +4911,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 #endif
     { setRspRate, 	 "setRspRate", 		  "<rate_idx = 8:6Mbps>",    "setRspRate to 6Mbps"   },
     { setBaWinSize, 	 "setBaWinSize", 		  "<tx_ba_window_size> <rx_ba_window_size>",    "Set BA window size of RX or TX or both."   },
+    {EnableCtsToSelf, "EnableCtsToSelf", 		  "<1: enable| 0: disable>",    "Enable/disable CTS-to-self."}
 };
 
 #ifdef CONFIG_ENABLE_P2P_MODE

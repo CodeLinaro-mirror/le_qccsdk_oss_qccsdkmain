@@ -395,6 +395,15 @@ Command ID to adjust BA window size when operating in Station mode.
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW_SIZE 92
 
+/**
+Command ID to set protection mode when operating in Station mode.
+
+@note1hang This parameter can be used with qapi_WLAN_Set_Param().
+
+@param[in] uint32_t        Set 1 to enable CTS_TO_SELF protection, 0 to be disabled.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_PROTECTION_MODE 93
+
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE                0
 
 /**

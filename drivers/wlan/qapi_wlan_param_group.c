@@ -191,6 +191,11 @@ qapi_Status_t qapi_WLAN_Set_Param(uint8_t __attribute__((__unused__)) device_ID,
             ret = wlan_set_ba_window_size(device_ID, ba_size.tx_size, ba_size.rx_size);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW_SIZE */
         }
+        case  __QAPI_WLAN_PARAM_GROUP_WIRELESS_PROTECTION_MODE: {
+            uint32_t enable = *((uint32_t *)data);
+            ret = wlan_set_cts_to_self(device_ID, enable);
+            break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_PROTECTION_MODE */
+        } 
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;
