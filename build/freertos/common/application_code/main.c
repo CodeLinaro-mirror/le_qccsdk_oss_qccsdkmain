@@ -640,14 +640,18 @@ fw_logger_init();
 
     if(app_mode != APP_MODE_FTM)
     {
+#ifndef CONFIG_AMBIENT_POWER_ENABLE
         tcpip_init(NULL, NULL);
+#endif
     }
 
 #if ((NT_TST_PING_TOOL) || (CONFIG_NET_SHELL))
         if(app_mode != APP_MODE_FTM)
         {
+#ifndef CONFIG_AMBIENT_POWER_ENABLE 
             extern void ping_init(void);
             ping_init();
+#endif
         }
 #endif
 

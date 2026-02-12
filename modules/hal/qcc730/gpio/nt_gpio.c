@@ -199,6 +199,11 @@ void nt_gpio_preset(void)
         /* UART op2: GPIO9 GPIO10*/
         NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG, CONFIG_BOARD_QCC730_GPIO_DEFAULT_PU_STATE);
         NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG, CONFIG_BOARD_QCC730_GPIO_DEFAULT_PD_STATE);
+#if CONFIG_AMBIENT_POWER_ENABLE
+        /* fix power issue: Current is ~45uA when plug out UART&SPI in the VBAT=VDD=VDDIO=1.8v, while it is ~35uA when plug in UART&SPI */
+        NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PU_REG,  0xAB0A);
+		NT_REG_WR(QWLAN_PMU_CFG_IOPAD_PD_REG,  0x1014F0);
+#endif
     }
 
 #ifndef FERMION_SILICON
