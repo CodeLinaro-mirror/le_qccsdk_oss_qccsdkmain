@@ -10,6 +10,20 @@
 #include "nt_wfm_wmi_interface.h"
 #include <stdint.h>
 
+#define SAT_STEP_NUM_BANDS 2              // 2G, 5G
+#define SAT_STEP_NUM_CHIP_TYPES 3         // FF, TT, SS
+
+typedef enum {
+    BAND_5G = 0,
+    BAND_2G = 1,
+} sat_step_band_t;
+
+typedef enum {
+    CHIP_TYPE_FF = 0,  // Fast-Fast corner
+    CHIP_TYPE_TT = 1,  // Typical-Typical corner
+    CHIP_TYPE_SS = 2,  // Slow-Slow corner
+} sat_step_chip_type_t;
+
 struct libwifi_kconfig_t {
     uint32_t hc_11a_0_2g;
     uint32_t hc_11a_1_2g;
@@ -19,6 +33,8 @@ struct libwifi_kconfig_t {
     uint32_t hc_11n_5g;
     uint8_t srrc_band_edge_enable;
     uint8_t xo_use_bdf_override;
+    uint8_t sat_step_manual_adjustment;
+    uint32_t sat_step_values[SAT_STEP_NUM_BANDS][SAT_STEP_NUM_CHIP_TYPES];
 };
 
 struct libwifi_qos_null_kconfig_t {
@@ -71,6 +87,50 @@ void libwifi_kconfig_install(void)
     g_libwifi_kconfig.xo_use_bdf_override = TRUE;
 #else
     g_libwifi_kconfig.xo_use_bdf_override = FALSE;
+#endif
+
+#ifdef CONFIG_SAT_STEP_MANUAL_ADJUSTMENT
+    g_libwifi_kconfig.sat_step_manual_adjustment = TRUE;
+#else
+    g_libwifi_kconfig.sat_step_manual_adjustment = FALSE;
+#endif
+
+    /* 2G band defaults */
+#ifdef CONFIG_SAT_STEP_2G_FF
+    g_libwifi_kconfig.sat_step_values[BAND_2G][CHIP_TYPE_FF] = CONFIG_SAT_STEP_2G_FF;
+#else
+    g_libwifi_kconfig.sat_step_values[BAND_2G][CHIP_TYPE_FF] = 0x00000066;
+#endif
+
+#ifdef CONFIG_SAT_STEP_2G_TT
+    g_libwifi_kconfig.sat_step_values[BAND_2G][CHIP_TYPE_TT] = CONFIG_SAT_STEP_2G_TT;
+#else
+    g_libwifi_kconfig.sat_step_values[BAND_2G][CHIP_TYPE_TT] = 0x00000060;
+#endif
+
+#ifdef CONFIG_SAT_STEP_2G_SS
+    g_libwifi_kconfig.sat_step_values[BAND_2G][CHIP_TYPE_SS] = CONFIG_SAT_STEP_2G_SS;
+#else
+    g_libwifi_kconfig.sat_step_values[BAND_2G][CHIP_TYPE_SS] = 0x00000060;
+#endif
+
+    /* 5G band defaults */
+#ifdef CONFIG_SAT_STEP_5G_FF
+    g_libwifi_kconfig.sat_step_values[BAND_5G][CHIP_TYPE_FF] = CONFIG_SAT_STEP_5G_FF;
+#else
+    g_libwifi_kconfig.sat_step_values[BAND_5G][CHIP_TYPE_FF] = 0x00000064;
+#endif
+
+#ifdef CONFIG_SAT_STEP_5G_TT
+    g_libwifi_kconfig.sat_step_values[BAND_5G][CHIP_TYPE_TT] = CONFIG_SAT_STEP_5G_TT;
+#else
+    g_libwifi_kconfig.sat_step_values[BAND_5G][CHIP_TYPE_TT] = 0x00000064;
+#endif
+
+#ifdef CONFIG_SAT_STEP_5G_SS
+    g_libwifi_kconfig.sat_step_values[BAND_5G][CHIP_TYPE_SS] = CONFIG_SAT_STEP_5G_SS;
+#else
+    g_libwifi_kconfig.sat_step_values[BAND_5G][CHIP_TYPE_SS] = 0x00000064;
 #endif
 
 #ifdef CONFIG_TOTAL_BEACON_WAIT_TIME
