@@ -1367,6 +1367,11 @@ typedef PREPACK struct {
 } POSTPACK WMI_P2P_SET_CCK_RATES;
 
 typedef PREPACK struct {
+    uint8_t min_discoverable_interval;
+    uint8_t max_discoverable_interval;
+} POSTPACK WMI_P2P_SET_DISCOVERABLE_INTERVAL;
+
+typedef PREPACK struct {
     uint8_t p2pmode;
 } POSTPACK WMI_P2P_SET_MODE;
 
@@ -1393,6 +1398,7 @@ typedef PREPACK struct {
         WMI_P2P_SET_DEV_NAME device_name;
         WMI_P2P_SET_MODE mode;
         WMI_P2P_SET_CCK_RATES cck_rates;
+        WMI_P2P_SET_DISCOVERABLE_INTERVAL discoverable_interval;
     } POSTPACK val;
 } POSTPACK WMI_P2P_SET_CMD;
 
@@ -1418,7 +1424,8 @@ typedef enum {
     WMI_P2P_CONFID_GO_INTENT = 6,
     WMI_P2P_CONFID_DEV_NAME = 7,
     WMI_P2P_CONFID_P2P_OPMODE = 8,
-    WMI_P2P_CONFID_CCK_RATES = 9
+    WMI_P2P_CONFID_CCK_RATES = 9,
+    WMI_P2P_CONFID_DISC_INT = 10
 } WMI_P2P_CONF_ID;
 
 typedef PREPACK struct {

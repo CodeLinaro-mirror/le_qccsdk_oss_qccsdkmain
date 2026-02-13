@@ -669,6 +669,20 @@ qapi_WLAN_Set_Param()
 #define __QAPI_WLAN_PARAM_GROUP_P2P_CCK_RATES 14
 
 /**
+Command ID to set P2P discoverable interval.
+Use this parameter with group ID #__QAPI_WLAN_PARAM_GROUP_P2P to call qapi_WLAN_Set_Param().
+Alternately, applications can use an object of structure qapi_WLAN_P2P_Set_Cmd_t with this
+macro as 'config_Id' and 'discoverable_Interval' members of
+union 'val' as data to call qapi_WLAN_Set_Param().
+@param[in] qapi_WLAN_P2P_Set_Discoverable_Interval_t   Set P2P discoverable interval in milliseconds.
+@sa
+qapi_WLAN_P2P_Set_Discoverable_Interval_t \n
+qapi_WLAN_P2P_Set_Cmd_t \n
+qapi_WLAN_Set_Param()
+*/
+#define __QAPI_WLAN_PARAM_GROUP_P2P_DISCOVERABLE_INTERVAL 15
+
+/**
 Command ID used for calling qapi_WLAN_Set_Param() to configure P2P group owner parameters.
 */
 #define __QAPI_WLAN_PARAM_GROUP_P2P_GO_PARAMS 5

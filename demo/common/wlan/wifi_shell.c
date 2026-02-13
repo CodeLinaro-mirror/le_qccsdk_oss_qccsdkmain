@@ -4837,6 +4837,35 @@ static qapi_Status_t P2p_set(uint32_t __attribute__((__unused__)) Parameter_Coun
         memcpy(p2p_set_params.val.device_Name.dev_Name, (char *)Parameter_List[1].String_Value, len);
         p2p_set_params.val.device_Name.dev_Name_Len = len;
     }
+    else if (strcmp(Parameter_List[0].String_Value, "discint") == 0) {
+        if (Parameter_Count < 3) {
+            info_printf("Incorrect parameters\r\n");
+            return -1;
+        }
+
+        uint8_t min_interval = Parameter_List[1].Integer_Value;
+        uint8_t max_interval = Parameter_List[2].Integer_Value;
+
+        if (min_interval == 0 || max_interval == 0) {
+            info_printf("The values for DiscoverableInterval shall be nonzero\r\n");
+            return -1;
+        }
+
+        if (min_interval > max_interval) {
+            info_printf("Minimum discoverable interval must be less than or equal to maximum\r\n");
+            return -1;
+        }
+
+        if (max_interval > 255) {
+            info_printf("Discoverable interval values must not exceed 255\r\n");
+            return -1;
+        }
+
+        p2p_set_params.config_Id = __QAPI_WLAN_PARAM_GROUP_P2P_DISCOVERABLE_INTERVAL;
+        p2p_set_params.val.discoverable_interval.min_discoverable_interval = min_interval;
+        p2p_set_params.val.discoverable_interval.max_discoverable_interval = max_interval;
+        len = sizeof(p2p_set_params.val.discoverable_interval);
+    }
 
     else
     {

@@ -393,6 +393,10 @@ qapi_Status_t qapi_WLAN_Set_Param(uint8_t __attribute__((__unused__)) device_ID,
             ret = wlan_p2p_set(device_ID, WMI_P2P_CONFID_CCK_RATES, data, length);
             break;
         }
+        case __QAPI_WLAN_PARAM_GROUP_P2P_DISCOVERABLE_INTERVAL: {
+            ret = wlan_p2p_set(device_ID, WMI_P2P_CONFID_DISC_INT, data, length);
+            break;
+        }
 
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
