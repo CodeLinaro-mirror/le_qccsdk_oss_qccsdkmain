@@ -2586,8 +2586,8 @@ static qapi_Status_t setRspRate(uint32_t Parameter_Count, QAPI_Console_Parameter
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
-    if (Parameter_List[0].Integer_Value != 8) {
-        info_printf("RspRate only support set to 8:6Mbps\r\n");
+    if (Parameter_List[0].Integer_Value != 8 && Parameter_List[0].Integer_Value != 16) {
+        info_printf("RspRate only support set to 8:6Mbps or 16:6.5Mbps\r\n");
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
@@ -4871,7 +4871,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 #ifdef CONFIG_WPS
     { wpsPushSetup, 	 "WpsPush", 		  "<connectFlag> [<ssid> <mac> <channel>]",    "Setup and start a WPS connection using the Push method"   },
 #endif
-    { setRspRate, 	 "setRspRate", 		  "<rate_idx = 8:6Mbps>",    "setRspRate to 6Mbps"   },
+    { setRspRate, 	 "setRspRate", 		  "<rate_idx = 8:11g 6Mbps 16:11n 6.5Mbps>",    "setRspRate to 11g 6Mbps or 11n 6.5Mbps"   },
     { setBaWinSize, 	 "setBaWinSize", 		  "<tx_ba_window_size> <rx_ba_window_size>",    "Set BA window size of RX or TX or both."   },
 };
 
