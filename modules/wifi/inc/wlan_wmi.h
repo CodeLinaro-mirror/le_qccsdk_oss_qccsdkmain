@@ -12,6 +12,8 @@
 
 #define wmi_timer_disp_hnd_t TimDispatchTab
 #define NT_WLAN_RA_ON        1
+#define NT_WLAN_RA_HT_ONLY_ENABLE		2
+#define NT_WLAN_RA_HT_ONLY_DISABLE		3
 typedef struct _WLAN_CONN_INFO_ {
     uint8_t no_conn;  //@Connection status
     uint8_t ssid[wificonfigMAX_SSID_LEN + 1];
