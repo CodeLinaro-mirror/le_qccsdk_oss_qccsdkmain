@@ -36,6 +36,9 @@
 #endif
 #include "nt_hosted_app.h"
 
+/*access pcb->flags*/
+#include "lwip/priv/tcp_priv.h"
+
 #ifdef SUPPORT_RING_IF
 #include "wifi_evt_hndlr.h"
 #include "nt_wfm_wmi_interface.h"
@@ -1437,3 +1440,43 @@ bool nt_dpm_macid_connected_chk(struct netif *p_netif, uint8 *mac_addr)
     }
     return TRUE;
 }
+
+
+#if defined(LWIP)
+/**
+ * @brief Checks if there are pending TCP Delayed ACKs.
+ *        Called from vPortSuppressTicksAndSleep to decide if sleep should be aborted.
+ */
+bool nt_tcp_has_pending_acks(void)
+{
+    struct tcp_pcb *pcb;
+    /* Safe to access tcp_active_pcbs here because:
+     * 1. We are in Scheduler Suspended state.
+     * 2. tcpip_thread is blocked and has released the core lock.
+     */
+    for (pcb = tcp_active_pcbs; pcb != NULL; pcb = pcb->next) {
+        if (pcb->flags & TF_ACK_DELAY) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/**
+ * @brief Callback to flush ACKs, running in tcpip_thread context.
+ */
+void nt_tcp_flush_acks_cb(void *ctx)
+{
+    struct tcp_pcb *pcb;
+    (void)ctx;
+    
+    /* tcpip_thread holds the lock when calling this callback */
+    for (pcb = tcp_active_pcbs; pcb != NULL; pcb = pcb->next) {
+        if (pcb->flags & TF_ACK_DELAY) {
+            tcp_ack_now(pcb);
+            tcp_output(pcb);
+            tcp_clear_flags(pcb, TF_ACK_DELAY | TF_ACK_NOW);
+        }
+    }
+}
+#endif /* LWIP */
