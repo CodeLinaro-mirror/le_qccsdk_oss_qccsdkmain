@@ -99,7 +99,7 @@ void libwifi_kconfig_install(void)
 #ifdef CONFIG_SAT_STEP_2G_FF
     g_libwifi_kconfig.sat_step_values[BAND_2G][CHIP_TYPE_FF] = CONFIG_SAT_STEP_2G_FF;
 #else
-    g_libwifi_kconfig.sat_step_values[BAND_2G][CHIP_TYPE_FF] = 0x00000066;
+    g_libwifi_kconfig.sat_step_values[BAND_2G][CHIP_TYPE_FF] = 0x00000062;
 #endif
 
 #ifdef CONFIG_SAT_STEP_2G_TT
