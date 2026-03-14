@@ -148,30 +148,6 @@ qapi_Status_t qapi_WLAN_Commit (uint8_t  __attribute__((__unused__)) device_ID)
     return ret;
 }
 
-qapi_Status_t qapi_WLAN_Set_11d(uint32_t  __attribute__((__unused__)) enable)
-{
-    WLAN_QAPI_LOCK();
-    PRINT_ERR_NOT_SUPPORTED;
-    WLAN_QAPI_UNLOCK();
-    return QAPI_WLAN_ERROR;
-}
-
-qapi_Status_t qapi_WLAN_Get_11d(uint32_t  __attribute__((__unused__)) *result)
-{
-    WLAN_QAPI_LOCK();
-    PRINT_ERR_NOT_SUPPORTED;
-    WLAN_QAPI_UNLOCK();
-    return QAPI_WLAN_ERROR;
-}
-
-qapi_Status_t qapi_WLAN_Get_Country_Code(char  __attribute__((__unused__)) *country_code)
-{
-    WLAN_QAPI_LOCK();
-    PRINT_ERR_NOT_SUPPORTED;
-    WLAN_QAPI_UNLOCK();
-    return QAPI_WLAN_ERROR;
-}
-
 qapi_Status_t qapi_WLAN_Get_Regulatory_Info(qapi_WLAN_Reg_Evt_t *reg)
 {
 	return wlan_sta_get_reg_info(reg);
