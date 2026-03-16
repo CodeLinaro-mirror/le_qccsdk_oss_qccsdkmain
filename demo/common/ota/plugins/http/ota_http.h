@@ -93,9 +93,12 @@ typedef struct {
     qapi_Ssl_Cert_t *sslCert;
     HTTP_Queue_t *http_rx_queue;
     uint32_t http_timeout;
+    uint16_t http_recv_count;
     int32_t resp_code;
     int32_t http_range_offset;
     int8_t flags;
+    uint8_t *http_recv_temp_buf;
+    uint16_t http_recv_temp_buf_offset;
 } http_session_info_t;
 
 #endif /*_OTA_HTTP_H_ */

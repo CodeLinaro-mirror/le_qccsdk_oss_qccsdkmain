@@ -1094,7 +1094,7 @@ qapi_Status_t wlan_set_rsp_rate(uint8_t device_id, uint8_t rate_idx)
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
     WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
 
-    if (rate_idx != 8)
+    if (rate_idx != 8 && rate_idx != 16) //8: 11g 6Mbps 16: 11n 6.5Mbps
         return QAPI_ERR_INVALID_PARAM;
 
     memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
@@ -1105,6 +1105,57 @@ qapi_Status_t wlan_set_rsp_rate(uint8_t device_id, uint8_t rate_idx)
 
     if (p_cxt->wlan_set_param_block_mode) {
         p_cxt->param_id = WIFI_PARAM_SET_RSP_RATE;
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+    error = get_wlan_qapi_error();
+    return error;
+}
+
+qapi_Status_t wlan_set_ba_window_size(uint8_t device_ID, uint16_t tx_size, uint16_t rx_size)
+{
+	qapi_Status_t error = QAPI_OK;
+	wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+	WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+	if (tx_size > 64 || rx_size > 64) {
+		return QAPI_ERR_INVALID_PARAM;	
+	}
+	
+	memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+	cmd->pdev_param_id = WIFI_PARAM_SET_BA_WINDOW_SIZE;
+	cmd->pdev_param_value = (tx_size << 16) | rx_size;
+
+	wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+	if(p_cxt->wlan_set_param_block_mode) {
+		p_cxt->param_id = WIFI_PARAM_SET_BA_WINDOW_SIZE;
+		qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+	} else {
+		log_printf("unblock mode, should check WMI cmd done in event cb\n");
+	}
+	error = get_wlan_qapi_error();
+	return error;	
+}
+
+qapi_Status_t wlan_set_cts_to_self(uint8_t device_ID, uint32_t enable)
+{
+    qapi_Status_t error = QAPI_OK;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+    extern devh_t *gdevp;
+
+    gdevp->anti_param.cts_to_self_enable = enable;
+
+    memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+    cmd->pdev_param_id = WIFI_PARAM_SET_CTS_TO_SELF;
+    cmd->pdev_param_value = enable;
+
+    wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+    if (p_cxt->wlan_set_param_block_mode) {
+        p_cxt->param_id = WIFI_PARAM_SET_CTS_TO_SELF;
         qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
     } else {
         log_printf("unblock mode, should check WMI cmd done in event cb\n");

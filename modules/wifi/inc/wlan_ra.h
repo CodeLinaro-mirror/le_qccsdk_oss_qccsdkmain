@@ -58,6 +58,7 @@ typedef struct nt_rate_context_s {
     uint32_t validModeMask;        /* Bit mask for valid rates */
 
     TimerHandle_t raPeriodicTimer; /* Periodic Timer handler */
+    NT_BOOL htOnly;                /* HT rate only enabled/disabled */
 } nt_rate_context_t;
 
 #ifdef SUPPORT_COEX

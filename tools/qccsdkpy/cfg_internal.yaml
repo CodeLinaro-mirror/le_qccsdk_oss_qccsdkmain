@@ -85,12 +85,12 @@ fdt_map:
 appdir_map:
     repo:
         appdirs_specific_supported: [pbl, sbl, prg, ftm, intg]
-        appdirs_build_supported: [pbl, sbl, prg, ftm, demo/hello_world, demo/posix_demo, intg, demo/fs_demo, demo/qcli_demo, demo/matter_demo, demo/qat_demo, demo/powertest_demo]
-        appdirs_flash_supported: [ftm, demo/hello_world, demo/posix_demo, demo/fs_demo, demo/qcli_demo, demo/matter_demo, demo/qat_demo, demo/powertest_demo]
+        appdirs_build_supported: [pbl, sbl, prg, ftm, demo/hello_world, demo/posix_demo, intg, demo/fs_demo, demo/qcli_demo, demo/matter_demo, demo/qat_demo, demo/powertest_demo, demo/ambient_power_demo]
+        appdirs_flash_supported: [ftm, demo/hello_world, demo/posix_demo, demo/fs_demo, demo/qcli_demo, demo/matter_demo, demo/qat_demo, demo/powertest_demo, demo/ambient_power_demo]
     SDK:
         appdirs_specific_supported: [sbl, prg, ftm]
-        appdirs_build_supported: [sbl, prg, ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, intg, demo/fs_demo, demo/matter_demo, demo/qat_demo, demo/powertest_demo]
-        appdirs_flash_supported: [ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, demo/fs_demo, demo/matter_demo, demo/qat_demo, demo/powertest_demo]
+        appdirs_build_supported: [sbl, prg, ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, intg, demo/fs_demo, demo/matter_demo, demo/qat_demo, demo/powertest_demo, demo/ambient_power_demo]
+        appdirs_flash_supported: [ftm, demo/qcli_demo, demo/hello_world, demo/posix_demo, demo/fs_demo, demo/matter_demo, demo/qat_demo, demo/powertest_demo, demo/ambient_power_demo]
     pbl: [rram_pbl, FERMION_PBL]
     sbl: [rram_sbl, FERMION_SBL]
     prg: [Null, FERMION_NVM_PROGRAMMER]
@@ -103,6 +103,7 @@ appdir_map:
     demo/qat_demo: [flash_app, FERMION_QAT_DEMO]
     intg: [Null, [FERMION_NVM_PROGRAMMER, FERMION_SBL, FERMION_FTM, FERMION_HELLO_WORLD, FERMION_POSIX_DEMO, FERMION_FS_DEMO, FERMION_IOE_QCLI_DEMO, FERMION_MATTER_DEMO, FERMION_QAT_DEMO]]
     demo/powertest_demo: [flash_app, FERMION_POWER_TEST_DEMO]
+    demo/ambient_power_demo: [flash_app, FERMION_AMBIENT_POWER_DEMO]
 
 #structure [nvm_entry_name, offset]
 nvm_offset:

@@ -468,6 +468,7 @@ typedef struct anti_param_s {
     uint16_t txop_limit;
     uint16_t ack_timeout;
     uint16_t delay;
+    uint8_t cts_to_self_enable;
 } anti_param_t;
 
 #if defined(FEATURE_STA_ECSA) || defined(FEATURE_AP_ECSA)

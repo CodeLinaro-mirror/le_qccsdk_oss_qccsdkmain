@@ -408,7 +408,7 @@ typedef struct {
     1:Device supports persistent groups. \n
     0:Device does not support persistent groups.
     */
-    int8_t device_Name[33];
+    uint8_t device_Name[__QAPI_WLAN_P2P_WPS_MAX_DEVNAME_LEN];
     /**< Device name */
 } qapi_WLAN_P2P_Device_Lite_t;
 
@@ -876,7 +876,7 @@ __QAPI_WLAN_PARAM_GROUP_P2P_DEV_NAME \n
 qapi_WLAN_Set_Param()
 */
 typedef struct {
-    uint8_t dev_Name[__QAPI_WLAN_P2P_WPS_MAX_DEVNAME_LEN + 1]; /**< P2P Device name */
+    uint8_t dev_Name[__QAPI_WLAN_P2P_WPS_MAX_DEVNAME_LEN]; /**< P2P Device name */
     uint8_t dev_Name_Len;                                      /**< Length of P2P Device name */
 } qapi_WLAN_P2P_Set_Dev_Name_t;
 
@@ -917,6 +917,25 @@ qapi_WLAN_Set_Param()
 typedef struct {
     uint8_t enable; /**< CCK rates enable */
 } qapi_WLAN_P2P_Set_Cck_Rates_t;
+
+/**
+@ingroup qapi_wlan_p2p
+Data structure used to pass the min and max discoverable interval from an application to the driver.
+An object of this structure should be used to call qapi_WLAN_Set_Param() along with following arguments,\n
+      device_ID: 0 (P2P mode is allowed only for device 0) \n
+       group_ID: #__QAPI_WLAN_PARAM_GROUP_P2P \n
+       param_ID: __QAPI_WLAN_PARAM_GROUP_P2P_DISCOVERABLE_INTERVAL
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_P2P_DISCOVERABLE_INTERVAL \n
+qapi_WLAN_Set_Param()
+*/
+typedef struct {
+    uint8_t min_discoverable_interval; /**< The random integer for listen state shall be no less than 
+                                             the minDiscoverableInterval value */
+    uint8_t max_discoverable_interval; /**< The random integer for listen state shall be no greater than 
+                                             the maxDiscoverableInterval value */
+} qapi_WLAN_P2P_Set_Discoverable_Interval_t;
 
 /**
 @ingroup qapi_wlan_p2p
@@ -969,6 +988,8 @@ typedef struct {
         /**< Operating mode information */
         qapi_WLAN_P2P_Set_Cck_Rates_t cck_Rates;
         /**< CCK Rates information */
+        qapi_WLAN_P2P_Set_Discoverable_Interval_t discoverable_interval;
+        /**< discoveryable interval information for find phase */
     } val;
 } qapi_WLAN_P2P_Set_Cmd_t;
 

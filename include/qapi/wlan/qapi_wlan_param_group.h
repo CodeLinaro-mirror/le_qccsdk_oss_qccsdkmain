@@ -20,12 +20,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "qapi_status.h"
 
 /**
-Macro that indicates the group ID that can be used to configure system parameters of
-the WLAN subsystem.
-*/
-#define __QAPI_WLAN_PARAM_GROUP_SYSTEM 0
-
-/**
 Macro that indicates the group ID that can be used to configure wireless parameters of
 the WLAN subsystem.
 */
@@ -388,10 +382,27 @@ operation for this should be done after establishing a connection.
 
 @note1hang This parameter can only be used with qapi_WLAN_Set_Param().
 
-@param[in] uint8_t  RspRate idx, only support 8:6Mbps.
+@param[in] uint8_t  RspRate idx, only support 8:11g 6Mbps 16:11n 6.5Mbps.
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSP_RATE 91
 
+/**
+Command ID to adjust BA window size when operating in Station mode. 
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] qapi_WLAN_BA_Window_Size_t  BA window size.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW_SIZE 92
+
+/**
+Command ID to set protection mode when operating in Station mode.
+
+@note1hang This parameter can be used with qapi_WLAN_Set_Param().
+
+@param[in] uint32_t        Set 1 to enable CTS_TO_SELF protection, 0 to be disabled.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_PROTECTION_MODE 93
 
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE                0
 
@@ -656,6 +667,20 @@ qapi_WLAN_P2P_Set_Cmd_t \n
 qapi_WLAN_Set_Param()
 */
 #define __QAPI_WLAN_PARAM_GROUP_P2P_CCK_RATES 14
+
+/**
+Command ID to set P2P discoverable interval.
+Use this parameter with group ID #__QAPI_WLAN_PARAM_GROUP_P2P to call qapi_WLAN_Set_Param().
+Alternately, applications can use an object of structure qapi_WLAN_P2P_Set_Cmd_t with this
+macro as 'config_Id' and 'discoverable_Interval' members of
+union 'val' as data to call qapi_WLAN_Set_Param().
+@param[in] qapi_WLAN_P2P_Set_Discoverable_Interval_t   Set P2P discoverable interval in milliseconds.
+@sa
+qapi_WLAN_P2P_Set_Discoverable_Interval_t \n
+qapi_WLAN_P2P_Set_Cmd_t \n
+qapi_WLAN_Set_Param()
+*/
+#define __QAPI_WLAN_PARAM_GROUP_P2P_DISCOVERABLE_INTERVAL 15
 
 /**
 Command ID used for calling qapi_WLAN_Set_Param() to configure P2P group owner parameters.

@@ -103,6 +103,7 @@ projects_common = [
     "//modules/net/mqtt_client",
     "//modules/net/httpd",
     "//modules/qat",
+    "//demo/ambient_power_demo",
 ]
 
 if (!CONFIG_WPS_LIB) {
@@ -149,6 +150,10 @@ config("common_define") {
     }
     if (image_name == "FERMION_POWER_TEST_DEMO"){
         defines += [ "CONFIG_POWER_TEST_DEMO_ENABLE=1" ]
+    }
+
+    if (image_name == "FERMION_AMBIENT_POWER_DEMO"){
+        defines += [ "CONFIG_AMBIENT_POWER_ENABLE=1" ]
     }
 }
 

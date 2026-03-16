@@ -189,16 +189,19 @@ loader_start( void* arg){
 	sbl_mpu_config();
 #endif
 
+#ifndef CONFIG_AMBIENT_POWER_ENABLE   
 	nt_uartInit();
-
+#endif
 	sbl_printf("\n\tFermion SBL - v%02d.%02d.%04d \r\n",(int)SBL_VER_MAJOR, (int)SBL_VER_MINOR, (int)SBL_VER_COUNT);
 	
 	cs_pbl = is_pbl_cs();
 	get_pbl_share(arg, cs_pbl);
 #ifdef P_DEBUG_PRINT_LOG
+#ifndef CONFIG_AMBIENT_POWER_ENABLE 
 	boot_log_show_system(pbl_log);
 	boot_log_show_handler(pbl_log);
 	boot_log_show_elf_load(pbl_log);
+#endif
 #endif	
 
 

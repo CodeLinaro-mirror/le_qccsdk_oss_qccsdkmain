@@ -1423,6 +1423,7 @@ static qapi_Status_t EnableXpa(uint32_t Parameter_Count, QAPI_Console_Parameter_
 
 static qapi_Status_t SetRate(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
 {
+    qapi_Status_t ret = QAPI_OK;
     qapi_WLAN_Set_Rate_Params_t set_rate_cfg;
 
     memset(&set_rate_cfg, 0, sizeof(qapi_WLAN_Set_Rate_Params_t));
@@ -1432,23 +1433,30 @@ static qapi_Status_t SetRate(uint32_t __attribute__((__unused__)) Parameter_Coun
         return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
     }
 
-    if (!Parameter_List)
-    {
+    if (!Parameter_List) {
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
-    if (memcmp(Parameter_List[0].String_Value, "auto", sizeof("auto")) == 0)
-    {
-        if (Parameter_Count < 1)
-        {
+    if (Parameter_Count < 1) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    if (memcmp(Parameter_List[0].String_Value, "auto", sizeof("auto")) == 0) {
+        set_rate_cfg.ra_ON = 1;
+    } else if(memcmp(Parameter_List[0].String_Value, "htOnly", sizeof("htOnly")) == 0) {
+        if (Parameter_Count < 2) {
             return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
         }
 
-        set_rate_cfg.ra_ON = 1;
-    } else
-    {
-        if (Parameter_Count < 4)
-        {
+        if(memcmp(Parameter_List[1].String_Value, "enable", sizeof("enable")) == 0) {
+            set_rate_cfg.ra_ON = 2;
+        } else if(memcmp(Parameter_List[1].String_Value, "disable", sizeof("disable")) == 0) {
+            set_rate_cfg.ra_ON = 3;
+        } else {
+            return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+        }
+    } else {
+        if (Parameter_Count < 4) {
             return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
         }
 
@@ -1459,7 +1467,13 @@ static qapi_Status_t SetRate(uint32_t __attribute__((__unused__)) Parameter_Coun
         set_rate_cfg.rate_t_rate = Parameter_List[3].Integer_Value;
     }
 
-    qapi_WLAN_Set_Rate(&set_rate_cfg);
+    ret = qapi_WLAN_Set_Rate(&set_rate_cfg);
+
+    if(ret != QAPI_OK) {
+        if(set_rate_cfg.ra_ON == 2 || set_rate_cfg.ra_ON == 3) {
+            info_printf("SetRate htOnly fail \n");
+        }
+    }
 
     return QAPI_OK;
 }
@@ -2586,8 +2600,8 @@ static qapi_Status_t setRspRate(uint32_t Parameter_Count, QAPI_Console_Parameter
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
-    if (Parameter_List[0].Integer_Value != 8) {
-        info_printf("RspRate only support set to 8:6Mbps\r\n");
+    if (Parameter_List[0].Integer_Value != 8 && Parameter_List[0].Integer_Value != 16) {
+        info_printf("RspRate only support set to 8:6Mbps or 16:6.5Mbps\r\n");
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
     }
 
@@ -2607,6 +2621,76 @@ static qapi_Status_t setRspRate(uint32_t Parameter_Count, QAPI_Console_Parameter
     return QAPI_OK;
 }
 
+static qapi_Status_t setBaWinSize(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	qapi_Status_t ret= QAPI_OK;
+	uint8_t deviceId = get_active_device();
+    qapi_WLAN_BA_Window_Size_t param;
+
+	if( Parameter_Count != 2 || !Parameter_List 
+        || !Parameter_List[0].Integer_Is_Valid || !Parameter_List[1].Integer_Is_Valid) {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+	
+	param.tx_size = Parameter_List[0].Integer_Value;
+	param.rx_size = Parameter_List[1].Integer_Value;
+	
+	if(param.tx_size > 64 || param.rx_size > 64) {
+		info_printf("Tha MAX value of tx_ba_window_size and rx_ba_window_size is 64\r\n");
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+	
+	ret = qapi_WLAN_Set_Param(deviceId, 
+               __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+               __QAPI_WLAN_PARAM_GROUP_WIRELESS_BA_WINDOW_SIZE,
+               &param,
+               sizeof(qapi_WLAN_BA_Window_Size_t),
+               FALSE);
+
+    if(ret != QAPI_OK) {
+        info_printf("Set failed. WLAN should be enabled and please set the parameter before connecting.\r\n");
+	}
+
+	return ret;
+}
+
+static qapi_Status_t EnableCtsToSelf(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+	qapi_Status_t ret = QAPI_OK;
+	uint8_t deviceId = get_active_device();
+	uint32_t enable;
+
+	if(!pg_wifi_shell_cxt->wlan_enabled) {
+		info_printf("wlan is not enabled \n");
+		return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+	}
+
+	if(Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+
+	enable = Parameter_List[0].Integer_Value;
+
+	if(enable != 0 && enable != 1) {
+		info_printf("Invalid parameter. Use 0 to disable or 1 to enable CTS-to-self\r\n");
+		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+	}
+
+	ret = qapi_WLAN_Set_Param(deviceId,
+				__QAPI_WLAN_PARAM_GROUP_WIRELESS,
+				__QAPI_WLAN_PARAM_GROUP_WIRELESS_PROTECTION_MODE,
+				&enable,
+				sizeof(enable),
+				FALSE);
+
+	if(ret != QAPI_OK) {
+		info_printf("Set CTS-to-self failed\r\n");
+	} else {
+		info_printf("CTS-to-self %s successfully\r\n", enable ? "enabled" : "disabled");
+	}
+
+	return ret;
+}
 
 #ifdef CONFIG_ENABLE_P2P_MODE
 void app_p2p_process_persistent_list_event(uint8_t *pData)
@@ -4767,6 +4851,35 @@ static qapi_Status_t P2p_set(uint32_t __attribute__((__unused__)) Parameter_Coun
         memcpy(p2p_set_params.val.device_Name.dev_Name, (char *)Parameter_List[1].String_Value, len);
         p2p_set_params.val.device_Name.dev_Name_Len = len;
     }
+    else if (strcmp(Parameter_List[0].String_Value, "discint") == 0) {
+        if (Parameter_Count < 3) {
+            info_printf("Incorrect parameters\r\n");
+            return -1;
+        }
+
+        uint8_t min_interval = Parameter_List[1].Integer_Value;
+        uint8_t max_interval = Parameter_List[2].Integer_Value;
+
+        if (min_interval == 0 || max_interval == 0) {
+            info_printf("The values for DiscoverableInterval shall be nonzero\r\n");
+            return -1;
+        }
+
+        if (min_interval > max_interval) {
+            info_printf("Minimum discoverable interval must be less than or equal to maximum\r\n");
+            return -1;
+        }
+
+        if (max_interval > 255) {
+            info_printf("Discoverable interval values must not exceed 255\r\n");
+            return -1;
+        }
+
+        p2p_set_params.config_Id = __QAPI_WLAN_PARAM_GROUP_P2P_DISCOVERABLE_INTERVAL;
+        p2p_set_params.val.discoverable_interval.min_discoverable_interval = min_interval;
+        p2p_set_params.val.discoverable_interval.max_discoverable_interval = max_interval;
+        len = sizeof(p2p_set_params.val.discoverable_interval);
+    }
 
     else
     {
@@ -4839,8 +4952,9 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 #ifdef CONFIG_WPS
     { wpsPushSetup, 	 "WpsPush", 		  "<connectFlag> [<ssid> <mac> <channel>]",    "Setup and start a WPS connection using the Push method"   },
 #endif
-    { setRspRate, 	 "setRspRate", 		  "<rate_idx = 8:6Mbps>",    "setRspRate to 6Mbps"   },
-
+    { setRspRate, 	 "setRspRate", 		  "<rate_idx = 8:11g 6Mbps 16:11n 6.5Mbps>",    "setRspRate to 11g 6Mbps or 11n 6.5Mbps"   },
+    { setBaWinSize, 	 "setBaWinSize", 		  "<tx_ba_window_size> <rx_ba_window_size>",    "Set BA window size of RX or TX or both."   },
+    {EnableCtsToSelf, "EnableCtsToSelf", 		  "<1: enable| 0: disable>",    "Enable/disable CTS-to-self."}
 };
 
 #ifdef CONFIG_ENABLE_P2P_MODE
