@@ -306,6 +306,9 @@ typedef enum {
     WMI_P2P_FW_GET_OPPPS_CMDID,
     WMI_P2P_LIST_PERSISTENT_NETWORK_CMDID,
 
+    WMI_SET_PMK_CMDID,
+    WMI_SET_PMKID_CMDID,
+
     WMI_CMD_MAX, /* Note: This cmd should be the last in the WMI_COMMAND_ID ENUM */
 } WMI_COMMAND_ID;
 
@@ -353,6 +356,7 @@ typedef enum {
     WMI_P2P_INVITE_SENT_RESULT_EVENTID,
     WMI_P2P_SDPD_RX_EVENTID,
     WMI_BMPS_GET_STATS_EVENTID,
+    WMI_8021X_ASSOC_RESULT_EVTID,
 
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
@@ -526,12 +530,15 @@ typedef enum {
     WMI_WPA_AUTH_CCKM = 0x20,
     WMI_WPA2_AUTH_CCKM = 0x40,
     WMI_WPA3_SHA256_AUTH = 0x80,
+    WMI_WPA2_SHA256_AUTH = 0x100,    // WPA2-802.1X with SHA256
+    WMI_WPA3_ENTERPRISE_ONLY_AUTH = 0x200, // WPA3 enterprise only mode
+    WMI_WPA3_ENTERPRISE_B_192_AUTH = 0x400 // WPA3 enterprise 192-bit mode
 } AUTH_MODE;
 
 typedef PREPACK struct {
     uint8_t networkType;
     uint8_t dot11AuthMode;
-    uint8_t authMode;
+    uint16_t authMode;
     uint8_t pairwiseCryptoType;
     uint8_t pairwiseCryptoLen;
     uint8_t groupCryptoType;
@@ -629,6 +636,14 @@ typedef PREPACK struct {
 } POSTPACK WMI_RECONNECT_CMD;
 
 /*
+ * WMI_SET_PMK_CMDID
+ */
+typedef PREPACK struct {
+    uint8_t pmk[WMI_PMK_LEN];
+    uint8_t pmk_len;
+} POSTPACK WMI_SET_PMK_CMD, WMI_GET_PMK_REPLY;
+
+/*
  * WMI_SET_PASSPHRASE_CMDID
  */
 typedef PREPACK struct {
@@ -669,6 +684,17 @@ typedef PREPACK struct {
 } POSTPACK WMI_SET_TKIP_COUNTERMEASURES_CMD;
 
 #define WMI_PMKID_LEN 16
+
+typedef enum {
+   PMKID_DISABLE = 0,
+   PMKID_ENABLE  = 1,
+} PMKID_ENABLE_FLG;
+
+typedef PREPACK struct {
+    uint8_t bssid[ATH_MAC_LEN];
+    uint8_t enable;                 /* PMKID_ENABLE_FLG */
+    uint8_t pmkid[WMI_PMKID_LEN];
+} POSTPACK WMI_SET_PMKID_CMD;
 
 /*
  * WMI_START_SCAN_CMD
@@ -2547,7 +2573,8 @@ typedef struct {
     uint16_t chan_freq; // Channel frequency in MHz
     uint8_t bssid[IEEE80211_ADDR_LEN];
     ssid_t ssid;
-    uint32_t security_mode;
+    uint32_t wpa_security_mode;
+    uint32_t rsn_security_mode;
     int8_t rssi;
     uint8_t wlan_mode;
 } ap_info;
@@ -2613,6 +2640,7 @@ typedef PREPACK struct {
 typedef PREPACK struct {
     uint8_t num_entries;
     uint8_t scan_id;
+    uint8_t reserved[2]; /* Padding bytes to align scan_bss_info on a 4-byte boundary */
     ap_info scan_bss_info[MAX_SCAN_SSID];
 } POSTPACK SCAN_RESULT;
 
@@ -2661,6 +2689,11 @@ typedef PREPACK struct {
     uint8_t reason;
     uint16_t new_chan_freq;
 } POSTPACK chan_switch_event;
+
+typedef PREPACK struct {
+    uint8_t bssid[IEEE80211_ADDR_LEN];
+    AUTH_MODE auth_mode;
+} POSTPACK WMI_EAP_ASSOC_RESULT_MSG;
 
 #ifdef CONFIG_WMI_EVENT
 typedef enum {

@@ -144,4 +144,7 @@ config TOTAL_BEACON_WAIT_TIME
     int "Total beacon wait time in power save mode"
     default 25000
 
+config WLAN_8021X_LIB
+    bool "enable 8021x"
+    default y
             endmenu

@@ -5,6 +5,13 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #include "wlan_drv.h"
 #include "wlan_qapi_helper.h"
+#ifdef CONFIG_WLAN_8021X
+#include "wlan_8021x_cxt.h"
+#include "suppl_auth.h"
+
+extern wlan_8021x_global_t *g_wl8021x_global;
+extern int wpa_debug_level;
+#endif
 
 /* Should be called under protection of p_cxt->wlan_qapi_cxt_mutex */
 static void _wlan_set_wep(void)
@@ -204,6 +211,23 @@ qapi_Status_t qapi_WLAN_Set_Param(uint8_t __attribute__((__unused__)) device_ID,
     }
     case __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY: {
         switch (param_ID) {
+#ifdef CONFIG_WLAN_8021X
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_PMK: {
+            if (!data || !length) {
+                warn_printf("clear passphrase\n");
+            } else {
+                if (length > __QAPI_WLAN_PASSPHRASE_LEN) {
+                    PRINT_ERR_INVALID_PARAM1("length", length);
+                    ret = QAPI_WLAN_ERR_EINVAL;
+                    break;
+                }
+            }
+            qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+            wlan_sec_set_pmk(device_ID, (uint8_t*) data, length);
+            qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+            break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_PMK */
+        }
+#endif
         case __QAPI_WLAN_PARAM_GROUP_SECURITY_PASSPHRASE: {
             if (!data || !length) {
                 warn_printf("clear passphrase\n");
@@ -262,11 +286,34 @@ qapi_Status_t qapi_WLAN_Set_Param(uint8_t __attribute__((__unused__)) device_ID,
                     p_cmd->dot11AuthMode = (SAE_AUTH | OPEN_AUTH);
                     p_cmd->authMode = (WMI_WPA3_SHA256_AUTH | WMI_WPA2_PSK_AUTH | WMI_WPA_PSK_AUTH);
                     break;
+#ifdef CONFIG_WLAN_8021X
+                case QAPI_WLAN_AUTH_WPA_E:
+                    p_cmd->dot11AuthMode = OPEN_AUTH;
+                    p_cmd->authMode = WMI_WPA_AUTH;
+                    break;
+                case QAPI_WLAN_AUTH_WPA2_E:
+                    p_cmd->dot11AuthMode = OPEN_AUTH;
+                    p_cmd->authMode = WMI_WPA2_AUTH;
+                    break;
+                case QAPI_WLAN_AUTH_WPA3_EAP_ONLY_E:
+                    p_cmd->dot11AuthMode = OPEN_AUTH;
+                    p_cmd->authMode = WMI_WPA3_ENTERPRISE_ONLY_AUTH;
+                    break;
+                case QAPI_WLAN_AUTH_WPA3_EAP_TRANSITION_E:
+                    p_cmd->dot11AuthMode = OPEN_AUTH;
+                    p_cmd->authMode = (WMI_WPA2_AUTH | WMI_WPA2_SHA256_AUTH);
+                    break;
+#endif
                 default:
                     PRINT_ERR_INVALID_PARAM1("e_wpa_ver", e_wpa_ver);
                     ret = QAPI_WLAN_ERR_EINVAL;
                     break;
                 }
+#ifdef CONFIG_WLAN_8021X
+                if (AUTH_IS_8021X(p_cmd->authMode)) {
+                    wlan_8021x_set_auth_mode(p_cmd->authMode);
+                }
+#endif
             }
             qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
             break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE */
@@ -319,7 +366,28 @@ qapi_Status_t qapi_WLAN_Set_Param(uint8_t __attribute__((__unused__)) device_ID,
             break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_WPS_CREDENTIALS */
         }
 #endif
-
+#ifdef CONFIG_WLAN_8021X
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_PMKID: {
+            ret = (qapi_Status_t)wlan_sec_set_pmkid(device_ID, (qapi_WLAN_Set_PMKID_Params_t*) data);
+            break;
+        }
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_METHOD:
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_IDENTITY:
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_USERNAME:
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_PASSWORD:
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_CA_CER:
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_CER:
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_PRIVATE_KEY:
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_NO_SERVER_AUTH: {
+            ret = wlan_8021x_set_param(device_ID, param_ID, data, length, g_wl8021x_global);
+            break; /* __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_START ~ __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_END */
+        }
+        case __QAPI_WLAN_PARAM_GROUP_SECURITY_DEBUG_LEVEL:
+            info_printf("%s wpa dbglevel=%d=>%d\n", __FUNCTION__, wpa_debug_level, *((int *)data));
+            wpa_debug_level = *((int *)data);
+            ret = QAPI_OK;
+            break;
+#endif
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;

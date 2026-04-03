@@ -153,4 +153,10 @@ declare_args() {
     CONFIG_SUPPORT_LWIP_RAW_SOCKET = false
 
     CONFIG_SECUREFS_DEMO = false
+
+    CONFIG_NO_STDOUT_DEBUG = false
+
+    CONFIG_ENABLE_SUPPLICANT = false
+
+    CONFIG_WLAN_8021X = false
 }

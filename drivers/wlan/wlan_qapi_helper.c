@@ -24,6 +24,8 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define SCAN_LIST_NUM_CHANNELS 11
 #endif /* CONFIG_6GHZ */
 
+#define PMK_STR_LEN (64)
+
 bool p2pMode = true;
 
 /* Should be called under protection of p_cxt->wlan_qapi_cxt_mutex */
@@ -81,6 +83,102 @@ void wlan_set_connect_bssid(const uint8_t *bssid, uint8_t bssid_length)
                     p_cmd->bssid[2], p_cmd->bssid[3], p_cmd->bssid[4], p_cmd->bssid[5]);
     }
 }
+
+#ifdef CONFIG_WLAN_8021X
+static uint8_t ascii2Hex(char val)
+{
+	if('0' <= val && '9' >= val){
+		return (uint8_t)(val - '0');
+	}else if('a' <= val && 'f' >= val){
+		return (uint8_t)((val - 'a') + 0x0a);
+	}else if('A' <= val && 'F' >= val){
+		return (uint8_t)((val - 'A') + 0x0a);
+	}
+
+	return 0xff;/* error */
+}
+
+qapi_Status_t wlan_sec_set_pmk(uint8_t device_id, uint8_t *pmk, uint32_t len)
+{
+    qapi_Status_t error = QAPI_OK;
+    WMI_SET_PMK_CMD *cmd;
+
+    if (pmk == NULL) {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+    if (len != PMK_STR_LEN && len != WMI_PMK_LEN) {
+        err_printf("Invalid len=%d\n", len);
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    cmd = malloc(sizeof(WMI_SET_PMK_CMD));
+    if (cmd == NULL)
+        return QAPI_ERROR;
+
+    memset(cmd, 0, sizeof(WMI_SET_PMK_CMD));
+
+    do {
+        cmd->pmk_len = WMI_PMK_LEN;
+
+        if (len == PMK_STR_LEN) {
+            int j;
+            for (j = 0; j < PMK_STR_LEN; j++) {
+                uint8_t val = ascii2Hex(pmk[j]);
+                if (val == 0xff) {
+                    warn_printf("Invalid character at index %d\n", j);
+                    error = QAPI_ERR_INVALID_PARAM;
+                    break;
+                }
+                if ((j & 1) == 0)
+                    val <<= 4;
+                cmd->pmk[j >> 1] |= val;
+            }
+            if (error != QAPI_OK)
+                break;
+        } else {
+            memcpy(cmd->pmk, pmk, WMI_PMK_LEN);
+        }
+
+        if (QAPI_OK != wmi_cmd_send(WMI_SET_PMK_CMDID, cmd, sizeof(WMI_SET_PMK_CMD))) {
+            error = QAPI_ERROR;
+            break;
+        }
+    } while (0);
+
+    free(cmd);
+    return error;
+}
+
+qapi_Status_t wlan_sec_set_pmkid(uint8_t device_id, qapi_WLAN_Set_PMKID_Params_t *pParam)
+{
+    qapi_Status_t error = QAPI_OK;
+    WMI_SET_PMKID_CMD *cmd;
+
+    if (pParam == NULL) {
+        return QAPI_ERR_INVALID_PARAM;
+    }
+
+    cmd = malloc(sizeof(WMI_SET_PMKID_CMD));
+    if (cmd == NULL)
+        return QAPI_ERROR;
+
+    memset(cmd, 0, sizeof(WMI_SET_PMKID_CMD));
+
+    do {
+        memcpy(cmd->bssid, pParam->bssid, ATH_MAC_LEN);
+        cmd->enable = pParam->enable;
+        memcpy(cmd->pmkid, pParam->pmkid, WMI_PMKID_LEN);
+
+        if (QAPI_OK != wmi_cmd_send(WMI_SET_PMKID_CMDID, cmd, sizeof(WMI_SET_PMKID_CMD))) {
+            error = QAPI_ERROR;
+            break;
+        }
+    } while (0);
+
+    free(cmd);
+    return error;
+}
+#endif
 
 /* Should be called under protection of p_cxt->wlan_qapi_cxt_mutex */
 void wlan_set_passphrase(const uint8_t *passphrase, uint8_t passphrase_len)

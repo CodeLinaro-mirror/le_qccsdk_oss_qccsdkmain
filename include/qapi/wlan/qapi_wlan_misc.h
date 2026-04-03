@@ -326,6 +326,31 @@ of the qapi_WLAN_BSS_Scan_Info_t structure.
 */
 #define __QAPI_WLAN_SECURITY_AUTH_SAE      0x04
 
+/**
+ * Flag that indicates whether the scanned access point's authentication type is of type
+ * WPA3-Enterprise / 802.1x (EAP based).
+ *
+ * This is indicated in the rsn_Auth field of the qapi_WLAN_BSS_Scan_Info_t structure
+ * for WPA3 APs.
+ *
+ * Typical WPA3-Enterprise AKM suite selectors include:
+ * - 00-0F-AC:5  : IEEE 802.1X using SHA-256
+ * - 00-0F-AC:3  : FT authentication over IEEE 802.1X using SHA-256
+ */
+#define __QAPI_WLAN_SECURITY_AUTH_WPA3_1X    0x08
+
+/**
+ * Flag that indicates whether the scanned access point's authentication type is of type
+ * WPA3-Enterprise 192-bit mode.
+ *
+ * This is indicated in the rsn_Auth field of the qapi_WLAN_BSS_Scan_Info_t structure
+ * for WPA3 APs.
+ *
+ * WPA3-Enterprise 192-bit mode AKM suite selectors:
+ * - 00-0F-AC:12 : WPA3-Enterprise 192-bit mode
+ */
+#define __QAPI_WLAN_SECURITY_AUTH_WPA3_1X_B_192    0x10
+
 /** @cond */
 /** Boot parameter. */
 #define __QAPI_WLAN_AR4XXX_PARAM_MODE_NORMAL    (0x00000002)

@@ -175,7 +175,7 @@ void inc_byte_array(uint8_t *counter, size_t len);
 /* Debugging function - conditional printf and hex dump. Driver wrappers can
  *  use these for debugging purposes. */
 
-enum { MSG_MSGDUMP, MSG_DEBUG, MSG_INFO, MSG_WARNING, MSG_ERROR };
+enum { MSG_EXCESSIVE, MSG_MSGDUMP, MSG_DEBUG, MSG_INFO, MSG_WARNING, MSG_ERROR };
 
 #ifdef CONFIG_NO_STDOUT_DEBUG
 
@@ -197,6 +197,16 @@ enum { MSG_MSGDUMP, MSG_DEBUG, MSG_INFO, MSG_WARNING, MSG_ERROR };
 #define wpa_hexdump_ascii_key(args...) \
     do {                               \
     } while (0)
+
+static inline void wpa_hexdump_buf(int level, const char *title,
+				   const struct wpabuf *buf)
+{
+}
+
+static inline void wpa_hexdump_buf_key(int level, const char *title,
+				       const struct wpabuf *buf)
+{
+}
 
 #else /* CONFIG_NO_STDOUT_DEBUG */
 

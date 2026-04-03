@@ -132,7 +132,7 @@ qapi_Status_t qapi_WLAN_Commit (uint8_t  __attribute__((__unused__)) device_ID)
 {
     qapi_Status_t ret = QAPI_WLAN_ERROR;
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
-    uint8_t authMode = p_cxt->connect_cmd.authMode;
+    uint16_t authMode = p_cxt->connect_cmd.authMode;
 
     WLAN_QAPI_LOCK();
     if ((authMode==WMI_WPA_PSK_AUTH) || 

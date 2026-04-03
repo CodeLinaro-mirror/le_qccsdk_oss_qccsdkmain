@@ -1,0 +1,19 @@
+# Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+
+menu "supplicant sub modules Settings"
+
+config ENABLE_SUPPLICANT
+    bool "Enable WPA Supplicant"
+    default n
+
+config NO_STDOUT_DEBUG
+    bool "disable wpa debug"
+    default n
+
+config WLAN_8021X
+    bool "enable wlan 8021x"
+    default n
+
+endmenu
+

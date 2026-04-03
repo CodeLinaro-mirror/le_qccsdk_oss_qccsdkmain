@@ -128,4 +128,12 @@ config ENABLE_P2P_LIB
     bool "enable p2p lib support"
     default y
 
+config TOTAL_BEACON_WAIT_TIME
+    int "Total beacon wait time in power save mode"
+    default 25000
+
+config WLAN_8021X_LIB
+    bool "enable 8021x"
+    default n
+
             endmenu
