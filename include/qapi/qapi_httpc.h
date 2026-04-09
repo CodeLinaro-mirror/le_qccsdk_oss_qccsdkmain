@@ -117,7 +117,7 @@ typedef struct {
  */
 typedef void (*qapi_HTTPc_CB_t)(
         void* arg,
-        /**< Argument passed in qapi_Net_HTTPc_New_sess(). */
+        /**< Argument passed in qapi_Net_HTTPc_New_sess2(). */
 
         int32_t state,
         /**< State in qapi_Net_HTTPc_CB_State_e. */
@@ -169,6 +169,8 @@ qapi_Status_t qapi_Net_HTTPc_Stop(void);
  * 
  * @param[in] ssl_Cfg   ssl_pre_buffer parameters.
  *
+ * @param[in] https_auth_type   https_auth_type parameters.
+ *
  * @return
  * On success, a non-NULL handle is returned; on error, NULL is returned.
  */
@@ -181,35 +183,8 @@ qapi_Net_HTTPc_handle_t qapi_Net_HTTPc_New_sess2(
         uint16_t                httpc_Max_Header_Length,
         uint16_t                httpc_Rx_Buffer_Size,
         uint16_t                ip_prefer,
-        uint16_t                ssl_pre_buffer);
-
-/**
- * @brief Starts a new a HTTP client session.
- *
- * @param[in] timeout  Timeout (in ms) on an HTTP request in this session.
- *
- * @param[in] isHttps  indicate requst is http or https.
- *
- * @param[in] callback  Pointer to the user callback function (see qapi_HTTPc_CB_t)
- *
- * @param[in] arg    Argument for the callback function.
- *
- * @param[in] httpc_Max_Body_Length  Size in bytes of message-body buffer for HTTP request.
- *
- * @param[in] httpc_Max_Header_Length   Size in bytes of header buffer for HTTP request.
- *
- * @note    Internally, the system allocates 1,750-byte RX buffer for caller.
- *
- * @return
- * On success, a non-NULL handle is returned; on error, NULL is returned.
- */
-qapi_Net_HTTPc_handle_t qapi_Net_HTTPc_New_sess(
-        uint32_t                timeout,
-        uint32_t                isHttps,
-        qapi_HTTPc_CB_t         callback,
-        void*                   arg,
-        uint16_t                httpc_Max_Body_Length,
-        uint16_t                httpc_Max_Header_Length);
+        uint16_t                ssl_pre_buffer,
+        uint8_t                 https_auth_type);
 
 /**
  * @brief Frees an HTTP client session.

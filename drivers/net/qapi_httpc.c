@@ -92,7 +92,8 @@ qapi_Net_HTTPc_New_sess2(
             uint16_t httpc_Max_Header_Length,
             uint16_t httpc_Rx_Buffer_Size,
             uint16_t ip_prefer,
-            uint16_t ssl_pre_buffer)
+            uint16_t ssl_pre_buffer,
+            uint8_t https_auth_type)
 {
     return (qapi_Net_HTTPc_handle_t)http_client_newsess(
             timeout,
@@ -103,30 +104,8 @@ qapi_Net_HTTPc_New_sess2(
             httpc_Max_Header_Length,
             httpc_Rx_Buffer_Size,
             ip_prefer,
-            ssl_pre_buffer);
-}
-
-/****************************************************************************
- ***************************************************************************/
-qapi_Net_HTTPc_handle_t
-qapi_Net_HTTPc_New_sess(
-            uint32_t timeout,
-            uint32_t isHttps,
-            qapi_HTTPc_CB_t callback,
-            void* arg,
-            uint16_t httpc_Max_Body_Length,
-            uint16_t httpc_Max_Header_Length)
-{
-    return qapi_Net_HTTPc_New_sess2(
-            timeout,
-            isHttps,
-            callback,
-            arg,
-            httpc_Max_Body_Length,
-            httpc_Max_Header_Length,
-            HTTPCLIENT_MAX_BUFFER_SIZE,
-            DEFAULT_IP_PREFER,
-            DEFAULT_PRE_ALLOCATE_BUFFER);
+            ssl_pre_buffer,
+            https_auth_type);
 }
 
 /****************************************************************************

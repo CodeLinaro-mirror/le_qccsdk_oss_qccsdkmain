@@ -677,169 +677,6 @@ void httpc_command_help(void)
     HTTPC_PRINTF(" httpc destroy 1\n");
 }
 
-qapi_Status_t httpc_command_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
-{
-    int error = QAPI_OK;
-    uint32_t port = 0;
-    uint32_t server_offset = 0;
-    uint32_t timeout = 0;
-    uint32_t i;
-    uint16_t httpc_max_body_length = 0;
-    uint16_t httpc_max_header_length = 0;
-    uint32_t isHttps = 0;
-    struct http_client_demo_s *arg = NULL;
-
-    if (Parameter_Count < 4) {
-        httpc_command_help();
-        return QAPI_ERROR;
-    }
-
-    if (strlen((char *)Parameter_List[1].String_Value) >= 64) {
-        HTTPC_PRINTF("%s line %d: Maximum 64 bytes supported as Connect URL\n", __func__, __LINE__);
-        return QAPI_ERROR;
-    }
-
-    for (i = 0; i < HTTPC_DEMO_MAX_NUM; i++) {
-        if (http_client_demo[i].client == NULL) {
-            arg = &http_client_demo[i];
-            arg->num = i + 1;
-            arg->total_len = 0;
-            break;
-        }
-    }
-
-    if (!arg) {
-        HTTPC_PRINTF("%s line %d: No More avalible HTTP CLIENT\n", __func__, __LINE__);
-        return QAPI_ERROR;
-    }
-
-    port = Parameter_List[2].Integer_Value;
-
-    if (port == 0) {
-        port = 80;
-    }
-
-    timeout = Parameter_List[3].Integer_Value;
-
-    /* httpc connect https://www.example.com 443 36000 */
-    if (strncmp(Parameter_List[1].String_Value, "https://", 8) == 0) {
-        server_offset = 8;
-        isHttps = 1;
-    }
-
-    /* httpc connect http://www.example.com 80 36000 */
-    else if (strncmp(Parameter_List[1].String_Value, "http://", 7) == 0) {
-        server_offset = 7;
-        isHttps = 0;
-    }
-
-    /* httpc connect www.example.com 80 36000 */
-    else {
-        server_offset = 0;
-    }
-    httpc_max_body_length = (httpc_demo_max_body_len) ? httpc_demo_max_body_len : HTTPC_DEMO_DEFAULT_MAX_BODY_LEN;
-    httpc_max_header_length =
-        (httpc_demo_max_header_len) ? httpc_demo_max_header_len : HTTPC_DEMO_DEFAULT_MAX_HEADER_LEN;
-
-#ifdef CONFIG_QAT_OTA_DEMO
-    if (ota_http_sess->status == HTTP_OTA_STATUS_RUNNING) {
-        arg->client = qapi_Net_HTTPc_New_sess(timeout, isHttps, http_client_cb_ota, (void *)arg, httpc_max_body_length,
-                                              httpc_max_header_length);
-
-    } else
-#endif
-    {
-        arg->client = qapi_Net_HTTPc_New_sess(timeout, isHttps, http_client_cb_demo, (void *)arg, httpc_max_body_length,
-                                              httpc_max_header_length);
-    }
-
-    if (arg->client == NULL) {
-        HTTPC_PRINTF("%s line %d: There is no available http client session\r\n", __func__, __LINE__);
-        memset(arg, 0, sizeof(struct http_client_demo_s));
-        return QAPI_ERROR;
-    }
-
-    // HTTPC_PRINTF("client=0x%p sslCtx=%x sslCfg=0x%p\n", arg->client, arg->sslCtx, arg->sslCfg);
-
-    // error = QAPI_OK;
-
-    if (isHttps) {
-        // use default ssl config
-        if (arg->sslCfg == NULL) {
-            arg->sslCfg = malloc(sizeof(qapi_Ssl_Config_t));
-            if (arg->sslCfg == NULL) {
-                HTTPC_PRINTF("Allocation sslconfig failure\n");
-                return QAPI_ERROR;
-            }
-            memset(arg->sslCfg, 0, sizeof(qapi_Ssl_Config_t));
-        }
-        ssl_config_default_value(arg->sslCfg);
-
-        error = qapi_Net_HTTPc_Configure_SSL(arg->client, arg->sslCfg);
-        if (error != QAPI_ERROR) {
-            HTTPC_PRINTF("%s line %d: qapi_Net_HTTPc_Configure_SSL failed %d\n", __func__, __LINE__, error);
-            ssl_free_config_parameters(arg->sslCfg);
-            arg->sslCfg = NULL;
-            return QAPI_ERROR;
-        }
-
-        // use default ssl cert
-        if (arg->sslCert == NULL) {
-            arg->sslCert = malloc(sizeof(qapi_Ssl_Cert_t));
-            if (arg->sslCert == NULL) {
-                HTTPC_PRINTF("Allocation sslcert failure\n");
-                return QAPI_ERROR;
-            }
-            memset(arg->sslCert, 0, sizeof(qapi_Ssl_Cert_t));
-            arg->sslCert->pRootCa = (uint8_t *)default_cas;
-            arg->sslCert->rootCaSize = default_cas_len;
-            arg->sslCert->pClientCert = (uint8_t *)default_ca_crt_ec;
-            arg->sslCert->clientCertSize = sizeof(default_ca_crt_ec);
-            arg->sslCert->pPrivateKey = (uint8_t *)default_ca_key_ec;
-            arg->sslCert->privateKeySize = sizeof(default_ca_key_ec);
-
-            error = qapi_Net_HTTPc_Configure_Cert(arg->client, arg->sslCert);
-            if (error != QAPI_OK) {
-                // ssl_free_credentials(arg->sslCert);
-                free(arg->sslCert);
-                arg->sslCert = NULL;
-
-                if (arg->sslCfg) {
-                    ssl_free_config_parameters(arg->sslCfg);
-                    arg->sslCfg = NULL;
-                }
-
-                return QAPI_ERROR;
-            }
-        }
-    }
-
-    if (error == QAPI_OK) {
-        error =
-            qapi_Net_HTTPc_Connect(arg->client, (const char *)(Parameter_List[1].String_Value + server_offset), port);
-    }
-
-    if (error) {
-        HTTPC_PRINTF("%s line %d: http client connect failed %d\n", __func__, __LINE__, error);
-        qapi_Net_HTTPc_Free_sess(arg->client);
-
-        if (arg->sslCfg) {
-            ssl_free_config_parameters(arg->sslCfg);
-            arg->sslCfg = NULL;
-        }
-        if (arg->sslCert) {
-            free(arg->sslCert);
-            arg->sslCert = NULL;
-        }
-
-        memset(arg, 0, sizeof(struct http_client_demo_s));
-        return QAPI_ERROR;
-    }
-
-    HTTPC_PRINTF("%s line %d: http client connect success <client num> = %d\n", __func__, __LINE__, arg->num);
-    return QAPI_OK;
-}
-
 qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
     uint32_t i;
@@ -850,6 +687,7 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
     int rxbuffer_size = RX_BUFFER_SIZE;
     uint16_t ip_prefer = DEFAULT_IP_PREFER;
     uint16_t pre_alloc_ssl_buffer = DEFAULT_PRE_ALLOCATE_BUFFER;
+    uint8_t https_auth_type = HTTPS_BOTH_AUTH;
     qbool_t secure_session = false;
     struct http_client_demo_s *arg = NULL;
 
@@ -1000,7 +838,15 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
                     }
                     pre_alloc_ssl_buffer = Parameter_List[i].Integer_Value;
                     break;
-
+                case 'u': /* -u auth type */
+                    i++;
+                    if (!Parameter_List[i].Integer_Is_Valid) {
+                        HTTPC_PRINTF("%s line %d: Invalid value of auth type: %s\n", __func__, __LINE__,
+                                     Parameter_List[i].String_Value);
+                        return QAPI_ERROR;
+                    }
+                    https_auth_type = Parameter_List[i].Integer_Value;
+                    break;
                 default:
                     HTTPC_PRINTF("%s line %d: Unknown option: %s\n", __func__, __LINE__,
                                  Parameter_List[i].String_Value);
@@ -1016,18 +862,18 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
             return QAPI_ERROR;
         }
     } /* for */
-
+ 
 #ifdef CONFIG_QAT_OTA_DEMO
     if (ota_http_sess->status == HTTP_OTA_STATUS_RUNNING) {
         arg->client = qapi_Net_HTTPc_New_sess2(timeout_ms, (uint32_t)secure_session, http_client_cb_ota, (void *)arg,
-                                               body_size, header_size, rxbuffer_size, ip_prefer, pre_alloc_ssl_buffer);
+                                               body_size, header_size, rxbuffer_size, ip_prefer, pre_alloc_ssl_buffer, https_auth_type);
     }
 
     else
 #endif
     {
         arg->client = qapi_Net_HTTPc_New_sess2(timeout_ms, (uint32_t)secure_session, http_client_cb_demo, (void *)arg,
-                                               body_size, header_size, rxbuffer_size, ip_prefer, pre_alloc_ssl_buffer);
+                                               body_size, header_size, rxbuffer_size, ip_prefer, pre_alloc_ssl_buffer, https_auth_type);
     }
 
     if (arg->client == NULL) {
@@ -1049,7 +895,7 @@ qapi_Status_t httpc_command_new_sess(uint32_t Parameter_Count, QAPI_Console_Para
         }
         return QAPI_ERROR;
     } else {
-        if (secure_session) {
+        if (secure_session && https_auth_type != HTTPS_NOT_AUTH) {
             if (arg->sslCert == NULL) {
                 // using default cert
                 arg->sslCert = malloc(sizeof(qapi_Ssl_Cert_t));
@@ -1275,13 +1121,6 @@ qapi_Status_t httpc_command_handler(uint32_t __attribute__((__unused__)) Paramet
      */
     if (strcmp(command, "new") == 0) {
         return httpc_command_new_sess(Parameter_Count, Parameter_List);
-    }
-
-    /*       [0]       [1]              [2]      [3]
-     * httpc connect <server or proxy>  <port>  <timeout_ms>
-     */
-    if (strcmp(command, "connect") == 0) {
-        return httpc_command_connect(Parameter_Count, Parameter_List);
     }
 
     /*************************************************************************
