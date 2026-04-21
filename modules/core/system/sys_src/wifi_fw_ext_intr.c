@@ -57,6 +57,9 @@
 extern SOCPM_STRUCT g_socpm_struct;
 static SemaphoreHandle_t _socpm_mutex = NULL;
 
+#define BMPS_EXIT_CMD_MIN_INTERVAL_MS  20U
+volatile TickType_t s_last_bmps_exit_tick = 0;
+
 /*-------------------------------------------------------------------------
  * Static Function Definitions
  * ----------------------------------------------------------------------*/
@@ -345,13 +348,26 @@ void __attribute__((section(".after_ram_vectors"))) aon_a2f_assert_isr_handler(v
     NT_LOG_PRINT(SOCPM, INFO, "A2F assert");
 #ifdef SUPPORT_SWTMR_TO_WKUP_FROM_BMPS
 #if 1
-    if ((nt_socpm_status() > 0) && (PM_STRUCT *)gdevp->pPmStruct != NULL &&
-        (PM_GET_RRI_STATE((PM_STRUCT *)gdevp->pPmStruct) == PM_RRI_MAC_DOWN_MCUSLP) &&
-        ((PM_STRUCT *)(gdevp->pPmStruct))->pm_type == PM_MODE_BMPS) {
-        // NT_LOG_PRINT(SOCPM, CRIT, "send pm");
-        PM_SET_SLEEP_EXIT_REASON((PM_STRUCT *)gdevp->pPmStruct, EXIT_REASON_EXT_INT);
-        nt_send_pm_mode_cmd(0);
-    }
+    if ((nt_socpm_status() > 0) && (PM_STRUCT *)gdevp->pPmStruct != NULL) {
+        NT_LOG_PRINT(SOCPM, INFO, "send pm");
+        TickType_t now = xTaskGetTickCountFromISR();
+
+        bool is_in_bmps = (((PM_STRUCT *)gdevp->pPmStruct)->pm_type == PM_MODE_BMPS) && (PM_GET_RRI_STATE((PM_STRUCT *)gdevp->pPmStruct) == PM_RRI_MAC_DOWN_MCUSLP);
+
+         bool is_entering_bmps =
+            ((PM_STRUCT *)gdevp->pPmStruct)->bmps_enabled &&
+            (((PM_STRUCT *)gdevp->pPmStruct)->stateTransition == PM_STATE_TRANSITION_TO_SLEEP ||
+             ((PM_STRUCT *)gdevp->pPmStruct)->stateTransition == PM_STATE_TRANSITION_TO_SLEEP_NULL_SENT);
+
+            if (TIME_IS_GREATER_EQ(now, s_last_bmps_exit_tick + pdMS_TO_TICKS(BMPS_EXIT_CMD_MIN_INTERVAL_MS))) {
+                s_last_bmps_exit_tick = now;
+
+                if (is_in_bmps || is_entering_bmps) {
+                    PM_SET_SLEEP_EXIT_REASON((PM_STRUCT *)gdevp->pPmStruct, EXIT_REASON_EXT_INT);
+                    nt_send_pm_mode_cmd(0);
+                }
+        }
+     }
 #endif
 
 #endif /* SUPPORT_SWTMR_TO_WKUP_FROM_BMPS */
