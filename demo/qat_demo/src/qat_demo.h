@@ -22,4 +22,8 @@ void Initialize_QAT_HttpC_Demo(void);
 
 void Initialize_QAT_OTA_Demo(void);
 
+#ifdef CONFIG_QAT_FSTORE_DEMO
+void Initialize_QAT_Fstore_Demo(void);
+#endif
+
 #endif /* QAT_DEMO_H */
