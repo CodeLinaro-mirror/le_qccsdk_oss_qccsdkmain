@@ -132,3 +132,10 @@
   offset: '16'
   length: '16'
   access: READ_WRITE
+
+#BDF_CALIBRATION_FLAG
+- name: BDF_CALIBRATION_FLAG
+  address: '0x00000274'
+  offset: '0'
+  length: '8'
+  access: READ_WRITE
