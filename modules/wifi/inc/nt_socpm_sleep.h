@@ -628,7 +628,7 @@ void nt_socpm_secondary_init(void);
  * execution
  *  @return : None
  */
-void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point);
+void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point,bool warm_boot);
 
 #ifdef NT_SOCPM_SW_MTUSR
 /*

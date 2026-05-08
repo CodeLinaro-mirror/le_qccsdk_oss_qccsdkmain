@@ -26,6 +26,7 @@
 #include "hal_int_modules.h"
 #include "data_path.h"
 #include "wmi.h"
+#include "wifi_fw_ext_intr.h"
 
 #if defined(PLATFORM_FERMION) && !defined(EMULATION_BUILD)
 #include "wifi_fw_cpr_driver.h"
@@ -480,6 +481,16 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
         uint32_t lic_int_status = NT_REG_RD(QWLAN_PMU_AON_LIC_INT_STAT_REG);
         if (lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK) {
             // Perform a full wake up if A2F was asserted
+            uint64_t delta_time_us;
+            delta_time_us = nt_socpm_get_slp_tmr_us();
+            PM_SET_SLEEP_EXIT_REASON(pPmStruct, EXIT_REASON_EXT_INT);
+            extern int BMPS_LIST;
+            extern int _socpm_slp_list_idx_imps;
+            extern int _socpm_slp_list_idx_rtos;
+            nt_socpm_sleep_deregister(_socpm_slp_list_idx_rtos);
+            nt_socpm_sleep_deregister(BMPS_LIST);
+            nt_socpm_sleep_deregister(_socpm_slp_list_idx_imps);
+            printf("intr only\r\n");
             wkup_us = 0;
         } else {
 #endif /* FIRMWARE_APPS_INFORMED_WAKE */
@@ -542,10 +553,34 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
 #endif /* if RMC_DISABLED_CODE */
             /* Going back to sleep service no more IRQs*/
             cpu_irq_disable();
-            nt_socpm_slp_enter(wkup_us);
-            test_f = 0x2;
-            goto slp_switch;
-        } else {
+            lic_int_status = NT_REG_RD(QWLAN_PMU_AON_LIC_INT_STAT_REG);
+            uint32_t ext_int = NT_REG_RD(NVIC_ICPR1) ;
+            if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK))) {
+                    printf("intr before wfi\r\n");
+                    wkup_us=0;
+            }else
+            {
+                nt_socpm_slp_enter(wkup_us);
+                // while(1);
+                wkup_us =0;
+                // printf(" after wfi \r\n");
+                printf("intr with beacon\r\n");
+                
+            }
+            // test_f = 0x2;
+            // goto slp_switch;
+        } 
+        
+        if(wkup_us<=0){
+            uint32_t bd= BMU_READ_WQ_NR_CMD(HAL_BMUWQ_BMU_IDLE_BD);
+            uint32_t ext_int = NT_REG_RD(NVIC_ICPR1) ;
+            if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK)))
+            {
+                HAL_REG_WR(QWLAN_AGC_AGC_RESET_REG, QWLAN_AGC_AGC_RESET_RESET_ERESET);
+                hal_wlan_sleep_trimmed();
+            }
+
+            printf(" after wfi %d\r\n",bd );
 #ifdef SOCPM_RMC_DBG
             /* Print when decides to wake up */
             UART_Send_direct("W\r\n", 3);
