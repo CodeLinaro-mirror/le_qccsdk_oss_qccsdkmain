@@ -1398,6 +1398,9 @@ static QAT_Command_Status_t Extend_Command_SetOperatingMode(uint32_t Op_Type, ui
     return rc;
 }
 
+/* Forward declaration — defined later in this file. */
+static int load_wifi_cred_from_flash(wifi_shell_cxt_t *p_cxt, uint8_t deviceId);
+
 /**
    @brief Processes the Extend command from the QAT.
 
@@ -1466,6 +1469,27 @@ static QAT_Command_Status_t Extend_Command_Connect(uint32_t Op_Type, uint32_t Pa
             if (Parameter_Count < 1 || !Parameter_List) {
                 QAT_Response_Str(QAT_RC_ERROR, NULL);
                 return rc;
+            }
+
+            /* AT+CWJAP=@saved  →  connect using flash-stored credentials */
+            if (strcmp(Parameter_List[0].String_Value, "@saved") == 0) {
+                int load_ret = load_wifi_cred_from_flash(p_cxt, deviceId);
+                if (load_ret < 0) {
+                    const char *msg =
+                        (load_ret == -1) ? "+CWJAP: filesystem not mounted" :
+                        (load_ret == -2) ? "+CWJAP: no saved credentials"   :
+                                           "+CWJAP: saved credentials corrupt";
+                    QAT_Response_Str(QAT_RC_ERROR, msg);
+                    return rc;
+                }
+                snprintf(buffer, WLAN_RESPONSE_BUFFER_LENGTH, "+CWJAP:connecting to ssid %s (@saved)", p_cxt->ssid);
+                QAT_Response_Str(QAT_RC_QUIET, buffer);
+                ret = qapi_WLAN_Commit(deviceId);
+                if (ret != QAPI_OK) {
+                    QAT_Response_Str(QAT_RC_ERROR, NULL);
+                    return rc;
+                }
+                break;
             }
 
             ssid = Parameter_List[0].String_Value;
@@ -2140,21 +2164,13 @@ static QAT_Command_Status_t Extend_Command_CWSave(uint32_t Op_Type, uint32_t Par
 }
 
 /*-------------------------------------------------------------------------
- * AT+CWLOAD — restore WiFi credentials from /lfs/wifi.conf
+ * Helper: load WiFi credentials from /lfs/wifi.conf into context + QAPI.
+ * Returns 0 on success; -1 no fs, -2 no file, -3 I/O error, -4 corrupt, -5 bad len.
  *-----------------------------------------------------------------------*/
-static QAT_Command_Status_t Extend_Command_CWLoad(uint32_t Op_Type, uint32_t Parameter_Count,
-                                                  QAT_Parameter_t *Parameter_List)
+static int load_wifi_cred_from_flash(wifi_shell_cxt_t *p_cxt, uint8_t deviceId)
 {
-    (void)Parameter_Count;
-    (void)Parameter_List;
-
-    if (Op_Type != QAT_OP_EXEC) {
-        return QAT_STATUS_SUCCESS_E;
-    }
-
     if (!is_fs_mounted()) {
-        QAT_Response_Str(QAT_RC_ERROR, "+CWLOAD: filesystem not mounted");
-        return QAT_STATUS_SUCCESS_E;
+        return -1;
     }
 
     wifi_cred_t cred;
@@ -2162,32 +2178,22 @@ static QAT_Command_Status_t Extend_Command_CWLoad(uint32_t Op_Type, uint32_t Par
     fs_file_t_init(&fp);
     int ret = vfs_open(&fp, WIFI_CONF_PATH, FS_O_READ);
     if (ret < 0) {
-        QAT_Response_Str(QAT_RC_ERROR, "+CWLOAD: no saved credentials");
-        return QAT_STATUS_SUCCESS_E;
+        return -2;
     }
 
     int32_t nread = vfs_read(&fp, &cred, sizeof(cred));
     vfs_close(&fp);
 
     if (nread != (int32_t)sizeof(cred)) {
-        QAT_Response_Str(QAT_RC_ERROR, "+CWLOAD: file corrupt (size)");
-        return QAT_STATUS_SUCCESS_E;
+        return -3;
     }
-
     if (memcmp(cred.magic, WIFI_CONF_MAGIC, 4) != 0 || cred.version != WIFI_CONF_VERSION) {
-        QAT_Response_Str(QAT_RC_ERROR, "+CWLOAD: file corrupt (magic)");
-        return QAT_STATUS_SUCCESS_E;
+        return -4;
     }
-
     if (cred.ssid_len > __QAPI_WLAN_MAX_SSID_LEN || cred.passphrase_len > 64) {
-        QAT_Response_Str(QAT_RC_ERROR, "+CWLOAD: file corrupt (len)");
-        return QAT_STATUS_SUCCESS_E;
+        return -5;
     }
 
-    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
-    uint8_t deviceId = qat_get_active_device();
-
-    /* Restore context */
     memscpy(p_cxt->ssid, sizeof(p_cxt->ssid), cred.ssid, cred.ssid_len);
     p_cxt->ssid[cred.ssid_len] = '\0';
     p_cxt->ssid_length = cred.ssid_len;
@@ -2196,7 +2202,6 @@ static QAT_Command_Status_t Extend_Command_CWLoad(uint32_t Op_Type, uint32_t Par
     p_cxt->auth   = (qapi_WLAN_Auth_Mode_e)cred.auth_mode;
     p_cxt->cipher = cred.cipher;
 
-    /* Re-apply to QAPI */
     qapi_WLAN_Auth_Mode_e  auth_mode = (qapi_WLAN_Auth_Mode_e)cred.auth_mode;
     qapi_WLAN_Crypt_Type_e cipher    = (qapi_WLAN_Crypt_Type_e)cred.cipher;
 
@@ -2212,6 +2217,35 @@ static QAT_Command_Status_t Extend_Command_CWLoad(uint32_t Op_Type, uint32_t Par
     qapi_WLAN_Set_Param(deviceId, __QAPI_WLAN_PARAM_GROUP_WIRELESS,
                         __QAPI_WLAN_PARAM_GROUP_WIRELESS_SSID,
                         (void *)p_cxt->ssid, cred.ssid_len, FALSE);
+    return 0;
+}
+
+/*-------------------------------------------------------------------------
+ * AT+CWLOAD — restore WiFi credentials from /lfs/wifi.conf
+ *-----------------------------------------------------------------------*/
+static QAT_Command_Status_t Extend_Command_CWLoad(uint32_t Op_Type, uint32_t Parameter_Count,
+                                                  QAT_Parameter_t *Parameter_List)
+{
+    (void)Parameter_Count;
+    (void)Parameter_List;
+
+    if (Op_Type != QAT_OP_EXEC) {
+        return QAT_STATUS_SUCCESS_E;
+    }
+
+    wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
+    uint8_t deviceId = qat_get_active_device();
+
+    int ret = load_wifi_cred_from_flash(p_cxt, deviceId);
+    if (ret < 0) {
+        const char *msg =
+            (ret == -1) ? "+CWLOAD: filesystem not mounted" :
+            (ret == -2) ? "+CWLOAD: no saved credentials"   :
+            (ret == -5) ? "+CWLOAD: file corrupt (len)"     :
+                          "+CWLOAD: file corrupt";
+        QAT_Response_Str(QAT_RC_ERROR, msg);
+        return QAT_STATUS_SUCCESS_E;
+    }
 
     char response[64];
     snprintf(response, sizeof(response), "+CWLOAD: loaded %s", p_cxt->ssid);
