@@ -60,6 +60,10 @@ static SemaphoreHandle_t _socpm_mutex = NULL;
 #define BMPS_EXIT_CMD_MIN_INTERVAL_MS  20U
 volatile TickType_t s_last_bmps_exit_tick = 0;
 
+#ifdef CONFIG_QAT_POWERSAVE_DEMO
+/* External wakeup flag - used to track if wakeup was triggered by external pin */
+static bool ext_wakeup_flag = FALSE;
+#endif
 /*-------------------------------------------------------------------------
  * Static Function Definitions
  * ----------------------------------------------------------------------*/
@@ -320,6 +324,25 @@ bool f2a_enable_disable_assert(uint8_t enable_assert)
     return result;
 }
 
+#ifdef CONFIG_QAT_POWERSAVE_DEMO
+void spi_set_ext_wakeup_flag(void)
+{
+    ext_wakeup_flag = TRUE;
+}
+
+bool spi_is_ext_wakeup(void)
+{
+	return ext_wakeup_flag;
+}
+
+void spi_clear_ext_wakeup_flag(void)
+{
+	ext_wakeup_flag = false;
+	NT_LOG_PRINT(SOCPM, INFO, "External wakeup flag cleared");
+}
+#endif /* CONFIG_QAT_POWERSAVE_DEMO */
+
+
 /*
  * @brief  ISR handler for A2F(external wakeup interrupt).
  *  When configured for edge triggered, this interrupt is triggered on the
@@ -345,7 +368,12 @@ void __attribute__((section(".after_ram_vectors"))) aon_a2f_assert_isr_handler(v
 
     g_socpm_struct.a2f_asserted = TRUE;
     g_socpm_struct.host_supports_a2f = TRUE;
-    NT_LOG_PRINT(SOCPM, ERR, "A2F assert");
+    NT_LOG_PRINT(SOCPM, INFO, "A2F assert");
+#ifdef CONFIG_QAT_POWERSAVE_DEMO
+    /* Mark that 730 was woken by host.*/
+    spi_set_ext_wakeup_flag();
+    pm_set_powersave_policy(gdevp, PS_POLICY_NOT_ALLOWED_SLEEP);
+#endif /* CONFIG_QAT_POWERSAVE_DEMO */
 #ifdef SUPPORT_SWTMR_TO_WKUP_FROM_BMPS
 #if 1
     if ((nt_socpm_status() > 0) && (PM_STRUCT *)gdevp->pPmStruct != NULL &&
