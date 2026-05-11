@@ -351,7 +351,7 @@ TickType_t xMaximumPossibleSuppressedTicks = 0xFFFFFFF;  // maximum 54 bits conf
 static sleep_mode _socpm_slp_mode;
 
 // Variables for Holding sleep time
-static int _socpm_slp_list_idx_rtos = _SOCPM_SLP_LST_IDX_INVALID;
+ int _socpm_slp_list_idx_rtos = _SOCPM_SLP_LST_IDX_INVALID;
 
 #if defined(EMULATION_BUILD) && defined(PLATFORM_FERMION)
 // Variable for sleep clock scaling on emulation
@@ -1269,7 +1269,7 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         /* Save current context and call WFI */
         _socpm_ctxt_save();
         /*  Check if sleep entry was prevented and assert if not a valid prevention  */
-        nt_socpm_check_sleep_entry_failure(_socpm_slp_mode, TRUE);
+        nt_socpm_check_sleep_entry_failure(_socpm_slp_mode, TRUE,FALSE);
 
 #if defined(IDLE_DISABLED) && defined(NT_DEBUG)
         /* This is a debug code required in future to attach debugger post RAM minimal code context restore */
@@ -1751,6 +1751,38 @@ uint64_t vPostSleepProcessing(void)
 }
 /*-----------------------------------------------------------*/
 
+void power_cycle_wmac()
+{
+    extern uint32_t g_wifi_ss_delay;
+    uint32_t mac_gdscr;
+    mac_gdscr = HAL_REG_RD(QWLAN_PMU_WLAN_MAC_GDSCR_REG);
+    mac_gdscr |= QWLAN_PMU_WLAN_MAC_GDSCR_COLLAPSE_EN_SW_MASK;
+    mac_gdscr &= (~QWLAN_PMU_WLAN_MAC_GDSCR_HW_CONTROL_MASK);
+    HAL_REG_WR(QWLAN_PMU_WLAN_MAC_GDSCR_REG, mac_gdscr);
+
+    for (uint32_t i = 0; i < g_wifi_ss_delay; i++)
+    {
+        mac_gdscr = HAL_REG_RD(QWLAN_PMU_WLAN_MAC_GDSCR_REG);
+        if(!(mac_gdscr& QWLAN_PMU_WLAN_MAC_GDSCR_GDS_CTL_PWR_STATUS_MASK)) 
+            break;
+        nt_socpm_nop_delay(1);
+    }
+
+    mac_gdscr = HAL_REG_RD(QWLAN_PMU_WLAN_MAC_GDSCR_REG);
+    mac_gdscr &= (~QWLAN_PMU_WLAN_MAC_GDSCR_COLLAPSE_EN_SW_MASK);
+    mac_gdscr |= (QWLAN_PMU_WLAN_MAC_GDSCR_HW_CONTROL_MASK);
+    HAL_REG_WR(QWLAN_PMU_WLAN_MAC_GDSCR_REG, mac_gdscr);
+
+    for (uint32_t i = 0; i < g_wifi_ss_delay; i++)
+    {
+        mac_gdscr = HAL_REG_RD(QWLAN_PMU_WLAN_MAC_GDSCR_REG);
+        if(mac_gdscr& QWLAN_PMU_WLAN_MAC_GDSCR_GDS_CTL_PWR_STATUS_MASK) 
+            break;
+        nt_socpm_nop_delay(1);
+    }
+
+}
+
 void nt_socpm_slp_enter(uint64_t slp_us)
 {
     nt_socpm_slp_tmr_set(slp_us);
@@ -1767,6 +1799,16 @@ void nt_socpm_slp_enter(uint64_t slp_us)
 #else
     vPreSleepProcessing(_socpm_slp_mode);
 #endif  // NT_FN_CPR
+    
+    uint32_t lic_int_status = NT_REG_RD(QWLAN_PMU_AON_LIC_INT_STAT_REG);
+    uint32_t ext_int = NT_REG_RD(NVIC_ICPR1) ;
+    if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK))) 
+    {
+        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_CLR, EXT_WAKEUP_INTR_CLR, 1);
+        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_CLR, EXT_WAKEUP_INTR_CLR, 0);
+
+        NT_REG_WR(NVIC_ICPR1, A2F_ASSERT_INTR_NVIC1_MASK);
+    }
 
     __asm volatile("dsb" ::: "memory");
     __asm volatile("wfi");
@@ -1774,9 +1816,16 @@ void nt_socpm_slp_enter(uint64_t slp_us)
     __asm volatile(" nop \n");
     __asm volatile(" nop \n");
     __asm volatile(" nop \n");
+    
+    // Delay accessing other CMEM banks/sub-banks to avoid power inrush issues
+    for (int i = 0; i < 7; i++) {
+        __asm volatile(" nop \n");
+    }
+
+    hal_wlan_sleep_trimmed();
 
     /* Check if sleep entry was prevented and assert if not a valid prevention */
-    nt_socpm_check_sleep_entry_failure(_socpm_slp_mode, FALSE);
+    nt_socpm_check_sleep_entry_failure(_socpm_slp_mode, FALSE,TRUE);
 }
 
 static uint64_t nt_socpm_slp_tmr_get(void)
@@ -2517,28 +2566,28 @@ uint64_t freertosdefaultminimum(uint32_t wkup_delay_us)
 
         if (pPmStruct->bConnected) {
             {
-                nt_hal_rri_soft_reset_rri_engine();
-                nt_hal_rri_restore_first();
+                // nt_hal_rri_soft_reset_rri_engine();
+                // nt_hal_rri_restore_first();
             }
 
-            PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
+            // PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
 
 /*SW MTU time restoration must to be conducted when RRI first list restored
   because MTU TSF will be retored to 0 after RRI first list restored.
 */
 #ifdef NT_SOCPM_SW_MTUSR
-            nt_socpm_mtusr_restore_mtu_time();
+            // nt_socpm_mtusr_restore_mtu_time();
 
 #endif  // NT_SOCPM_SW_MTUSR
 
-            PM_SET_WLAN_STATE_ON(pPmStruct);
+            // PM_SET_WLAN_STATE_ON(pPmStruct);
 
             {
-                nt_hal_rri_restore_second();
-                PM_SET_RRI_STATE(pPmStruct, PM_RRI_TXRX_READY);
+                // nt_hal_rri_restore_second();
+                // PM_SET_RRI_STATE(pPmStruct, PM_RRI_TXRX_READY);
             }
 
-            rri_force_wakeup = 1;
+            // rri_force_wakeup = 1;
         }
     }
 
@@ -3579,7 +3628,7 @@ static void _socpm_slpcfg_sby(void)
     _tst_sleep_enter();
 #endif
     /* Check if sleep entry was prevented and assert if not a valid prevention */
-    nt_socpm_check_sleep_entry_failure(_socpm_slp_mode, FALSE);
+    nt_socpm_check_sleep_entry_failure(_socpm_slp_mode, FALSE,FALSE);
 }
 
 #else
@@ -4086,7 +4135,7 @@ uint64_t nt_socpm_min_proc(int *proc_routine)
  *  @param[in] : mode - sleep mode being entered
  *  @return : None
  */
-void nt_socpm_handle_sleep_entry_failure(sleep_mode mode)
+void nt_socpm_handle_sleep_entry_failure(sleep_mode mode,bool warm_boot)
 {
     (void)mode;
 
@@ -4163,30 +4212,33 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode)
 
     HAL_REG_WR(QWLAN_PMU_CFG_WIFI_SS_STATE_REG, NT_PMU_CFG_WIFI_CONFIG_OFFSET);  // Set wifi config state
 
-    nt_hal_rri_soft_reset_rri_engine();
-
+    // nt_hal_rri_soft_reset_rri_engine();
+    printf("sleep failed\r\n");
     if (gdevp) {
         // nt_pm_enforce_rri_readiness(gdevp);
         PM_STRUCT *pPmStruct = (PM_STRUCT *)gdevp->pPmStruct;
         {
-            nt_hal_rri_soft_reset_rri_engine();
-            nt_hal_rri_restore_first();
+            if(!warm_boot)
+            {
+                nt_hal_rri_soft_reset_rri_engine();
+                nt_hal_rri_restore_first();
+                PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
+
+                #ifdef NT_SOCPM_SW_MTUSR
+                        nt_socpm_mtusr_restore_mtu_time();
+                #endif  // NT_SOCPM_SW_MTUSR
+
+                PM_SET_WLAN_STATE_ON(pPmStruct);
+
+                {
+                    nt_hal_rri_restore_second();
+                    PM_SET_RRI_STATE(pPmStruct, PM_RRI_TXRX_READY);
+                }
+                rri_force_wakeup = 1;
+            }
+
         }
-
-        PM_SET_RRI_STATE(pPmStruct, PM_RRI_RX_READY);
-
-#ifdef NT_SOCPM_SW_MTUSR
-        nt_socpm_mtusr_restore_mtu_time();
-#endif  // NT_SOCPM_SW_MTUSR
-
-        PM_SET_WLAN_STATE_ON(pPmStruct);
-
-        {
-            nt_hal_rri_restore_second();
-            PM_SET_RRI_STATE(pPmStruct, PM_RRI_TXRX_READY);
-        }
-
-        rri_force_wakeup = 1;
+      
     }
 
 #ifdef SLEEP_CLK_SWITCH_AND_CAL_2_0
@@ -4242,7 +4294,7 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode)
  * execution
  *  @return : None
  */
-void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point)
+void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point,bool warm_boot)
 {
     if ((mode == clk_gtd_sleep) || (is_ctxt_rstr_point && (_socpm_mcu_sleep_wake == 1))) {
         return;
@@ -4321,7 +4373,8 @@ void nt_socpm_check_sleep_entry_failure(sleep_mode mode, bool is_ctxt_rstr_point
                      g_socpm_struct.nvic_icpr_status[1], g_socpm_struct.nvic_icpr_status[2],
                      g_socpm_struct.nvic_icpr_status[3]);
         NT_REG_WR(QWLAN_PMU_SLP_CNTL_REG, 0);
-        nt_socpm_handle_sleep_entry_failure(mode);
+        // while(1);
+        nt_socpm_handle_sleep_entry_failure(mode,warm_boot);
     }
 }
 

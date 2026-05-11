@@ -382,7 +382,7 @@ operation for this should be done after establishing a connection.
 
 @note1hang This parameter can only be used with qapi_WLAN_Set_Param().
 
-@param[in] uint8_t  RspRate idx, only support 8:6Mbps.
+@param[in] uint8_t  RspRate idx, only support 8:11g 6Mbps 16:11n 6.5Mbps.
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_RSP_RATE 91
 

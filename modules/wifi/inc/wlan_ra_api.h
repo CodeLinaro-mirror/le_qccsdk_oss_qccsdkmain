@@ -85,6 +85,7 @@ void nt_wlan_stop_ra(struct devh_s *dev);
 void nt_wlan_resume_ra(struct devh_s *dev);
 void nt_wlan_pause_ra(struct devh_s *dev);
 void nt_wlan_ra_on(struct devh_s *dev);
+NT_BOOL nt_ra_set_htrates_only(struct devh_s *dev, NT_BOOL enable);
 
 #endif  // NT_FN_RA
 

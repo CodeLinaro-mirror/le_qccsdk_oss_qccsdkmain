@@ -1094,7 +1094,7 @@ qapi_Status_t wlan_set_rsp_rate(uint8_t device_id, uint8_t rate_idx)
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
     WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
 
-    if (rate_idx != 8)
+    if (rate_idx != 8 && rate_idx != 16) //8: 11g 6Mbps 16: 11n 6.5Mbps
         return QAPI_ERR_INVALID_PARAM;
 
     memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));

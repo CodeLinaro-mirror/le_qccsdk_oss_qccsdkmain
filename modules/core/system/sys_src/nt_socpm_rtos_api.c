@@ -130,8 +130,15 @@ void _socpm_systick_on(void)
  defined in the FreeRTOS Cortex-M3 port layer with a version that manages the
  asynchronous timer (Sleep timer), as the tick is generated from the low power Sleep timer and
  not the SysTick as would normally be the case on a Cortex-M. */
+extern bool nt_tcp_has_pending_acks(void);
+extern void nt_tcp_flush_acks_cb(void *ctx);
+
 void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 {
+    if (nt_tcp_has_pending_acks()) { 
+        tcpip_try_callback(nt_tcp_flush_acks_cb, NULL); 
+        return; 
+    }
     eSleepModeStatus eSleepAction;
     uint64_t slp_val = 0;
 

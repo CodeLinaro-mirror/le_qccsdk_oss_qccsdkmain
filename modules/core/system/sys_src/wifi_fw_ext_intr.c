@@ -57,6 +57,9 @@
 extern SOCPM_STRUCT g_socpm_struct;
 static SemaphoreHandle_t _socpm_mutex = NULL;
 
+#define BMPS_EXIT_CMD_MIN_INTERVAL_MS  20U
+volatile TickType_t s_last_bmps_exit_tick = 0;
+
 /*-------------------------------------------------------------------------
  * Static Function Definitions
  * ----------------------------------------------------------------------*/
@@ -342,15 +345,17 @@ void __attribute__((section(".after_ram_vectors"))) aon_a2f_assert_isr_handler(v
 
     g_socpm_struct.a2f_asserted = TRUE;
     g_socpm_struct.host_supports_a2f = TRUE;
-    NT_LOG_PRINT(SOCPM, INFO, "A2F assert");
+    NT_LOG_PRINT(SOCPM, ERR, "A2F assert");
 #ifdef SUPPORT_SWTMR_TO_WKUP_FROM_BMPS
 #if 1
     if ((nt_socpm_status() > 0) && (PM_STRUCT *)gdevp->pPmStruct != NULL &&
         (PM_GET_RRI_STATE((PM_STRUCT *)gdevp->pPmStruct) == PM_RRI_MAC_DOWN_MCUSLP) &&
         ((PM_STRUCT *)(gdevp->pPmStruct))->pm_type == PM_MODE_BMPS) {
-        // NT_LOG_PRINT(SOCPM, CRIT, "send pm");
+        NT_LOG_PRINT(SOCPM, CRIT, "send pm");
         PM_SET_SLEEP_EXIT_REASON((PM_STRUCT *)gdevp->pPmStruct, EXIT_REASON_EXT_INT);
-        nt_send_pm_mode_cmd(0);
+        // _socpm_slptmr_off();
+        // nt_send_pm_mode_cmd(0);
+        nt_bmps_wakeup_callback(EXIT_REASON_EXT_INT);
     }
 #endif
 
@@ -449,7 +454,7 @@ void __attribute__((section(".after_ram_vectors"))) aon_a2f_deassert_isr_handler
                EXT_WAKEUP_POS_EDGE_DETECT_INTR_CLR, 0);
 
     g_socpm_struct.a2f_asserted = FALSE;
-    NT_LOG_PRINT(SOCPM, INFO, "A2F deassert");
+    // NT_LOG_PRINT(SOCPM, ERR, "A2F deassert");
 
     /** If IMPS sleep was registered while A2F/F2A asserted, restart the IMPS
      * entry sequence.
