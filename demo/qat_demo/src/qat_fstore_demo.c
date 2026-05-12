@@ -20,6 +20,7 @@
 #define FSTORE_MOUNT_POINT     "/lfs"
 #define FSTORE_MAX_PATH        128
 #define FSTORE_READ_CHUNK_SIZE 512
+#define FSTORE_CHUNK_HEX_MAX   128  /* max bytes per hex chunk = 256 hex chars */
 
 /*-------------------------------------------------------------------------
  * Type Declarations
@@ -98,7 +99,19 @@ static void mkdir_parent(const char *path)
 }
 
 /*-------------------------------------------------------------------------
- * AT+WRITEFILE=<path>,<size>
+ * Helper: decode one hex nibble; returns -1 on invalid character
+ *-----------------------------------------------------------------------*/
+static int hex_val(char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+/*-------------------------------------------------------------------------
+ * AT+WRITEFILE=<path>,C,<size>   — create/truncate
+ * AT+WRITEFILE=<path>,A,<hex>    — append hex-encoded chunk
  *-----------------------------------------------------------------------*/
 static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t Parameter_Count,
                                                      QAT_Parameter_t *Parameter_List)
@@ -108,8 +121,9 @@ static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t 
     switch (Op_Type) {
         case QAT_OP_EXEC_W_PARAM: {
             if (Parameter_Count < 2 || !Parameter_List[0].String_Value ||
-                !Parameter_List[1].Integer_Is_Valid) {
-                QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: usage AT+WRITEFILE=<path>,<size>");
+                !Parameter_List[1].String_Value) {
+                QAT_Response_Str(QAT_RC_ERROR,
+                    "+WRITEFILE: usage AT+WRITEFILE=<path>,C,<size> or AT+WRITEFILE=<path>,A,<hex>");
                 return QAT_STATUS_SUCCESS_E;
             }
 
@@ -118,103 +132,111 @@ static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t 
                 return QAT_STATUS_SUCCESS_E;
             }
 
-            if (writefile_state.active) {
-                QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: transfer already in progress");
-                return QAT_STATUS_SUCCESS_E;
-            }
-
             char path[FSTORE_MAX_PATH];
             if (normalize_path(Parameter_List[0].String_Value, path, sizeof(path)) < 0) {
                 QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: path too long");
                 return QAT_STATUS_SUCCESS_E;
             }
-            int32_t size = Parameter_List[1].Integer_Value;
 
-            if (size <= 0) {
-                QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: size must be > 0");
-                return QAT_STATUS_SUCCESS_E;
-            }
+            char mode = Parameter_List[1].String_Value[0];
 
-            mkdir_parent(path);
+            /* ---- C: create / truncate ---- */
+            if (mode == 'C' || mode == 'c') {
+                size_t expected = (Parameter_Count >= 3 && Parameter_List[2].Integer_Is_Valid)
+                                  ? (size_t)Parameter_List[2].Integer_Value : 0;
 
-            fs_file_t_init(&writefile_state.file);
-            int ret = vfs_open(&writefile_state.file, path, FS_O_CREATE | FS_O_WRITE);
-            if (ret < 0) {
-                snprintf(response, sizeof(response), "+WRITEFILE: open failed (%d)", ret);
-                QAT_Response_Str(QAT_RC_ERROR, response);
-                return QAT_STATUS_SUCCESS_E;
-            }
-
-            /* Truncate to clear any existing content */
-            vfs_truncate(&writefile_state.file, 0);
-
-            writefile_state.total_len    = (size_t)size;
-            writefile_state.received_len = 0;
-            writefile_state.active       = true;
-
-            extern Cur_Data_Mode_Cmd_t Cur_Data_Mode_Cmd;
-            memcpy(Cur_Data_Mode_Cmd.cur_data_mode_commnd, "+WRITEFILE",
-                   strlen("+WRITEFILE") + 1);
-
-            QAT_Transfer_Mode_set(QAT_Transfer_Mode_ONLINE_DATA_E, QAT_Data_Transfer_Mode_Handle);
-
-            snprintf(response, sizeof(response), "+WRITEFILE: Ready, send %d bytes", size);
-            QAT_Response_Str(QAT_RC_QUIET, response);
-            QAT_Response_Str(QAT_RC_OK, NULL);
-            break;
-        }
-
-        case QAT_OP_EXEC_IN_DATA_MODEL: {
-            if (!writefile_state.active) {
-                return QAT_STATUS_SUCCESS_E;
-            }
-
-            uint8_t *buf    = (uint8_t *)Parameter_List;
-            uint32_t in_len = Parameter_Count;
-
-            /* Clamp to remaining bytes */
-            size_t remaining = writefile_state.total_len - writefile_state.received_len;
-            size_t write_len = (in_len < remaining) ? in_len : remaining;
-
-            int32_t written = vfs_write(&writefile_state.file, buf, write_len);
-            if (written < 0) {
-                vfs_close(&writefile_state.file);
-                writefile_state.active = false;
-                QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E, NULL);
-                snprintf(response, sizeof(response), "+WRITEFILE: write error (%d)", (int)written);
-                QAT_Response_Str(QAT_RC_ERROR, response);
-                return QAT_STATUS_SUCCESS_E;
-            }
-
-            /* Retry any short write to avoid stalling the state machine. */
-            if ((size_t)written < write_len) {
-                size_t remaining2 = write_len - (size_t)written;
-                int32_t written2  = vfs_write(&writefile_state.file, buf + written, remaining2);
-                if (written2 > 0) {
-                    written += written2;
+                if (writefile_state.active) {
+                    vfs_close(&writefile_state.file);
+                    writefile_state.active = false;
                 }
-            }
-
-            writefile_state.received_len += (size_t)written;
-
-            if (writefile_state.received_len >= writefile_state.total_len) {
-                vfs_close(&writefile_state.file);
-                writefile_state.active = false;
-                QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E, NULL);
+                mkdir_parent(path);
+                fs_file_t_init(&writefile_state.file);
+                int ret = vfs_open(&writefile_state.file, path, FS_O_CREATE | FS_O_WRITE);
+                if (ret < 0) {
+                    snprintf(response, sizeof(response), "+WRITEFILE: open failed (%d)", ret);
+                    QAT_Response_Str(QAT_RC_ERROR, response);
+                    return QAT_STATUS_SUCCESS_E;
+                }
+                vfs_truncate(&writefile_state.file, 0);
+                writefile_state.total_len    = expected;
+                writefile_state.received_len = 0;
+                writefile_state.active       = true;
                 QAT_Response_Str(QAT_RC_OK, NULL);
+
+            /* ---- A: append hex-encoded chunk ---- */
+            } else if (mode == 'A' || mode == 'a') {
+                if (!writefile_state.active) {
+                    QAT_Response_Str(QAT_RC_ERROR,
+                        "+WRITEFILE: no file open, send C command first");
+                    return QAT_STATUS_SUCCESS_E;
+                }
+                if (Parameter_Count < 3 || !Parameter_List[2].String_Value) {
+                    QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: hex data missing");
+                    return QAT_STATUS_SUCCESS_E;
+                }
+
+                const char *hex = Parameter_List[2].String_Value;
+                size_t hex_len = strlen(hex);
+
+                if (hex_len == 0 || hex_len % 2 != 0) {
+                    QAT_Response_Str(QAT_RC_ERROR,
+                        "+WRITEFILE: hex data missing or odd length");
+                    return QAT_STATUS_SUCCESS_E;
+                }
+                if (hex_len > FSTORE_CHUNK_HEX_MAX * 2) {
+                    QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: hex chunk too large");
+                    return QAT_STATUS_SUCCESS_E;
+                }
+
+                uint8_t decode[FSTORE_CHUNK_HEX_MAX];
+                size_t byte_count = hex_len / 2;
+
+                for (size_t i = 0; i < byte_count; i++) {
+                    int hi = hex_val(hex[i * 2]);
+                    int lo = hex_val(hex[i * 2 + 1]);
+                    if (hi < 0 || lo < 0) {
+                        QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: invalid hex character");
+                        return QAT_STATUS_SUCCESS_E;
+                    }
+                    decode[i] = (uint8_t)((hi << 4) | lo);
+                }
+
+                int32_t written = vfs_write(&writefile_state.file, decode, byte_count);
+                if (written < 0) {
+                    vfs_close(&writefile_state.file);
+                    writefile_state.active = false;
+                    snprintf(response, sizeof(response), "+WRITEFILE: write error (%d)",
+                             (int)written);
+                    QAT_Response_Str(QAT_RC_ERROR, response);
+                    return QAT_STATUS_SUCCESS_E;
+                }
+                writefile_state.received_len += (size_t)written;
+
+                if (writefile_state.total_len > 0 &&
+                    writefile_state.received_len >= writefile_state.total_len) {
+                    vfs_close(&writefile_state.file);
+                    writefile_state.active = false;
+                    snprintf(response, sizeof(response), "+WRITEFILE: %zu bytes written",
+                             writefile_state.received_len);
+                    QAT_Response_Str(QAT_RC_OK, response);
+                } else {
+                    QAT_Response_Str(QAT_RC_OK, NULL);
+                }
+
+            } else {
+                QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: unknown mode, use C or A");
             }
             break;
         }
 
         default:
             if (writefile_state.active) {
-                /* AT+WRITEFILE with no args aborts an in-progress transfer. */
                 vfs_close(&writefile_state.file);
                 writefile_state.active = false;
-                QAT_Transfer_Mode_set(QAT_Transfer_Mode_AT_COMMAND_E, NULL);
                 QAT_Response_Str(QAT_RC_OK, "+WRITEFILE: transfer aborted");
             } else {
-                QAT_Response_Str(QAT_RC_QUIET, "+WRITEFILE=<path>,<size>");
+                QAT_Response_Str(QAT_RC_QUIET,
+                    "+WRITEFILE=<path>,C,<size>  or  +WRITEFILE=<path>,A,<hex>");
             }
             break;
     }
