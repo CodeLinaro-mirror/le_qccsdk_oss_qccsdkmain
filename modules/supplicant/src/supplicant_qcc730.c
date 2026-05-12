@@ -356,9 +356,9 @@ void eloop_run(void) {
           timeout = 0;
         }
       }
-      if (timeout > CFG_ELOOP_MAX_TIMEOUT_MS) {
-        timeout = CFG_ELOOP_MAX_TIMEOUT_MS;
-      }
+      // if (timeout > CFG_ELOOP_MAX_TIMEOUT_MS) {
+      //   timeout = CFG_ELOOP_MAX_TIMEOUT_MS;
+      // }
 
       int maxfdp1 = eloop_sock_table_set_fds(&eloop.readers, &rfds);
 
