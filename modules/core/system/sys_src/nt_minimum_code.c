@@ -561,14 +561,10 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
             }else
             {
                 nt_socpm_slp_enter(wkup_us);
-                // while(1);
                 wkup_us =0;
-                // printf(" after wfi \r\n");
-                printf("intr with beacon\r\n");
                 
             }
-            // test_f = 0x2;
-            // goto slp_switch;
+   
         } 
         
         if(wkup_us<=0){
@@ -577,7 +573,12 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
             if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK)))
             {
                 HAL_REG_WR(QWLAN_AGC_AGC_RESET_REG, QWLAN_AGC_AGC_RESET_RESET_ERESET);
-                hal_wlan_sleep_trimmed();
+                // hal_wlan_sleep_trimmed();
+                PM_SET_RRI_STATE(pPmStruct, PM_RRI_MAC_DOWN_MCUSLP);
+                extern int rri_force_wakeup;
+                extern volatile uint32_t last_rri;
+                rri_force_wakeup = last_rri = 0x0;
+                power_cycle_wmac();
             }
 
             printf(" after wfi %d\r\n",bd );
