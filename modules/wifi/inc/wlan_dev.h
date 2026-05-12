@@ -201,7 +201,7 @@ typedef struct conn_profile_s {
     uint8_t group_cipher_len;
     uint32_t flags;
     uint32_t grp_cipher_flag; // temporary flag for decision of group-ciphers for STA
-    uint8_t akm_type;         /* Used for WPA2 assoc to differentiate SHA1 and SHA256,
+    uint16_t akm_type;         /* Used for WPA2 assoc to differentiate SHA1 and SHA256,
                                  Be cautious when used for other AUTH type's, value may invalid */
 } conn_profile_t;
 
@@ -736,6 +736,7 @@ typedef struct devh_s {
 #endif
 
     wpa3_tdi_ctx_t wpa3_tdi_ctx;
+    bool is_pmk_set;
 
 } devh_t;
 
@@ -796,7 +797,7 @@ struct wlan_dev_ev_handler_info {
  * Profile Related Macros
  */
 
-#define PROFILE_IS_WPA(prof) ((prof)->wlan_authmode & (WMI_WPA_PSK_AUTH | WMI_WPA2_PSK_AUTH | WMI_WPA3_SHA256_AUTH))
+#define PROFILE_IS_WPA(prof) ((prof)->wlan_authmode & (WMI_WPA_AUTH | WMI_WPA_PSK_AUTH | WMI_WPA2_AUTH| WMI_WPA2_PSK_AUTH | WMI_WPA2_SHA256_AUTH | WMI_WPA3_SHA256_AUTH | WMI_WPA3_ENTERPRISE_ONLY_AUTH))
 
 #define PROFILE_HAS_PRIVACY_ENABLED(prof) ((prof)->pairwise_cipher != NONE_CRYPT)
 

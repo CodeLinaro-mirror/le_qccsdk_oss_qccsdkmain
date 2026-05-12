@@ -12,6 +12,7 @@ import("//configs_decl.gni")
             "//hal/qcc730/i2c",
             "//drivers/lowpower",
             "//demo/common/peripherals/gpio",
+            "//modules/supplicant/inc",
         ]
 
     drivers_src =
@@ -73,6 +74,11 @@ source_set("drivers")
                 "wlan/wmi_api.c",
                 "wlan/wlan_drv.c",
                 "wlan/qapi_wlan_p2p.c",
+            ]
+        }
+        if (CONFIG_WLAN_8021X) {
+            sources += [
+                "wlan/qapi_wlan_8021x.c",
             ]
         }
     }

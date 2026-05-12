@@ -13,11 +13,18 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "wps_def.h"
 #endif
 #include "wlan_power.h"
+#ifdef CONFIG_WLAN_8021X
+#include "wlan_8021x_cxt.h"
+#include "supplicant_cxt.h"
+#endif
 
 typedef void (*wlan_evt_fn_table)(void *);
 
 extern qurt_pipe_t msg_wfm_wmi_id;
 extern ppm_common_t g_ppm_common_struct;
+#ifdef CONFIG_WLAN_8021X
+extern wlan_8021x_global_t *g_wl8021x_global;
+#endif
 
 static void wmi_enabled_event(void *msg)
 {
@@ -164,7 +171,7 @@ uint8_t dc_freq_to_chindex(dev_common_t *pDevCmn, uint32_t frequency);
 static void _wlan_fill_scan_info(qapi_WLAN_BSS_Scan_Info_t *dst, const ap_info *src)
 {
     uint16_t channel = src->chan_freq;
-    uint8_t rsn_Cipher, rsn_Auth, wpa_Cipher, wpa_Auth;
+    uint16_t rsn_Cipher, rsn_Auth, wpa_Cipher, wpa_Auth;
     extern int32_t wlan_freq_to_channel(uint16_t * channel);
     wlan_freq_to_channel(&channel);
     dst->channel = channel;
@@ -176,10 +183,10 @@ static void _wlan_fill_scan_info(qapi_WLAN_BSS_Scan_Info_t *dst, const ap_info *
     memscpy(dst->ssid, dst->ssid_Length, src->ssid.ssid, dst->ssid_Length);
     dst->rssi = src->rssi;
     // src->wlan_mode  //wlan phy mode, WLAN_PHY_MODE, no map
-    if (src->security_mode >> 16) {
+    if (src->wpa_security_mode) {
         dst->security_Enabled = 1;
-        wpa_Cipher = src->security_mode >> 24;
-        wpa_Auth = (src->security_mode >> 16 & 0x00FF);
+        wpa_Cipher = src->wpa_security_mode >> 16;
+        wpa_Auth = (src->wpa_security_mode & 0xFFFF);
         if (wpa_Cipher & TKIP_CRYPT)
             dst->wpa_Cipher |= __QAPI_WLAN_CIPHER_TYPE_TKIP;
 
@@ -196,10 +203,10 @@ static void _wlan_fill_scan_info(qapi_WLAN_BSS_Scan_Info_t *dst, const ap_info *
             dst->wpa_Auth |= __QAPI_WLAN_SECURITY_AUTH_PSK;
     }
 
-    if (src->security_mode & 0xFFFF) {
+    if (src->rsn_security_mode) {
         dst->security_Enabled = 1;
-        rsn_Auth = src->security_mode & 0xFF;
-        rsn_Cipher = (src->security_mode & 0xFF00) >> 8;
+        rsn_Auth = src->rsn_security_mode & 0xFFFF;
+        rsn_Cipher = (src->rsn_security_mode) >> 16;
         if (rsn_Cipher & TKIP_CRYPT)
             dst->rsn_Cipher |= __QAPI_WLAN_CIPHER_TYPE_TKIP;
 
@@ -211,6 +218,14 @@ static void _wlan_fill_scan_info(qapi_WLAN_BSS_Scan_Info_t *dst, const ap_info *
 
         if (rsn_Auth & WMI_WPA2_AUTH)
             dst->rsn_Auth |= __QAPI_WLAN_SECURITY_AUTH_1X;
+
+#ifdef CONFIG_WLAN_8021X
+        if (rsn_Auth & (WMI_WPA2_SHA256_AUTH | WMI_WPA3_ENTERPRISE_ONLY_AUTH))
+            dst->rsn_Auth |= __QAPI_WLAN_SECURITY_AUTH_WPA3_1X;
+
+        if (rsn_Auth & WMI_WPA3_ENTERPRISE_B_192_AUTH)
+            dst->rsn_Auth |= __QAPI_WLAN_SECURITY_AUTH_WPA3_1X_B_192;
+#endif
 
         if ((rsn_Auth & WMI_WPA2_PSK_AUTH))
             dst->rsn_Auth |= __QAPI_WLAN_SECURITY_AUTH_PSK;
@@ -1143,6 +1158,27 @@ static void wmi_control_rx_p2p(event_t event_id, void *data)
 }
 #endif
 
+#ifdef CONFIG_WLAN_8021X
+static void wmi_8021x_assoc_result_event(void *msg)
+{
+    if (!msg) {
+        warn_printf("msg NULL\n");
+        return;
+    }
+    PRINT_LOG_FUNC_LINE_ENTRY;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_WLAN_Connect_Cb_Info_t cxnInfo;
+    int intf_id;
+    
+    memset(&cxnInfo, 0, sizeof(qapi_WLAN_Connect_Cb_Info_t));
+
+    cxnInfo.value = true;
+    memcpy(cxnInfo.mac_Addr, ((WMI_EAP_ASSOC_RESULT_MSG *)msg)->bssid, __QAPI_WLAN_MAC_LEN);
+
+    wlan_8021x_event_cb(WLAN_SUPPLICANT_INTERFACE_ID, QAPI_WLAN_CONNECT_CB_E, g_wl8021x_global, (void *)&cxnInfo, sizeof(cxnInfo));
+}
+#endif
+
 static void wmi_event_dispatch(event_t event_id, void *data)
 {
     switch (event_id) {
@@ -1218,6 +1254,11 @@ static void wmi_event_dispatch(event_t event_id, void *data)
     case WMI_BMPS_GET_STATS_EVENTID:
         wmi_get_bmps_stats_event(data);
         break;
+#ifdef CONFIG_WLAN_8021X
+    case WMI_8021X_ASSOC_RESULT_EVTID:
+        wmi_8021x_assoc_result_event(data);
+        break;
+#endif
 
 #if CONFIG_ENABLE_P2P_MODE
     case WMI_P2P_LIST_PERSISTENT_NETWORK_EVENTID:

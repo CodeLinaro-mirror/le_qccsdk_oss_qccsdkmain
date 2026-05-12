@@ -1196,7 +1196,7 @@ void app_hexdump_raw(void *inbuf, uint32_t inlen, int ascii, int addr)
     return;
 }
 
-int hex2byte(const char *hex)
+static int hex2byte(const char *hex)
 {
 	int a, b;
 
@@ -1211,7 +1211,7 @@ int hex2byte(const char *hex)
 	return (a << 4) | b;
 }
 
-int hexstr2bin(const char *hex, uint8_t *buf, size_t len)
+static int hexstr2bin(const char *hex, uint8_t *buf, size_t len)
 {
 	int a;
 	const char *ipos = hex;

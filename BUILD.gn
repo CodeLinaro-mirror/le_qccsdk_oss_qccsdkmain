@@ -104,6 +104,7 @@ projects_common = [
     "//modules/net/httpd",
     "//modules/qat",
     "//demo/ambient_power_demo",
+    "//modules/supplicant",
 ]
 
 if (!CONFIG_WPS_LIB) {

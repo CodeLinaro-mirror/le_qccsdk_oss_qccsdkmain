@@ -23,6 +23,13 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "qapi_hfc.h"
 #endif
 
+#ifdef CONFIG_WLAN_8021X
+#include "wlan_8021x.h"
+#include "qapi_wlan_8021x.h"
+#include "qcli_api.h"
+#include "fcntl.h"
+#endif
+
 #define WIFI_SHELL_INFO 1
 #define WIFI_SHELL_LOG  0
 
@@ -190,21 +197,40 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                 if(list[i].security_Enabled){
                     if(list[i].rsn_Auth || list[i].rsn_Cipher){
                         printf("\r\n\r");
-                        if((list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) || (list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK))
-                            printf("RSN/WPA2= ");
-                        if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE)
-                            printf("WPA3= ");
+                        qbool_t has_wpa2 = false;
+                        qbool_t has_wpa3 = false;
+                        if((list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_1X) ||
+                            (list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK)) {
+                                has_wpa2 = true;
+                        }
+                        if((list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE) || (list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_WPA3_1X)) {
+                            has_wpa3 = true;
+                        }
+
+                        if (has_wpa2 && has_wpa3) {
+                            printf("RSN/WPA2/WPA3= ");
+                        } else if (has_wpa2) {
+                            info_printf("RSN/WPA2= ");
+                        } else if (has_wpa3) {
+                            info_printf("RSN/WPA3= ");
+                        }
                     }
                     if(list[i].rsn_Auth){
                         printf(" {");
                         if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_1X){
-                             printf("802.1X ");
+                             printf("WPA2-802.1X ");
                         }
                         if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK){
                             printf("PSK ");
                         }
                         if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_SAE){
                             printf("SAE");
+                        }
+                        if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_WPA3_1X){
+                             printf("WPA3-802.1X ");
+                        }
+                        if(list[i].rsn_Auth & __QAPI_WLAN_SECURITY_AUTH_WPA3_1X_B_192){
+                             printf("WPA3-802.1X (192-bit)");
                         }
                         printf("}");
                     }
@@ -230,7 +256,7 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                     if(list[i].wpa_Auth){
                          printf(" {");
                          if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_1X){
-                             printf("802.1X ");
+                             printf("WPA-802.1X ");
                          }
                          if(list[i].wpa_Auth & __QAPI_WLAN_SECURITY_AUTH_PSK){
                              printf("PSK ");
@@ -428,6 +454,19 @@ static qapi_Status_t Enable(uint32_t __attribute__((__unused__)) Parameter_Count
 	} else {
 		p_cxt->active_device = NT_DEV_STA_ID;
 	}
+
+#ifdef CONFIG_ENABLE_SUPPLICANT
+    ret = wlan_supplicant_init();
+    if (QAPI_OK != ret) {
+        info_printf("wlan supplicant init fail\n");
+    }
+#endif
+#ifdef CONFIG_WLAN_8021X
+    ret = qapi_WLAN_8021x_Enable(QAPI_WLAN_8021X_ENABLE_E);
+    if (QAPI_OK != ret) {
+        info_printf("wlan 802.1x init fail\n");
+    }
+#endif
     return ret;
 }
 
@@ -439,12 +478,19 @@ static qapi_Status_t Disable(uint32_t __attribute__((__unused__)) Parameter_Coun
     if(p_cxt->wlan_enabled == 0){
         return QAPI_OK;
     }
+
     ret = qapi_WLAN_Enable(false);
 
     if (QAPI_OK != ret){
         PRINT_ERR_CMD_FAILED;
         return ret;
     }
+#ifdef CONFIG_WLAN_8021X
+    qapi_WLAN_8021x_Enable(QAPI_WLAN_8021X_DISABLE_E);
+#endif
+#ifdef CONFIG_ENABLE_SUPPLICANT
+    wlan_supplicant_exit();
+#endif
     p_cxt->wlan_enabled = 0;
     info_printf("disabled\n");
     return ret;
@@ -781,8 +827,22 @@ static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Param
     }
 
 	uint8_t deviceId = get_active_device();
+    qapi_WLAN_DEV_Mode_e opmode = 0;
+    uint32_t dataLen = sizeof(opmode);
     char *wpaVer = Parameter_List[0].String_Value;
     qapi_WLAN_Auth_Mode_e e_wpa_ver;
+
+#ifdef CONFIG_WLAN_8021X
+    if (QAPI_OK != qapi_WLAN_Get_Param (deviceId,
+                         __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                         __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+                         &opmode,
+                         &dataLen))
+    {
+        info_printf("set_wpa failed.\r\n");
+        return -1;
+    }
+#endif
 
     if(!strcmp(wpaVer,"WPA")) {
         e_wpa_ver = QAPI_WLAN_AUTH_WPA_PSK_E;
@@ -796,6 +856,16 @@ static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Param
         e_wpa_ver = QAPI_WLAN_AUTH_WPA_WPA2_MIXED_E;
     } else if(!strcmp(wpaVer,"SAE_WPA2_WPA")) {
         e_wpa_ver = QAPI_WLAN_AUTH_WPA_WPA2_SAE_MIXED_E;
+#ifdef CONFIG_WLAN_8021X
+    } else if ((opmode == DEV_MODE_STATION_E) && !(strcmp(wpaVer, "WPACERT"))) {
+        e_wpa_ver = QAPI_WLAN_AUTH_WPA_E;
+    } else if ((opmode == DEV_MODE_STATION_E) && (!strcmp(wpaVer, "WPA2CERT"))) {
+        e_wpa_ver = QAPI_WLAN_AUTH_WPA2_E;
+    } else if ((opmode == DEV_MODE_STATION_E) && (!strcmp(wpaVer, "WPA3CERT"))) {
+        e_wpa_ver = QAPI_WLAN_AUTH_WPA3_EAP_ONLY_E;
+    } else if ((opmode == DEV_MODE_STATION_E) && (!strcmp(wpaVer, "WPA2_WPA3CERT"))) {
+        e_wpa_ver = QAPI_WLAN_AUTH_WPA3_EAP_TRANSITION_E;
+#endif
     } else {
         info_printf("invalid wpa ver =%s\n", wpaVer);
         return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
@@ -839,6 +909,222 @@ static qapi_Status_t SetWpaParameters(uint32_t __attribute__((__unused__)) Param
 
     return QAPI_OK;
 }
+
+#ifdef CONFIG_WLAN_8021X
+/* e.g.
+ * SetWpaCertParameters TTLS-MSCHAPV2 qguest user password
+ */
+static qapi_Status_t setWpaCertParams(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if (Parameter_Count < 1 || !Parameter_List || Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    uint32_t deviceId = get_active_device();
+    uint8_t param_index = 0;
+    uint8_t param_index_max = Parameter_Count - 1;
+    char *method = NULL, *id = NULL, *username = NULL, *password = NULL;
+    char *param_str = NULL;
+    qapi_WLAN_8021X_Method_e q_method = QAPI_WLAN_8021X_METHOD_UNKNOWN;
+    int integer_val = 0, debug_level = -1, priv = 0;
+    char *ca_path = NULL, *cert_path = NULL, *private_key_path = NULL, *private_key_pwd = NULL;
+	char* srv_auth = NULL;
+    int file = -1;
+
+    while (param_index <= param_index_max) {
+        param_str = Parameter_List[param_index].String_Value;
+        integer_val = Parameter_List[param_index].Integer_Value;
+        switch (param_index) {
+            case 0:
+                method = param_str;
+                break;
+            case 1:
+                id = param_str;
+                break;
+            case 2:
+                username = param_str;
+                break;
+            case 3:
+                password = param_str;
+                break;
+            case 4:
+                debug_level = integer_val;
+                break;
+            case 5:
+                ca_path = param_str;
+                break;
+            case 6:
+                cert_path = param_str;
+                break;
+            case 7:
+                private_key_path = param_str;
+                break;
+            case 8:
+                private_key_pwd = param_str;
+                break;
+            case 9:
+                priv = integer_val;
+				break;
+			case 10:
+                srv_auth = param_str;   
+                break;
+            default:
+                break;
+        }
+        param_index++;
+    }
+
+    if (debug_level >= 0 && debug_level <= 5) {
+        qapi_WLAN_Set_Param (deviceId,
+                             __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                             __QAPI_WLAN_PARAM_GROUP_SECURITY_DEBUG_LEVEL,
+                             (void *)&debug_level, sizeof(int), FALSE);
+    }
+    else {
+        info_printf("invaid debug level, it should be an integer within [0, 5]\r\n");
+        return QAPI_ERROR;
+    }
+
+    /********** wpa version ****************/
+    if(!strcmp(method, "TLS")) {
+        q_method = QAPI_WLAN_8021X_METHOD_EAP_TLS_E;
+    } else if(!strcmp(method,"TTLS-MSCHAPV2")) {
+        q_method = QAPI_WLAN_8021X_METHOD_EAP_TTLS_MSCHAPV2_E;
+    } else if(!strcmp(method,"PEAP-MSCHAPV2")) {
+        q_method = QAPI_WLAN_8021X_METHOD_EAP_PEAP_MSCHAPV2_E;
+    } else if(!strcmp(method,"TTLS-MD5")) {
+        q_method = QAPI_WLAN_8021X_METHOD_EAP_TTLS_MD5_E;
+    } else {
+        info_printf("invaid method\r\n");
+        return QAPI_ERROR;
+    }
+
+    switch (q_method) {
+    case QAPI_WLAN_8021X_METHOD_EAP_TLS_E:
+        if (!ca_path || !cert_path) {
+            info_printf("Need ca_path, cert_path\r\n");
+            return QAPI_ERROR;
+        }
+        break;
+    case QAPI_WLAN_8021X_METHOD_EAP_TTLS_MSCHAPV2_E:
+    case QAPI_WLAN_8021X_METHOD_EAP_PEAP_MSCHAPV2_E:
+    case QAPI_WLAN_8021X_METHOD_EAP_TTLS_MD5_E:
+        if (!username || !password) {
+            info_printf("Need username and password\r\n");
+            return QAPI_ERROR;
+        }
+        break;
+    default:
+        info_printf("invaid method\r\n");
+        return QAPI_ERROR;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                         __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                         __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_METHOD,
+                         (void *) &q_method, sizeof(q_method), FALSE)) {
+        info_printf("set method failed.\r\n");
+        return QAPI_ERROR;
+    }
+
+    if (0 != qapi_WLAN_Set_Param (deviceId,
+                         __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                         __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_IDENTITY,
+                         (void *) id, strlen(id)+1, FALSE)) {
+        info_printf("set id failed.\r\n");
+        return QAPI_ERROR;
+    }
+
+    switch (q_method) {
+    case QAPI_WLAN_8021X_METHOD_EAP_TLS_E: {
+        qapi_WLAN_Security_8021x_Private_Key_t private_key;
+
+        memset(&private_key, 0, sizeof(private_key));
+        private_key.Private_Key_filename = private_key_path;
+        private_key.Private_Key_Password = private_key_pwd;
+
+        file = open(ca_path, O_RDONLY, 0);
+        if (file != -1) {
+            close(file);
+            if (0 != qapi_WLAN_Set_Param (deviceId,
+                             __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                             __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_CA_CER,
+                             (void *) ca_path, strlen(ca_path)+1, FALSE)) {
+                info_printf("set ca_path failed.\r\n");
+                return QAPI_ERROR;
+            }
+        } else {
+            info_printf("Invalid ca path, no server auth\r\n");
+        }
+
+        file = open(cert_path, O_RDONLY, 0);
+        if (file != -1) {
+            close(file);
+            if (0 != qapi_WLAN_Set_Param (deviceId,
+                             __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                             __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_CER,
+                             (void *) cert_path, strlen(cert_path)+1, FALSE)) {
+            info_printf("set cert_path failed.\r\n");
+            return QAPI_ERROR;
+            }
+        } else {
+            info_printf("Invalid cert path.\r\n");
+        }
+
+        file = open(private_key_path, O_RDONLY, 0);
+        if (file != -1) {
+            close(file);
+            if (0 != qapi_WLAN_Set_Param (deviceId,
+                             __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                             __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_PRIVATE_KEY,
+                             (void *) &private_key, sizeof(private_key), FALSE)) {
+            info_printf("set private key failed.\r\n");
+            return QAPI_ERROR;
+            }
+        } else {
+            info_printf("Invalid private key path.\r\n");
+        }
+
+        break;
+    }
+    case QAPI_WLAN_8021X_METHOD_EAP_TTLS_MSCHAPV2_E:
+    case QAPI_WLAN_8021X_METHOD_EAP_PEAP_MSCHAPV2_E:
+    case QAPI_WLAN_8021X_METHOD_EAP_TTLS_MD5_E: {
+        if (0 != qapi_WLAN_Set_Param (deviceId,
+                             __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                             __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_USERNAME,
+                             (void *) username, strlen(username)+1, FALSE)) {
+            info_printf("set username failed.\r\n");
+            return QAPI_ERROR;
+        }
+        if (0 != qapi_WLAN_Set_Param (deviceId,
+                             __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                             __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_PASSWORD,
+                             (void *) password, strlen(password)+1, FALSE)) {
+            info_printf("set password failed.\r\n");
+            return QAPI_ERROR;
+        }
+        file = open(ca_path, O_RDONLY, 0);
+        if (file != -1) {
+            close(file);
+            if (0 != qapi_WLAN_Set_Param (deviceId,
+                             __QAPI_WLAN_PARAM_GROUP_WIRELESS_SECURITY,
+                             __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_CA_CER,
+                             (void *) ca_path, strlen(ca_path)+1, FALSE)) {
+                info_printf("set ca_path failed.\r\n");
+                return QAPI_ERROR;
+            }
+        }
+        break;
+    }
+    default:
+        info_printf("invalid method\r\n");
+        return QAPI_ERROR;
+    }
+
+    return QAPI_OK;
+
+}
+#endif
 
 int32_t ether_aton(const char *orig, uint8_t *eth)
 {
@@ -4908,7 +5194,10 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { SetDevice,       "SetDevice",             "<device = 0:AP|GO, 1:STA|P2P client",    "Set the active device"},
     { Scan,            "Scan",                  "<mode = 1: blocking| 2: non-blocking> [ssid]",    "Scan for networks, using blocking/non-blocking modes. If ssid is provided, scan for specific ssid only."},
     { SetWpaPassphrase,"SetWpaPassphrase",      "<passphrase>",          "Set WPA passphrase"},
-    { SetWpaParameters,"SetWpaParameters",      "<version=WPA|WPA2|WPACERT|WPA2CERT|SAE> <ucipher> <mcipher>\n    For mix mode, <version=WPA2_WPA|SAE_WPA2|SAE_WPA2_WPA>, <ucipher> and <mcipher> are not required",  "Set WPA specific parameters"},
+    { SetWpaParameters,"SetWpaParameters",      "<version=WPA|WPA2|WPACERT|WPA2CERT|WPA3CERT|SAE> <ucipher> <mcipher>\n    For mix mode, <version=WPA2_WPA|SAE_WPA2|SAE_WPA2_WPA>, <ucipher> and <mcipher> are not required",  "Set WPA specific parameters"},
+#ifdef CONFIG_WLAN_8021X
+    { setWpaCertParams,"SetWpaCertParameters",  "<method=TLS|TTLS-MSCHAPV2|PEAP-MSCHAPV2|TTLS-MD5> <id> <username> <password> <dbglevel> <ca_path> <cert_path> <key_path> <key_pwd>",    "Set WPA enterprise specific parameters"},
+#endif
     { Connect,         "Connect",               "<ssid> [bssid]",        "Connect to a given ssid and given bssid(bssid option applicable to STA mode only. if AP mode connect command shouldnt take BSSID)"},
     { GetRssi,         "GetRssi",               "",                      "Get link quality indicator (SNR in dB) between AP and STA."},
     { Disconnect,      "Disconnect",            "",                      "Disconnect from AP or peer"},
@@ -5004,6 +5293,9 @@ void wifi_shell_init (void)
     qurt_mutex_create(&p_cxt->wifi_shell_cxt_mutex);
     pg_wifi_shell_cxt->auth = QAPI_WLAN_AUTH_NONE_E;
     wifi_shell_cmd_group_handle = QAPI_Console_Register_Command_Group(NULL, &wifi_shell_cmd_group);
+#ifdef CONFIG_WLAN_8021X
+    wlan_dbg_init(wifi_shell_cmd_group_handle, QCLI_Printf);
+#endif
 
 #ifdef CONFIG_ENABLE_P2P_MODE
      p2p_shell_cmd_group_handle = QAPI_Console_Register_Command_Group(wifi_shell_cmd_group_handle, &p2p_shell_cmd_group);

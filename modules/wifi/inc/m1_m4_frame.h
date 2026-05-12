@@ -14,9 +14,9 @@ NT_BOOL verify_mic(uint8_t ver, uint8_t *buf, uint16_t len, uint8_t *mic, uint8_
 void create_eap_m2(INFO_PARAMS *param, uint8_t *buf, uint8_t *sz);
 void create_eap_m4(INFO_PARAMS *param, uint8_t *buf, uint8_t *sz);
 void generate_ptk(INFO_PARAMS *param, uint8_t *pmk, uint8_t pmk_len, uint8_t *n1, uint8_t *n2, uint8_t *addr1,
-                  uint8_t *addr2, uint8_t *ptk, uint8_t auth, uint8_t ucipher);
+                  uint8_t *addr2, uint8_t *ptk, uint16_t auth, uint8_t ucipher);
 void sec_dump_frame(char *pmsg, uint8_t *fr, uint16_t sz);
-uint8_t sec_get_frm_info(uint8_t *frm, uint16_t sz, uint8_t auth);
+uint8_t sec_get_frm_info(uint8_t *frm, uint16_t sz, uint16_t auth);
 bool decrypt_key(INFO_PARAMS *param, uint8_t *keyiv, uint8_t *encrypted_data, uint16_t keydatalen);
 
 NT_BOOL parse_and_decode_m2(INFO_PARAMS *param, uint8_t *mic);

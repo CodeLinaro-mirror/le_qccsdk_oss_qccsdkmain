@@ -422,6 +422,22 @@ qapi_WLAN_Crypt_Type_e
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_ENCRYPTION_TYPE 1
 
 /**
+Command ID to set the pairwise master key for the upcoming WPA/WPA2 association 
+procedure.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] uint8_t[]       Pairwise master key to be set. The master key 
+                           should be of length __QAPI_WLAN_PASSPHRASE_LEN.
+@dependencies
+This should be done before initiating an association.
+
+@sa
+__QAPI_WLAN_PASSPHRASE_LEN
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_PMK                      2
+
+/**
 Command ID to set the passphrase for the upcoming WPA/WPA2 association procedure.
 
 @note1hang This parameter can only be used with qapi_WLAN_Set_Param().
@@ -453,6 +469,141 @@ secure association.
 qapi_WLAN_WPS_Credentials_t
 */
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_WPS_CREDENTIALS 6
+
+/**
+Command ID to set/get the 802.1x method.
+
+@note1hang This parameter can be used with qapi_WLAN_Set_Param() and qapi_WLAN_Get_Param().
+
+@param[in,out] qapi_WLAN_8021x_Method_e   802.1x mode to be set.
+
+@sa
+qapi_WLAN_8021x_Method_e
+
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_METHOD           7
+
+/**
+The first Command ID to set/get the 802.1x information.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_START            (__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_METHOD)
+
+/**
+The first Command ID to set/get wlan_lib information.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_WLIB_START            (__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_START)
+
+/**
+@ingroup qapi_wlan
+Set the 802.1x identity for PEAP/TTLS method.\n
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_IDENTITY
+qapi_WLAN_Set_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_IDENTITY         8
+
+/**
+@ingroup qapi_wlan
+Set the 802.1x username for PEAP/TTLS method.\n
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_USERNAME
+qapi_WLAN_Set_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_USERNAME         9
+
+/**
+@ingroup qapi_wlan
+Set the 802.1x password for PEAP/TTLS method.\n
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_PASSWORD
+qapi_WLAN_Set_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_PASSWORD         10
+
+/**
+@ingroup qapi_wlan
+Set/get the 802.1x CA certificate filename.
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_CA_CERT
+qapi_WLAN_Set_Param
+qapi_WLAN_Get_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_CA_CER           11
+
+/**
+@ingroup qapi_wlan
+Set/get the 802.1x certificate filename.
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_CERT
+qapi_WLAN_Set_Param
+qapi_WLAN_Get_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_CER              12
+
+/**
+@ingroup qapi_wlan
+Set 802.1x private key filename and its password.
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_PRIVATE_KEY
+qapi_WLAN_Set_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_PRIVATE_KEY      13
+
+/**
+@ingroup qapi_wlan
+Set server authentication override flag.
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_NO_SERVER_AUTH
+qapi_WLAN_Set_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_NO_SERVER_AUTH         14
+
+/**
+The last Command ID to set/get 802.1x information.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_END            30
+
+/**
+The first Command ID to set/get WLAN library information.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_WLIB_MAIN_START            (__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_END+1)
+
+/**
+@ingroup qapi_wlan
+Set security debug level.\n
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_DEBUG_LEVEL
+qapi_WLAN_Set_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_DEBUG_LEVEL              31
+
+/**
+@ingroup qapi_wlan
+Set security priv.\n
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_PRIV
+qapi_WLAN_Set_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_PRIV           32
+
+/**
+@ingroup qapi_wlan
+Set PMKID.\n
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_PMKID
+qapi_WLAN_Set_Param
+*/
+#define __QAPI_WLAN_PARAM_GROUP_SECURITY_PMKID          1001
 
 /**
 Command ID to configure P2P device parameters.

@@ -42,7 +42,7 @@ typedef void (*SUPPL_AUTH_COMPL_FN)(void *ctxt, uint8_t *peer, WMI_ADD_CIPHER_KE
 typedef struct _supp_auth_config_t {
     SUPPL_AUTH_FN side;
     uint8_t hdr_len;
-    uint8_t auth;
+    uint16_t auth;
     uint8_t ucipher;
     uint8_t mcipher;
     uint8_t *peer;
