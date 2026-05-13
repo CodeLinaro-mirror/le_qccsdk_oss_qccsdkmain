@@ -132,6 +132,16 @@ void PAL_Release_Lock(void)
 #define BACKSPACE_KEY_TERATERM 8
 extern int uart_flag;
 
+static uint8_t utf8_char_display_width(const char *buf, uint16_t start)
+{
+    uint8_t b = (uint8_t)buf[start];
+    /* Lead byte range 0xE4-0xE9 covers the main CJK Unified Ideographs block. */
+    if (b >= 0xE4 && b <= 0xE9) {
+        return 2;
+    }
+    return 1;
+}
+
 static void QCLI_Task(void __attribute__((__unused__)) * pvParameters)
 {
     uint32_t notified_value = 0;
@@ -165,12 +175,22 @@ static void QCLI_Task(void __attribute__((__unused__)) * pvParameters)
                 nt_dbg_print("should never happen\r\n");
             } else if ((cRxedChar == BACKSPACE_KEY_PUTTY) || (cRxedChar == BACKSPACE_KEY_TERATERM)) {
                 if (cInputIndex > 0) {
-                    PAL_Console_Write(3, "\b \b");
-                    cInputIndex--;
-                    cInputString[cInputIndex] = '\0';
+                    uint16_t seq_start_idx;
+                    uint8_t erase_cols;
+                    seq_start_idx = cInputIndex - 1;
+                    while ((seq_start_idx > 0) && ((uint8_t)cInputString[seq_start_idx] >= 0x80)
+                           && ((uint8_t)cInputString[seq_start_idx] <= 0xBF)) {
+                        seq_start_idx--;
+                    }
+                    erase_cols = utf8_char_display_width(cInputString, seq_start_idx);
+                    memset(&cInputString[seq_start_idx], '\0', cInputIndex - seq_start_idx);
+                    cInputIndex = seq_start_idx;
+                    while (erase_cols--) {
+                        PAL_Console_Write(3, "\b \b");
+                    }
                 }
             } else {
-                if ((cRxedChar >= ' ') && (cRxedChar <= '~')) {
+                if (((cRxedChar >= ' ') && (cRxedChar <= '~')) || (cRxedChar >= 0x80)) {
                     if (cInputIndex < cmdMAX_INPUT_SIZE) {
                         PAL_Console_Write(sizeof(cRxedChar), (char *)&cRxedChar);
                         cInputString[cInputIndex] = cRxedChar;
@@ -207,7 +227,7 @@ static void QCLI_RTT_CLI_Task(void __attribute__((__unused__)) * pvParameters)
                 }
 
             } else {
-                if ((view_input >= ' ') && (view_input <= '~')) {
+                if (((view_input >= ' ') && (view_input <= '~')) || (view_input >= 0x80)) {
                     if (rttInputStringIndex < cmdMAX_INPUT_SIZE) {
                         rttInputString[rttInputStringIndex] = view_input;
                         rttInputStringIndex++;
