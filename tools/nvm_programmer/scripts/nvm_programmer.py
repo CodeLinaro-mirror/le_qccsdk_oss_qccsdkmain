@@ -484,7 +484,11 @@ class NVM_Programmer(GDB_Framework):
             # Restore nvm_name
             self.config['nvm_name'] = saved_nvm_name
         
-        print('********************************************************************************')
+        # Reset system after export
+        self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_SYSTEM_RESET)
+        self.gdb_execute('c')
+        print('Reset system.')
+
     def run(self):
         '''
         Start tool.
