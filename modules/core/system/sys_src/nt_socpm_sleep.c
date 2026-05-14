@@ -1825,8 +1825,8 @@ void nt_socpm_slp_enter(uint64_t slp_us)
     extern int rri_force_wakeup;
     extern volatile uint32_t last_rri;
     rri_force_wakeup = last_rri = 0x0;
-    // hal_wlan_sleep_trimmed();
-    power_cycle_wmac();
+    hal_wlan_sleep_trimmed();
+
 
     /* Check if sleep entry was prevented and assert if not a valid prevention */
     nt_socpm_check_sleep_entry_failure(_socpm_slp_mode, FALSE,TRUE);
