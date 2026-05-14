@@ -89,6 +89,10 @@ uint32_t httpc_max_num_con = HTTPCLIENT_DEFAULT_CON_SUPPORT;
 gbl_httpc_ctxt_t *g_httpc_ctxt = NULL;
 uint8_t httpc_thread_started = FALSE;
 qurt_signal_t httpc_sem;
+#if CONFIG_QAT_POWERSAVE_DEMO
+extern qurt_signal_t http_sem;
+extern uint8_t powersave_active;
+#endif
 
 /* HTTP requests we support.
  * Do NOT change order of method strings.
@@ -3032,11 +3036,19 @@ static void httpc_check(uint32_t param)
  */
 void http_client_task(void __attribute__((__unused__)) * pvParameters)
 {
+#if CONFIG_QAT_POWERSAVE_DEMO
+    uint32 Signal_Waiting;
+#endif
     for (;;) {
         httpc_check(0);
         if (httpc_thread_started == FALSE) {
             qurt_signal_set(&httpc_sem, 1);
         }
+#if CONFIG_QAT_POWERSAVE_DEMO
+        if (powersave_active) {
+            qurt_signal_wait_timed(&http_sem, 1, QURT_SIGNAL_ATTR_CLEAR_MASK, &Signal_Waiting, QURT_TIME_WAIT_FOREVER);
+        }
+#endif
     }
 }
 

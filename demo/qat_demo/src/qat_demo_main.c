@@ -50,6 +50,10 @@ void app_init(void)
     Initialize_FwUpgrade_Demo();
 #endif
 
+#ifdef CONFIG_QAT_POWERSAVE_DEMO
+    Initialize_QAT_POWERSAVE_Demo();
+#endif
+
 #endif
 
 #ifdef CONFIG_QAT_FSTORE_DEMO

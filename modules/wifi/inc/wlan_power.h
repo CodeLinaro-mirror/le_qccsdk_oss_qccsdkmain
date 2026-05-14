@@ -246,6 +246,11 @@ typedef enum {
     PM_EVENT_RRT_CHANGE, /* PM event when trigger an RRI resync on change in RRTs*/
 } PM_EVENT_TYPE;
 
+typedef enum {
+    PS_POLICY_ALLOWED_SLEEP = 0,
+    PS_POLICY_NOT_ALLOWED_SLEEP = 1,
+} PS_POLICY;
+
 /* PM AP Information */
 #ifdef BMPS_AP
 typedef struct {
@@ -460,6 +465,7 @@ typedef struct {
     bool  first_qos_null_pm1_sent;
     bool  bmps_timer_registered_when_awake;
     bool  mybeacon_received;
+    PS_POLICY powersave_policy;
 } PM_STRUCT;
 
 /**
@@ -841,4 +847,12 @@ void pm_save_active_sleep_time_record(devh_t *dev, uint32_t sleep_time, uint32_t
 void pm_save_tx_rx_counts_during_certain_period(devh_t *dev);
 void pm_statistic_init(pm_statistics_t * pm_statistics);
 void pm_statistic_deinit(pm_statistics_t * pm_statistics);
+
+static inline void pm_set_powersave_policy(devh_t *dev, PS_POLICY policy)
+{
+    if (dev && dev->pPmStruct) {
+        PM_STRUCT *pPmStruct = (PM_STRUCT *)dev->pPmStruct;
+        pPmStruct->powersave_policy = policy;
+    }
+}
 #endif  // _WLAN_POWER_H_

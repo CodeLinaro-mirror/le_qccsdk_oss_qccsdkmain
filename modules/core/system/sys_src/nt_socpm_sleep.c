@@ -1117,6 +1117,12 @@ void nt_socpm_slp_tmr_set(uint64_t sleep_time)  // in us
 void nt_socpm_soc_sleep_processing(uint64_t slp_val)
 {
     uint64_t slp_exp = 0;
+#ifdef CONFIG_QAT_POWERSAVE_DEMO
+    PM_STRUCT *pPmStruct = NULL;
+    if (gdevp) {
+        pPmStruct = (PM_STRUCT *)gdevp->pPmStruct;
+    }
+#endif
 
 #ifdef FIRMWARE_APPS_INFORMED_WAKE
     if ((TRUE == g_socpm_struct.a2f_asserted) || (TRUE == g_socpm_struct.f2a_asserted)) {
@@ -1166,7 +1172,30 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
 
     }
 #endif /* SUPPORT_SLEEP_DEBUG_UNIT_TEST_CMD */
+#ifdef CONFIG_QAT_POWERSAVE_DEMO
+    else if (pPmStruct && pPmStruct->powersave_policy == PS_POLICY_NOT_ALLOWED_SLEEP) {
+        /* Re-enable interrupts */
+        NT_SOCPM_IRQ_ENABLE();
+        /* Restart tick. */
+        _socpm_systick_on();
 
+        uint64_t delta_hres_time_us = hres_timer_curr_time_us() - hres_time_pre_sleep + g_socpm_struct.unapplied_systick_err_us;
+        uint64_t delta_hres_time_ms = 0;
+
+        NT_LOG_PRINT(SOCPM, INFO, " nt_socpm_slp_time_total %d delta_rtos %d", (uint32_t)nt_socpm_slp_time_total,
+                        (uint32_t)delta_hres_time_us);
+
+        delta_hres_time_ms = US_TO_MS(delta_hres_time_us);
+        g_socpm_struct.unapplied_systick_err_us = (delta_hres_time_us - 1000 * delta_hres_time_ms);
+
+        if (delta_hres_time_ms > 0) {
+            vTaskStepTick(delta_hres_time_ms);
+        } 
+#ifdef SUPPORT_QCSPI_SLAVE
+            qcspi_slv_init();
+#endif /* SUPPORT_QCSPI_SLAVE */
+    } 
+#endif /* CONFIG_QAT_POWERSAVE_DEMO */
     else {
         /*Decide on which sleep type to enter
          * limited now on sleep time need to add battery and voting inputs to it
