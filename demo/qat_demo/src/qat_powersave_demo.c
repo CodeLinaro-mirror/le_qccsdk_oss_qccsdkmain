@@ -86,6 +86,8 @@ void qat_notify_pm_state_cb(uint8_t evt, void *p_args)
     if (evt == PWR_EVT_WMAC_POST_AWAKE) {
         if (spi_is_ext_wakeup()) {
             pm_set_powersave_policy(gdevp, PS_POLICY_NOT_ALLOWED_SLEEP);
+            /* Disable bmps and imps when woken up by external pin */
+            qapi_imps_enter_sleep(0,0,0);
             if (qapi_bmps_cfg(0, 0) != QAPI_OK) {
                 rc = QAT_Response_Str(QAT_RC_ERROR, "+PSENABLE: bmps cfg failed");
             } else {
@@ -145,8 +147,8 @@ static QAT_Command_Status_t Extend_Command_PS_Enable(uint32_t Op_Type, uint32_t 
                 return rc;
             }
 
-            /* enable imps */
-            qapi_imps_enter_sleep(Parameter_List[0].Integer_Value, 100, 10000);
+            /* enable imps, default sleep time is 10 hours */
+            qapi_imps_enter_sleep(Parameter_List[0].Integer_Value, 100, 36000000);
 
             /* bmps timeout settings */
             if (Parameter_Count == 2) {
