@@ -59,10 +59,10 @@ typedef struct {
 } rtt_sample_t;
 
 /* Optional callback for demo apps to get notified on each sample. */
-void nt_rtt_demo_notify(uint64_t dist_cm);
+void nt_rtt_demo_notify(uint64_t dist_mm);
 
 static SemaphoreHandle_t g_rtt_sync_sem = NULL;
-static uint32_t g_last_rtt_distance_cm = 0;
+static uint32_t g_last_rtt_distance_mm = 0;
 static int g_rtt_status = -1; /* 0 = Success, -1 = Fail */
 QCLI_Group_Handle_t qcli_rtt_group;
 
@@ -81,15 +81,15 @@ static usr_ftm g_cfg = {
     .format_and_bw = 0,
 };
 extern uint32_t g_dynamic_base_delay;
-void nt_rtt_demo_notify(uint64_t dist_cm)
+void nt_rtt_demo_notify(uint64_t dist_mm)
 {
-    g_last_rtt_distance_cm = (uint32_t)dist_cm;
+    g_last_rtt_distance_mm = (uint32_t)dist_mm;
     g_rtt_status = 0;
 
     if (g_rtt_sync_sem != NULL) {
         xSemaphoreGive(g_rtt_sync_sem);
     } else {
-        printf("RTT Async: %u cm", (uint32_t)dist_cm);
+        printf("RTT Async: %u mm", (uint32_t)dist_mm);
     }
 }
 
@@ -210,7 +210,7 @@ static QCLI_Command_Status_t cmd_RTT_Start(uint32_t Parameter_Count, QCLI_Parame
     //     return QCLI_STATUS_ERROR_E;
     // }
     printf("g_rtt_index=%d, g_ftm_number=%d\r\n", g_rtt_index, g_ftm_number);
-    return QCLI_STATUS_SUCCESS_E;
+    return QCLI_STATUS_ERROR_E;
 }
 
 static QCLI_Command_Status_t cmd_RTT_Status(uint32_t Parameter_Count, QCLI_Parameter_t *Parameter_List)
@@ -218,11 +218,20 @@ static QCLI_Command_Status_t cmd_RTT_Status(uint32_t Parameter_Count, QCLI_Param
     (void)Parameter_Count;
     (void)Parameter_List;
 
-    printf("RTT STATUS: last=%u cm, status=%d ", g_last_rtt_distance_cm, g_rtt_status);
+    printf("RTT STATUS: last=%u mm, status=%d", g_last_rtt_distance_mm, g_rtt_status);
     printf("RTT CFG: ftms=%d delta=%d asap=%d bw=%d dur=%d period=%d cal=0x%x",
            g_cfg.ftms_per_burst, g_cfg.min_delta_ftm, g_cfg.asap, g_cfg.format_and_bw,
            g_cfg.burst_duration, g_cfg.burst_period, g_cfg.cal_val);
 
+    return QCLI_STATUS_SUCCESS_E;
+}
+
+
+static QCLI_Command_Status_t cmd_RTT_Stop(uint32_t Parameter_Count, QCLI_Parameter_t *Parameter_List)
+{
+    (void)Parameter_Count;
+    (void)Parameter_List;
+    printf("RTT STOP: not wired to stop cmd yet. Start a new session to override.");
     return QCLI_STATUS_SUCCESS_E;
 }
 
@@ -242,6 +251,7 @@ const QCLI_Command_t rtt_cmd_list[] =
 {
     {cmd_RTT_Cfg,   "rtt_cfg",   "[ftms=N] [delta=N] [asap=0|1] [bw=N] [dur=N] [period=N] [cal=HEX]", "Configure RTT/FTM"},
     {cmd_RTT_Start, "rtt_start", "<mac_addr> [count]", "Start RTT/FTM measurement"},
+    {cmd_RTT_Stop,  "rtt_stop",  "", "Stop RTT/FTM (optional)"},
     {cmd_RTT_Status,"rtt_status","", "Show RTT status"},
     { cmd_set_rtt_base_delay, "set_base_delay", "set_base_delay <value>", "Set RTT base delay dynamically"},
 };
