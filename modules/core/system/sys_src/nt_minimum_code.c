@@ -580,8 +580,6 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
                 rri_force_wakeup = last_rri = 0x0;
                 power_cycle_wmac();
             }
-
-            printf(" after wfi %d\r\n",bd );
 #ifdef SOCPM_RMC_DBG
             /* Print when decides to wake up */
             UART_Send_direct("W\r\n", 3);
