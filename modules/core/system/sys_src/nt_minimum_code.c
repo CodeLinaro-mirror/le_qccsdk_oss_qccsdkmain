@@ -575,8 +575,6 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
                 HAL_REG_WR(QWLAN_AGC_AGC_RESET_REG, QWLAN_AGC_AGC_RESET_RESET_ERESET);
                 hal_wlan_sleep_trimmed();
             }
-
-            printf(" after wfi %d\r\n",bd );
 #ifdef SOCPM_RMC_DBG
             /* Print when decides to wake up */
             UART_Send_direct("W\r\n", 3);
