@@ -18,6 +18,7 @@
 
 #ifdef CONFIG_QAT_POWERSAVE_DEMO
 #include "wlan_power.h"
+extern uint8_t powersave_active;
 #endif
 
 /*------------------------------------------------------------------------
@@ -451,8 +452,9 @@ bool ringif_f2a_pkt_attach(uint8_t ring_id, uint32_t *p_buf_start, uint32_t *p_b
 #endif
 
 #ifdef CONFIG_QAT_POWERSAVE_DEMO
-    pm_set_powersave_policy(gdevp, PS_POLICY_NOT_ALLOWED_SLEEP);
-    sys_msleep(5);
+    if (powersave_active) {
+        pm_set_powersave_policy(gdevp, PS_POLICY_NOT_ALLOWED_SLEEP);
+    }
 #endif
 
     /* Indicate to Host that ring has been updated */
@@ -853,7 +855,7 @@ bool ringif_f2a_clear_used_bufs(uint8_t ring_id, _pfn_clear_elem pfn_clear_elem)
     } else {
         p_ring_ctx->ring_idx_clear_pending = 0;
 #ifdef CONFIG_QAT_POWERSAVE_DEMO
-        if (!spi_is_ext_wakeup()) {
+        if (powersave_active && !spi_is_ext_wakeup()) {
             pm_set_powersave_policy(gdevp, PS_POLICY_ALLOWED_SLEEP);
         }
 #endif
