@@ -201,6 +201,12 @@ static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t 
                     decode[i] = (uint8_t)((hi << 4) | lo);
                 }
 
+                if (writefile_state.total_len > 0 &&
+                    writefile_state.received_len + byte_count > writefile_state.total_len) {
+                    QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: data exceeds declared length");
+                    return QAT_STATUS_SUCCESS_E;
+                }
+
                 int32_t written = vfs_write(&writefile_state.file, decode, byte_count);
                 if (written < 0) {
                     vfs_close(&writefile_state.file);
@@ -216,8 +222,8 @@ static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t 
                     writefile_state.received_len >= writefile_state.total_len) {
                     vfs_close(&writefile_state.file);
                     writefile_state.active = false;
-                    snprintf(response, sizeof(response), "+WRITEFILE: %zu bytes written",
-                             writefile_state.received_len);
+                    snprintf(response, sizeof(response), "+WRITEFILE: %u bytes written",
+                             (unsigned)writefile_state.received_len);
                     QAT_Response_Str(QAT_RC_OK, response);
                 } else {
                     QAT_Response_Str(QAT_RC_OK, NULL);
