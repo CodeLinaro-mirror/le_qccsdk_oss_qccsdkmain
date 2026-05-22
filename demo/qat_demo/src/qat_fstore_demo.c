@@ -220,11 +220,17 @@ static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t 
 
                 if (writefile_state.total_len > 0 &&
                     writefile_state.received_len >= writefile_state.total_len) {
-                    vfs_close(&writefile_state.file);
+                    int close_ret = vfs_close(&writefile_state.file);
                     writefile_state.active = false;
-                    snprintf(response, sizeof(response), "+WRITEFILE: %u bytes written",
-                             (unsigned)writefile_state.received_len);
-                    QAT_Response_Str(QAT_RC_OK, response);
+                    if (close_ret < 0) {
+                        snprintf(response, sizeof(response),
+                                 "+WRITEFILE: close failed (%d)", close_ret);
+                        QAT_Response_Str(QAT_RC_ERROR, response);
+                    } else {
+                        snprintf(response, sizeof(response), "+WRITEFILE: %u bytes written",
+                                 (unsigned)writefile_state.received_len);
+                        QAT_Response_Str(QAT_RC_OK, response);
+                    }
                 } else {
                     QAT_Response_Str(QAT_RC_OK, NULL);
                 }
