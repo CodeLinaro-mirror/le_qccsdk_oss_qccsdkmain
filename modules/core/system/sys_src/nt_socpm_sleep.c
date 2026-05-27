@@ -1257,7 +1257,8 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
             (g_socpm_struct.nvic_icpr_status[0] & NT_CM4_UART_INTERRUPT_BIT_MASK)
 #endif /* PLATFORM_FERMION */
         ) {
-            _socpm_slp_mode = clk_gtd_sleep;
+            printf("a2f pend\r\n");
+            // _socpm_slp_mode = clk_gtd_sleep;
         }
         /* This function performs sleep recipe as per the sleep mode specified */
 #ifdef CONFIG_WATCH_DOG_ENABLE
@@ -1821,8 +1822,11 @@ void nt_socpm_slp_enter(uint64_t slp_us)
     for (int i = 0; i < 7; i++) {
         __asm volatile(" nop \n");
     }
-
-    hal_wlan_sleep_trimmed();
+    extern int rri_force_wakeup;
+    extern volatile uint32_t last_rri;
+    rri_force_wakeup = last_rri = 0x0;
+    // hal_wlan_sleep_trimmed();
+    power_cycle_wmac();
 
     /* Check if sleep entry was prevented and assert if not a valid prevention */
     nt_socpm_check_sleep_entry_failure(_socpm_slp_mode, FALSE,TRUE);
