@@ -18,7 +18,7 @@
  * Preprocessor Definitions and Constants
  *-----------------------------------------------------------------------*/
 #define FSTORE_MOUNT_POINT     "/lfs"
-#define FSTORE_MAX_PATH        128
+#define FSTORE_MAX_PATH        130
 #define FSTORE_READ_CHUNK_SIZE 512
 #define FSTORE_CHUNK_HEX_MAX   128  /* max bytes per hex chunk = 256 hex chars */
 
@@ -58,17 +58,24 @@ static QAT_Command_t QAT_Fstore_Command_List[] = {
 static int normalize_path(const char *input, char *out, size_t out_sz)
 {
     bool has_prefix = strncmp(input, FSTORE_MOUNT_POINT, strlen(FSTORE_MOUNT_POINT)) == 0;
-    size_t needed = has_prefix
-        ? strlen(input) + 1
-        : strlen(FSTORE_MOUNT_POINT) + 1 + strlen(input) + 1;
-
-    if (needed > out_sz) {
-        return -1;
-    }
 
     if (has_prefix) {
+        if (strlen(input) + 1 > out_sz) {
+            return -1;
+        }
         snprintf(out, out_sz, "%s", input);
+    } else if (input[0] == '/') {
+        /* Input starts with '/' but not the mount point: concatenate directly
+         * to avoid double slash (e.g. /lfs + /foo/bar → /lfs/foo/bar). */
+        if (strlen(FSTORE_MOUNT_POINT) + strlen(input) + 1 > out_sz) {
+            return -1;
+        }
+        snprintf(out, out_sz, "%s%s", FSTORE_MOUNT_POINT, input);
     } else {
+        /* Relative path: insert separator. */
+        if (strlen(FSTORE_MOUNT_POINT) + 1 + strlen(input) + 1 > out_sz) {
+            return -1;
+        }
         snprintf(out, out_sz, "%s/%s", FSTORE_MOUNT_POINT, input);
     }
     return 0;
