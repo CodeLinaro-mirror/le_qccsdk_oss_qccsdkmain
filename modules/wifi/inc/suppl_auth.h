@@ -56,7 +56,7 @@ typedef enum {
 #define KEYDATA_REQ_BIT     0x0800
 #define KEYDATA_ENC_BIT     0x1000
 
-#define AUTH_IS_8021X(auth) ((auth) & (WMI_WPA_AUTH | WMI_WPA2_AUTH))
+#define AUTH_IS_8021X(auth) ((auth) & (WMI_WPA_AUTH | WMI_WPA2_AUTH | WMI_WPA2_SHA256_AUTH | WMI_WPA3_ENTERPRISE_ONLY_AUTH))
 
 #define STATUS_M1_NEED_HOLD (1 << 0)
 
@@ -66,7 +66,7 @@ typedef struct supp_auth_rec_t {
     uint8_t state;
     uint8_t peer[IEEE80211_ADDR_LEN];
     uint8_t keyType;
-    uint8_t auth;
+    uint16_t auth;
     uint8_t ucipher;
     uint8_t mcipher;
     uint8_t *rsn_ie;
@@ -100,6 +100,8 @@ typedef struct supp_auth_rec_t {
     uint8_t prev_ptk[PTK_LEN]; /* In order to avoid installing same PTK after rekeying - CR 2130539 */
     uint8_t *frm;              /* backup pointer to the received frame */
     uint16_t frm_len;          /* backup length of the received frame */
+    /* 8021X M1 hold buffer */
+    uint8_t *m1_hold_buf;      /* heap buffer holding a copy of M1 frame */
     uint16_t m1_frame_len;     /* length of the held M1 frame */
     uint8_t pmk_len;           /* PMK length */
     uint8_t rec_id;            /* offset of rec in array */
@@ -163,6 +165,13 @@ void auth_process_m3_timeout(INFO_PARAMS *param);
 void suppl_process_tkip_cm(INFO_PARAMS *param);
 
 void auth_process_grp_key_handshake(devh_t *dev, uint8_t *source_addr);
+
+#ifdef CONFIG_WLAN_8021X_LIB
+void suppl_auth_update_pmk(void *ctxt, uint8_t *peer, uint8_t *pmk, uint8_t pmk_len);
+void suppl_8021X_hold_m1(SUPPL_AUTH_INFO *info, SUPPL_AUTH_REC *rec);
+void suppl_8021X_drain_m1(SUPPL_AUTH_INFO *info, SUPPL_AUTH_REC *rec);
+void suppl_8021X_resume_m1(SUPPL_AUTH_INFO *info, SUPPL_AUTH_REC *rec);
+#endif
 
 #endif /* __SUPPL_AUTH_H__ */
 //#endif /* SECURITY */

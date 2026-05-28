@@ -48,6 +48,7 @@ struct wpabuf *wpabuf_alloc_ext_data(uint8_t *data, size_t len);
 struct wpabuf *wpabuf_alloc_copy(const void *data, size_t len);
 struct wpabuf *wpabuf_dup(const struct wpabuf *src);
 void wpabuf_free(struct wpabuf *buf);
+void wpabuf_clear_free(struct wpabuf *buf);
 void *wpabuf_put(struct wpabuf *buf, size_t len);
 struct wpabuf *wpabuf_concat(struct wpabuf *a, struct wpabuf *b);
 struct wpabuf *wpabuf_zeropad(struct wpabuf *buf, size_t len);
@@ -117,7 +118,7 @@ static inline uint32_t WPA_GET_LE32(const uint8_t *a)
 //	a[0] = val & 0xff;
 //}
 
-#if 0
+
 static inline uint64_t WPA_GET_BE64(const uint8_t *a)
 {
 	return (((uint64_t) a[0]) << 56) | (((uint64_t) a[1]) << 48) |
@@ -126,6 +127,7 @@ static inline uint64_t WPA_GET_BE64(const uint8_t *a)
 		(((uint64_t) a[6]) << 8) | ((uint64_t) a[7]);
 }
 
+#if 0
 static inline void WPA_PUT_BE64(uint8_t *a, uint64_t val)
 {
 	a[0] = val >> 56;
@@ -157,6 +159,7 @@ static inline void WPA_PUT_LE64(uint8_t *a, uint64_t val)
 	a[1] = val >> 8;
 	a[0] = val & 0xff;
 }
+#endif
 
 /**
  * wpabuf_size - Get the currently allocated size of a wpabuf buffer
@@ -167,7 +170,6 @@ static inline size_t wpabuf_size(const struct wpabuf *buf)
 {
 	return buf->size;
 }
-#endif
 
 /**
  * wpabuf_len - Get the current length of a wpabuf buffer data
@@ -176,7 +178,7 @@ static inline size_t wpabuf_size(const struct wpabuf *buf)
  */
 size_t wpabuf_len(const struct wpabuf *buf);
 
-#if 0
+
 /**
  * wpabuf_tailroom - Get size of available tail room in the end of the buffer
  * @buf: wpabuf buffer
@@ -186,7 +188,6 @@ static inline size_t wpabuf_tailroom(const struct wpabuf *buf)
 {
 	return buf->size - buf->used;
 }
-#endif
 
 /**
  * wpabuf_head - Get pointer to the head of the buffer data
@@ -195,12 +196,10 @@ static inline size_t wpabuf_tailroom(const struct wpabuf *buf)
  */
 const void *wpabuf_head(const struct wpabuf *buf);
 
-#if 0
 static inline const uint8_t * wpabuf_head_u8(const struct wpabuf *buf)
 {
 	return wpabuf_head(buf);
 }
-#endif
 
 /**
  * wpabuf_mhead - Get modifiable pointer to the head of the buffer data
@@ -211,7 +210,6 @@ void *wpabuf_mhead(struct wpabuf *buf);
 
 uint8_t *wpabuf_mhead_u8(struct wpabuf *buf);
 
-#if 0
 static inline void wpabuf_put_u8(struct wpabuf *buf, uint8_t data)
 {
 	uint8_t *pos = wpabuf_put(buf, 1);
@@ -247,18 +245,19 @@ static inline void wpabuf_put_be32(struct wpabuf *buf, uint32_t data)
 	uint8_t *pos = wpabuf_put(buf, 4);
 	WPA_PUT_BE32(pos, data);
 }
-#endif
+
+#if 0
 static inline void wpabuf_put_le16(struct wpabuf *buf, uint16_t data)
 {
     uint8_t *pos = wpabuf_put(buf, 2);
     WPA_PUT_LE16(pos, data);
 }
+#endif
 
 void wpabuf_put_data(struct wpabuf *buf, const void *data, size_t len);
 
 void wpabuf_put_buf(struct wpabuf *dst, const struct wpabuf *src);
 
-#if 0
 static inline void wpabuf_set(struct wpabuf *buf, const void *data, size_t len)
 {
 	buf->ext_data = (uint8_t *) data;
@@ -269,7 +268,6 @@ static inline void wpabuf_put_str(struct wpabuf *dst, const char *str)
 {
 	wpabuf_put_data(dst, str, strlen(str));
 }
-#endif
 
 #endif  // NT_FN_WPA3
 

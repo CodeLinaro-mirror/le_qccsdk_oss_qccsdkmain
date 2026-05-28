@@ -18,8 +18,8 @@
 #define EAP_WSC_H
 
 #ifdef NT_FN_WPS
-struct wpsbuf *eap_msg_alloc(int vendor, EapType type, uint16_t payload_len, uint8_t code, uint8_t identifier,
-                             uint8_t wsc_pkt);
+// struct wpsbuf *eap_msg_alloc(int vendor, EapType type, uint16_t payload_len, uint8_t code, uint8_t identifier,
+//                              uint8_t wsc_pkt);
 struct wpsbuf *eap_wsc_build_msg(WPS_CONTEXT *wps, uint8_t id, uint8_t *ignore);
 int eap_wsc_process_cont(WPS_CONTEXT *wps, const uint8_t *buf, uint16_t len, uint8_t op_code);
 struct wpsbuf *eap_wsc_build_frag_ack(uint8_t id, uint8_t code);

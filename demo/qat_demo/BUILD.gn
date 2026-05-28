@@ -43,6 +43,9 @@ if (CONFIG_QAT_TCPIP_DEMO) {
 }
 
 if (CONFIG_QAT_WLAN_DEMO) {
+    qat_inc += [
+        "//modules/fs",
+    ]
     qat_src += [
         "src/qat_wlan_demo.c",
     ]
@@ -70,6 +73,21 @@ if (CONFIG_QAT_OTA_DEMO) {
     ]
     qat_src += [
         "src/qat_ota_demo.c",
+    ]
+}
+
+if (CONFIG_QAT_FSTORE_DEMO) {
+    qat_inc += [
+        "//modules/fs",
+    ]
+    qat_src += [
+        "src/qat_fstore_demo.c",
+    ]
+}
+
+if (CONFIG_QAT_POWERSAVE_DEMO) {
+    qat_src += [
+        "src/qat_powersave_demo.c",
     ]
 }
 

@@ -72,10 +72,10 @@ typedef struct // qapi_WLAN_BSS_Scan_Info_s
     uint8_t bss_type;                       /**< BSS type. */
     uint8_t bssid[__QAPI_WLAN_MAC_LEN];     /**< BSSID. */
     uint8_t ssid[__QAPI_WLAN_MAX_SSID_LEN]; /**< SSID. */
-    uint8_t rsn_Cipher;                     /**< RSN cipher. */
-    uint8_t rsn_Auth;                       /**< RSN authentication. */
-    uint8_t wpa_Cipher;                     /**< WPA cipher. */
-    uint8_t wpa_Auth;                       /**< WPS authentication. */
+    uint16_t rsn_Cipher;                     /**< RSN cipher. */
+    uint16_t rsn_Auth;                       /**< RSN authentication. */
+    uint16_t wpa_Cipher;                     /**< WPA cipher. */
+    uint16_t wpa_Auth;                       /**< WPS authentication. */
     uint16_t caps;                          /**< Capability IE. */
     uint8_t wep_Support;                    /**< Supprt for WEP. */
     uint8_t reserved[3];                    /**< Reserved. */
@@ -577,7 +577,11 @@ typedef enum {
     /**< WPA, WPA2 and SAE mixed mode of authentication. */
     QAPI_WLAN_AUTH_WPA_WPA2_MIXED_E = 12,
     /**< WPA and WPA2 mixed mode of authentication. */
-    QAPI_WLAN_AUTH_INVALID_E = 13 /**< Invalid authentication method. */
+    QAPI_WLAN_AUTH_WPA3_EAP_ONLY_E = 13,
+    /**< WPA3 Enterprise only mode of authentication. */
+    QAPI_WLAN_AUTH_WPA3_EAP_TRANSITION_E = 14,
+    /**< WPA2 and WPA3 Enterprise transition mode of authentication. */
+    QAPI_WLAN_AUTH_INVALID_E = 15 /**< Invalid authentication method. */
 } qapi_WLAN_Auth_Mode_e;
 
 /**
@@ -609,6 +613,42 @@ typedef enum {
     /**< Auto Select Key based on AP capability. Support TKIP & AES for now. */
     QAPI_WLAN_CRYPT_INVALID_E = 8 /**< Invalid encryption type. */
 } qapi_WLAN_Crypt_Type_e;
+
+/**
+@ingroup qapi_wlan
+Enumeration that identifies a list of supported 802.1x methods.
+The application sets the required method from one of these modes
+using qapi_WLAN_Set_Param() with __QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_METHOD
+as the command ID.
+
+@dependencies
+802.1x method should be set before calling qapi_WLAN_Commit()
+to make the method set effective.
+*/
+typedef enum
+{
+    QAPI_WLAN_8021X_METHOD_UNKNOWN              = 0, /**< Unknown. */
+    QAPI_WLAN_8021X_METHOD_EAP_TLS_E            = 1, /**< EAP_TLS. */
+    QAPI_WLAN_8021X_METHOD_EAP_TTLS_MSCHAPV2_E  = 2, /**< EAP_TTLS_MSCHAPV2. */
+    QAPI_WLAN_8021X_METHOD_EAP_PEAP_MSCHAPV2_E  = 3, /**< EAP_PEAP_MSCHAPV2. */
+    QAPI_WLAN_8021X_METHOD_EAP_TTLS_MD5_E  = 4,     /**< EAP_TTLS_MD5. */
+    QAPI_WLAN_8021X_METHOD_MAX  = 50,               /**< max. */
+} qapi_WLAN_8021X_Method_e;
+
+/**
+@ingroup qapi_wlan
+Data structure to set the 802.1x private key filename and its password.\n
+Both Private_Key_filename and Private_Key_Password are ASCII.
+
+@sa
+__QAPI_WLAN_PARAM_GROUP_SECURITY_8021X_PRIVATE_KEY
+qapi_WLAN_Set_Param
+*/
+typedef struct //qapi_WLAN_Security_8021x_Private_Key_s
+{
+    char    *Private_Key_filename;     /**< Point to address where stores the private key filename */
+    char    *Private_Key_Password;     /**< Point to address where stores the private key password */
+} qapi_WLAN_Security_8021x_Private_Key_t;
 
 /**
 @ingroup qapi_wlan
@@ -1005,6 +1045,45 @@ typedef struct {
     uint16_t tx_size;					/** TX BA window size */
     uint16_t rx_size;					/** RX BA window size */
 } qapi_WLAN_BA_Window_Size_t;
+
+/** Size of the WLAN PMKID in bytes. */
+#define __QAPI_WLAN_PMKID_LEN  16
+
+/**
+@ingroup qapi_wlan
+Enumeration the enable/disable options for WLAN PMKID.
+*/
+typedef enum {
+   QAPI_WLAN_PMKID_DISABLE_E = 0,   /**< Disable the WLAN PMKID. */
+   QAPI_WLAN_PMKID_ENABLE_E  = 1,   /**< Enable the WLAN PMKID. */
+} qapi_WLAN_PMKID_ENABLE_e;
+
+/**
+@ingroup qapi_wlan
+Data structure that the application is to set pmkid.
+*/
+typedef struct {
+    uint8_t     bssid[__QAPI_WLAN_MAC_LEN]; /**< bssid of the wlan connection. */
+    uint8_t     enable;                     /**< qapi_WLAN_PMKID_ENABLE_e. */
+    uint8_t     pmkid[__QAPI_WLAN_PMKID_LEN];   /**< pmkid of the wlan connection. */
+} qapi_WLAN_Set_PMKID_Params_t;
+
+/**
+@ingroup qapi_wlan
+Data structure that presents rx_eapol_key event information from the driver to the
+application.
+
+The application uses this data structure to interpret the event
+payload received with a QAPI_WLAN_RX_EAPOL_KEY_CB_E event.
+*/
+typedef struct
+{
+    uint8_t                 descType;       /**< Eapol key type, qapi_EAPOL_KEY_TYPE_e. */
+    uint8_t                 keyInfo[2];     /**< Key information, big endian. */
+    uint8_t                 pmkid_valid;    /**< Is pmkid valid. */
+    uint8_t                 rsrv[4];        /**< Reserved. */
+    uint8_t                 pmkid[__QAPI_WLAN_PMKID_LEN];   /**< Pmkid. */
+} qapi_WLAN_RxEapolKey_Cb_Info_t;
 
 /**
 @ingroup qapi_wlan

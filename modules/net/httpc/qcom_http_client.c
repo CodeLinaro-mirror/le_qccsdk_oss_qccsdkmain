@@ -89,6 +89,10 @@ uint32_t httpc_max_num_con = HTTPCLIENT_DEFAULT_CON_SUPPORT;
 gbl_httpc_ctxt_t *g_httpc_ctxt = NULL;
 uint8_t httpc_thread_started = FALSE;
 qurt_signal_t httpc_sem;
+#if CONFIG_QAT_POWERSAVE_DEMO
+extern qurt_signal_t http_sem;
+extern uint8_t powersave_active;
+#endif
 
 /* HTTP requests we support.
  * Do NOT change order of method strings.
@@ -556,7 +560,7 @@ int http_client_release_pre_allcoate_buffer()
  */
 httpclient_sess *http_client_newsess(uint32_t timeout, uint32_t isHttps, http_client_cb_t callback, void *arg,
                                      uint16_t httpc_max_body_length, uint16_t httpc_max_header_length,
-                                     uint16_t rxbufsize, uint16_t ip_prefer, uint16_t ssl_pre_buffer)
+                                     uint16_t rxbufsize, uint16_t ip_prefer, uint16_t ssl_pre_buffer, uint8_t https_auth_type)
 {
     httpclient_sess *session = NULL;
     uint32 i;
@@ -587,6 +591,7 @@ httpclient_sess *http_client_newsess(uint32_t timeout, uint32_t isHttps, http_cl
     session->hcs_socket = INVALID_SOCKET;
     session->isHttps = isHttps;
     session->is_pre_alccote_ssl_buffer = ssl_pre_buffer;
+    session->https_auth_type = https_auth_type;
     session->timeout = timeout;
     session->http_client_cb = callback;
     session->cb_arg = arg;
@@ -1257,51 +1262,59 @@ static void sslContextFree(SSLContext_t *pSslContext)
 static int sslSetCredentials(httpclient_sess *sess, SSLContext_t *pSslContext)
 {
     int32_t mbedtlsError = -1;
-
-    if (!sess || !sess->sslCert)
+    if (!sess) {
         return -1;
-
-    mbedtls_ssl_conf_authmode(&(pSslContext->config), MBEDTLS_SSL_VERIFY_REQUIRED);
+    }
+    if (sess->sslCert == NULL && sess->https_auth_type != HTTPS_NOT_AUTH) {
+        return -1;
+    }
+    if (sess->https_auth_type == HTTPS_NOT_AUTH) {
+        mbedtls_ssl_conf_authmode(&(pSslContext->config), MBEDTLS_SSL_VERIFY_NONE);
+    } else {
+        mbedtls_ssl_conf_authmode(&(pSslContext->config), MBEDTLS_SSL_VERIFY_REQUIRED);
+    }
     mbedtls_ssl_conf_rng(&(pSslContext->config), mbedtls_ctr_drbg_random, &(pSslContext->ctrDrbgContext));
-    // set root ca
-    if (sess->sslCert->pRootCa) {
-        mbedtlsError = mbedtls_x509_crt_parse(&(pSslContext->rootCa), (const unsigned char *)sess->sslCert->pRootCa,
-                                              sess->sslCert->rootCaSize);
-    }
-    if (mbedtlsError != 0) {
-        htdbgprintf("%s:%d: set rootca fail.\n", __func__, __LINE__);
-        return -1;
-    }
+    if (sess->https_auth_type != HTTPS_NOT_AUTH) {
+        // set root ca
+        if (sess->sslCert->pRootCa) {
+            mbedtlsError = mbedtls_x509_crt_parse(&(pSslContext->rootCa), (const unsigned char *)sess->sslCert->pRootCa,
+                                                sess->sslCert->rootCaSize);
+        }
+        if (mbedtlsError != 0) {
+            htdbgprintf("%s:%d: set rootca fail.\n", __func__, __LINE__);
+            return -1;
+        }
 
-    mbedtls_ssl_conf_ca_chain(&(pSslContext->config), &(pSslContext->rootCa), NULL);
-    // set client cert
-    if (sess->sslCert->pClientCert) {
-        mbedtlsError =
-            mbedtls_x509_crt_parse(&(pSslContext->clientCert), (const unsigned char *)sess->sslCert->pClientCert,
-                                   sess->sslCert->clientCertSize);
-    }
-    if (mbedtlsError != 0) {
-        htdbgprintf("%s:%d: set client crt fail.\n", __func__, __LINE__);
-        return -1;
-    }
-    // set pk
-    if (sess->sslCert->pPrivateKey) {
-        mbedtlsError = mbedtls_pk_parse_key(&(pSslContext->privKey), (const unsigned char *)sess->sslCert->pPrivateKey,
-                                            sess->sslCert->privateKeySize, NULL, 0, mbedtls_ctr_drbg_random,
-                                            &(pSslContext->ctrDrbgContext));
-    }
-    if (mbedtlsError != 0) {
-        htdbgprintf("%s:%d: set priv key fail.\n", __func__, __LINE__);
-        return -1;
-    }
+        mbedtls_ssl_conf_ca_chain(&(pSslContext->config), &(pSslContext->rootCa), NULL);
+        // set client cert
+        if (sess->sslCert->pClientCert) {
+            mbedtlsError =
+                mbedtls_x509_crt_parse(&(pSslContext->clientCert), (const unsigned char *)sess->sslCert->pClientCert,
+                                    sess->sslCert->clientCertSize);
+        }
+        if (mbedtlsError != 0) {
+            htdbgprintf("%s:%d: set client crt fail.\n", __func__, __LINE__);
+            return -1;
+        }
+        // set pk
+        if (sess->sslCert->pPrivateKey) {
+            mbedtlsError = mbedtls_pk_parse_key(&(pSslContext->privKey), (const unsigned char *)sess->sslCert->pPrivateKey,
+                                                sess->sslCert->privateKeySize, NULL, 0, mbedtls_ctr_drbg_random,
+                                                &(pSslContext->ctrDrbgContext));
+        }
+        if (mbedtlsError != 0) {
+            htdbgprintf("%s:%d: set priv key fail.\n", __func__, __LINE__);
+            return -1;
+        }
 
-    if (sess->sslCert->pClientCert) {
-        mbedtlsError =
-            mbedtls_ssl_conf_own_cert(&(pSslContext->config), &(pSslContext->clientCert), &(pSslContext->privKey));
-    }
-    if (mbedtlsError != 0) {
-        htdbgprintf("%s:%d: set mutual auth fail.\n", __func__, __LINE__);
-        return -1;
+        if (sess->sslCert->pClientCert) {
+            mbedtlsError =
+                mbedtls_ssl_conf_own_cert(&(pSslContext->config), &(pSslContext->clientCert), &(pSslContext->privKey));
+        }
+        if (mbedtlsError != 0) {
+            htdbgprintf("%s:%d: set mutual auth fail.\n", __func__, __LINE__);
+            return -1;
+        }
     }
 
     return 0;
@@ -1416,19 +1429,19 @@ static int http_client_sslconnect(httpclient_sess *sess)
         return -1;
     }
 
-    ret = sslSetCredentials(sess, sess->sslCtx);
-    if (ret != 0) {
-        sslContextFree(sess->sslCtx);
-        sess->sslCtx = NULL;
-        htdbgprintf("http_client_sslconnect fail, set credential fail.\n");
-        return -1;
-    }
-
     ret = sslSetup(sess->sslCtx);
     if (ret != 0) {
         sslContextFree(sess->sslCtx);
         sess->sslCtx = NULL;
         htdbgprintf("http_client_sslconnect fail, ssl setup fail.\n");
+        return -1;
+    }
+
+    ret = sslSetCredentials(sess, sess->sslCtx);
+    if (ret != 0) {
+        sslContextFree(sess->sslCtx);
+        sess->sslCtx = NULL;
+        htdbgprintf("http_client_sslconnect fail, set credential fail.\n");
         return -1;
     }
     // set pre-allocte flag
@@ -3023,11 +3036,19 @@ static void httpc_check(uint32_t param)
  */
 void http_client_task(void __attribute__((__unused__)) * pvParameters)
 {
+#if CONFIG_QAT_POWERSAVE_DEMO
+    uint32 Signal_Waiting;
+#endif
     for (;;) {
         httpc_check(0);
         if (httpc_thread_started == FALSE) {
             qurt_signal_set(&httpc_sem, 1);
         }
+#if CONFIG_QAT_POWERSAVE_DEMO
+        if (powersave_active) {
+            qurt_signal_wait_timed(&http_sem, 1, QURT_SIGNAL_ATTR_CLEAR_MASK, &Signal_Waiting, QURT_TIME_WAIT_FOREVER);
+        }
+#endif
     }
 }
 

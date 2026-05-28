@@ -83,10 +83,6 @@ static QAT_Command_Status_t Extend_Command_HttpGetSize(uint32_t Op_Type, uint32_
                 }
             }
 
-            if (!validate_config(url)) {
-                goto rlt;
-            }
-
             if (Parameter_Count == 2) {
                 timeout = Parameter_List[1].Integer_Value;
                 if (!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout > MAX_TIMEOUT_MS)) {
@@ -156,10 +152,6 @@ static QAT_Command_Status_t Extend_Command_HttpGet(uint32_t Op_Type, uint32_t Pa
                 }
             }
 
-            if (!validate_config(url)) {
-                goto rlt;
-            }
-
             if (Parameter_Count == 2) {
                 timeout = Parameter_List[1].Integer_Value;
                 if (!Parameter_List[1].Integer_Is_Valid || (timeout < 0 || timeout > MAX_TIMEOUT_MS)) {
@@ -209,10 +201,6 @@ static QAT_Command_Status_t Extend_Command_HttpPost(uint32_t Op_Type, uint32_t P
             if (!validate_url(Parameter_List[0].String_Value)) {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPOST: Invalid url\r\n");
                 rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-                goto rlt;
-            }
-
-            if (!validate_config(Parameter_List[0].String_Value)) {
                 goto rlt;
             }
 
@@ -544,10 +532,6 @@ static QAT_Command_Status_t Extend_Command_HttpPut(uint32_t Op_Type, uint32_t Pa
             if (!validate_url(Parameter_List[0].String_Value)) {
                 snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+HTTPPUT: Invalid url\r\n");
                 rc = QAT_Response_Str(QAT_RC_ERROR, buffer);
-                goto rlt;
-            }
-
-            if (!validate_config(Parameter_List[0].String_Value)) {
                 goto rlt;
             }
 
@@ -1334,10 +1318,6 @@ static QAT_Command_Status_t Extend_Command_HttpClient(uint32_t Op_Type, uint32_t
                 }
             }
 
-            if (!validate_config(url)) {
-                goto rlt;
-            }
-
             if (opt == QAT_HTTP_CLIENT_POST || opt == QAT_HTTP_CLIENT_PUT) {
                 if (Parameter_Count >= 4) {
                     data_buf = Parameter_List[3].String_Value;
@@ -1449,13 +1429,24 @@ qapi_Status_t at_httpc_new_session(char *url, int32_t timeout)
     if (isSecureSession(url)) {
         int scheme = g_https_cfg.https_auth_type;
         if (scheme == AT_HTTPS_NOT_AUTH) {
-            // nothing to do
+            Parameter_List[Parameter_Count].String_Value = "-s";
+            Parameter_Count++;
+            Parameter_List[Parameter_Count].String_Value = "-u";
+            Parameter_Count++;
+            Parameter_List[Parameter_Count].Integer_Is_Valid = true;
+            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_auth_type;
+            Parameter_Count++;
         } else if (scheme == AT_HTTPS_SERVER_AUTH) {
             Parameter_List[Parameter_Count].String_Value = "-s";
             Parameter_Count++;
             Parameter_List[Parameter_Count].String_Value = "-a";
             Parameter_Count++;
             Parameter_List[Parameter_Count].String_Value = g_https_cfg.ca_file;
+            Parameter_Count++;
+            Parameter_List[Parameter_Count].String_Value = "-u";
+            Parameter_Count++;
+            Parameter_List[Parameter_Count].Integer_Is_Valid = true;
+            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_auth_type;
             Parameter_Count++;
 
         } else if (scheme == AT_HTTPS_CLIENT_AUTH) {
@@ -1468,6 +1459,11 @@ qapi_Status_t at_httpc_new_session(char *url, int32_t timeout)
             Parameter_List[Parameter_Count].String_Value = "-k";
             Parameter_Count++;
             Parameter_List[Parameter_Count].String_Value = g_https_cfg.key_file;
+            Parameter_Count++;
+            Parameter_List[Parameter_Count].String_Value = "-u";
+            Parameter_Count++;
+            Parameter_List[Parameter_Count].Integer_Is_Valid = true;
+            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_auth_type;
             Parameter_Count++;
 
         } else if (scheme == AT_HTTPS_BOTH_AUTH) {
@@ -1484,6 +1480,11 @@ qapi_Status_t at_httpc_new_session(char *url, int32_t timeout)
             Parameter_List[Parameter_Count].String_Value = "-a";
             Parameter_Count++;
             Parameter_List[Parameter_Count].String_Value = g_https_cfg.ca_file;
+            Parameter_Count++;
+            Parameter_List[Parameter_Count].String_Value = "-u";
+            Parameter_Count++;
+            Parameter_List[Parameter_Count].Integer_Is_Valid = true;
+            Parameter_List[Parameter_Count].Integer_Value = g_https_cfg.https_auth_type;
             Parameter_Count++;
         }
     }
@@ -3591,7 +3592,7 @@ qbool_t save_content_type(uint8_t content_type)
 
 void resetSslInfo()
 {
-    g_https_cfg.https_auth_type = 0;
+    g_https_cfg.https_auth_type = AT_HTTPS_BOTH_AUTH;
     memset(g_https_cfg.cert_file, 0, FILE_PATH_STR_BUFFER_LENGTH);
     memset(g_https_cfg.key_file, 0, FILE_PATH_STR_BUFFER_LENGTH);
     memset(g_https_cfg.ca_file, 0, FILE_PATH_STR_BUFFER_LENGTH);
@@ -3703,20 +3704,6 @@ qbool_t is_succ_resp_code(int errorcode)
         return TRUE;
     }
     return FALSE;
-}
-
-int validate_config(const char *url)
-{
-    if (isSecureSession(url)) {
-        // not support AT_HTTPS_NOT_AUTH when https
-        if (!g_https_cfg.https_auth_type) {
-            char buffer[HTTP_STR_BUFFER_LENGTH];
-            snprintf(buffer, HTTP_STR_BUFFER_LENGTH, "+httpc: need configure SSL paramenters firstly\r\n");
-            QAT_Response_Str(QAT_RC_ERROR, buffer);
-            return 0;
-        }
-    }
-    return 1;
 }
 
 int is_valid_char(char c)

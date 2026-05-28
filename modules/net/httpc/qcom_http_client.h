@@ -187,6 +187,13 @@ typedef enum {
     HTTP_CLIENT_RSP_WITH_VALID_FORMAT_HEADER,
 } http_client_rsp_header_status;
 
+typedef enum {
+    HTTPS_NOT_AUTH,
+    HTTPS_SERVER_AUTH,
+    HTTPS_CLIENT_AUTH,
+    HTTPS_BOTH_AUTH,
+} https_auth_mode;
+
 typedef struct http_client_rx_cb_s {
     uint8_t pending_req;
     int32_t state;
@@ -231,6 +238,7 @@ typedef struct httpclient_sess_s {
                                                      */
     uint32_t isHttps;
     uint16_t is_pre_alccote_ssl_buffer; /* 0: don't pre allocte; 1:pre allocte, default: 0 */
+    uint8_t https_auth_type;
     uint16_t ipprefer;
     HTTPC_REQUEST_CMD_E hcs_command;
     SSLContext_t *sslCtx;
@@ -296,7 +304,7 @@ int http_client_stop(void);
 int http_client_start(void);
 httpclient_sess *http_client_newsess(uint32_t timeout, uint32_t isHttps, http_client_cb_t callback, void *arg,
                                      uint16_t httpc_max_body_length, uint16_t httpc_max_header_length,
-                                     uint16_t rxbufsize, uint16_t ip_prefer, uint16_t ssl_pre_buffer);
+                                     uint16_t rxbufsize, uint16_t ip_prefer, uint16_t ssl_pre_buffer, uint8_t https_auth_type);
 int http_client_freesess(httpclient_sess *sess);
 int http_client_connect(httpclient_sess *sess, const char *server, uint16_t port);
 int http_client_disconnect(httpclient_sess *sess);

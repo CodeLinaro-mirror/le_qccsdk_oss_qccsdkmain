@@ -130,6 +130,10 @@ class NVM_Programmer(GDB_Framework):
 
     OEM_SECURE_BOOT_REGION = ['TOTAL_ROT_NUM', 'MODEL_ID', 'SECURE_BOOT_ENFORCE', 'OEM_ID', 'OEM_DEBUG_DISABLE', 'DISABLE_QC_RMA', 'ROT_INDEX']
 
+    # BDF address in RRAM (from cfg_internal.yaml)
+    BDF_RRAM_ADDRESS = 0x37A000
+    BDF_SIZE = 0x6000  # 24KB, typical BDF size
+
     def __init__(self):
         '''
         Initializes the GDB tool.
@@ -167,6 +171,8 @@ class NVM_Programmer(GDB_Framework):
         self.argparser.add_argument('--config', help='The yaml file which may contain OTP key-value pairs')
         self.argparser.add_argument('--otp_field_cfg', default='otp_field_list.yaml', help='OTP field configuration file')
         self.argparser.add_argument('--compare-key', help='One key-value pair to comapre with that in OTP region')
+        self.argparser.add_argument('--force', default=False, action='store_true', help='Force write BDF even if calibration flag is set')
+        self.argparser.add_argument('--export-bdf', help='Export BDF bin from board to PC, specify output file path')
 
     def load_fields(self, file_name):
         with open(file_name, 'r') as f:
@@ -414,10 +420,87 @@ class NVM_Programmer(GDB_Framework):
                     self.update_access('MAC_ADDRESSES', 1, 0)
                 continue
         return
+
+    def check_bdf_calibration_flag(self):
+        '''
+        Check if BDF calibration flag is set in OTP.
+        Returns True if BDF is calibrated (flag = 1), False otherwise.
+        '''
+        field = self.get_field('BDF_CALIBRATION_FLAG')
+        if field is None:
+            print('WARNING: BDF_CALIBRATION_FLAG not found in OTP field list')
+            return False
+        
+        res = self.read_otp_field(field, False)
+        length = field.length
+        offset = field.offset
+        mask = ((1 << length) - 1) << offset
+        int_value = int.from_bytes(b''.join(res), byteorder='little')
+        int_value &= mask
+        int_value >>= offset
+        
+        return int_value == 1
+
+    def set_bdf_calibration_flag(self, value):
+        '''
+        Set BDF calibration flag in OTP.
+        value: 0 or 1
+        '''
+        field = self.get_field('BDF_CALIBRATION_FLAG')
+        if field is None:
+            print('ERROR: BDF_CALIBRATION_FLAG not found in OTP field list')
+            return False
+        
+        print('Setting BDF_CALIBRATION_FLAG to {}'.format(value))
+        self.write_otp_field(field, hex(value))
+        return True
+
+    def is_bdf_address(self, address):
+        '''
+        Check if the given address is within BDF region in RRAM.
+        '''
+        return (address >= NVM_Programmer.BDF_RRAM_ADDRESS and 
+                address < NVM_Programmer.BDF_RRAM_ADDRESS + NVM_Programmer.BDF_SIZE)
+
+    def export_bdf(self, output_file):
+        '''
+        Export BDF bin from board to PC.
+        '''
+        print('********************************************************************************')
+        print('Exporting BDF from board to {}'.format(output_file))
+        
+        # Save current nvm_name
+        saved_nvm_name = self.config['nvm_name']
+        
+        # Set to RRAM to read BDF
+        self.config['nvm_name'] = 'rram'
+        self.set_nvm_name()
+        
+        try:
+            # Read BDF from RRAM
+            self.read(output_file, NVM_Programmer.BDF_RRAM_ADDRESS, NVM_Programmer.BDF_SIZE)
+            print('BDF exported successfully to {}'.format(output_file))
+        finally:
+            # Restore nvm_name
+            self.config['nvm_name'] = saved_nvm_name
+        
+        # Reset system after export
+        self.write_int(self.param_buf + NVM_Programmer.JTAG_PARAM_COMMAND, NVM_Programmer.JTAG_COMMAND_SYSTEM_RESET)
+        self.gdb_execute('c')
+        print('Reset system.')
+
     def run(self):
         '''
         Start tool.
         '''
+        # Handle export BDF command
+        if self.config.get('export_bdf') is not None:
+            self.setup()
+            self.init_ram_image(self.config['ram_image'])
+            self.export_bdf(self.config['export_bdf'])
+            self.cleanup()
+            return
+
         if self.config['config'] != None:
             self.setup()
             self.init_ram_image(self.config['ram_image'])
@@ -621,6 +704,43 @@ class NVM_Programmer(GDB_Framework):
         start_time = time.time()
         nvm_image = nvm_image.replace(os.sep, '/')
 
+        # Check if writing to BDF region in RRAM BEFORE setting nvm_name
+        if (self.config['nvm_name'] == 'rram' and 
+            self.is_bdf_address(begin_address)):
+            
+            print('********************************************************************************')
+            print('Detected BDF write operation to address 0x{:08X}'.format(begin_address))
+            
+            # Load OTP fields if not already loaded
+            if not self.fields:
+                self.load_fields(self.config['otp_field_cfg'])
+            
+            # Save current nvm_name and temporarily switch to OTP to read flag
+            saved_nvm_name = self.config['nvm_name']
+            self.config['nvm_name'] = 'otp'
+            self.set_nvm_name()
+            
+            # Check BDF calibration flag
+            is_calibrated = self.check_bdf_calibration_flag()
+            
+            # Restore nvm_name
+            self.config['nvm_name'] = saved_nvm_name
+            
+            if is_calibrated:
+                print('WARNING: BDF calibration flag is set (BDF is calibrated)')
+                if not self.config.get('force', False):
+                    print('ERROR: Cannot write to calibrated BDF without --force flag')
+                    print('Use --force to override this protection')
+                    print('********************************************************************************')
+                    raise Exception('BDF write blocked: BDF is calibrated. Use --force to override.')
+                else:
+                    print('--force flag detected, proceeding with BDF write')
+                    print('BDF calibration flag will be cleared after write')
+            else:
+                print('BDF calibration flag is not set, proceeding with write')
+            
+            print('********************************************************************************')
+
         self.set_nvm_name()
 
         # Get the address and size of the buffers.
@@ -704,6 +824,27 @@ class NVM_Programmer(GDB_Framework):
 
             end_time = time.time()
             print('Image programmed successfully, time elapsed {} seconds.'.format(end_time - start_time))
+
+        # Clear BDF calibration flag if forced write to calibrated BDF
+        if (self.config['nvm_name'] == 'rram' and 
+            self.is_bdf_address(begin_address) and 
+            self.config.get('force', False)):
+            
+            print('********************************************************************************')
+            print('Clearing BDF calibration flag after forced write')
+            
+            # Switch to OTP mode to clear flag
+            saved_nvm_name = self.config['nvm_name']
+            self.config['nvm_name'] = 'otp'
+            self.set_nvm_name()
+            
+            self.set_bdf_calibration_flag(0)
+            
+            # Restore nvm_name
+            self.config['nvm_name'] = saved_nvm_name
+            
+            print('BDF calibration flag cleared successfully')
+            print('********************************************************************************')
 
     def partial_erase(self):
         '''

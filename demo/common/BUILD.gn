@@ -122,6 +122,9 @@ source_set("common") {
             include_dirs += ["//drivers/wlan"]
             sources += [ "wlan/wifi_shell.c"]
         }
+        if (CONFIG_WLAN_8021X) {
+            include_dirs += ["//modules/supplicant/inc"]
+    }
     }
     if (CONFIG_UNITTEST_SHELL) {
         sources += [

@@ -293,6 +293,7 @@ typedef uint8_t *ieee80211_mgt_beacon_t;
 #define WPA_ASE_8021X_PSK         0x02
 #define WPA_ASE_8021X_UNSPEC_CCKM 0x04
 #define WPA_ASE_8021X_PSK_SHA256  0x08
+#define WPA_ASE_8021X_UNSPEC_SHA256 0x10
 #define WPA_ASE_8021X_SAE         0x20
 
 #define RSN_OUI     0xac0f00
@@ -314,6 +315,7 @@ typedef uint8_t *ieee80211_mgt_beacon_t;
 #define RSN_ASE_8021X_SHA256     0x05
 #define RSN_ASE_8021X_PSK_SHA256 0x06
 #define RSN_ASE_SAE              0x08
+#define RSN_ASE_8021X_SUITE_B_192  0x0c
 
 #define RSN_CAP_PREAUTH 0x01
 #define RSN_CAP_MFPR    0x40

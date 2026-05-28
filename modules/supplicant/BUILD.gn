@@ -1,0 +1,116 @@
+# Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+
+import("//configs_decl.gni")
+
+supplicant_inc = [
+    "inc",
+    "//modules/fs",
+    "//modules/wifi/inc",
+    "../../../comp/hostap/src",
+    "../../../comp/hostap/src/utils",
+    "../../../comp/mbedtls/include/",
+]
+
+supplicant_src = []
+
+if (CONFIG_ENABLE_SUPPLICANT) {
+    supplicant_src = [
+        "src/supplicant_qcc730.c",
+        "src/supplicant.c",
+        "../../../comp/hostap/src/utils/common.c",
+        "../../../comp/hostap/src/utils/wpa_debug.c",
+        "../../../comp/hostap/src/utils/os_internal.c",
+        "../../../comp/hostap/src/utils/base64.c",
+    ]
+}
+
+if (CONFIG_WLAN_8021X) {
+    supplicant_src += [
+        # ═══════════════════════════════════════════════════════════════════
+        # 802.1X Module Entry
+        # ═══════════════════════════════════════════════════════════════════
+        "src/wlan_8021x/wlan_8021x.c",                                      # 802.1X module main entry & management
+        "src/wlan_8021x/wlan_8021x_glue.c",                                 # 802.1X glue layer bridging to wpa_supplicant
+
+        # ═══════════════════════════════════════════════════════════════════
+        # Crypto
+        # ═══════════════════════════════════════════════════════════════════
+
+        # ─── Backend: mbedTLS Adapter ───────────────────────────────────
+        "../../../comp/hostap/src/crypto/tls_mbedtls_alt.c",                # mbedTLS TLS backend adapter
+        "../../../comp/hostap/src/crypto/crypto_mbedtls_alt.c",             # mbedTLS crypto primitive adapter
+
+        # ─── Hash / Cipher Primitives ───────────────────────────────────
+        "../../../comp/hostap/src/crypto/md4-internal.c",                   # MD4 hash (required by NT Hash / MSCHAPv2)
+        "../../../comp/hostap/src/crypto/des-internal.c",                   # DES cipher (required by MSCHAPv2 / CHAP)
+
+        # ─── MSCHAPv2 ───────────────────────────────────────────────────
+        "../../../comp/hostap/src/crypto/ms_funcs.c",                       # MSCHAPv2 core: NT Hash, challenge-response
+
+        # ═══════════════════════════════════════════════════════════════════
+        # TLS (Internal Client — tlsv1)
+        # ═══════════════════════════════════════════════════════════════════
+
+        # ─── Record Layer ───────────────────────────────────────────────
+        "../../../comp/hostap/src/tls/tlsv1_common.c",                      # Cipher suite table & shared TLS utilities
+        "../../../comp/hostap/src/tls/tlsv1_record.c",                      # TLS record layer: encrypt / decrypt / HMAC
+
+        # ─── Handshake State Machine ────────────────────────────────────
+        "../../../comp/hostap/src/tls/tlsv1_client.c",                      # TLS client entry point & handshake control
+        "../../../comp/hostap/src/tls/tlsv1_client_write.c",                # Handshake TX: ClientHello / CKE / Finished
+        "../../../comp/hostap/src/tls/tlsv1_client_read.c",                 # Handshake RX: ServerHello / Certificate / SKE
+        "../../../comp/hostap/src/tls/tlsv1_cred.c",                        # Certificate & private key loading / management
+
+        # ─── Optional (removable) ───────────────────────────────────────
+        "../../../comp/hostap/src/tls/tlsv1_client_ocsp.c",                 # OCSP certificate status check (not required on embedded)
+
+        # ═══════════════════════════════════════════════════════════════════
+        # EAP
+        # ═══════════════════════════════════════════════════════════════════
+
+        # ─── Common Layer ───────────────────────────────────────────────
+        "../../../comp/hostap/src/eap_common/eap_common.c",                 # EAP packet parsing & common processing
+        "../../../comp/hostap/src/eap_common/eap_peap_common.c",            # PEAP version negotiation & shared definitions
+        "../../../comp/hostap/src/eap_common/chap.c",                       # CHAP challenge-response (used by EAP-TTLS inner)
+
+        # ─── Peer Core ──────────────────────────────────────────────────
+        "../../../comp/hostap/src/eap_peer/eap.c",                          # EAP peer state machine (RFC 3748)
+        "../../../comp/hostap/src/eap_peer/eap_methods.c",                  # EAP method registry & dynamic dispatch
+        "../../../comp/hostap/src/eap_peer/eap_tls_common.c",               # Shared TLS tunnel logic for EAP-TLS / PEAP / TTLS
+
+        # ─── EAP Methods ────────────────────────────────────────────────
+        "../../../comp/hostap/src/eap_peer/eap_tls.c",                      # EAP-TLS: certificate-based mutual auth
+        "../../../comp/hostap/src/eap_peer/eap_peap.c",                     # EAP-PEAP: TLS tunnel + inner EAP (MSCHAPv2)
+        "../../../comp/hostap/src/eap_peer/eap_ttls.c",                     # EAP-TTLS: TLS tunnel + AVP inner auth
+        "../../../comp/hostap/src/eap_peer/eap_mschapv2.c",                 # EAP-MSCHAPv2 peer (PEAP/TTLS inner method)
+        "../../../comp/hostap/src/eap_peer/mschapv2.c",                     # MSCHAPv2 protocol: challenge / response / auth
+        "../../../comp/hostap/src/eap_peer/eap_md5.c",                      # EAP-MD5 (TTLS-MD5 inner method)
+
+        # ═══════════════════════════════════════════════════════════════════
+        # EAPOL Supplicant State Machine (802.1X)
+        # ═══════════════════════════════════════════════════════════════════
+        "../../../comp/hostap/src/eapol_supp/eapol_supp_sm.c",              # EAPOL supplicant SM: port control / key rx / EAP dispatch
+    ]
+}
+
+
+config("_config") {
+    include_dirs = supplicant_inc
+}
+
+source_set("supplicant") {
+    sources = []
+    sources += supplicant_src
+    include_dirs = [
+        "../../../comp/hostap/src/utils",
+        "../../../comp/hostap/src",
+        "../modules/wifi/inc",
+        "inc",
+    ]
+    cflags_c = [
+        "-w",
+        "-Os",
+        "--specs=nano.specs",
+    ]
+}

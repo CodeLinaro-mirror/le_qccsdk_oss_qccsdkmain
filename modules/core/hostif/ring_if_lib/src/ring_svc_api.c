@@ -16,6 +16,11 @@
 #include "ring_svc_api.h"
 #include "ring_ctx_holder.h"
 
+#ifdef CONFIG_QAT_POWERSAVE_DEMO
+#include "wlan_power.h"
+extern uint8_t powersave_active;
+#endif
+
 /*------------------------------------------------------------------------
  * Static Function Declarations and Definitions
  * ----------------------------------------------------------------------*/
@@ -442,10 +447,17 @@ bool ringif_f2a_pkt_attach(uint8_t ring_id, uint32_t *p_buf_start, uint32_t *p_b
     RINGIF_PRINT_LOG_INFO("ringif_f2a_pkt_attach success ( buf[0]:%x len:%d info:%d) ",
                           (uint32_t)p_write_element->p_buf[0], p_write_element->len, p_write_element->info);
 
-    /* Indicate to Host that ring has been updated */
 #ifdef CONFIG_QAT_HTTPC_DEMO
     sys_msleep(5);
 #endif
+
+#ifdef CONFIG_QAT_POWERSAVE_DEMO
+    if (powersave_active) {
+        pm_set_powersave_policy(gdevp, PS_POLICY_NOT_ALLOWED_SLEEP);
+    }
+#endif
+
+    /* Indicate to Host that ring has been updated */
     ringif_indicate_to_host(ring_id, RING_DIR_F2A);
     return TRUE;
 }
@@ -842,6 +854,11 @@ bool ringif_f2a_clear_used_bufs(uint8_t ring_id, _pfn_clear_elem pfn_clear_elem)
         }
     } else {
         p_ring_ctx->ring_idx_clear_pending = 0;
+#ifdef CONFIG_QAT_POWERSAVE_DEMO
+        if (powersave_active && !spi_is_ext_wakeup()) {
+            pm_set_powersave_policy(gdevp, PS_POLICY_ALLOWED_SLEEP);
+        }
+#endif
     }
 
     return TRUE;

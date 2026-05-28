@@ -26,6 +26,12 @@ config QAT_HTTPC_DEMO
 config QAT_OTA_DEMO
     bool "enable QAT OTA DEMO"
     default n
+config QAT_FSTORE_DEMO
+    bool "enable QAT FSTORE DEMO (AT+WRITEFILE/READFILE/DELFILE)"
+    default n
+config QAT_POWERSAVE_DEMO
+    bool "enable QAT POWERSAVE DEMO"
+    default n
 config QAT_CB_SIZE_MTU_MULTIPLIER
     int "Set the circular buffer size to be a multiple of the MTU."
     default 10
