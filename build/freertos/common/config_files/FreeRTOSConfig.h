@@ -59,6 +59,7 @@
 #define configUSE_IDLE_HOOK                          0
 #define configUSE_TICK_HOOK                          0
 #define configUSE_TICKLESS_IDLE                      1
+#define configEXPECTED_IDLE_TIME_BEFORE_SLEEP        10
 #define configUSE_DAEMON_TASK_STARTUP_HOOK           1//peter
 #define configCPU_CLOCK_HZ                           ( SystemCoreClock )
 #define configTICK_RATE_HZ                           ( ( TickType_t ) 1000 )

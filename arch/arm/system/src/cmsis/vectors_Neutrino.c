@@ -1188,7 +1188,7 @@ rri_ccu_intr3(void)
 	PROF_IRQ_ENTER();
 	nt_clear_device_irq(RRI_ccu_int_p_3);
 #ifdef NT_DEBUG
-	nt_dbg_print("Int-43 clrd\r\n");
+	// nt_dbg_print("Int-43 clrd\r\n");
 #endif
 	PROF_IRQ_EXIT();
 }
