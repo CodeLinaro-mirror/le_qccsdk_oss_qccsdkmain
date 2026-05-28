@@ -10,6 +10,7 @@
 #include "qapi_status.h"
 #include "supplicant_cxt.h"
 #include "wlan_drv.h"
+#include "wlan_8021x.h"
 
 #define DESTORY_EVENT_MASK_TASK 0x01
 

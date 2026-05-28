@@ -17,8 +17,29 @@
 #include "qapi_status.h"
 #include "qapi_wlan_base.h"
 #include "sockets.h"
+#include "wlan_8021x.h"
 #include "wlan_8021x_cfg.h"
 #include "wlan_8021x_cxt.h"
+#include "qapi/qapi_lowpower.h"
+#include "lowpower_internal.h"
+
+extern lpr_wmi_t g_lowpower_wmi;
+
+void wlan_8021x_eap_enter_ps_hold(wlan_8021x_intf_t *wl8021x_intf) {
+  if (wl8021x_intf->bmps_held_for_eap) return;
+  if (g_lowpower_wmi.bmps_cfg.bmps_enable.enable) {
+    qapi_bmps_cfg(0, 0);
+    wl8021x_intf->bmps_held_for_eap = true;
+    info_printf("8021X: BMPS suspended for EAP\n");
+  }
+}
+
+void wlan_8021x_eap_leave_ps_hold(wlan_8021x_intf_t *wl8021x_intf) {
+  if (!wl8021x_intf->bmps_held_for_eap) return;
+  qapi_bmps_cfg(1, 0);
+  wl8021x_intf->bmps_held_for_eap = false;
+  info_printf("8021X: BMPS resumed\n");
+}
 
 /**
  * wlan_generate_pmkid - Calculate PMK identifier
@@ -210,6 +231,7 @@ static void wlan_8021x_eapol_cb(struct eapol_sm *eapol,
   info_printf("%s\n", __FUNCTION__);
   if (result != EAPOL_SUPP_RESULT_SUCCESS) {
     WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_AUTHENTICAT_FAILED;
+    wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
     return;
   }
 
@@ -226,6 +248,7 @@ static void wlan_8021x_eapol_cb(struct eapol_sm *eapol,
     }
   }
   WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_AUTHENTICATED;
+  wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
 }
 
 static void wlan_8021x_cert_cb(void *ctx, int depth, const char *subject,
@@ -317,6 +340,7 @@ void wlan_8021x_rx_eapol_data_notify(wlan_8021x_intf_t *wl8021x_intf) {
 #ifdef CONFIG_ENABLE_REAUTH
   if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_PMK_CACHED) {
     // it is reauth
+    wlan_8021x_eap_enter_ps_hold(wl8021x_intf);
     WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_AUTHENTICATING;
   }
 #endif

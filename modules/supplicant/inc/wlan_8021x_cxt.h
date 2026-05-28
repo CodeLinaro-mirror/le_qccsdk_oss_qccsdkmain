@@ -49,6 +49,7 @@ typedef struct wlan_8021x_intf_s {
   int eapol_received;
   WL8021X_STATE_e wl8021x_intf_state;
   struct eapol_sm *eapol;
+  bool bmps_held_for_eap;
 } wlan_8021x_intf_t;
 
 typedef struct wlan_8021x_global_s {
