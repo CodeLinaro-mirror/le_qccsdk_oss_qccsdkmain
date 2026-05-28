@@ -248,7 +248,7 @@ static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t 
                 writefile_state.active = false;
                 QAT_Response_Str(QAT_RC_OK, "+WRITEFILE: transfer aborted");
             } else {
-                QAT_Response_Str(QAT_RC_QUIET,
+                QAT_Response_Str(QAT_RC_OK,
                     "+WRITEFILE=<path>,C,<size>  or  +WRITEFILE=<path>,A,<hex>");
             }
             break;
@@ -266,7 +266,7 @@ static QAT_Command_Status_t Extend_Command_ReadFile(uint32_t Op_Type, uint32_t P
     char response[64];
 
     if (Op_Type != QAT_OP_EXEC_W_PARAM) {
-        QAT_Response_Str(QAT_RC_QUIET, "+READFILE=<path>");
+        QAT_Response_Str(QAT_RC_OK, "+READFILE=<path>");
         return QAT_STATUS_SUCCESS_E;
     }
 
@@ -328,7 +328,7 @@ static QAT_Command_Status_t Extend_Command_DelFile(uint32_t Op_Type, uint32_t Pa
     char response[64];
 
     if (Op_Type != QAT_OP_EXEC_W_PARAM) {
-        QAT_Response_Str(QAT_RC_QUIET, "+DELFILE=<path>");
+        QAT_Response_Str(QAT_RC_OK, "+DELFILE=<path>");
         return QAT_STATUS_SUCCESS_E;
     }
 
