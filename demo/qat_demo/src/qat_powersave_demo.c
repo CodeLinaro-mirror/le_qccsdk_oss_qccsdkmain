@@ -331,12 +331,27 @@ static QAT_Command_Status_t Extend_Command_PS_PeriodAwake(uint32_t Op_Type, uint
 
         case QAT_OP_EXEC_W_PARAM: /* AT+PSPERAWAKE= */
         {
-            if (Parameter_Count == 2 && Parameter_List[1].Integer_Is_Valid) {
-                period_ms = Parameter_List[1].Integer_Value;
+            if ((Parameter_Count != 1 && Parameter_Count != 2) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+                rc = QAT_Response_Str(QAT_RC_ERROR,
+                                      "+PSPERAWAKE=<1/0> [period in ms to awake], Enable BMPS(DTIM) period awake");
+                return rc;
             }
+
+            if (Parameter_Count == 2) {
+                if ((Parameter_List[1].Integer_Is_Valid) && (Parameter_List[1].Integer_Value > 0)) {
+                    period_ms = Parameter_List[1].Integer_Value;
+                } else {
+                    rc = QAT_Response_Str(QAT_RC_ERROR,
+                                      "+PSPERAWAKE=<1/0> [period in ms to awake], Enable BMPS(DTIM) period awake");
+                    return rc;
+                }
+            }
+
             if (!s_timer_handle) {
                 s_timer_handle =
-                    xTimerCreate("MyTimer", (period_ms / portTICK_PERIOD_MS), 1 /* uxAutoReload */, NULL, timer_cb);
+                    xTimerCreate("MyTimer", pdMS_TO_TICKS(period_ms), 1 /* uxAutoReload */, NULL, timer_cb);
+            } else {
+                xTimerChangePeriod(s_timer_handle, pdMS_TO_TICKS(period_ms), portMAX_DELAY);
             }
 
             if (Parameter_List[0].Integer_Value) {
