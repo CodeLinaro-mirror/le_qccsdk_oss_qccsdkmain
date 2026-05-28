@@ -490,7 +490,7 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
             nt_socpm_sleep_deregister(_socpm_slp_list_idx_rtos);
             nt_socpm_sleep_deregister(BMPS_LIST);
             nt_socpm_sleep_deregister(_socpm_slp_list_idx_imps);
-            printf("intr only\r\n");
+
             wkup_us = 0;
         } else {
 #endif /* FIRMWARE_APPS_INFORMED_WAKE */
@@ -570,7 +570,7 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
         if(wkup_us<=0){
             uint32_t bd= BMU_READ_WQ_NR_CMD(HAL_BMUWQ_BMU_IDLE_BD);
             uint32_t ext_int = NT_REG_RD(NVIC_ICPR1) ;
-            if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK)))
+            if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK)) || !bd)
             {
                 HAL_REG_WR(QWLAN_AGC_AGC_RESET_REG, QWLAN_AGC_AGC_RESET_RESET_ERESET);
                 hal_wlan_sleep_trimmed();
