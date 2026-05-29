@@ -970,7 +970,7 @@ void nt_socpm_slp_tmr_set(uint64_t sleep_time)  // in us
     temp_2 = temp_2 | 0x00800000;
     NT_REG_WR(NT_NVIC_ISER1, temp_2);
 
-    nt_enable_device_irq(RRI_ccu_int_p_3);
+    // nt_enable_device_irq(RRI_ccu_int_p_3);
 
     if (nt_socpm_sby_force == 1) {
         nt_socpm_sby_force = 0;
