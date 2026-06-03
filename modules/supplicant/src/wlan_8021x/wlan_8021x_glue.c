@@ -22,8 +22,23 @@
 #include "wlan_8021x_cxt.h"
 #include "qapi/qapi_lowpower.h"
 #include "lowpower_internal.h"
+#include "qcc730_os.h"
 
 extern lpr_wmi_t g_lowpower_wmi;
+
+/* Watchdog: if 4-way handshake doesn't complete within this window after
+ * EAP-Success, resume BMPS anyway so the system isn't permanently stuck
+ * out of power save (e.g. AP never sends M1, MIC failure, etc.). */
+#define WLAN_8021X_4WAY_HOLD_WATCHDOG_MS 3000
+
+static void wlan_8021x_eap_leave_ps_hold_watchdog(void *eloop_ctx,
+                                                  void *timeout_ctx) {
+  wlan_8021x_intf_t *wl8021x_intf = (wlan_8021x_intf_t *)timeout_ctx;
+  if (wl8021x_intf->bmps_held_for_eap) {
+    warn_printf("8021X: 4-way watchdog fired, resuming BMPS\n");
+    wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
+  }
+}
 
 void wlan_8021x_eap_enter_ps_hold(wlan_8021x_intf_t *wl8021x_intf) {
   if (wl8021x_intf->bmps_held_for_eap) return;
@@ -35,10 +50,28 @@ void wlan_8021x_eap_enter_ps_hold(wlan_8021x_intf_t *wl8021x_intf) {
 }
 
 void wlan_8021x_eap_leave_ps_hold(wlan_8021x_intf_t *wl8021x_intf) {
+  /* Always cancel the watchdog, even if not held - cheap, idempotent. */
+  eloop_cancel_timeout(wlan_8021x_eap_leave_ps_hold_watchdog, NULL,
+                       wl8021x_intf);
   if (!wl8021x_intf->bmps_held_for_eap) return;
   qapi_bmps_cfg(1, 0);
   wl8021x_intf->bmps_held_for_eap = false;
   info_printf("8021X: BMPS resumed\n");
+}
+
+/* Arm the watchdog. Caller has just decided to keep BMPS held until the
+ * 4-way handshake completes; if it doesn't, this fires and force-resumes.
+ * Skip arming if BMPS isn't actually held (e.g. user hadn't enabled BMPS
+ * when association happened) - nothing to release later, and PMKSA-cache
+ * fast path also lands here without M3 ever coming back to the host. */
+static void wlan_8021x_eap_arm_leave_watchdog(wlan_8021x_intf_t *wl8021x_intf) {
+  if (!wl8021x_intf->bmps_held_for_eap) return;
+  eloop_cancel_timeout(wlan_8021x_eap_leave_ps_hold_watchdog, NULL,
+                       wl8021x_intf);
+  eloop_register_timeout(WLAN_8021X_4WAY_HOLD_WATCHDOG_MS / 1000,
+                         (WLAN_8021X_4WAY_HOLD_WATCHDOG_MS % 1000) * 1000,
+                         wlan_8021x_eap_leave_ps_hold_watchdog, NULL,
+                         wl8021x_intf);
 }
 
 /**
@@ -235,20 +268,28 @@ static void wlan_8021x_eapol_cb(struct eapol_sm *eapol,
     return;
   }
 
-  if (!suppl_intf->pmk_len) {
-    info_printf("Configure PMK for driver-based RSN 4-way handshake\n");
-    wlan_8021x_get_pmk(suppl_intf->pmk, &suppl_intf->pmk_len, wl8021x_intf);
-    if (suppl_intf->pmk_len) {
-      info_printf("%s set pmk\n", __FUNCTION__);
-      for (i = 0; i < suppl_intf->pmk_len; i++) {
-                printf("%02x", ((uint8_t *)suppl_intf->pmk)[i]);
-      }
-      printf("\n");
-      wlan_set_pmk(suppl_intf->dev_id, suppl_intf->pmk, suppl_intf->pmk_len);
+  /* Always fetch and push the PMK: on reauth the EAP method derives a new
+   * key, so the cached pmk_len != 0 guard must not be used. */
+  info_printf("Configure PMK for driver-based RSN 4-way handshake\n");
+  suppl_intf->pmk_len = 0;
+  wlan_8021x_get_pmk(suppl_intf->pmk, &suppl_intf->pmk_len, wl8021x_intf);
+  if (suppl_intf->pmk_len) {
+    info_printf("%s set pmk\n", __FUNCTION__);
+    for (i = 0; i < suppl_intf->pmk_len; i++) {
+              printf("%02x", ((uint8_t *)suppl_intf->pmk)[i]);
     }
+    printf("\n");
+    wlan_set_pmk(suppl_intf->dev_id, suppl_intf->pmk, suppl_intf->pmk_len);
   }
   WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_AUTHENTICATED;
-  wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
+  /* Don't leave PS hold yet: the driver-based RSN 4-way handshake
+   * (M1/M2/M3/M4 + PTK/GTK install + PMKID set) hasn't started.  If we
+   * resume BMPS here the device may sleep mid-handshake; on wakeup the
+   * RX path observed to stay deaf until the next disconnect/reauth.
+   * Resume only after rx_eapol_key_notify finishes installing PMKID
+   * (state -> PMK_CACHED).  Watchdog covers the case where M1 never
+   * arrives. */
+  wlan_8021x_eap_arm_leave_watchdog(wl8021x_intf);
 }
 
 static void wlan_8021x_cert_cb(void *ctx, int depth, const char *subject,
