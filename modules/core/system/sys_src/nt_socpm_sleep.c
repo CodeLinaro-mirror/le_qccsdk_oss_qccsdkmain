@@ -1819,13 +1819,6 @@ void nt_socpm_slp_enter(uint64_t slp_us)
     
     uint32_t lic_int_status = NT_REG_RD(QWLAN_PMU_AON_LIC_INT_STAT_REG);
     uint32_t ext_int = NT_REG_RD(NVIC_ICPR1) ;
-    if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK))) 
-    {
-        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_CLR, EXT_WAKEUP_INTR_CLR, 1);
-        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_CLR, EXT_WAKEUP_INTR_CLR, 0);
-
-        NT_REG_WR(NVIC_ICPR1, A2F_ASSERT_INTR_NVIC1_MASK);
-    }
 
     __asm volatile("dsb" ::: "memory");
     __asm volatile("wfi");
@@ -4256,7 +4249,7 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode,bool warm_boot)
     /* Disable the GPIO retension */
     NT_REG_WR(QWLAN_PMU_CFG_IO_RET_CNTL_REG, QWLAN_PMU_CFG_IO_RET_CNTL_DEFAULT);
 #endif /* GPIO_RETENTION_IN_SLP */
-    uart_init();
+    // uart_init();
 
     HAL_REG_WR(QWLAN_PMU_CFG_WIFI_SS_STATE_REG, NT_PMU_CFG_WIFI_CONFIG_OFFSET);  // Set wifi config state
 
@@ -4301,6 +4294,8 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode,bool warm_boot)
     NT_REG_WR(CACHE_REG_BASE, 0x01);
     NT_REG_WR(CACHE_REG_BASE, 0x00);
 
+    /* Set all IRQ to reset for both Sleepback and wakeup path*/
+    nt_global_irq_init();
     portENABLE_INTERRUPTS(); /* Sets the BASEPRI to 0x00*/
     portNVIC_SYSPRI2_REG |= portNVIC_PENDSV_PRI;
     portNVIC_SYSPRI2_REG |= portNVIC_SYSTICK_PRI;
