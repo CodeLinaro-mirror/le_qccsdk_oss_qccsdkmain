@@ -391,6 +391,11 @@ typedef struct ftm_dev {
     uint8_t location : 1;       // Location ON or OFF
     uint8_t location_type : 2;  // off or RTT or RSSI
     uint8_t trigger : 1;
+#ifdef NT_FN_RTT_DEMO
+    // Unassociated FTM: when use_target_mac=1, bypass DEVICE_CONNECTED check
+    uint8_t use_target_mac : 1;
+    uint8_t target_mac[IEEE80211_ADDR_LEN]; // Target AP MAC for unassociated FTM
+#endif
     conn_t *conn;
     void *ftm_cfg;
     FTM_PEER_INFO *rx_cap_info;
@@ -416,6 +421,10 @@ typedef struct usr_ftm_cfg {
     uint8_t location : 1;       // Location ON or OFF
     uint8_t location_type : 2;  // FTM or OFF
     uint8_t asap : 1;
+#ifdef NT_FN_RTT_DEMO
+    uint8_t has_target_mac : 1; // 1 = use target_mac for unassociated FTM
+    uint8_t target_mac[IEEE80211_ADDR_LEN]; // Target AP BSSID
+#endif
     uint8_t ftms_per_burst;
     uint8_t no_of_bur_exp;
     uint8_t min_delta_ftm;
@@ -467,6 +476,11 @@ extern struct ftm_info nt_rx_ftmInfo;*/
 void nt_ftm_config(devh_t *dev, usr_ftm *ftm_config_info);
 void nt_ftm_init(devh_t *dev);
 
+#ifdef NT_FN_RTT_DEMO
+void nt_ftm_set_target_mac(devh_t *dev, const uint8_t *mac);
+void nt_ftm_clear_target_mac(devh_t *dev);
+#endif
+
 void nt_ftm_min_delta_timeout_msg(TimerHandle_t __attribute__((__unused__)) timer_param);
 
 void nt_ftm_min_delta_expiry_cb_fn(TimerHandle_t __attribute__((__unused__)) timer_handle);
@@ -512,5 +526,100 @@ void nt_create_ftm_burst_period_timer(devh_t *dev, FTM_FIELDS_T *rxed_ftm_respon
 void nt_initiator_ftm_session_timout_timer_handler(devh_t *dev,
                                                    initiator_ftm_Session_timeout_timer_handler timer_state);
 void nt_rtt_clear_buffers();
+void nt_rtt_register_notify_callback(void (*callback)(uint64_t dist_cm));
+
+#ifdef NT_FN_RTT_DEMO
+/* 
+ * Unassociated (non-associated) FTM multi-AP ranging and 2-D trilateration
+ * After all APs have been measured, nt_trilateration_2d() computes the
+ * estimated (x, y) position using weighted least-squares.
+ */
+
+#define UNASSOC_FTM_MAX_APS             8    // max number of anchor APs
+#define UNASSOC_FTM_SESSION_TIMEOUT_MS  2000 // per-AP FTM session timeout (ms)
+
+typedef struct {
+    uint8_t  bssid[IEEE80211_ADDR_LEN]; // AP BSSID / MAC address
+    uint8_t  channel;                   // 802.11 channel number
+    float    x_m;                       // known AP position X (metres)
+    float    y_m;                       // known AP position Y (metres)
+    uint8_t  valid;                     // 1 = entry populated
+
+    uint64_t rtt_100ps;                 // measured RTT in 100 ps units
+    uint64_t distance_mm;               // derived distance in mm
+    uint8_t  measured;                  // 1 = distance measurement available
+} unassoc_ftm_ap_entry_t;
+
+typedef enum {
+    UNASSOC_FTM_STATE_IDLE = 0,
+    UNASSOC_FTM_STATE_MEASURING,   // FTM session in progress for current AP
+    UNASSOC_FTM_STATE_DONE,        // all APs measured, result available
+    UNASSOC_FTM_STATE_ERROR,
+} unassoc_ftm_state_t;
+
+typedef struct {
+    float x_m;
+    float y_m;
+    float error_m;   // estimated position error (metres), 0 if unknown
+    uint8_t valid;   // 1 = position computed successfully
+} unassoc_ftm_position_t;
+
+/**
+ * Called when all AP measurements are done and the position has been
+ * computed (or an error occurred).
+ *
+ * @param pos   Pointer to the computed position (valid=0 on error).
+ * @param ctx   User-supplied context pointer passed to nt_unassoc_ftm_start().
+ */
+typedef void (*unassoc_ftm_done_cb_t)(const unassoc_ftm_position_t *pos,
+                                      void *ctx);
+
+typedef struct {
+    unassoc_ftm_ap_entry_t  aps[UNASSOC_FTM_MAX_APS];
+    uint8_t                 ap_count;
+    uint8_t                 current_ap_idx;
+    unassoc_ftm_state_t     state;
+    unassoc_ftm_position_t  position;
+    unassoc_ftm_done_cb_t   done_cb;
+    void                   *done_cb_ctx;
+    devh_t                 *dev;
+
+    uint8_t  ftms_per_burst;
+    uint8_t  format_and_bw;
+    uint8_t  min_delta_ftm;
+
+    uint8_t  saved_channel;
+    uint8_t  channel_was_saved;
+    uint8_t  saved_bssid[IEEE80211_ADDR_LEN];
+
+    TimerHandle_t session_timer;
+
+    /* Set to 1 if we called nt_hal_bss_add() for unassociated FTM;
+     * cleared after nt_hal_bss_del() in _restore_bss_ctx(). */
+    uint8_t  hal_bss_added;
+} unassoc_ftm_ctx_t;
+
+void nt_unassoc_ftm_init(void);
+int  nt_unassoc_ftm_add_ap(const uint8_t *bssid, uint8_t channel,
+                            float x_m, float y_m);
+void nt_unassoc_ftm_clear_aps(void);
+int  nt_unassoc_ftm_start(devh_t *dev,
+                           uint8_t ftms_per_burst,
+                           uint8_t format_and_bw,
+                           unassoc_ftm_done_cb_t done_cb,
+                           void *ctx);
+void nt_unassoc_ftm_stop(void);
+void nt_unassoc_ftm_on_result(uint64_t distance_mm, uint8_t success);
+const unassoc_ftm_position_t *nt_unassoc_ftm_get_position(void);
+const unassoc_ftm_ap_entry_t *nt_unassoc_ftm_get_ap(uint8_t idx);
+
+void nt_unassoc_ftm_session_timeout_cb(TimerHandle_t timer);  // posts WMI msg
+void nt_unassoc_ftm_session_timeout_fn(TimerHandle_t timer, void *data); // WMI task handler
+
+uint8_t nt_unassoc_ftm_hal_bss_added(void);
+
+void nt_unassoc_ftm_prepare(devh_t *dev, const uint8_t *bssid);
+void nt_unassoc_ftm_unprepare(devh_t *dev);
+#endif /* NT_FN_RTT_DEMO */
 #endif
 #endif /* CORE_WIFI_MLM_INCLUDE_NT_FTM_H_ */

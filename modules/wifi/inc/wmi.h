@@ -468,6 +468,9 @@ typedef enum //@Wmi generic timedout handler events
 #endif // NT_FN_FTM_2016V
 #ifdef NT_FN_FTM
   nt_ftm_min_delta_expiry_cb_evntid,
+#ifdef NT_FN_RTT_DEMO
+  nt_unassoc_ftm_session_timeout_evntid,  /* unassociated FTM per-AP session timeout */
+#endif
 #endif // NT_FN_FTM
 #ifdef CONFIG_CHANNEL_SCHEDULER
   co_op_dwell_timeout_eventid,

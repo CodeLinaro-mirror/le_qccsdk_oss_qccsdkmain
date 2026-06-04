@@ -235,12 +235,253 @@ QCLI_Command_Status_t cmd_set_rtt_base_delay(uint32_t Parameter_Count, QCLI_Para
     return QCLI_STATUS_SUCCESS_E;
 }
 
+#ifdef NT_FN_RTT_DEMO
+/*
+ * Unassociated multi-AP FTM commands
+ * Usage:
+ *   rtt_ap_add  <bssid> <channel> <x_m> <y_m>
+ *   rtt_ap_clear
+ *   rtt_range  <bssid> <channel> <x_m> <y_m> //for single AP test
+ *   rtt_locate  [ftms_per_burst] [format_bw]
+ */
+static void _locate_done_cb(const unassoc_ftm_position_t *pos, void *ctx)
+{
+    (void)ctx;
+    if (pos && pos->valid) {
+        int xi = (int)pos->x_m;
+        int xd = (int)((pos->x_m - (float)xi) * 100.0f);
+        if (xd < 0) xd = -xd;
+        int yi = (int)pos->y_m;
+        int yd = (int)((pos->y_m - (float)yi) * 100.0f);
+        if (yd < 0) yd = -yd;
+        int ei = (int)pos->error_m;
+        int ed = (int)((pos->error_m - (float)ei) * 100.0f);
+        if (ed < 0) ed = -ed;
+        printf("\r\n[LOCATE] Position: X=%d.%02d m  Y=%d.%02d m  err=%d.%02d m\r\n",
+               xi, xd, yi, yd, ei, ed);
+    } else {
+        printf("\r\n[LOCATE] Positioning failed (not enough valid measurements)\r\n");
+    }
+}
+
+/**
+ * rtt_ap_add <bssid_hex> <channel> <x_m> <y_m>
+ * Example: rtt_ap_add AA:BB:CC:DD:EE:FF 6 0.0 5.0
+ */
+static QCLI_Command_Status_t cmd_rtt_ap_add(uint32_t Parameter_Count,
+                                             QCLI_Parameter_t *Parameter_List)
+{
+    if (Parameter_Count < 4) {
+        printf("Usage: rtt_ap_add <bssid> <channel> <x_m> <y_m>\r\n");
+        return QCLI_STATUS_USAGE_E;
+    }
+
+    /* Parse BSSID: accept "AA:BB:CC:DD:EE:FF" format */
+    uint8_t bssid[6];
+    const char *s = (const char *)Parameter_List[0].String_Value;
+    unsigned int v[6] = {0, 0, 0, 0, 0, 0};
+    int parsed = 0;
+
+    if (strlen(s) == 17) {
+        parsed = sscanf(s, "%x:%x:%x:%x:%x:%x",
+                        &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]);
+    } else if (strlen(s) == 12) {
+        /* AABBCCDDEEFF format: parse each byte manually */
+        parsed = 0;
+        for (int i = 0; i < 6; i++) {
+            unsigned int byte_val = 0;
+            if (sscanf(s + i * 2, "%2x", &byte_val) == 1) {
+                v[i] = byte_val;
+                parsed++;
+            }
+        }
+    }
+
+    if (parsed != 6) {
+        printf("rtt_ap_add: invalid BSSID format (expected AA:BB:CC:DD:EE:FF)\r\n");
+        return QCLI_STATUS_ERROR_E;
+    }
+    for (int i = 0; i < 6; i++) {
+        bssid[i] = (uint8_t)(v[i] & 0xFF);
+    }
+
+    uint8_t channel = (uint8_t)atoi((char *)Parameter_List[1].String_Value);
+    float   x_m     = (float)atof((char *)Parameter_List[2].String_Value);
+    float   y_m     = (float)atof((char *)Parameter_List[3].String_Value);
+
+    if (nt_unassoc_ftm_add_ap(bssid, channel, x_m, y_m) != 0) {
+        printf("rtt_ap_add: AP table full\r\n");
+        return QCLI_STATUS_ERROR_E;
+    }
+
+    int x_int = (int)x_m;
+    int x_dec = (int)((x_m - (float)x_int) * 10.0f);
+    if (x_dec < 0) x_dec = -x_dec;
+    int y_int = (int)y_m;
+    int y_dec = (int)((y_m - (float)y_int) * 10.0f);
+    if (y_dec < 0) y_dec = -y_dec;
+    printf("rtt_ap_add: AP added (ch=%u x=%d.%d y=%d.%d)\r\n",
+           channel, x_int, x_dec, y_int, y_dec);
+    return QCLI_STATUS_SUCCESS_E;
+}
+
+/**
+ * rtt_ap_clear
+ * Remove all registered anchor APs.
+ */
+static QCLI_Command_Status_t cmd_rtt_ap_clear(uint32_t Parameter_Count,
+                                               QCLI_Parameter_t *Parameter_List)
+{
+    (void)Parameter_Count;
+    (void)Parameter_List;
+    nt_unassoc_ftm_clear_aps();
+    printf("rtt_ap_clear: AP list cleared\r\n");
+    return QCLI_STATUS_SUCCESS_E;
+}
+
+/**
+ * rtt_range <bssid> <channel> [ftms] [bw]
+ * Single-AP unassociated FTM ranging (no trilateration needed).
+ * Useful for debugging: tests whether the AP responds to FTM at all.
+ * Result is printed via the locate done callback (valid=0 on timeout).
+ */
+static void _range_done_cb(const unassoc_ftm_position_t *pos, void *ctx)
+{
+    (void)pos;
+    (void)ctx;
+    const unassoc_ftm_ap_entry_t *ap = nt_unassoc_ftm_get_ap(0);
+    if (ap && ap->measured && ap->distance_mm > 0) {
+        uint32_t dist_cm  = (uint32_t)(ap->distance_mm / 10);
+        uint32_t dist_int = dist_cm / 100;
+        uint32_t dist_dec = dist_cm % 100;
+        printf("\r\n[RANGE] Distance: %u.%02u m  (%u mm)\r\n",
+               dist_int, dist_dec, (uint32_t)ap->distance_mm);
+    } else {
+        printf("\r\n[RANGE] Measurement failed (AP did not respond or timed out)\r\n");
+        printf("[RANGE] Possible causes:\r\n");
+        printf("  1. AP does not support FTM (check AP firmware/config)\r\n");
+        printf("  2. AP requires association before FTM (not all APs support unassoc FTM)\r\n");
+        printf("  3. Wrong channel number (check with rtt_ap_add ch=<N>)\r\n");
+        printf("  4. AP MAC address mismatch\r\n");
+    }
+}
+
+static QCLI_Command_Status_t cmd_rtt_range(uint32_t Parameter_Count,
+                                            QCLI_Parameter_t *Parameter_List)
+{
+    if (Parameter_Count < 2) {
+        printf("Usage: rtt_range <bssid> <channel> [ftms=3] [bw=4]\r\n");
+        printf("  bssid:   AP MAC, e.g. 3e:a1:27:10:10:81\r\n");
+        printf("  channel: 802.11 channel, e.g. 48 (5GHz) or 6 (2.4GHz)\r\n");
+        printf("  ftms:    FTM frames per burst (default 3)\r\n");
+        printf("  bw:      format_and_bw code (default 4 = HT20)\r\n");
+        return QCLI_STATUS_USAGE_E;
+    }
+
+#ifdef NT_DEV_STA_ID
+    extern dev_common_t *gpDevCommon;
+    if (!gpDevCommon || !gpDevCommon->devp[NT_DEV_STA_ID]) {
+        printf("rtt_range: device not available\r\n");
+        return QCLI_STATUS_ERROR_E;
+    }
+    devh_t *dev = gpDevCommon->devp[NT_DEV_STA_ID];
+#else
+    extern devh_t *gdevp;
+    devh_t *dev = gdevp;
+#endif
+
+    uint8_t bssid[6];
+    const char *s = (const char *)Parameter_List[0].String_Value;
+    unsigned int v[6] = {0};
+    int parsed = 0;
+    if (strlen(s) == 17) {
+        parsed = sscanf(s, "%x:%x:%x:%x:%x:%x",
+                        &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]);
+    } else if (strlen(s) == 12) {
+        parsed = 0;
+        for (int i = 0; i < 6; i++) {
+            unsigned int bv = 0;
+            if (sscanf(s + i * 2, "%2x", &bv) == 1) { v[i] = bv; parsed++; }
+        }
+    }
+    if (parsed != 6) {
+        printf("rtt_range: invalid BSSID format\r\n");
+        return QCLI_STATUS_ERROR_E;
+    }
+    for (int i = 0; i < 6; i++) bssid[i] = (uint8_t)(v[i] & 0xFF);
+
+    uint8_t channel = (uint8_t)atoi((char *)Parameter_List[1].String_Value);
+    uint8_t ftms    = (Parameter_Count >= 3)
+                      ? (uint8_t)atoi((char *)Parameter_List[2].String_Value) : 3;
+    uint8_t bw      = (Parameter_Count >= 4)
+                      ? (uint8_t)atoi((char *)Parameter_List[3].String_Value) : 4;
+
+    nt_unassoc_ftm_clear_aps();
+    if (nt_unassoc_ftm_add_ap(bssid, channel, 0.0f, 0.0f) != 0) {
+        printf("rtt_range: failed to add AP\r\n");
+        return QCLI_STATUS_ERROR_E;
+    }
+
+    printf("rtt_range: starting unassoc FTM to %02x:%02x:%02x:%02x:%02x:%02x ch=%u ftms=%u bw=%u\r\n",
+           bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5],
+           channel, ftms, bw);
+
+    int rc = nt_unassoc_ftm_start(dev, ftms, bw, _range_done_cb, NULL);
+    if (rc != 0) {
+        printf("rtt_range: failed to start (rc=%d)\r\n", rc);
+        return QCLI_STATUS_ERROR_E;
+    }
+    printf("rtt_range: waiting for result (timeout=%d ms)...\r\n",
+           UNASSOC_FTM_SESSION_TIMEOUT_MS);
+    return QCLI_STATUS_SUCCESS_E;
+}
+
+/**
+ * rtt_locate [ftms_per_burst] [format_bw]
+ * Start sequential unassociated FTM ranging and compute 2-D position.
+ */
+static QCLI_Command_Status_t cmd_rtt_locate(uint32_t Parameter_Count,
+                                             QCLI_Parameter_t *Parameter_List)
+{
+#ifdef NT_DEV_STA_ID
+    extern dev_common_t *gpDevCommon;
+    if (!gpDevCommon || !gpDevCommon->devp[NT_DEV_STA_ID]) {
+        printf("rtt_locate: device not available\r\n");
+        return QCLI_STATUS_ERROR_E;
+    }
+    devh_t *dev = gpDevCommon->devp[NT_DEV_STA_ID];
+#else
+    extern devh_t *gdevp;
+    devh_t *dev = gdevp;
+#endif
+
+    uint8_t ftms = (Parameter_Count >= 1)
+                   ? (uint8_t)atoi((char *)Parameter_List[0].String_Value) : 3;
+    uint8_t bw   = (Parameter_Count >= 2)
+                   ? (uint8_t)atoi((char *)Parameter_List[1].String_Value) : 4;
+
+    int rc = nt_unassoc_ftm_start(dev, ftms, bw, _locate_done_cb, NULL);
+    if (rc != 0) {
+        printf("rtt_locate: failed to start (rc=%d)\r\n", rc);
+        return QCLI_STATUS_ERROR_E;
+    }
+    printf("rtt_locate: ranging started (ftms=%u bw=%u)\r\n", ftms, bw);
+    return QCLI_STATUS_SUCCESS_E;
+}
+#endif /* NT_FN_RTT_DEMO */
+
 const QCLI_Command_t rtt_cmd_list[] =
 {
     {cmd_RTT_Cfg,   "rtt_cfg",   "[ftms=N] [delta=N] [asap=0|1] [bw=N] [dur=N] [period=N] [cal=HEX]", "Configure RTT/FTM"},
     {cmd_RTT_Start, "rtt_start", "<mac_addr> [count]", "Start RTT/FTM measurement"},
     {cmd_RTT_Status,"rtt_status","", "Show RTT status"},
     { cmd_set_rtt_base_delay, "set_base_delay", "set_base_delay <value>", "Set RTT base delay dynamically"},
+#ifdef NT_FN_RTT_DEMO
+    {cmd_rtt_ap_add,   "rtt_ap_add",   "<bssid> <channel> <x_m> <y_m>",  "Add anchor AP for positioning"},
+    {cmd_rtt_ap_clear, "rtt_ap_clear", "",                                "Clear anchor AP list"},
+    {cmd_rtt_range,    "rtt_range",    "<bssid> <channel> [ftms] [bw]",   "Single-AP unassoc FTM ranging (debug)"},
+    {cmd_rtt_locate,   "rtt_locate",   "[ftms_per_burst] [format_bw]",    "Start unassociated multi-AP FTM positioning"},
+#endif /* NT_FN_RTT_DEMO */
 };
 
 const QCLI_Command_Group_t rtt_cmd_group =
@@ -254,6 +495,9 @@ void Initialize_RTT_Demo(void)
 {
     extern void nt_rtt_register_notify_callback(void (*callback)(uint64_t));
     nt_rtt_register_notify_callback(nt_rtt_demo_notify);
+#ifdef NT_FN_RTT_DEMO
+    nt_unassoc_ftm_init();
+#endif
     
     qcli_rtt_group = QCLI_Register_Command_Group(NULL, &rtt_cmd_group);
     if (qcli_rtt_group) {
