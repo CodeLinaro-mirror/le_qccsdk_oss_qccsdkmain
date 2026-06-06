@@ -13,6 +13,8 @@
 #include "supplicant_cxt.h"
 
 #include "crypto/sha1.h"
+#include "crypto/sha256.h"
+#include "wmi.h"
 #include "printfext.h"
 #include "qapi_status.h"
 #include "qapi_wlan_base.h"
@@ -80,24 +82,38 @@ static void wlan_8021x_eap_arm_leave_watchdog(wlan_8021x_intf_t *wl8021x_intf) {
  * @pmk_len: Length of pmk in bytes
  * @auth_addr: Authenticator address
  * @suppl_addr: Supplicant address
- * @pmkid: Buffer for PMKID
+ * @pmkid: Buffer for PMKID (16 bytes)
+ * @auth_mode: AUTH_MODE bitmask, selects the hash:
+ *   WPA2 802.1X (SHA1 AKM)        → HMAC-SHA1-128
+ *   WPA2-SHA256 / WPA3-SHA256 /
+ *   WPA3-Enterprise-only          → HMAC-SHA256-128
  *
- * IEEE Std 802.11i-2004 - 8.5.1.2 Pairwise key hierarchy
- * PMKID = HMAC-SHA1-128(PMK, "PMK Name" || AA || SPA)
+ * IEEE 802.11-2020 12.7.1.3: PMKID = Truncate-128(HMAC-Hash(PMK,
+ *   "PMK Name" || AA || SPA))
+ *
+ * WPA3-Enterprise-192bit (CNSA, akm 00-0F-AC:12) wants HMAC-SHA384-128
+ * but sha384 isn't linked into this build; that mode is left on the
+ * SHA1 fallback branch and is currently unsupported for fast reauth.
  */
 int wlan_generate_pmkid(const u8 *pmk, size_t pmk_len, const u8 *auth_addr,
-                        const u8 *suppl_addr, u8 *pmkid) {
+                        const u8 *suppl_addr, u8 *pmkid,
+                        unsigned short auth_mode) {
   char *title = "PMK Name";
   const u8 *addr[3];
   const size_t len[3] = {8, ETH_ALEN, ETH_ALEN};
-  unsigned char hash[SHA1_MAC_LEN];
+  unsigned char hash[SHA256_MAC_LEN];
   int iRet;
 
   addr[0] = (u8 *)title;
   addr[1] = auth_addr;
   addr[2] = suppl_addr;
 
-  iRet = hmac_sha1_vector(pmk, pmk_len, 3, addr, len, hash);
+  if (auth_mode & (WMI_WPA2_SHA256_AUTH | WMI_WPA3_SHA256_AUTH |
+                   WMI_WPA3_ENTERPRISE_ONLY_AUTH)) {
+    iRet = hmac_sha256_vector(pmk, pmk_len, 3, addr, len, hash);
+  } else {
+    iRet = hmac_sha1_vector(pmk, pmk_len, 3, addr, len, hash);
+  }
   if (iRet != 0)
     return iRet;
 
@@ -408,7 +424,7 @@ void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
 
     res = wlan_generate_pmkid(suppl_intf->pmk, suppl_intf->pmk_len,
                               suppl_intf->bssid, suppl_intf->if_mac,
-                              suppl_intf->pmkid);
+                              suppl_intf->pmkid, suppl_intf->auth_mode);
     if (res) {
       warn_printf("%s failed to generate pmkid\n", __FUNCTION__);
       goto out;

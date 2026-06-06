@@ -1169,11 +1169,21 @@ static void wmi_8021x_assoc_result_event(void *msg)
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
     qapi_WLAN_Connect_Cb_Info_t cxnInfo;
     int intf_id;
-    
+    WMI_EAP_ASSOC_RESULT_MSG *result = (WMI_EAP_ASSOC_RESULT_MSG *)msg;
+
     memset(&cxnInfo, 0, sizeof(qapi_WLAN_Connect_Cb_Info_t));
 
     cxnInfo.value = true;
-    memcpy(cxnInfo.mac_Addr, ((WMI_EAP_ASSOC_RESULT_MSG *)msg)->bssid, __QAPI_WLAN_MAC_LEN);
+    memcpy(cxnInfo.mac_Addr, result->bssid, __QAPI_WLAN_MAC_LEN);
+
+    /* Refresh host-side auth_mode with the value negotiated by the driver.
+     * The user previously called set_auth_mode with the configured set
+     * (e.g. transition mode passes WMI_WPA2_AUTH | WMI_WPA2_SHA256_AUTH);
+     * here we narrow it to the single AKM the driver actually negotiated
+     * with the AP (wlan_wpa_keymgmt_rsn returns one of WMI_WPA2_AUTH /
+     * WMI_WPA2_SHA256_AUTH / WMI_WPA3_*). The supplicant uses this to pick
+     * the right hash for the PMKID (SHA1 vs SHA256). */
+    wlan_8021x_set_auth_mode(result->auth_mode);
 
     wlan_8021x_event_cb(WLAN_SUPPLICANT_INTERFACE_ID, QAPI_WLAN_CONNECT_CB_E, g_wl8021x_global, (void *)&cxnInfo, sizeof(cxnInfo));
 }
