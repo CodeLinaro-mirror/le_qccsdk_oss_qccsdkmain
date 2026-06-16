@@ -82,27 +82,31 @@ static int normalize_path(const char *input, char *out, size_t out_sz)
 }
 
 /*-------------------------------------------------------------------------
- * Helper: create parent directory (1 level deep)
+ * Helper: create all intermediate directories (mkdir -p semantics)
  *-----------------------------------------------------------------------*/
 static void mkdir_parent(const char *path)
 {
     char dir[FSTORE_MAX_PATH];
-    const char *slash = strrchr(path, '/');
+    /* Start scanning after the mount point prefix */
+    const char *p = path + strlen(FSTORE_MOUNT_POINT);
 
-    if (!slash || slash == path) {
-        return;
+    while (*p == '/') {
+        p++;
     }
-    size_t dir_len = (size_t)(slash - path);
-    if (dir_len == 0 || dir_len >= sizeof(dir)) {
-        return;
-    }
-    snprintf(dir, sizeof(dir), "%.*s", (int)dir_len, path);
 
-    /* Skip if it's just the mount point itself */
-    if (strcmp(dir, FSTORE_MOUNT_POINT) == 0) {
-        return;
+    while (*p) {
+        const char *slash = strchr(p, '/');
+        if (!slash) {
+            break;  /* last component is the filename, stop */
+        }
+        size_t dir_len = (size_t)(slash - path);
+        if (dir_len == 0 || dir_len >= sizeof(dir)) {
+            break;
+        }
+        snprintf(dir, sizeof(dir), "%.*s", (int)dir_len, path);
+        vfs_mkdir(dir);  /* ignore error — EEXIST is fine */
+        p = slash + 1;
     }
-    vfs_mkdir(dir);  /* ignore error — EEXIST is fine */
 }
 
 /*-------------------------------------------------------------------------
