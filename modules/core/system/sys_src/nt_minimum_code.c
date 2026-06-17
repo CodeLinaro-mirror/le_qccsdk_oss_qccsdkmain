@@ -297,6 +297,10 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
     for (int i = 0; i < MIN_CMEM_INRUSH_DELAY; i++) {
         __asm volatile(" nop \n");
     }
+
+    nt_global_irq_init();
+    cpu_irq_disable();
+
     extern uint64_t nt_socpm_slp_time_total;
     extern int mcu_sleep_force;
     extern int nt_socpm_resume_f;
@@ -600,7 +604,9 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
             NT_REG_WR(QWLAN_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ_REG, son_value);
 #endif /* if RMC_DISABLED_CODE */
             process_routine = 0;
-
+            
+            /* Set all IRQ to reset for both Sleepback and wakeup path*/
+            nt_global_irq_init();
             cpu_irq_disable();
             /**
             * Workaround to address incorrect __stack_ptr value after BMPS.
