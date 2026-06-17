@@ -594,9 +594,17 @@ typedef struct {
 
     TimerHandle_t session_timer;
 
-    /* Set to 1 if we called nt_hal_bss_add() for unassociated FTM;
+    /* Case A (not connected): we called nt_hal_bss_add() for a temp BSS;
      * cleared after nt_hal_bss_del() in _restore_bss_ctx(). */
     uint8_t  hal_bss_added;
+
+    /* Case B (connected to hotspot): we del'd the real BSS and re-added with
+     * target BSSID; restore needs to del target and re-add the original. */
+    uint8_t  hal_bss_replaced;
+    uint8_t  saved_hal_bssid[IEEE80211_ADDR_LEN];
+
+    /* Beacon-miss threshold saved before off-channel FTM; restored after. */
+    uint8_t  saved_bmiss_threshold;
 } unassoc_ftm_ctx_t;
 
 void nt_unassoc_ftm_init(void);
