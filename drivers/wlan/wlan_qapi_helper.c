@@ -203,22 +203,30 @@ void wlan_set_passphrase(const uint8_t *passphrase, uint8_t passphrase_len)
 void wlan_set_scan_param(WMI_START_SCAN_CMD *p_cmd, const qapi_WLAN_Start_Scan_Params_t *scan_Params)
 {
     memset(p_cmd, 0, sizeof(WMI_START_SCAN_CMD));
-    if (!scan_Params) {
-        p_cmd->scan_type = any_profile;
-        p_cmd->cnt_prof = 0;
-    } else {
+
+    if (scan_Params && scan_Params->ssid_Length > 0) {
         p_cmd->scan_type = specific_ssid;
         p_cmd->cnt_prof = 1;
         p_cmd->ssid[0].ssid_len = scan_Params->ssid_Length;
-        memscpy(p_cmd->ssid[0].ssid, scan_Params->ssid_Length, scan_Params->ssid, scan_Params->ssid_Length);
+        memscpy(p_cmd->ssid[0].ssid, scan_Params->ssid_Length,scan_Params->ssid, scan_Params->ssid_Length);
+    } else {
+        p_cmd->scan_type = any_profile;
+        p_cmd->cnt_prof = 0;
     }
+
     p_cmd->auth_mode = WMI_NONE_AUTH;
     p_cmd->crypto_type = NONE_CRYPT;
     p_cmd->probe_type = active_probe;
-    p_cmd->num_channels = SCAN_LIST_NUM_CHANNELS;
     int i;
-    for (i = 0; i < p_cmd->num_channels; i++) {
-        p_cmd->channel_list[i] = i;
+    if (scan_Params && scan_Params->num_Channels > 0) {
+        p_cmd->num_channels = scan_Params->num_Channels;
+        for (i = 0; i < scan_Params->num_Channels; i++) {
+            p_cmd->channel_list[i] = scan_Params->channel_List[i] - 1;
+        }
+    } else {
+        p_cmd->num_channels = SCAN_LIST_NUM_CHANNELS;
+        for (i = 0; i < p_cmd->num_channels; i++)
+            p_cmd->channel_list[i] = i;
     }
     p_cmd->scan_only = true;
 }

@@ -46,12 +46,14 @@ typedef struct // qapi_WLAN_Start_Scan_Params_s
      * used.  */
     uint8_t scan_Type;
     /**< This parameter currently supports only 0 as an input value. */
+    uint8_t ssid[__QAPI_WLAN_MAX_SSID_LEN];
+    /**< SSID to scan for. */
+    uint8_t ssid_Length;
+    /**< Length of the SSID. */
     uint8_t num_Channels;
     /**< Number of channels to scan. */
     uint16_t channel_List[1];
-    /**< List of channels to scan. */
-    uint8_t ssid[__QAPI_WLAN_MAX_SSID_LEN];
-    uint8_t ssid_Length;
+    /**< List of channels to scan. Must be the last field; allocate extra memory for more than one channel. */
 } qapi_WLAN_Start_Scan_Params_t;
 
 /**
