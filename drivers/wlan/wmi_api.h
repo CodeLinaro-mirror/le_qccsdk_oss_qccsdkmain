@@ -37,6 +37,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define WLAN_WMI_CMD_SIG_MASK_PROV_DISC_REQ 0x400000
 #endif
 #define WLAN_WMI_CMD_SIG_MASK_GET_BMPS_STATS 0x800000
+#define WLAN_WMI_CMD_SIG2_MASK_SAP_CSA_STATUS 0x1
 
 extern qapi_Status_t wmi_cmd_send(WMI_COMMAND_ID cmd_id, void *p_data, uint32_t data_len);
 extern qapi_Status_t wmi_dev_cmd_send(WMI_COMMAND_ID cmd_id, uint8_t dev_id, void *p_data, uint32_t data_len);

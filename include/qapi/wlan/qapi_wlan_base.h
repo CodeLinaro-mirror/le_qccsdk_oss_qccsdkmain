@@ -1430,6 +1430,18 @@ qapi_Status_t qapi_WLAN_Disable_Mgmt_Filter(uint8_t device_ID);
 */
 qapi_Status_t qapi_WLAN_Recv_Mgmt_Frames(uint8_t *buffer, uint32_t buffer_len, uint32_t *frame_len, uint32_t timeout);
 
+/**
+@brief  API to be used for SAP to perform CSA.
+@param[in]  device_id        Device ID.
+@param[in]  switch_mode      Channel switch mode.
+@param[in]  channel          New channel number.
+@param[in]  is_6g            6G channel.
+@param[in]  switch_count     Channel switch count.
+
+@return qapi_Status_t       QAPI_OK on success, other error code on failure.
+*/
+qapi_Status_t qapi_WLAN_Sap_Csa(uint8_t device_ID, uint8_t switch_mode, uint16_t channel, uint8_t is_6g, uint8_t switch_count);
+
 _STRUCT_4BYTE_ALLIGN_CHECK(qapi_WLAN_Evt_Hdr_t)
 _STRUCT_4BYTE_ALLIGN_CHECK(qapi_WLAN_Enable_Evt_t)
 _STRUCT_4BYTE_ALLIGN_CHECK(qapi_WLAN_Disable_Evt_t)

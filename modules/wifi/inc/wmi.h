@@ -308,6 +308,7 @@ typedef enum {
 
     WMI_SET_PMK_CMDID,
     WMI_SET_PMKID_CMDID,
+    WMI_SET_SAP_CSA,
 
     WMI_CMD_MAX, /* Note: This cmd should be the last in the WMI_COMMAND_ID ENUM */
 } WMI_COMMAND_ID;
@@ -357,7 +358,7 @@ typedef enum {
     WMI_P2P_SDPD_RX_EVENTID,
     WMI_BMPS_GET_STATS_EVENTID,
     WMI_8021X_ASSOC_RESULT_EVTID,
-
+    WMI_WLAN_SAP_CSA_EVTID,
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
 
@@ -698,6 +699,16 @@ typedef PREPACK struct {
     uint8_t enable;                 /* PMKID_ENABLE_FLG */
     uint8_t pmkid[WMI_PMKID_LEN];
 } POSTPACK WMI_SET_PMKID_CMD;
+
+/*
+ * WMI_SAP_CSA_CMD
+ */
+typedef PREPACK struct {
+    uint8_t mode;
+    uint8_t is_6g;
+    uint16_t channel;
+    uint8_t count;
+} POSTPACK WMI_SAP_CSA_CMD;
 
 /*
  * WMI_START_SCAN_CMD

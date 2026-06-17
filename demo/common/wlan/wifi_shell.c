@@ -2088,7 +2088,7 @@ static qapi_Status_t setCSAType(uint32_t Parameter_Count, QAPI_Console_Parameter
 
 static qapi_Status_t channelSwitch(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
 {
-	uint8_t mode, count, ch_no, is_6g = 0;
+	uint8_t mode, count, ch_no, is_6g = 0, dev_id = 0;
     if(!pg_wifi_shell_cxt->wlan_enabled) {
         info_printf("wlan is not enabled \n");
         return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
@@ -2105,7 +2105,7 @@ static qapi_Status_t channelSwitch(uint32_t Parameter_Count, QAPI_Console_Parame
 	if(Parameter_Count > 3 && Parameter_List[0].Integer_Is_Valid)
 		is_6g = Parameter_List[3].Integer_Value;
 	
-	if(ecsa_ap_chan_switch(mode, count, ch_no, is_6g) != 0) {
+	if(qapi_WLAN_Sap_Csa(dev_id, mode, ch_no, is_6g, count) != 0) {
 		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_ERROR;
 	}
 	

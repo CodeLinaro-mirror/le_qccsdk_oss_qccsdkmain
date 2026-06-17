@@ -354,3 +354,14 @@ qapi_Status_t qapi_WLAN_Stop_Wps (uint8_t device_ID, uint8_t wps_stage)
 
 #endif
 
+qapi_Status_t qapi_WLAN_Sap_Csa(uint8_t device_ID, uint8_t switch_mode, uint16_t channel, uint8_t is_6g, uint8_t switch_count)
+{
+    qapi_Status_t ret = QAPI_WLAN_ERROR;
+
+    WLAN_QAPI_LOCK();
+    ret = wmi_wlan_sap_csa(device_ID, switch_mode, channel, is_6g, switch_count);
+    WLAN_QAPI_UNLOCK();
+
+    return ret;
+}
+
