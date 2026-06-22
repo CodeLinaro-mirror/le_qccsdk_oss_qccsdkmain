@@ -45,6 +45,7 @@ typedef struct wlan_qapi_cxt_s {
     void *event_application_Context;
     qurt_mutex_t wlan_qapi_cxt_mutex; /* protect wlan_qapi_cxt_t safe in multi-thread */
     qurt_signal_t wlan_cmd_done;      /* will be ready if wlan cmd is done */
+    qurt_signal_t wlan_cmd_done2;      /* will be ready if wlan cmd is done */
     qurt_mutex_t wlan_qapi_block_mutex;
     uint32_t wlan_enable_block_mode : 1;
     uint32_t wlan_disable_block_mode : 1;
@@ -66,6 +67,7 @@ typedef struct wlan_qapi_cxt_s {
     uint32_t wlan_set_mgmt_filter_block_mode : 1;
     uint32_t wlan_get_tx_power_block_mode : 1;
     uint32_t wlan_get_bmps_stats_block_mode : 1;
+    uint32_t wlan_sap_csa_block_mode: 1;
     qapi_Status_t wlan_qapi_error;
     dev_common_t *dev_common;
     wlan_evt_payload_t event_payload_buf[EVT_PAYLOAD_MAX];
@@ -111,6 +113,7 @@ typedef struct wlan_qapi_cxt_s {
     WMI_WPS_START_CMD wps_param;
 #endif
     WMI_BMPS_GET_STATS cmd_bmps_stats;
+    WMI_SAP_CSA_CMD sap_csa;
 #ifdef CONFIG_ENABLE_P2P_MODE
     qapi_WLAN_P2P_Node_List_Params_t get_p2p_nodelist;
     qapi_WLAN_P2P_Event_Cb_Info_t p2p_Event_Cb_Info;
