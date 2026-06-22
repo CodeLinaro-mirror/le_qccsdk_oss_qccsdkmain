@@ -1325,7 +1325,7 @@ static qapi_Status_t Set11nHTCap(uint32_t __attribute__((__unused__)) Parameter_
 {
 	qapi_Status_t ret= QAPI_OK;
 	uint8_t deviceId = get_active_device();
-	qapi_WLAN_11n_HT_Config_t config;
+	qapi_WLAN_11n_HT_Config_t config = {0};
 
 	char *ht_config;
 	if( Parameter_Count < 1 || Parameter_Count > 3 || !Parameter_List || Parameter_List[0].Integer_Is_Valid) {
@@ -1333,9 +1333,9 @@ static qapi_Status_t Set11nHTCap(uint32_t __attribute__((__unused__)) Parameter_
 	}
 
 	ht_config = (char *)Parameter_List[0].String_Value;
-	if(!strcmp(ht_config,"disable"))
+	if(!strcmp(ht_config,"disable")) {
 		config.htconfig = QAPI_WLAN_11N_DISABLED_E;
-	else if(!strcmp(ht_config,"ht20")) {
+	} else if(!strcmp(ht_config,"ht20")) {
 		config.htconfig = QAPI_WLAN_11N_HT20_E;
         if (Parameter_Count == 3) {
             config.sgi = Parameter_List[1].Integer_Value;
