@@ -1039,7 +1039,7 @@ static qapi_Status_t Set11nHTCap(uint32_t __attribute__((__unused__)) Parameter_
 {
 	qapi_Status_t ret= QAPI_OK;
 	uint8_t deviceId = get_active_device();
-	qapi_WLAN_11n_HT_Config_t config;
+	qapi_WLAN_11n_HT_Config_t config = {0};
 
 	char *ht_config;
 	if( Parameter_Count < 1 || Parameter_Count > 3 || !Parameter_List || Parameter_List[0].Integer_Is_Valid) {
