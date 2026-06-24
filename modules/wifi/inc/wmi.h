@@ -1613,6 +1613,13 @@ typedef struct {
 #define WMI_HTCAP_TX_STBC (1 << 5)
 #define WMI_REQUIRE_HT (1 << 7)
 
+/* Band values for WMI_SET_HT_CAP_CMD.band — bitmask so HT can be enabled/
+ * disabled on a per-band basis. band == 0 is treated as "all bands" for
+ * backward compatibility with callers that don't set it. */
+#define WMI_HT_BAND_2G   (1 << 0)
+#define WMI_HT_BAND_5G   (1 << 1)
+#define WMI_HT_BAND_ALL  (WMI_HT_BAND_2G | WMI_HT_BAND_5G)
+
 typedef PREPACK struct {
     uint8_t band;   /* specifies which band to apply these values */
     uint8_t enable; /* allows 11n to be disabled on a per band basis */

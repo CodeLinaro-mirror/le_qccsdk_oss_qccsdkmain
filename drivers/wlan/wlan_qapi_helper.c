@@ -260,7 +260,7 @@ qapi_Status_t wlan_set_phy_mode(uint8_t device_id, uint32_t phy_mode)
     return error;
 }
 
-int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig, uint8_t is_sgi, uint8_t mpdu_density)
+int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig, uint8_t is_sgi, uint8_t mpdu_density, uint8_t band)
 {
     int32_t error = QAPI_OK;
     WMI_SET_HT_CAP_CMD *cmd;
@@ -275,6 +275,8 @@ int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t h
         return QAPI_ERROR;
 
     memset(cmd, 0, sizeof(WMI_SET_HT_CAP_CMD));
+    /* band == 0 falls back to "all bands" in the firmware handler */
+    cmd->band = band;
     do {
         if (QAPI_WLAN_11N_DISABLED_E != htconfig) {
             cmd->enable = 1;
