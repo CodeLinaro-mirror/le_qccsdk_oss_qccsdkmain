@@ -13,6 +13,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "qapi_wlan_base.h"
 #endif
 
+extern dev_common_t *gpDevCommon;
+extern uint8_t dc_freq_to_chindex(dev_common_t *pDevCmn, uint32_t frequency);
+
 #ifdef CONFIG_6GHZ
 /*11 for 2G and 30 for 5G and 24 for 6G */
 #define SCAN_LIST_NUM_CHANNELS 68
@@ -221,7 +224,19 @@ void wlan_set_scan_param(WMI_START_SCAN_CMD *p_cmd, const qapi_WLAN_Start_Scan_P
     if (scan_Params && scan_Params->num_Channels > 0) {
         p_cmd->num_channels = scan_Params->num_Channels;
         for (i = 0; i < scan_Params->num_Channels; i++) {
-            p_cmd->channel_list[i] = scan_Params->channel_List[i] - 1;
+            uint16_t ieee_chan = scan_Params->channel_List[i];
+#ifdef SUPPORT_5GHZ
+            /* Convert IEEE channel number to internal channel index. */
+            if (gpDevCommon) {
+                uint8_t chindex = dc_freq_to_chindex(gpDevCommon,
+                                      (uint32_t)IEEE_ieee2freq((int32_t)ieee_chan, FALSE));
+                p_cmd->channel_list[i] = (chindex != 0xFF) ? chindex : (ieee_chan - 1);
+            } else {
+                p_cmd->channel_list[i] = ieee_chan - 1;
+            }
+#else
+            p_cmd->channel_list[i] = ieee_chan - 1;
+#endif
         }
     } else {
         p_cmd->num_channels = SCAN_LIST_NUM_CHANNELS;
