@@ -536,7 +536,7 @@ void nt_rtt_register_notify_callback(void (*callback)(uint64_t dist_cm));
  */
 
 #define UNASSOC_FTM_MAX_APS             8    // max number of anchor APs
-#define UNASSOC_FTM_SESSION_TIMEOUT_MS  2000 // per-AP FTM session timeout (ms)
+#define UNASSOC_FTM_SESSION_TIMEOUT_MS  15000 // per-AP FTM session timeout (ms); 15s covers HAL BSS replace CM delay (~9s) + FTM exchange
 
 typedef struct {
     uint8_t  bssid[IEEE80211_ADDR_LEN]; // AP BSSID / MAC address
@@ -602,6 +602,10 @@ typedef struct {
      * target BSSID; restore needs to del target and re-add the original. */
     uint8_t  hal_bss_replaced;
     uint8_t  saved_hal_bssid[IEEE80211_ADDR_LEN];
+
+    /* Case B v2 (connected, skip hal_bss_del/add): only bss->ni_bssid patched.
+     * Set so that the FTM response gate (nt_unassoc_ftm_hal_bss_added) passes. */
+    uint8_t  hal_bss_conn_active;
 
     /* Beacon-miss threshold saved before off-channel FTM; restored after. */
     uint8_t  saved_bmiss_threshold;
