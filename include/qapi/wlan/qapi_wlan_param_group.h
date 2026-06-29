@@ -16,6 +16,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
  *          for applications to perform WLAN control operations.
  */
 
+#include "wifi_cmn.h"
 #include "qapi_types.h"
 #include "qapi_status.h"
 
@@ -403,6 +404,17 @@ Command ID to set protection mode when operating in Station mode.
 @param[in] uint32_t        Set 1 to enable CTS_TO_SELF protection, 0 to be disabled.
 */
 #define __QAPI_WLAN_PARAM_GROUP_WIRELESS_PROTECTION_MODE 93
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+/**
+Command ID to enable or disable chipset debug logging.
+
+@note1hang This parameter can only be used with qapi_WLAN_Set_Param().
+
+@param[in] uint8_t  1 to enable chipset logging, 0 to disable.
+*/
+#define __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHIPSET_LOGGING_ENABLE 94
+#endif
 
 #define __QAPI_WLAN_PARAM_GROUP_SECURITY_AUTH_MODE                0
 
