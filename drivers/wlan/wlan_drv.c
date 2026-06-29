@@ -119,6 +119,9 @@ int wlan_qapi_init(void)
 
     PRINT_LOG_FUNC_LINE;
     memset(p_cxt, 0, sizeof(wlan_qapi_cxt_t));
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    p_cxt->wmi_get_chipset_logging_stats_evt.request_id = 0xaa55aa55;
+#endif
     if (qurt_mutex_create(&p_cxt->wlan_qapi_cxt_mutex) != QURT_EOK) {
         PRINT_ERR_NO_RESOURCE;
         set_wlan_qapi_error(QAPI_WLAN_ERR_NO_RESOURCE);

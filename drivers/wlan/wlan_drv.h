@@ -90,6 +90,9 @@ typedef struct wlan_qapi_cxt_s {
 #endif
     qbool_t wait_scan_comp_evt;
     qbool_t connected;
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    qbool_t chipset_logging_enabled;
+#endif
     uint8_t *pScanOut; /* callers buffer to hold results. */
     uint16_t pScanOutSize;
     uint16_t scanBssMaxCount;
@@ -107,6 +110,12 @@ typedef struct wlan_qapi_cxt_s {
     WMI_SET_APPIE_CMD appie_cmd;
     WMI_SET_TX_POWER_CMD tx_power;
     qapi_WLAN_Get_Power_Evt_t get_tx_power_result;
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_PARAM_EVT wmi_get_param_evt;
+#endif
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_CHIPSET_LOGGING_STATS_EVT wmi_get_chipset_logging_stats_evt;
+#endif
 #ifdef CONFIG_WPS
     WMI_WPS_START_CMD wps_param;
 #endif

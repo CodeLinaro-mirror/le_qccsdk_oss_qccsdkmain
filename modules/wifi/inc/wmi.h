@@ -30,6 +30,10 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+#include "chipset_log_wmi.h"
+#endif
+
 #define WMI_MAC_LEN 6 /* length of mac in bytes */
 #define ATH_MAC_LEN 6
 #define WMI_MAX_KEY_LEN 32
@@ -277,6 +281,9 @@ typedef enum {
     WMI_SET_APPIE_CMDID,
     WMI_SET_TX_POWER,
     WMI_GET_TX_POWER_CMDID,
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_PARAM_CMDID,
+#endif
     WMI_IMPS_SLEEP_EXIT_CMDID,
     WMI_IMPS_TIMEDOUT_HNDL_CMDID,
 
@@ -305,6 +312,14 @@ typedef enum {
     WMI_P2P_FW_GET_NOA_CMDID,
     WMI_P2P_FW_GET_OPPPS_CMDID,
     WMI_P2P_LIST_PERSISTENT_NETWORK_CMDID,
+
+    WMI_SET_PMK_CMDID,
+    WMI_SET_PMKID_CMDID,
+    WMI_SET_SAP_CSA,
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_CHIPSET_LOGGING_STATS_CMDID,
+#endif
 
     WMI_CMD_MAX, /* Note: This cmd should be the last in the WMI_COMMAND_ID ENUM */
 } WMI_COMMAND_ID;
@@ -353,6 +368,15 @@ typedef enum {
     WMI_P2P_INVITE_SENT_RESULT_EVENTID,
     WMI_P2P_SDPD_RX_EVENTID,
     WMI_BMPS_GET_STATS_EVENTID,
+    WMI_8021X_ASSOC_RESULT_EVTID,
+    WMI_WLAN_SAP_CSA_EVTID,
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_PARAM_EVTID,
+#endif
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_CHIPSET_LOGGING_STATS_EVTID,
+#endif
 
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
@@ -2544,6 +2568,32 @@ typedef PREPACK struct {
     uint32_t pdev_param_value;
 } POSTPACK WMI_SET_PDEV_PARAM_CMD;
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+typedef PREPACK struct {
+    uint32_t param_id;
+    uint32_t param_value;
+} POSTPACK WMI_GET_PARAM_CMD;
+
+typedef PREPACK struct {
+    uint32_t param_id;
+    uint8_t param_value[12];
+} POSTPACK WMI_GET_PARAM_EVT;
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+typedef PREPACK struct {
+    uint32_t request_id;
+    uint32_t param_value;
+} POSTPACK WMI_GET_CHIPSET_LOGGING_STATS_CMD;
+
+typedef PREPACK struct {
+    uint32_t request_id;
+    uint32_t payload_len;
+    chipset_log_header_t header;
+    chipset_log_stats_t stats;
+} POSTPACK WMI_GET_CHIPSET_LOGGING_STATS_EVT;
+#endif
+
 typedef PREPACK struct {
     uint8_t scan_id;
 } POSTPACK WMI_SCAN_STOP_CMD;
@@ -2697,6 +2747,9 @@ typedef enum {
     WIFI_PARAM_SET_RSP_RATE = 23,
 	WIFI_PARAM_SET_BA_WINDOW_SIZE = 24,
     WIFI_PARAM_SET_CTS_TO_SELF = 25,
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WIFI_PARAM_CHIPSET_LOGGING_ENABLE = 26,
+#endif
 
     WLAN_P2P_CONNECT,
     WLAN_P2P_CONNECT_CLIENT,

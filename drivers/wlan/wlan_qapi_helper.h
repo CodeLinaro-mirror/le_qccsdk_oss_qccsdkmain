@@ -57,6 +57,10 @@ extern qapi_Status_t wlan_set_slot_time(uint8_t device_ID, uint32_t slot_time);
 extern qapi_Status_t wlan_get_slot_time(uint32_t *slot_time);
 extern qapi_Status_t wlan_set_edcca_threshold(uint8_t device_ID, uint8_t edcca_threshold);
 extern qapi_Status_t wlan_get_edcca_threshold(uint8_t *edcca_threshold);
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+extern qapi_Status_t wlan_set_chipset_logging_enable(uint8_t device_ID, uint8_t enable);
+extern qapi_Status_t wlan_get_chipset_logging_enable(uint8_t *enable);
+#endif
 extern qapi_Status_t wlan_set_tx_power(qapi_WLAN_Set_Txpower_Params_t txpower_params);
 extern qapi_Status_t wlan_get_tx_power(qapi_WLAN_Get_Power_Evt_t *txpower_params);
 extern qapi_Status_t wlan_set_bmiss_threshold(uint8_t device_ID, uint8_t bmiss_threshold);

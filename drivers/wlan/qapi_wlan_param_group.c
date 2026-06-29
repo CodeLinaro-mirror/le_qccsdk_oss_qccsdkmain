@@ -195,7 +195,14 @@ qapi_Status_t qapi_WLAN_Set_Param(uint8_t __attribute__((__unused__)) device_ID,
             uint32_t enable = *((uint32_t *)data);
             ret = wlan_set_cts_to_self(device_ID, enable);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_PROTECTION_MODE */
-        } 
+        }
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHIPSET_LOGGING_ENABLE: {
+            uint8_t enable = *((uint8_t *)data);
+            ret = wlan_set_chipset_logging_enable(device_ID, enable);
+            break;
+        }
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
         default: /* __QAPI_WLAN_PARAM_GROUP_WIRELESS + param_ID */
             PRINT_ERR_INVALID_PARAM1("param_ID", param_ID);
             ret = QAPI_WLAN_ERR_EINVAL;
@@ -560,6 +567,16 @@ qapi_Status_t qapi_WLAN_Get_Param(uint8_t __attribute__((__unused__)) device_ID,
             wlan_get_edcca_threshold(edcca_threshold);
             break;
         }
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+        case __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHIPSET_LOGGING_ENABLE: {
+            uint8_t *enable = (uint8_t *)data;
+            if (*length < sizeof(uint8_t)) {
+                return QAPI_WLAN_ERR_EINVAL;
+            }
+            ret = wlan_get_chipset_logging_enable(enable);
+            break;
+        }
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
         case __QAPI_WLAN_PARAM_GROUP_WIRELESS_TX_POWER_IN_DBM: {
             qapi_WLAN_Get_Power_Evt_t *power = (qapi_WLAN_Get_Power_Evt_t *)data;
             wlan_get_tx_power(power);

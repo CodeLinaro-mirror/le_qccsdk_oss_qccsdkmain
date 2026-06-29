@@ -2710,6 +2710,129 @@ static qapi_Status_t EnableCtsToSelf(uint32_t __attribute__((__unused__)) Parame
 	return ret;
 }
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+static qapi_Status_t setChipsetLoggingEnable(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    qapi_Status_t ret = QAPI_OK;
+    uint8_t deviceId = get_active_device();
+    uint8_t enable;
+
+    if (!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
+    if (Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    enable = (uint8_t)Parameter_List[0].Integer_Value;
+
+    if (enable != 0 && enable != 1) {
+        info_printf("Invalid parameter. Use 0 to disable or 1 to enable chipset logging\r\n");
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+
+    ret = qapi_WLAN_Set_Param(deviceId,
+                              __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                              __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHIPSET_LOGGING_ENABLE,
+                              &enable,
+                              sizeof(enable),
+                              FALSE);
+
+    if (ret != QAPI_OK) {
+        info_printf("set chipset logging enable failed\r\n");
+        return QAPI_ERROR;
+    }
+    info_printf("chipset logging %s\n", enable ? "enabled" : "disabled");
+    return QAPI_OK;
+}
+
+static qapi_Status_t getChipsetLoggingEnable(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    uint32_t length;
+    uint8_t deviceId = get_active_device();
+    uint8_t enable;
+
+    if (!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
+    length = sizeof(enable);
+    if (QAPI_OK != qapi_WLAN_Get_Param(deviceId,
+                                       __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                       __QAPI_WLAN_PARAM_GROUP_WIRELESS_CHIPSET_LOGGING_ENABLE,
+                                       &enable,
+                                       &length)) {
+        info_printf("get chipset logging enable failed\r\n");
+        return QAPI_ERROR;
+    }
+    info_printf("chipset logging enable: %d\n", enable);
+    return QAPI_OK;
+}
+
+static void dumpChipsetLoggingStats (qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t *stats)
+{
+    uint32_t i, all_tx = 0, all_rx = 0;
+    const chipset_log_datapath_tx_t *tx = &stats->stats.datapath_stats.tx;
+    const chipset_log_datapath_rx_t *rx = &stats->stats.datapath_stats.rx;
+
+    for (i = 0; i < CHIPSET_LOG_DP_11B_RATES;  i++) { all_tx += tx->tx_11b_mpdu[i];  all_rx += rx->rx_11b_mpdu[i];  }
+    for (i = 0; i < CHIPSET_LOG_DP_11AG_RATES; i++) { all_tx += tx->tx_11ag_mpdu[i]; all_rx += rx->rx_11ag_mpdu[i]; }
+    for (i = 0; i < CHIPSET_LOG_DP_MCS_MAX;    i++) { all_tx += tx->tx_mcs_mpdu[i];  all_rx += rx->rx_mcs_mpdu[i];  }
+
+    info_printf("request_id=%u payload_len=%u\n", stats->request_id, stats->payload_len);
+    info_printf("header: version=%u total_length=%u\n",
+                stats->header.version, stats->header.total_length);
+#ifdef CHIPSET_LOG_LINK_ENABLE
+    info_printf("link[0]: rx_speed=%u tx_speed=%u\n",
+                stats->stats.link_stats[0].rx_speed, stats->stats.link_stats[0].tx_speed);
+    info_printf("link[1]: rx_speed=%u tx_speed=%u\n",
+                stats->stats.link_stats[1].rx_speed, stats->stats.link_stats[1].tx_speed);
+#endif
+    info_printf("tx_11b_mpdu=%u,%u,%u,%u tx_11ag_mpdu=%u,%u,%u,%u,%u,%u tx_mcs_mpdu=%u,%u,%u,%u,%u all_tx=%u\n",
+                tx->tx_11b_mpdu[0], tx->tx_11b_mpdu[1], tx->tx_11b_mpdu[2], tx->tx_11b_mpdu[3],
+                tx->tx_11ag_mpdu[0], tx->tx_11ag_mpdu[1], tx->tx_11ag_mpdu[2],
+                tx->tx_11ag_mpdu[3], tx->tx_11ag_mpdu[4], tx->tx_11ag_mpdu[5],
+                tx->tx_mcs_mpdu[0], tx->tx_mcs_mpdu[1], tx->tx_mcs_mpdu[2],
+                tx->tx_mcs_mpdu[3], tx->tx_mcs_mpdu[4],
+                all_tx);
+    info_printf("tx_rts_succ_cnt=%u tx_rts_fail_cnt=%u tx_ppdu_cnt=%u tx_ppdu_ack_to=%u\n",
+                tx->tx_rts_succ_cnt, tx->tx_rts_fail_cnt, tx->tx_ppdu_cnt, tx->tx_ppdu_ack_to);
+    info_printf("tx_success_frm_cnt=%u tx_fail_cnt=%u tx_ack_fail_cnt=%u tx_retry_cnt=%u tx_mult_retry_cnt=%u\n",
+                tx->tx_success_frm_cnt, tx->tx_fail_cnt, tx->tx_ack_fail_cnt,
+                tx->tx_retry_cnt, tx->tx_mult_retry_cnt);
+    info_printf("rx_11b_mpdu=%u,%u,%u,%u rx_11ag_mpdu=%u,%u,%u,%u,%u,%u rx_mcs_mpdu=%u,%u,%u,%u,%u all_rx=%u\n",
+                rx->rx_11b_mpdu[0], rx->rx_11b_mpdu[1], rx->rx_11b_mpdu[2], rx->rx_11b_mpdu[3],
+                rx->rx_11ag_mpdu[0], rx->rx_11ag_mpdu[1], rx->rx_11ag_mpdu[2],
+                rx->rx_11ag_mpdu[3], rx->rx_11ag_mpdu[4], rx->rx_11ag_mpdu[5],
+                rx->rx_mcs_mpdu[0], rx->rx_mcs_mpdu[1], rx->rx_mcs_mpdu[2],
+                rx->rx_mcs_mpdu[3], rx->rx_mcs_mpdu[4],
+                all_rx);
+    info_printf("rx_mpdu=%u rx_ampdu=%u rx_mpdu_in_ampdu=%u dlm_err=%u max_pktlen_fail=%u\n",
+                rx->rx_mpdu, rx->rx_ampdu, rx->rx_mpdu_in_ampdu, rx->dlm_err, rx->max_pktlen_fail);
+}
+
+static qapi_Status_t getChipsetLoggingStats(uint32_t __attribute__((__unused__)) Parameter_Count, QAPI_Console_Parameter_t __attribute__((__unused__)) *Parameter_List)
+{
+    qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t stats;
+    uint8_t deviceId = get_active_device();
+
+    if (!pg_wifi_shell_cxt->wlan_enabled) {
+        info_printf("wlan is not enabled \n");
+        return QAPI_WLAN_ERR_DEVICE_NOT_FOUND;
+    }
+
+    if (QAPI_OK != qapi_WLAN_Get_Chipset_Logging_Stats(deviceId, &stats, sizeof(stats))) {
+        info_printf("get chipset logging stats failed\r\n");
+        return QAPI_ERROR;
+    }
+    dumpChipsetLoggingStats(&stats);
+    return QAPI_OK;
+}
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
+
 #ifdef CONFIG_ENABLE_P2P_MODE
 void app_p2p_process_persistent_list_event(uint8_t *pData)
 {
@@ -4972,7 +5095,12 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
 #endif
     { setRspRate, 	 "setRspRate", 		  "<rate_idx = 8:11g 6Mbps 16:11n 6.5Mbps>",    "setRspRate to 11g 6Mbps or 11n 6.5Mbps"   },
     { setBaWinSize, 	 "setBaWinSize", 		  "<tx_ba_window_size> <rx_ba_window_size>",    "Set BA window size of RX or TX or both."   },
-    {EnableCtsToSelf, "EnableCtsToSelf", 		  "<1: enable| 0: disable>",    "Enable/disable CTS-to-self."}
+    {EnableCtsToSelf, "EnableCtsToSelf", 		  "<1: enable| 0: disable>",    "Enable/disable CTS-to-self."},
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    {setChipsetLoggingEnable, "setChipsetLoggingEnable", "<1: enable | 0: disable>", "Enable/disable chipset debug logging"},
+    {getChipsetLoggingEnable, "getChipsetLoggingEnable", "", "Get chipset debug logging enable state"},
+    {getChipsetLoggingStats,  "getChipsetLogging",       "", "Get chipset debug logging stats"}
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
 };
 
 #ifdef CONFIG_ENABLE_P2P_MODE
