@@ -414,4 +414,7 @@ flag */
 /* Check data activity after DPM stop during BMPS entry and abort sleep if necessary */
 #define BMPS_ENTRY_ABORT_ON_ACTIVITY_POST_ITO
 
+/* Enable WLAN chipset debug log collection feature. */
+#define WLAN_CHIPSET_LOG_ENABLE
+
 #endif  // _QCP7321_H_

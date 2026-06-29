@@ -19,6 +19,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "qapi_types.h"
 #include "qapi_status.h"
 #include "qapi_wlan_misc.h"
+#include "chipset_log_wmi.h"
 
 /**
 @ingroup qapi_wlan
@@ -996,6 +997,15 @@ typedef struct {
     uint16_t real_power;                            /** The power that is set to driver.*/
 } qapi_WLAN_Get_Power_Evt_t;
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+typedef struct {
+    uint32_t request_id;
+    uint32_t payload_len;
+    chipset_log_header_t header;
+    chipset_log_stats_t stats;
+} qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t;
+#endif
+
 /**
 @ingroup qapi_wlan
 Set Rate.
@@ -1363,6 +1373,10 @@ Nonzero value -- Regulatory information retrieval failed.
 None.
 */
 qapi_Status_t qapi_WLAN_Get_Regulatory_Info(qapi_WLAN_Reg_Evt_t *reg);
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+qapi_Status_t qapi_WLAN_Get_Chipset_Logging_Stats(uint8_t device_ID, qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t *stats, uint32_t length);
+#endif
 
 /**
 @ingroup qapi_wlan

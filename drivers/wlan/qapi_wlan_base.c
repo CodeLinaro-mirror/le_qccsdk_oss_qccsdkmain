@@ -365,3 +365,43 @@ qapi_Status_t qapi_WLAN_Sap_Csa(uint8_t device_ID, uint8_t switch_mode, uint16_t
     return ret;
 }
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+qapi_Status_t qapi_WLAN_Get_Chipset_Logging_Stats(uint8_t device_ID, qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t *stats, uint32_t length)
+{
+    (void)device_ID;
+    qapi_Status_t ret;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+
+    if (gp_wlan_qapi_cxt->wlanEnabled == false) {
+        warn_printf("wlan is not enabled\n");
+        return QAPI_ERROR;
+    }
+
+    if (p_cxt->chipset_logging_enabled != TRUE) {
+        warn_printf("chipset logging is not enabled\n");
+        return QAPI_ERROR;
+    }
+
+    if (!stats || length < sizeof(qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t)) {
+        return QAPI_WLAN_ERR_EINVAL;
+    }
+
+    WLAN_QAPI_LOCK();
+    uint32_t request_id = p_cxt->wmi_get_chipset_logging_stats_evt.request_id;
+    ret = wmi_get_chipset_logging_stats(request_id);
+    if (ret == QAPI_OK) {
+        if (p_cxt->wmi_get_chipset_logging_stats_evt.request_id == request_id) {
+            memscpy(stats, length, &p_cxt->wmi_get_chipset_logging_stats_evt,
+                    sizeof(WMI_GET_CHIPSET_LOGGING_STATS_EVT));
+        } else {
+            warn_printf("request_id=%d not match\n", p_cxt->wmi_get_chipset_logging_stats_evt.request_id);
+            ret = QAPI_ERROR;
+        }
+        p_cxt->wmi_get_chipset_logging_stats_evt.request_id++;
+    }
+    WLAN_QAPI_UNLOCK();
+
+    return ret;
+}
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
+
