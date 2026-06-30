@@ -1305,6 +1305,33 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         /* feed watchdog before sleep */
         nt_watchdog_bark_timer_reset();
 #endif
+
+        /* Guard against entering BMPS / MCU sleep without an armed wake source.
+         *
+         * Race: the sleep list head node registered for this BMPS pass can be
+         * deleted between nt_socpm_sleep_register() and the WFI below. When that
+         * delete empties the list, nt_socpm_sleep_lst_delete() neither re-arms the
+         * AON timer nor downgrades _socpm_slp_mode, so the AON expiry register is
+         * left at the "never expire" sentinel (0xFFFFFF/0xFFFFFFFF) written for an
+         * empty list. Entering WFI in mcu_sleep with that value means there is no
+         * wake source and the SoC sleeps forever (SysTick stays off at 0x6).
+         *
+         * Detect the condition (empty list or sentinel expiry) and fall back to
+         * clock-gated sleep, which keeps SysTick alive and lets the next idle pass
+         * re-arm correctly.
+         */
+        if (_socpm_slp_mode != clk_gtd_sleep) {
+            uint32_t _exp_msb = NT_REG_RD(QWLAN_PMU_WLAN_SLP_TMR_EXP_MSB_REG);
+            uint32_t _exp_lsb = NT_REG_RD(QWLAN_PMU_WLAN_SLP_TMR_EXP_LSB_REG);
+            if ((_socpm_slp_lst_head == _INVALID_SLP_LST_HD) ||
+                (_exp_msb == 0xFFFFFF && _exp_lsb == 0xFFFFFFFF)) {
+                NT_LOG_PRINT(SOCPM, ERR,
+                             "Abort BMPS: no wake source (head %d exp %x/%x mode %d)",
+                             _socpm_slp_lst_head, _exp_msb, _exp_lsb, _socpm_slp_mode);
+                _socpm_slp_mode = clk_gtd_sleep;
+            }
+        }
+
         vPreSleepProcessing(_socpm_slp_mode);
 
         /* Save current context and call WFI */
@@ -1377,7 +1404,7 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
             uint32_t ext_int = NT_REG_RD(NVIC_ICPR1) ;
             // printf("AON_LIC_INT_STAT: 0x%x, ICPR1:0x%x\r\n",lic_int_status, ext_int);
 
-        NT_SOCPM_IRQ_ENABLE();
+   
         /**
         * nt_socpm_slp_time_total sometimes is smaller than the real passing sleep time during Systick closed,
         *because it does not calculate the time when receive beacon, use the delta of hres timer is more accurate
@@ -1400,6 +1427,8 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         } else {
             vTaskStepTick(slp_exp);
         }
+
+        NT_SOCPM_IRQ_ENABLE();
 #if 0
         NT_LOG_PRINT(DPM, ERR,"slp:%dms  slp:%dus aonTm:%dus\n\r",
                 (uint32_t)slp_exp, (uint32_t)slp_exp_us, (uint32_t)cur_aon_us);
