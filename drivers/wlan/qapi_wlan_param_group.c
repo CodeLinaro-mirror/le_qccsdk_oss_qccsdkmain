@@ -88,7 +88,7 @@ qapi_Status_t qapi_WLAN_Set_Param(uint8_t __attribute__((__unused__)) device_ID,
         }
         case __QAPI_WLAN_PARAM_GROUP_WIRELESS_11N_HT: {
             qapi_WLAN_11n_HT_Config_t config = *(qapi_WLAN_11n_HT_Config_t *)data;
-            ret = wlan_set_11n_ht(device_ID, (uint8_t)config.htconfig, config.sgi, config.mpdu_density);
+            ret = wlan_set_11n_ht(device_ID, (uint8_t)config.htconfig, config.sgi, config.mpdu_density, config.band);
             break; /* __QAPI_WLAN_PARAM_GROUP_WIRELESS_11N_HT */
         }
         case __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE: {

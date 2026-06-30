@@ -1332,9 +1332,27 @@ static qapi_Status_t Set11nHTCap(uint32_t __attribute__((__unused__)) Parameter_
 		return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 	}
 
+	config.band = QAPI_WLAN_HT_BAND_ALL; /* default: apply to both 2.4G and 5G */
+
 	ht_config = (char *)Parameter_List[0].String_Value;
 	if(!strcmp(ht_config,"disable")) {
 		config.htconfig = QAPI_WLAN_11N_DISABLED_E;
+		/* optional band: "disable [2g|5g]"; omitted means all bands */
+		if (Parameter_Count == 2) {
+			char *band = (char *)Parameter_List[1].String_Value;
+			if (Parameter_List[1].Integer_Is_Valid || !band) {
+				return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+			} else if (!strcmp(band, "2g")) {
+				config.band = QAPI_WLAN_HT_BAND_2G;
+			} else if (!strcmp(band, "5g")) {
+				config.band = QAPI_WLAN_HT_BAND_5G;
+			} else {
+				info_printf("Unknown band, only support 2g/5g\r\n");
+				return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+			}
+		} else if (Parameter_Count != 1) {
+			return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+		}
 	} else if(!strcmp(ht_config,"ht20")) {
 		config.htconfig = QAPI_WLAN_11N_HT20_E;
         if (Parameter_Count == 3) {
@@ -1355,7 +1373,7 @@ static qapi_Status_t Set11nHTCap(uint32_t __attribute__((__unused__)) Parameter_
                sizeof(config),
                FALSE);
     if (ret) {
-        info_printf("<HTCap = disable|ht20> <is_sgi = 0:no, 1:yes> <mpdu_density = 0:0us, 4:2us, 5:4us, 6:8us, 7:16us>\r\n");
+        info_printf("disable [2g|5g] (no band = both) | ht20 <is_sgi = 0:no, 1:yes> <mpdu_density = 0:0us, 4:2us, 5:4us, 6:8us, 7:16us>\r\n");
     }
 	return ret;
 }
@@ -5203,7 +5221,7 @@ const QAPI_Console_Command_t wifi_shell_cmds[] =
     { Disconnect,      "Disconnect",            "",                      "Disconnect from AP or peer"},
     { SetChannel,      "SetChannel",            "<channel> [<is_6g_index = 0:no, 1:yes>]",      "Set a channel hint."},
     { SetPhyMode,      "SetPhyMode",            "<mode = a|b|g|ng|abgn>","Set the wireless mode"},
-    { Set11nHTCap,     "Set11nHTCap",           "<HTCap = disable|ht20> <is_sgi = 0:no, 1:yes> <mpdu_density = 0:0us, 4:2us, 5:4us, 6:8us, 7:16us>","Set 11n HT parameter"},
+    { Set11nHTCap,     "Set11nHTCap",           "<HTCap = disable [2g|5g] (no band = both) | ht20> <is_sgi = 0:no, 1:yes> <mpdu_density = 0:0us, 4:2us, 5:4us, 6:8us, 7:16us>","Set 11n HT parameter"},
     { SetOperatingMode,"SetOperatingMode",      "<ap|station> [<hidden|0> <wps|0>]",  "Set the operating mode to either Soft-AP or STA. Hidden and wps parameters only apply to AP mode."},
     { SetPowerMode,    "SetPowerMode",          "<mode = 0: Max performance, 1: Power Save>",    "Set the device power mode."},
     { SetAggregationParameters,"SetAggregationParameters",  "<tx_tid_mask> <rx_tid_mask>",    "Set aggregation on RX or TX or both. Enabled via TID bit mask (0x00-0xff)"}, 

@@ -422,11 +422,19 @@ typedef enum {
 @ingroup qapi_wlan
 Data structure to set 11n HT configurations.
 */
+/** @ingroup qapi_wlan
+ * Band bitmask for qapi_WLAN_11n_HT_Config_t.band. Values must match the
+ * firmware WMI_HT_BAND_* definitions. 0 (unset) means all bands. */
+#define QAPI_WLAN_HT_BAND_2G   (1 << 0) /**< Apply HT config to 2.4GHz only. */
+#define QAPI_WLAN_HT_BAND_5G   (1 << 1) /**< Apply HT config to 5GHz only. */
+#define QAPI_WLAN_HT_BAND_ALL  (QAPI_WLAN_HT_BAND_2G | QAPI_WLAN_HT_BAND_5G) /**< Apply to all bands. */
+
 typedef struct // qapi_WLAN_HT_Config_s
 {
     qapi_WLAN_11n_HT_Config_e htconfig;   /**< Enumeration that provides 11n HT configurations. */
     uint8_t sgi; /**< 20M short GI enable flag. */
     uint8_t mpdu_density;   /**< MPDU density (aka Minimum MPDU Start Spacing). */
+    uint8_t band; /**< QAPI_WLAN_HT_BAND_* bitmask the config applies to; 0 means all bands. */
 } qapi_WLAN_11n_HT_Config_t;
 
 /**
