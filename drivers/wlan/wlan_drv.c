@@ -128,6 +128,7 @@ int wlan_qapi_init(void)
         return (int)QAPI_WLAN_ERR_NO_RESOURCE;
     }
     qurt_signal_create(&p_cxt->wlan_cmd_done);
+    qurt_signal_create(&p_cxt->wlan_cmd_done2);
     qurt_mutex_create(&p_cxt->wlan_qapi_block_mutex);
     p_cxt->network_id = __QAPI_NETWORK_ID_UNSPECIFIED;
     p_cxt->wlan_enable_block_mode = true;
@@ -192,6 +193,7 @@ void wlan_qapi_exit(void)
     PRINT_LOG_FUNC_LINE;
     qurt_mutex_delete(&p_cxt->wlan_qapi_cxt_mutex);
     qurt_signal_delete(&p_cxt->wlan_cmd_done);
+    qurt_signal_delete(&p_cxt->wlan_cmd_done2);
     qurt_mutex_delete(&p_cxt->wlan_qapi_block_mutex);
     free(p_cxt->event_payload_buf[EVT_LARGE_PAYLOAD].buf);
     free(p_cxt->event_payload_buf[EVT_SMALL_PAYLOAD].buf);

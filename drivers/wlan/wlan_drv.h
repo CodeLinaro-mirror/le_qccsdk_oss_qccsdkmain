@@ -45,6 +45,7 @@ typedef struct wlan_qapi_cxt_s {
     void *event_application_Context;
     qurt_mutex_t wlan_qapi_cxt_mutex; /* protect wlan_qapi_cxt_t safe in multi-thread */
     qurt_signal_t wlan_cmd_done;      /* will be ready if wlan cmd is done */
+    qurt_signal_t wlan_cmd_done2;      /* will be ready if wlan cmd is done */
     qurt_mutex_t wlan_qapi_block_mutex;
     uint32_t wlan_enable_block_mode : 1;
     uint32_t wlan_disable_block_mode : 1;

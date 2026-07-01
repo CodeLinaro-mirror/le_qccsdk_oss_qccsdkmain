@@ -1870,34 +1870,6 @@ qapi_Status_t wmi_get_chipset_logging_stats(uint32_t request_id)
 }
 #endif /* WLAN_CHIPSET_LOG_ENABLE */
 
-qapi_Status_t wmi_wlan_sap_csa(uint8_t device_ID, uint8_t switch_mode, uint16_t channel, uint8_t is_6g, uint8_t switch_count)
-{
-    qapi_Status_t ret = QAPI_OK;
-    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
-    WMI_SAP_CSA_CMD *csa_data = &p_cxt->sap_csa;
-
-    csa_data->mode = switch_mode;
-    csa_data->channel = channel;
-    csa_data->is_6g = is_6g;
-    csa_data->count = switch_count;
-
-    wmi_cmd_send(WMI_SET_SAP_CSA, csa_data, sizeof(WMI_SAP_CSA_CMD));
-    if (p_cxt->wlan_sap_csa_block_mode) {
-        qurt_signal_wait(&p_cxt->wlan_cmd_done2, WLAN_WMI_CMD_SIG2_MASK_SAP_CSA_STATUS,
-                         QURT_SIGNAL_ATTR_CLEAR_MASK | QURT_SIGNAL_ATTR_WAIT_ANY);
-    } else {
-        log_printf("unblock mode, should check WMI cmd done in event cb\n");
-    }
-
-    if (p_cxt->wlan_sap_csa_block_mode) {
-        qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
-        ret = get_wlan_qapi_error();
-        qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
-    }
-
-    return ret;
-}
-
 #ifdef CONFIG_WPS
 extern qapi_WLAN_WPS_Credentials_t gWpsCredentials;
 
