@@ -367,7 +367,7 @@ void __attribute__((section(".after_ram_vectors"))) aon_a2f_assert_isr_handler(v
     HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_CLR, EXT_WAKEUP_INTR_CLR, 0);
 
     g_socpm_struct.a2f_asserted = TRUE;
-    g_socpm_struct.host_supports_a2f = TRUE;
+    //g_socpm_struct.host_supports_a2f = TRUE;
     NT_LOG_PRINT(SOCPM, INFO, "A2F assert");
 #ifdef CONFIG_QAT_POWERSAVE_DEMO
     /* Mark that 730 was woken by host.*/
