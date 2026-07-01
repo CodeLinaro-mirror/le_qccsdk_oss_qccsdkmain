@@ -204,8 +204,8 @@ static int wlan_8021x_ether_send(wlan_8021x_intf_t *wl8021x_intf,
                                  size_t len) {
   int ret;
   int sock = socket(AF_PACKET, SOCK_RAW, ETHPROTO_EAP);
-  if (sock == QAPI_ERROR) {
-    warn_printf("ERROR: Failed to create socket\n");
+  if (sock < 0) {
+    warn_printf("ERROR: Failed to create EAPOL socket: %d\n", sock);
     return QAPI_ERROR;
   }
   ret = sendto(sock, (char *)buf, len, 0, NULL, 0);
@@ -450,6 +450,14 @@ void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
   }
 #endif
 
+  if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_PMK_CACHED) {
+    /* 4-way handshake done (normal or PMKSA caching) — quiesce the EAPOL
+     * SM to stop the residual idleWhile timer tick (set to 60s during EAP
+     * INITIALIZE) from waking the chip out of BMPS every second. */
+    eapol_sm_notify_portEnabled(wl8021x_intf->eapol, false);
+    wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
+  }
+
 out:
   log_printf("%s ---\n", __FUNCTION__);
 }
@@ -461,6 +469,14 @@ void wlan_8021x_rx_eapol(wlan_8021x_intf_t *wl8021x_intf,
 
   log_printf("%s\n", __FUNCTION__);
   wl8021x_intf->eapol_received++;
+
+  if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_PMK_CACHED) {
+    /* Re-enable EAPOL SM before feeding the packet — it was quiesced after
+     * the previous handshake completed. */
+    eapol_sm_notify_portEnabled(wl8021x_intf->eapol, true);
+    eapol_sm_notify_portValid(wl8021x_intf->eapol, true);
+  }
+
   ret = eapol_sm_rx_eapol(wl8021x_intf->eapol, src_addr, buf, len,
                           FRAME_ENCRYPTION_UNKNOWN);
 
