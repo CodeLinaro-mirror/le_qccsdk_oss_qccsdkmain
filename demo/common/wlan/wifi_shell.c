@@ -705,12 +705,13 @@ static qapi_Status_t Scan(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Pa
 {
     qapi_Status_t ret = QAPI_OK;
     wifi_shell_cxt_t *p_cxt = pg_wifi_shell_cxt;
-    qapi_WLAN_Start_Scan_Params_t scan_param = {0};
-    qbool_t scan_ssid = false;
-	qapi_WLAN_DEV_Mode_e opmode;
-	uint32_t length = sizeof(qapi_WLAN_DEV_Mode_e);
-
-	uint8_t deviceId = get_active_device();
+    qapi_WLAN_DEV_Mode_e opmode;
+    uint32_t length = sizeof(qapi_WLAN_DEV_Mode_e);
+    uint8_t deviceId = get_active_device();
+    uint8_t num_channels = 0;
+    uint8_t ch_param_start = 0;  /* index in Parameter_List where channels begin */
+    qapi_WLAN_Start_Scan_Params_t *scan_params = NULL;
+    int i;
 
     if (0 == p_cxt->wlan_enabled)
     {
@@ -731,37 +732,66 @@ static qapi_Status_t Scan(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Pa
         }
         p_cxt->scan_mode = param_scan_mode;
     }
-    if(Parameter_Count >= 2 && !Parameter_List[1].Integer_Is_Valid) {
-        uint8_t ssid_Length = strlen((char *) Parameter_List[1].String_Value);
-        if(ssid_Length > __QAPI_WLAN_MAX_SSID_LEN) {
-            info_printf("SSID length exceeds Maximum value\r\n");
-            ret = QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
-            qurt_mutex_unlock(&p_cxt->wifi_shell_cxt_mutex);
-            goto exit;
-        }
-        scan_param.ssid_Length = ssid_Length;
-        memscpy(scan_param.ssid, ssid_Length, Parameter_List[1].String_Value, ssid_Length);
-        scan_ssid = true;
-    }
-    if(QAPI_OK != qapi_WLAN_Get_Param (deviceId,
-									__QAPI_WLAN_PARAM_GROUP_WIRELESS,
-									__QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
-									&opmode,
-									&length)){
-		info_printf("get operation mode fail for device %d\n",deviceId);
-		goto exit;
-    }
-	if(opmode != DEV_MODE_STATION_E) {
-		info_printf("current operation mode %d do not support scan, need to set station mode\n",opmode);
-		goto exit;
-	}
-    info_printf("scan_mode=%d\n", p_cxt->scan_mode);
     qurt_mutex_unlock(&p_cxt->wifi_shell_cxt_mutex);
 
-    if (scan_ssid) {
-        ret = qapi_WLAN_Start_Scan(deviceId, &scan_param);
-    } else {
+    if (QAPI_OK != qapi_WLAN_Get_Param(deviceId,
+                                        __QAPI_WLAN_PARAM_GROUP_WIRELESS,
+                                        __QAPI_WLAN_PARAM_GROUP_WIRELESS_OPERATION_MODE,
+                                        &opmode, &length)) {
+        info_printf("get operation mode fail for device %d\n", deviceId);
+        goto exit;
+    }
+    if (opmode != DEV_MODE_STATION_E) {
+        info_printf("current operation mode %d do not support scan\n", opmode);
+        goto exit;
+    }
+
+    /* Determine where channel parameters start:
+     * Param[1] string → SSID, channels start at Param[2]
+     * Param[1] integer → no SSID, channels start at Param[1] */
+    ch_param_start = (Parameter_Count >= 2 && !Parameter_List[1].Integer_Is_Valid) ? 2 : 1;
+    if (ch_param_start < Parameter_Count)
+        num_channels = (uint8_t)(Parameter_Count - ch_param_start);
+
+    /* Allocate scan_params for channel_List */
+    uint32_t buf_size = offsetof(qapi_WLAN_Start_Scan_Params_t, channel_List)
+                        + (num_channels > 0 ? num_channels : 1) * sizeof(uint16_t);
+    scan_params = malloc(buf_size);
+    if (!scan_params) {
+        info_printf("malloc failed\r\n");
+        ret = QAPI_ERROR;
+        goto exit;
+    }
+    memset(scan_params, 0, buf_size);
+
+    /* Fill SSID if provided */
+    if (Parameter_Count >= 2 && !Parameter_List[1].Integer_Is_Valid) {
+        uint8_t ssid_len = strlen((char *)Parameter_List[1].String_Value);
+        if (ssid_len > __QAPI_WLAN_MAX_SSID_LEN) {
+            info_printf("SSID length exceeds maximum\r\n");
+            ret = QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+            goto exit;
+        }
+        scan_params->ssid_Length = ssid_len;
+        memscpy(scan_params->ssid, ssid_len, Parameter_List[1].String_Value, ssid_len);
+    }
+
+    /* Fill channel list if provided */
+    if (num_channels > 0) {
+        scan_params->num_Channels = num_channels;
+        for (i = 0; i < num_channels; i++) {
+            scan_params->channel_List[i] = (uint16_t)Parameter_List[ch_param_start + i].Integer_Value;
+            info_printf("Scanning channel %d\r\n", scan_params->channel_List[i]);
+        }
+    }
+
+    info_printf("scan_mode=%d\n", p_cxt->scan_mode);
+
+    /* Pass NULL if no SSID and no channels specified */
+    if (scan_params->ssid_Length == 0 && scan_params->num_Channels == 0) {
         ret = qapi_WLAN_Start_Scan(deviceId, NULL);
+    } else {
+        ret = qapi_WLAN_Start_Scan(deviceId, scan_params);
     }
 
     if ((ret == QAPI_OK) && \
@@ -782,6 +812,8 @@ static qapi_Status_t Scan(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Pa
     }
 
 exit:
+    if (scan_params)
+        free(scan_params);
     return ret;
 }
 
