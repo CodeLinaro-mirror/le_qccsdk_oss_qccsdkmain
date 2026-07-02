@@ -30,14 +30,15 @@
 /** Number of VO rate-index slots returned by hal_tpe_sta_vo_wifi_stats_get() */
 #define NT_DP_CHIPSET_LOG_VO_RATE_SLOTS  3
 
-typedef struct chipset_log_sleep_preserve_raw {
+typedef struct chipset_log_sleep_preserve {
     uint32_t sleep_cnt;
+    uint32_t awake_cnt;
     uint32_t rx_mpdu;
     uint32_t rx_ampdu;
     uint32_t rx_mpdu_in_ampdu;
-	uint32_t dlm_err;
-	uint32_t max_pktlen_fail;
-} chipset_log_sleep_preserve_raw_t;
+    uint32_t dlm_err;
+    uint32_t max_pktlen_fail;
+} chipset_log_sleep_preserve_t;
 
 typedef struct hal_tpe_sta_wifi_iface_stats {
 	uint32_t tx_rts_succ_cnt;   /**< sum of across all TIDs */
@@ -88,6 +89,8 @@ typedef struct {
 #ifdef CHIPSET_LOG_LINK_ENABLE
     uint32_t max_speed_kbps[CHIPSET_LOG_MAX_DEV_COUNT];
 #endif
+    uint32_t max_tx_speed; /**< Max rate Kbps in rate_index_20MHZ */
+#ifdef CHIPSET_LOG_MCS_ENABLE
     /**
      * Per-MCS TX MPDU counts pre-computed inside nt_dp_chipset_log_tx_stats_get().
      *
@@ -103,6 +106,7 @@ typedef struct {
     uint32_t tx_mcs_mpdu[CHIPSET_LOG_DP_MCS_MAX]; //tx_mpdu_responded_20m
     uint32_t tx_11b_mpdu[CHIPSET_LOG_DP_11B_RATES]; /**< per 11b speed bucket: [0]=1M [1]=2M [2]=5.5M [3]=11M */
     uint32_t tx_11ag_mpdu[CHIPSET_LOG_DP_11AG_RATES]; /**< per 11a/g speed bucket: [0]=6M [1]=9M [2]=12M [3]=18M [4]=24M [5]=36M */
+#endif /* CHIPSET_LOG_MCS_ENABLE */
     /**
      * Set to A_TRUE when at least one connected device was found in the
      * device loop.  Used by chipset_log_datapath_collect() to guard
@@ -141,9 +145,11 @@ typedef struct chipset_log_dp_prev {
     uint32_t tx_ack_fail_cnt;    /**< across all TIDs */
     uint32_t tx_retry_cnt;       /**< across all TIDs */
     uint32_t tx_mult_retry_cnt;  /**< across all TIDs */
+#ifdef CHIPSET_LOG_MCS_ENABLE
     uint32_t tx_mcs_mpdu[CHIPSET_LOG_DP_MCS_MAX];   /**< Previous per-MCS TX MPDU counts (HT MCS 0-4) */
     uint32_t tx_11b_mpdu[CHIPSET_LOG_DP_11B_RATES]; /**< Previous 11b TX MPDU counts per speed bucket */
     uint32_t tx_11ag_mpdu[CHIPSET_LOG_DP_11AG_RATES]; /**< Previous 11a/g TX MPDU counts per speed bucket */
+#endif /* CHIPSET_LOG_MCS_ENABLE */
     /* RX cumulative counters (previous snapshot) */
     uint32_t rx_mpdu;
     uint32_t rx_ampdu;
@@ -229,6 +235,7 @@ typedef enum {
 typedef struct chipset_log_ctx {
     WMI_GET_CHIPSET_LOGGING_STATS_EVT wmi_stats; /**< WMI event payload (request_id, payload_len, header, stats) */
     chipset_log_dp_prev_t  dp_prev;     /**< Previous datapath snapshot for delta calculation */
+    chipset_log_sleep_preserve_t sleep_preserve;
 #ifdef CHIPSET_LOG_TODO
     chipset_log_sta_prev_t sta_prev;    /**< STA per-cycle RSSI count and CCA previous snapshots */
 #endif

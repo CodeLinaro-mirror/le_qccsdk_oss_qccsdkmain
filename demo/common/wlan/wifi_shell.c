@@ -3092,13 +3092,13 @@ static qapi_Status_t getChipsetLoggingEnable(uint32_t __attribute__((__unused__)
 
 static void dumpChipsetLoggingStats (qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t *stats)
 {
-    uint32_t i, all_tx = 0, all_rx = 0;
+    uint32_t i, all_rx = 0;
     const chipset_log_datapath_tx_t *tx = &stats->stats.datapath_stats.tx;
     const chipset_log_datapath_rx_t *rx = &stats->stats.datapath_stats.rx;
 
-    for (i = 0; i < CHIPSET_LOG_DP_11B_RATES;  i++) { all_tx += tx->tx_11b_mpdu[i];  all_rx += rx->rx_11b_mpdu[i];  }
-    for (i = 0; i < CHIPSET_LOG_DP_11AG_RATES; i++) { all_tx += tx->tx_11ag_mpdu[i]; all_rx += rx->rx_11ag_mpdu[i]; }
-    for (i = 0; i < CHIPSET_LOG_DP_MCS_MAX;    i++) { all_tx += tx->tx_mcs_mpdu[i];  all_rx += rx->rx_mcs_mpdu[i];  }
+    for (i = 0; i < CHIPSET_LOG_DP_11B_RATES;  i++) { all_rx += rx->rx_11b_mpdu[i];  }
+    for (i = 0; i < CHIPSET_LOG_DP_11AG_RATES; i++) { all_rx += rx->rx_11ag_mpdu[i]; }
+    for (i = 0; i < CHIPSET_LOG_DP_MCS_MAX;    i++) { all_rx += rx->rx_mcs_mpdu[i];  }
 
     info_printf("request_id=%u payload_len=%u\n", stats->request_id, stats->payload_len);
     info_printf("header: version=%u total_length=%u\n",
@@ -3109,13 +3109,22 @@ static void dumpChipsetLoggingStats (qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t *
     info_printf("link[1]: rx_speed=%u tx_speed=%u\n",
                 stats->stats.link_stats[1].rx_speed, stats->stats.link_stats[1].tx_speed);
 #endif
-    info_printf("tx_11b_mpdu=%u,%u,%u,%u tx_11ag_mpdu=%u,%u,%u,%u,%u,%u tx_mcs_mpdu=%u,%u,%u,%u,%u all_tx=%u\n",
-                tx->tx_11b_mpdu[0], tx->tx_11b_mpdu[1], tx->tx_11b_mpdu[2], tx->tx_11b_mpdu[3],
-                tx->tx_11ag_mpdu[0], tx->tx_11ag_mpdu[1], tx->tx_11ag_mpdu[2],
-                tx->tx_11ag_mpdu[3], tx->tx_11ag_mpdu[4], tx->tx_11ag_mpdu[5],
-                tx->tx_mcs_mpdu[0], tx->tx_mcs_mpdu[1], tx->tx_mcs_mpdu[2],
-                tx->tx_mcs_mpdu[3], tx->tx_mcs_mpdu[4],
-                all_tx);
+    info_printf("max_tx_speed=%uKbps\n", tx->max_tx_speed);
+#ifdef CHIPSET_LOG_MCS_ENABLE
+    {
+        uint32_t all_tx = 0;
+        for (i = 0; i < CHIPSET_LOG_DP_11B_RATES;  i++) { all_tx += tx->tx_11b_mpdu[i];  }
+        for (i = 0; i < CHIPSET_LOG_DP_11AG_RATES; i++) { all_tx += tx->tx_11ag_mpdu[i]; }
+        for (i = 0; i < CHIPSET_LOG_DP_MCS_MAX;    i++) { all_tx += tx->tx_mcs_mpdu[i];  }
+        info_printf("tx_11b_mpdu=%u,%u,%u,%u tx_11ag_mpdu=%u,%u,%u,%u,%u,%u tx_mcs_mpdu=%u,%u,%u,%u,%u all_tx=%u\n",
+                    tx->tx_11b_mpdu[0], tx->tx_11b_mpdu[1], tx->tx_11b_mpdu[2], tx->tx_11b_mpdu[3],
+                    tx->tx_11ag_mpdu[0], tx->tx_11ag_mpdu[1], tx->tx_11ag_mpdu[2],
+                    tx->tx_11ag_mpdu[3], tx->tx_11ag_mpdu[4], tx->tx_11ag_mpdu[5],
+                    tx->tx_mcs_mpdu[0], tx->tx_mcs_mpdu[1], tx->tx_mcs_mpdu[2],
+                    tx->tx_mcs_mpdu[3], tx->tx_mcs_mpdu[4],
+                    all_tx);
+    }
+#endif /* CHIPSET_LOG_MCS_ENABLE */
     info_printf("tx_rts_succ_cnt=%u tx_rts_fail_cnt=%u tx_ppdu_cnt=%u tx_ppdu_ack_to=%u\n",
                 tx->tx_rts_succ_cnt, tx->tx_rts_fail_cnt, tx->tx_ppdu_cnt, tx->tx_ppdu_ack_to);
     info_printf("tx_success_frm_cnt=%u tx_fail_cnt=%u tx_ack_fail_cnt=%u tx_retry_cnt=%u tx_mult_retry_cnt=%u\n",

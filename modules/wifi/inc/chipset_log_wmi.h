@@ -134,9 +134,12 @@ typedef struct chipset_log_link_info {
  * Transmit MPDU statistics collected from the data path.
  */
 typedef struct chipset_log_datapath_tx {
+#ifdef CHIPSET_LOG_MCS_ENABLE
     uint32_t tx_mcs_mpdu[CHIPSET_LOG_DP_MCS_MAX];           /**< TX MPDUs per HT-MCS index (MCS 0-4) */
     uint32_t tx_11b_mpdu[CHIPSET_LOG_DP_11B_RATES];         /**< TX MPDUs per 11b rate: [0]=1M [1]=2M [2]=5.5M [3]=11M */
     uint32_t tx_11ag_mpdu[CHIPSET_LOG_DP_11AG_RATES];       /**< TX MPDUs per 11a/g rate: [0]=6M [1]=9M [2]=12M [3]=18M [4]=24M [5]=36M */
+#endif /* CHIPSET_LOG_MCS_ENABLE */
+    uint32_t max_tx_speed;                                  /**< Max rate Kbps in rate_index_20MHZ */
     uint32_t tx_rts_succ_cnt;                               /**< across all TIDs */
     uint32_t tx_rts_fail_cnt;                               /**< across all TIDs */
     uint32_t tx_ppdu_cnt;
