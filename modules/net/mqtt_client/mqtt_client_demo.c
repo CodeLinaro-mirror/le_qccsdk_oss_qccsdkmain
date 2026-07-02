@@ -1255,6 +1255,14 @@ void mqtt_client_process_cmd(uint32_t sessionIndex)
             }
             if (isAllSessionDisconn) {
                 mqttRxThreadCreated = false;
+                if (pMqttTaskCtrl->mqtt_keepalive_created) {
+                    nt_stop_timer(pMqttTaskCtrl->mqtt_keepalive_timer);
+                    if (nt_delete_timer(pMqttTaskCtrl->mqtt_keepalive_timer) != NT_TIMER_SUCCESS) {
+                        MQTT_CLIENT_PRINTF("MQTT keepalive timer delete failed\n");
+                    }
+                    pMqttTaskCtrl->mqtt_keepalive_timer = NULL;
+                    pMqttTaskCtrl->mqtt_keepalive_created = false;
+                }
             }
             break;
 
@@ -1504,9 +1512,6 @@ void mqtt_keepalive_timer_cb(void)
 
     qurt_signal_set(&pMqttTaskCtrl->mqtt_client_signal, MQTT_PUB_KEEPALIVE);
 
-    if (nt_start_timer(pMqttTaskCtrl->mqtt_keepalive_timer) != NT_TIMER_SUCCESS) {
-        MQTT_CLIENT_PRINTF("QAT MQTT keepalive timer start failed\n");
-    }
 }
 
 qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
@@ -1826,7 +1831,7 @@ void cleanupConnectInfo(MQTTClientSession_t *pMqttClientSess)
      * Control Packets being sent does not exceed the this Keep Alive value. In the
      * absence of sending any other Control Packets, the Client MUST send a
      * PINGREQ Packet. */
-    pMqttClientSess->connectInfo.keepAliveSeconds = MQTT_KEEP_ALIVE_INTERVAL_SECONDS;
+    pMqttClientSess->connectInfo.keepAliveSeconds = MQTT_KEEP_ALIVE_INTERVAL_SECONDS - 1;
 
     if (pMqttClientSess->connectInfo.pClientIdentifier != NULL) {
         free((char *)pMqttClientSess->connectInfo.pClientIdentifier);
@@ -2063,7 +2068,7 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
                     "default to 120000.\n");
             }
 
-            pMqttClientSess->connectInfo.keepAliveSeconds = Parameter_List[index].Integer_Value;
+            pMqttClientSess->connectInfo.keepAliveSeconds = Parameter_List[index].Integer_Value - 1;
             index++;
         }
 #ifdef CONFIG_QAT_MQTT_DEMO
@@ -2126,7 +2131,7 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
         if (pMqttTaskCtrl->mqtt_keepalive_created == false) {
             pMqttTaskCtrl->mqtt_keepalive_timer = (nt_osal_timer_handle_t)nt_create_timer(
-                mqtt_keepalive_timer_cb, NULL, pMqttTaskCtrl->mqttkeepalive_time_bmps, FALSE);
+                mqtt_keepalive_timer_cb, NULL, pMqttTaskCtrl->mqttkeepalive_time_bmps, TRUE);
 
             if (nt_start_timer(pMqttTaskCtrl->mqtt_keepalive_timer) != NT_TIMER_SUCCESS) {
                 MQTT_CLIENT_PRINTF("MQTT keepalive timer start failed\n");
