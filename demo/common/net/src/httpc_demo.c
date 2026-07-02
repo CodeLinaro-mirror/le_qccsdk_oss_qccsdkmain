@@ -258,6 +258,7 @@ void app_hexdump(void *inbuf, uint32_t inlen, int ascii, int addr)
 
 #ifdef CONFIG_QAT_HTTPC_DEMO
 extern qbool_t conn_enable;
+extern qbool_t global_conn_enable;
 #endif
 void http_client_cb_demo(void *arg, int32_t state, void *http_resp)
 {
@@ -451,6 +452,7 @@ void http_client_cb_demo(void *arg, int32_t state, void *http_resp)
             HTTPC_PRINTF("HTTP Client server closed on client[%d].\n", hc->num);
 #ifdef CONFIG_QAT_HTTPC_DEMO
             conn_enable = FALSE;
+            global_conn_enable = FALSE;
 #endif
         } else
             HTTPC_PRINTF("HTTP Client Receive error: %d\nPlease input 'httpc disconnect %d'\n", state, hc->num);
