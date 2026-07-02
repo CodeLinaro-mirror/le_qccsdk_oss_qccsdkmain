@@ -447,9 +447,6 @@ bool ringif_f2a_pkt_attach(uint8_t ring_id, uint32_t *p_buf_start, uint32_t *p_b
     RINGIF_PRINT_LOG_INFO("ringif_f2a_pkt_attach success ( buf[0]:%x len:%d info:%d) ",
                           (uint32_t)p_write_element->p_buf[0], p_write_element->len, p_write_element->info);
 
-#ifdef CONFIG_QAT_HTTPC_DEMO
-    sys_msleep(5);
-#endif
 
 #ifdef CONFIG_QAT_POWERSAVE_DEMO
     if (powersave_active) {

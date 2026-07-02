@@ -1200,10 +1200,7 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
 
         if (delta_hres_time_ms > 0) {
             vTaskStepTick(delta_hres_time_ms);
-        } 
-#ifdef SUPPORT_QCSPI_SLAVE
-            qcspi_slv_init();
-#endif /* SUPPORT_QCSPI_SLAVE */
+        }
     } 
 #endif /* CONFIG_QAT_POWERSAVE_DEMO */
     else {

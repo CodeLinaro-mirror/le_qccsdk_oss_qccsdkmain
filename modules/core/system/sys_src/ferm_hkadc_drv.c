@@ -426,31 +426,24 @@ void hkadc_auto_vbat_monitor_enable(void)
  */
 void hkadc_temp_monitor_done_sys_intr_enable(bool enable)
 {
-    uint32_t temp1;
     uint32_t bit_temp = (0x1 << 15);  // 64+15=79, Device Specific 79
 
     if (enable) {
-        temp1 = bit_temp | NT_REG_RD(NVIC_ISER2);
-        NT_REG_WR(NVIC_ISER2, temp1);
+        NT_REG_WR(NVIC_ISER2, bit_temp);
     } else {
-        temp1 = bit_temp | NT_REG_RD(NVIC_ICER2);
-        NT_REG_WR(NVIC_ICER2, temp1);
+        NT_REG_WR(NVIC_ICER2, bit_temp);
     }
 }
 
 void hkadc_vbat_monitor_done_sys_intr_enable(bool enable)
 {
-    uint32_t temp1;
     uint32_t bit_temp = (0x1 << 16);  // 64+16=80, Device Specific 80
 
     if (enable) {
-        temp1 = bit_temp | NT_REG_RD(NVIC_ISER2);
-        NT_REG_WR(NVIC_ISER2, temp1);
+        NT_REG_WR(NVIC_ISER2, bit_temp);
     } else {
-        temp1 = bit_temp | NT_REG_RD(NVIC_ICER2);
-        NT_REG_WR(NVIC_ICER2, temp1);
+        NT_REG_WR(NVIC_ICER2, bit_temp);
     }
-    return;
 }
 
 #if 0

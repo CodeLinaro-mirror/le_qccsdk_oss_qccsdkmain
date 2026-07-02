@@ -175,19 +175,23 @@ static QAT_Command_Status_t Extend_Command_PS_Enable(uint32_t Op_Type, uint32_t 
 
             qapi_bmps_rx_filter_enable(true);
             qapi_bmps_bcmc_rx_filter_cb_register(wakeup_cb_bcmc_filter_dtim, NULL);
-
-            fpci_evt_cb_reg((ps_evt_cb_t)&qat_notify_pm_state_cb, PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, PS_CALLBACK_QAT_PRIORITY, NULL);
             
             /* http keep alive */
-            qurt_signal_create(&http_sem);
+            static uint8_t http_sem_created = 0;
+            if (!http_sem_created) {
+                qurt_signal_create(&http_sem);
+                http_sem_created = 1;
+            }
 
             powersave_active = Parameter_List[0].Integer_Value ? 1 : 0;
             if (powersave_active) {
                 pm_set_powersave_policy(gdevp, PS_POLICY_ALLOWED_SLEEP);
                 spi_clear_ext_wakeup_flag();
                 printf("QAT: External wakeup flag cleared\r\n");
+                qapi_bmps_sleep_wakeup_cb((ps_evt_cb_t)&qat_notify_pm_state_cb,1);
             } else {
                 pm_set_powersave_policy(gdevp, PS_POLICY_NOT_ALLOWED_SLEEP);
+                qapi_bmps_sleep_wakeup_cb((ps_evt_cb_t)&qat_notify_pm_state_cb,0);
             }
 
             if (qapi_bmps_cfg(powersave_active, 0) != QAPI_OK) {
