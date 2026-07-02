@@ -2146,7 +2146,7 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
     }
 
     if (mqttThreadCreated == false) {
-        if (nt_qurt_thread_create(mqttc_task, "mqtt_client_task", 4096, pMqttClientSess, 6, NULL) != pdPASS) {
+        if (nt_qurt_thread_create(mqttc_task, "mqtt_client_task", 2048, pMqttClientSess, 6, NULL) != pdPASS) {
             MQTT_CLIENT_PRINTF("MQTT main thread create fail\n");
         } else {
             mqttThreadCreated = true;
@@ -2154,7 +2154,7 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
     }
 
     if (mqttRxThreadCreated == false) {
-        if (nt_qurt_thread_create(mqttc_rx_task, "mqtt_rx_client_task", 4096, pMqttClientSess, 6, NULL) != pdPASS) {
+        if (nt_qurt_thread_create(mqttc_rx_task, "mqtt_rx_client_task", 2048, pMqttClientSess, 6, NULL) != pdPASS) {
             MQTT_CLIENT_PRINTF("MQTT rx thread create fail\n");
         } else {
             mqttRxThreadCreated = true;
