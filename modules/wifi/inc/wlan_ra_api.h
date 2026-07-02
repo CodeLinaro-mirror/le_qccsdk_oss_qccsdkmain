@@ -86,7 +86,7 @@ void nt_wlan_resume_ra(struct devh_s *dev);
 void nt_wlan_pause_ra(struct devh_s *dev);
 void nt_wlan_ra_on(struct devh_s *dev);
 NT_BOOL nt_ra_set_htrates_only(struct devh_s *dev, NT_BOOL enable);
-
+uint32_t wlan_get_rate_from_index(uint32_t rateIndex);
 #endif  // NT_FN_RA
 
 #endif /* _WLAN_RA_API_H_ */
