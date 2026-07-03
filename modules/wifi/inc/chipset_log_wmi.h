@@ -140,15 +140,16 @@ typedef struct chipset_log_datapath_tx {
     uint32_t tx_11ag_mpdu[CHIPSET_LOG_DP_11AG_RATES];       /**< TX MPDUs per 11a/g rate: [0]=6M [1]=9M [2]=12M [3]=18M [4]=24M [5]=36M */
 #endif /* CHIPSET_LOG_MCS_ENABLE */
     uint32_t max_tx_speed;                                  /**< Max rate Kbps in rate_index_20MHZ */
-    uint32_t tx_rts_succ_cnt;                               /**< across all TIDs */
-    uint32_t tx_rts_fail_cnt;                               /**< across all TIDs */
-    uint32_t tx_ppdu_cnt;
-    uint32_t tx_ppdu_ack_to;
-    uint32_t tx_success_frm_cnt;                            /**< across all TIDs */
-    uint32_t tx_fail_cnt;                                   /**< across all TIDs */
-    uint32_t tx_ack_fail_cnt;                               /**< across all TIDs */
-    uint32_t tx_retry_cnt;                                  /**< across all TIDs */
-    uint32_t tx_mult_retry_cnt;                             /**< across all TIDs */
+    uint16_t tx_rts_succ_cnt;                               /**< across all TIDs */
+    uint16_t tx_rts_fail_cnt;                               /**< across all TIDs */
+    uint16_t tx_ppdu_cnt;
+    uint16_t tx_ppdu_ack_to;
+    uint16_t tx_success_frm_cnt;                            /**< across all TIDs */
+    uint16_t tx_fail_cnt;                                   /**< across all TIDs */
+    uint16_t tx_ack_fail_cnt;                               /**< across all TIDs */
+    uint16_t tx_retry_cnt;                                  /**< across all TIDs */
+    uint16_t tx_mult_retry_cnt;                             /**< across all TIDs */
+    uint16_t reserved;
 } POSTPACK chipset_log_datapath_tx_t;
 
 /**
@@ -163,7 +164,8 @@ typedef struct chipset_log_datapath_rx {
     uint32_t rx_mpdu;
     uint32_t rx_ampdu;
     uint32_t rx_mpdu_in_ampdu;
-    uint32_t dlm_err;
+    uint8_t dlm_err;
+    uint8_t reserved[3];
     uint32_t max_pktlen_fail;
 #ifdef CHIPSET_LOG_TODO
     uint32_t rx_drop_mpdu;                      /**< Number of received MPDUs dropped by the data path */
