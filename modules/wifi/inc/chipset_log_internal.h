@@ -36,33 +36,35 @@ typedef struct chipset_log_sleep_preserve {
     uint32_t rx_mpdu;
     uint32_t rx_ampdu;
     uint32_t rx_mpdu_in_ampdu;
-    uint32_t dlm_err;
+    uint8_t dlm_err;
+    uint8_t reserved[3];
     uint32_t max_pktlen_fail;
 } chipset_log_sleep_preserve_t;
 
 typedef struct hal_tpe_sta_wifi_iface_stats {
-	uint32_t tx_rts_succ_cnt;   /**< sum of across all TIDs */
-	uint32_t tx_rts_fail_cnt;   /**< sum of across all TIDs */
-	uint32_t tx_ppdu_cnt;
-	uint32_t tx_ppdu_ack_to;
+	uint16_t tx_rts_succ_cnt;   /**< sum of across all TIDs */
+	uint16_t tx_rts_fail_cnt;   /**< sum of across all TIDs */
+	uint16_t tx_ppdu_cnt;
+	uint16_t tx_ppdu_ack_to;
 #if CHIP_THEMISTO
 	int32_t rssi_ack;
 #endif
 } hal_wifi_iface_stats_t;
 
 typedef struct chipset_log_wmm_stats {
-    uint32_t tx_success_frm_cnt; /**< sum of across all TIDs */
-    uint32_t tx_fail_cnt;        /**< sum of across all TIDs */
-    uint32_t tx_retry_cnt;       /**< sum of across all TIDs */
-    uint32_t tx_mult_retry_cnt;  /**< sum of across all TIDs */
-    uint32_t tx_ack_fail_cnt;    /**< sum of across all TIDs */
+    uint16_t tx_success_frm_cnt; /**< sum of across all TIDs */
+    uint16_t tx_fail_cnt;        /**< sum of across all TIDs */
+    uint16_t tx_retry_cnt;       /**< sum of across all TIDs */
+    uint16_t tx_mult_retry_cnt;  /**< sum of across all TIDs */
+    uint16_t tx_ack_fail_cnt;    /**< sum of across all TIDs */
 } chipset_log_wmm_stats_t;
 
 typedef struct hal_vo_wifi_stats {
     uint32_t rx_mpdu;
     uint32_t rx_ampdu;
     uint32_t rx_mpdu_in_ampdu;
-    uint32_t dlm_err; //rx
+    uint8_t dlm_err; //rx
+    uint8_t reserved[3];
     uint32_t max_pktlen_fail; //rx
     uint32_t tx_mpdu_responded_20m[NT_DP_CHIPSET_LOG_VO_RATE_SLOTS];
 #if CHIP_THEMISTO
@@ -77,15 +79,15 @@ typedef struct hal_vo_wifi_stats {
 
 /** Raw TX statistics snapshot collected from HAL TPE for chipset log. */
 typedef struct {
-    uint32_t tx_rts_succ_cnt;   /**< across all TIDs */
-    uint32_t tx_rts_fail_cnt;   /**< across all TIDs */
-    uint32_t tx_ppdu_cnt;
-    uint32_t tx_ppdu_ack_to;
-    uint32_t tx_success_frm_cnt; /**< across all TIDs */
-    uint32_t tx_fail_cnt;        /**< across all TIDs */
-    uint32_t tx_ack_fail_cnt;    /**< across all TIDs */
-    uint32_t tx_retry_cnt;       /**< across all TIDs */
-    uint32_t tx_mult_retry_cnt;  /**< across all TIDs */
+    uint16_t tx_rts_succ_cnt;   /**< across all TIDs */
+    uint16_t tx_rts_fail_cnt;   /**< across all TIDs */
+    uint16_t tx_ppdu_cnt;
+    uint16_t tx_ppdu_ack_to;
+    uint16_t tx_success_frm_cnt; /**< across all TIDs */
+    uint16_t tx_fail_cnt;        /**< across all TIDs */
+    uint16_t tx_ack_fail_cnt;    /**< across all TIDs */
+    uint16_t tx_retry_cnt;       /**< across all TIDs */
+    uint16_t tx_mult_retry_cnt;  /**< across all TIDs */
 #ifdef CHIPSET_LOG_LINK_ENABLE
     uint32_t max_speed_kbps[CHIPSET_LOG_MAX_DEV_COUNT];
 #endif
@@ -136,15 +138,15 @@ typedef struct {
  */
 typedef struct chipset_log_dp_prev {
     /* TX cumulative counters (previous snapshot) */
-    uint32_t tx_rts_succ_cnt;   /**< across all TIDs */
-    uint32_t tx_rts_fail_cnt;   /**< across all TIDs */
-    uint32_t tx_ppdu_cnt;
-    uint32_t tx_ppdu_ack_to;
-    uint32_t tx_success_frm_cnt; /**< across all TIDs */
-    uint32_t tx_fail_cnt;        /**< across all TIDs */
-    uint32_t tx_ack_fail_cnt;    /**< across all TIDs */
-    uint32_t tx_retry_cnt;       /**< across all TIDs */
-    uint32_t tx_mult_retry_cnt;  /**< across all TIDs */
+    uint16_t tx_rts_succ_cnt;   /**< across all TIDs */
+    uint16_t tx_rts_fail_cnt;   /**< across all TIDs */
+    uint16_t tx_ppdu_cnt;
+    uint16_t tx_ppdu_ack_to;
+    uint16_t tx_success_frm_cnt; /**< across all TIDs */
+    uint16_t tx_fail_cnt;        /**< across all TIDs */
+    uint16_t tx_ack_fail_cnt;    /**< across all TIDs */
+    uint16_t tx_retry_cnt;       /**< across all TIDs */
+    uint16_t tx_mult_retry_cnt;  /**< across all TIDs */
 #ifdef CHIPSET_LOG_MCS_ENABLE
     uint32_t tx_mcs_mpdu[CHIPSET_LOG_DP_MCS_MAX];   /**< Previous per-MCS TX MPDU counts (HT MCS 0-4) */
     uint32_t tx_11b_mpdu[CHIPSET_LOG_DP_11B_RATES]; /**< Previous 11b TX MPDU counts per speed bucket */
@@ -154,7 +156,8 @@ typedef struct chipset_log_dp_prev {
     uint32_t rx_mpdu;
     uint32_t rx_ampdu;
     uint32_t rx_mpdu_in_ampdu;
-    uint32_t dlm_err;
+    uint8_t dlm_err;
+    uint8_t reserved[3];
     uint32_t max_pktlen_fail;
 } chipset_log_dp_prev_t;
 
