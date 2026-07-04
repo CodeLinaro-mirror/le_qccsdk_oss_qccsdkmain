@@ -38,6 +38,10 @@ static void wlan_8021x_eap_leave_ps_hold_watchdog(void *eloop_ctx,
   wlan_8021x_intf_t *wl8021x_intf = (wlan_8021x_intf_t *)timeout_ctx;
   if (wl8021x_intf->bmps_held_for_eap) {
     warn_printf("8021X: 4-way watchdog fired, resuming BMPS\n");
+    if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_AUTHENTICATED) {
+      WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_PMK_CACHED;
+      eapol_sm_notify_portEnabled(wl8021x_intf->eapol, false);
+    }
     wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
   }
 }
@@ -290,11 +294,6 @@ static void wlan_8021x_eapol_cb(struct eapol_sm *eapol,
   suppl_intf->pmk_len = 0;
   wlan_8021x_get_pmk(suppl_intf->pmk, &suppl_intf->pmk_len, wl8021x_intf);
   if (suppl_intf->pmk_len) {
-    info_printf("%s set pmk\n", __FUNCTION__);
-    for (i = 0; i < suppl_intf->pmk_len; i++) {
-              printf("%02x", ((uint8_t *)suppl_intf->pmk)[i]);
-    }
-    printf("\n");
     wlan_set_pmk(suppl_intf->dev_id, suppl_intf->pmk, suppl_intf->pmk_len);
   }
   WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_AUTHENTICATED;
@@ -406,6 +405,7 @@ void wlan_8021x_rx_eapol_data_notify(wlan_8021x_intf_t *wl8021x_intf) {
 void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
   suppl_intf_t *suppl_intf =
       (suppl_intf_t *)WL8021X_INTF_2_SUPPL_INTF(wl8021x_intf);
+  bool watchdog_armed = false;
   log_printf("%s +++\n", __FUNCTION__);
 
   if (wlan_lib_auth_is_8021x(suppl_intf->auth_mode) != true) {
@@ -413,7 +413,10 @@ void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
   }
 
   if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_AUTHENTICATED) {
-    /* rx eapol key after auth is completed, then set pmkid */
+    /* rx eapol key (M1) after EAP auth completed — set PMKID so FW can
+     * complete the 4-way handshake (M2/M3/M4) autonomously.
+     * Transition to PMK_CACHED immediately so reauth packets arriving
+     * later (wlan_8021x_rx_eapol) can re-enable the SM. */
     int res = 0;
 
     if (!suppl_intf->pmk_len) {
@@ -437,7 +440,17 @@ void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
       goto out;
     }
 
+    /* FW handles 4-way autonomously from here — quiesce SM immediately
+     * so idleWhile timer won't cause reason=8 wakeups after BMPS resumes. */
+    eapol_sm_notify_portEnabled(wl8021x_intf->eapol, false);
     WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_PMK_CACHED;
+
+    /* Hold BMPS and arm watchdog — each M1 retransmit resets the timer.
+     * enter_ps_hold is idempotent; needed here because a prior watchdog
+     * expiry may have already resumed BMPS. */
+    wlan_8021x_eap_enter_ps_hold(wl8021x_intf);
+    wlan_8021x_eap_arm_leave_watchdog(wl8021x_intf);
+    watchdog_armed = true;
   }
 
 #ifdef CONFIG_ENABLE_PMK_CACHE
@@ -451,11 +464,13 @@ void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
 #endif
 
   if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_PMK_CACHED) {
-    /* 4-way handshake done (normal or PMKSA caching) — quiesce the EAPOL
-     * SM to stop the residual idleWhile timer tick (set to 60s during EAP
-     * INITIALIZE) from waking the chip out of BMPS every second. */
+    /* Quiesce EAPOL SM to stop idleWhile timer from waking chip out of
+     * BMPS every second. */
     eapol_sm_notify_portEnabled(wl8021x_intf->eapol, false);
-    wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
+    if (!watchdog_armed) {
+      /* PMK cache path: 4-way already done by FW, safe to resume now. */
+      wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
+    }
   }
 
 out:
