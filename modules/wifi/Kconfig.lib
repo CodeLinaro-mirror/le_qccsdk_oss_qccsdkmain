@@ -147,4 +147,9 @@ config TOTAL_BEACON_WAIT_TIME
 config WLAN_8021X_LIB
     bool "enable 8021x"
     default y
+
+config UART_BAUDRATE_TABLE_INDEX
+    int "0: 115200, 1: 57600, 2: 38400, 3: 19200, 4: 9600, 5: 4800"
+    range 0 5
+    default 0
             endmenu
