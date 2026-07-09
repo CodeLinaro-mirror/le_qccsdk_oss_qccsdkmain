@@ -1450,7 +1450,7 @@ static void mqtt_client_help()
     MQTT_CLIENT_PRINTF("mqttc destroy <session_id>\n");
     MQTT_CLIENT_PRINTF("options:\n");
     MQTT_CLIENT_PRINTF("<session_id> demo session :, can be 0 or 1.\n");
-    MQTT_CLIENT_PRINTF("-s <transport_scheme> transport layer to use:ssl or tcp. Defaults to tcp.\n");
+    MQTT_CLIENT_PRINTF("-s <transport_scheme> transport layer to use:ssl, sslnoverify or tcp. Defaults to tcp.\n");
     MQTT_CLIENT_PRINTF(
         "--ca <file> file path containing trusted CA certificates to enable encrypted certificate. Defaults to "
         "null.\n");
@@ -1489,6 +1489,7 @@ void cleanupNetworkCredentials(MQTTClientSession_t *pMqttClientSess)
     }
 
     pMqttClientSess->tlsCredentials.disableSni = pdFALSE;
+    pMqttClientSess->tlsCredentials.disableServerVerify = pdFALSE;
 
     if (pMqttClientSess->tlsCredentials.pRootCa != NULL) {
         free((void *)pMqttClientSess->tlsCredentials.pRootCa);
@@ -1583,6 +1584,9 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
 
             if (strcasecmp(Parameter_List[index].String_Value, "ssl") == 0) {
                 pMqttClientSess->mqttTransportScheme = MQTT_OVER_SSL;
+            } else if (strcasecmp(Parameter_List[index].String_Value, "sslnoverify") == 0) {
+                pMqttClientSess->mqttTransportScheme = MQTT_OVER_SSL;
+                pMqttClientSess->tlsCredentials.disableServerVerify = pdTRUE;
             } else if (strcasecmp(Parameter_List[index].String_Value, "tcp") == 0) {
                 pMqttClientSess->mqttTransportScheme = MQTT_OVER_TCP;
             } else {
@@ -1781,8 +1785,8 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
     }
 
     if (pMqttClientSess->mqttTransportScheme == MQTT_OVER_SSL) {
-        /*SSL mode must configure CA certificates */
-        if (pMqttClientSess->tlsCredentials.pRootCa == NULL) {
+        if (pMqttClientSess->tlsCredentials.disableServerVerify != pdTRUE &&
+            pMqttClientSess->tlsCredentials.pRootCa == NULL) {
             MQTT_CLIENT_PRINTF("MQTT session:%d init fail, SSL should configure CA certificates.\n",
                                pMqttClientSess->sessionIndex);
             goto fail;

@@ -132,6 +132,12 @@ typedef struct NetworkCredentials {
      */
     BaseType_t disableSni;
 
+    /**
+     * @brief Disable server certificate verification for a TLS session.
+     * When set to pdTRUE, the client will not verify the server's certificate.
+     */
+    BaseType_t disableServerVerify;
+
     const uint8_t *pRootCa;     /**< @brief String representing a trusted server root certificate. */
     size_t rootCaSize;          /**< @brief Size associated with #NetworkCredentials.pRootCa. */
     const uint8_t *pClientCert; /**< @brief String representing the client certificate. */
