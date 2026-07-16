@@ -1981,15 +1981,17 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
             pMqttClientSess->connectInfo.userNameLength = strlen(Parameter_List[index].String_Value);
 
-            pMqttClientSess->connectInfo.pUserName = malloc(pMqttClientSess->connectInfo.userNameLength + 1);
+            if (pMqttClientSess->connectInfo.userNameLength > 0) {
+                pMqttClientSess->connectInfo.pUserName = malloc(pMqttClientSess->connectInfo.userNameLength + 1);
 
-            if (pMqttClientSess->connectInfo.pUserName == NULL) {
-                MQTT_CLIENT_PRINTF("MQTT malloc username (%d) fail\n", pMqttClientSess->connectInfo.userNameLength + 1);
-                goto fail;
+                if (pMqttClientSess->connectInfo.pUserName == NULL) {
+                    MQTT_CLIENT_PRINTF("MQTT malloc username (%d) fail\n", pMqttClientSess->connectInfo.userNameLength + 1);
+                    goto fail;
+                }
+
+                memcpy((char *)pMqttClientSess->connectInfo.pUserName, Parameter_List[index].String_Value,
+                       pMqttClientSess->connectInfo.userNameLength + 1);
             }
-
-            memcpy((char *)pMqttClientSess->connectInfo.pUserName, Parameter_List[index].String_Value,
-                   pMqttClientSess->connectInfo.userNameLength + 1);
 
             index++;
         }
@@ -2006,15 +2008,17 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
             pMqttClientSess->connectInfo.passwordLength = strlen(Parameter_List[index].String_Value);
 
-            pMqttClientSess->connectInfo.pPassword = malloc(pMqttClientSess->connectInfo.passwordLength + 1);
+            if (pMqttClientSess->connectInfo.passwordLength > 0) {
+                pMqttClientSess->connectInfo.pPassword = malloc(pMqttClientSess->connectInfo.passwordLength + 1);
 
-            if (pMqttClientSess->connectInfo.pPassword == NULL) {
-                MQTT_CLIENT_PRINTF("MQTT malloc password (%d) fail\n", pMqttClientSess->connectInfo.passwordLength + 1);
-                goto fail;
+                if (pMqttClientSess->connectInfo.pPassword == NULL) {
+                    MQTT_CLIENT_PRINTF("MQTT malloc password (%d) fail\n", pMqttClientSess->connectInfo.passwordLength + 1);
+                    goto fail;
+                }
+
+                memcpy((char *)pMqttClientSess->connectInfo.pPassword, Parameter_List[index].String_Value,
+                       pMqttClientSess->connectInfo.passwordLength + 1);
             }
-
-            memcpy((char *)pMqttClientSess->connectInfo.pPassword, Parameter_List[index].String_Value,
-                   pMqttClientSess->connectInfo.passwordLength + 1);
 
             index++;
         }
