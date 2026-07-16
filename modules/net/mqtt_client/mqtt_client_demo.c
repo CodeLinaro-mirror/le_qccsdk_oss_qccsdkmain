@@ -2138,8 +2138,12 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
         pMqttClientSess->mqttState = MQTT_CONNECTED;
 
         if (pMqttTaskCtrl->mqtt_keepalive_created == false) {
+            uint32_t keepalive_ms = (pMqttClientSess->connectInfo.keepAliveSeconds > 0)
+                ? ((pMqttClientSess->connectInfo.keepAliveSeconds + 1) * 1000)
+                : MQTT_KEEP_ALIVE_INTERVAL_MSECONDS;
+            pMqttTaskCtrl->mqttkeepalive_time_bmps = keepalive_ms;
             pMqttTaskCtrl->mqtt_keepalive_timer = (nt_osal_timer_handle_t)nt_create_timer(
-                mqtt_keepalive_timer_cb, NULL, pMqttTaskCtrl->mqttkeepalive_time_bmps, TRUE);
+                mqtt_keepalive_timer_cb, NULL, keepalive_ms, TRUE);
 
             if (nt_start_timer(pMqttTaskCtrl->mqtt_keepalive_timer) != NT_TIMER_SUCCESS) {
                 MQTT_CLIENT_PRINTF("MQTT keepalive timer start failed\n");
