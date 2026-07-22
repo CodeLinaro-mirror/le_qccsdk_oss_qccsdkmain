@@ -114,7 +114,7 @@ static QAT_Command_t QAT_TCPIP_Command_List[] = {
 #define INVALID_LINKID               -1
 #define QAT_IP_PRINTF(...)           printf(__VA_ARGS__)
 #define MY_MAX_PORT                  65535
-#define MAX_WAIT_TIME                2000
+#define MAX_WAIT_TIME                10000
 
 /** ping identifier - must fit on a u16_t */
 #ifndef QAT_PING_ID
