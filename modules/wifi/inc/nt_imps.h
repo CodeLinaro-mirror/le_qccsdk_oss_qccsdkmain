@@ -69,6 +69,7 @@ NT_BOOL nt_imps_is_enabled_in_hosted_mode(void);
  *
  */
 void nt_configure_host_mode_in_imps(void);
+void nt_imps_force_wlan_wakeup(void);
 void nt_set_reset_delayed_imps(NT_BOOL is_set);
 
 NT_BOOL nt_is_imps_registered(void);

@@ -376,13 +376,13 @@ void __attribute__((section(".after_ram_vectors"))) aon_a2f_assert_isr_handler(v
 #endif /* CONFIG_QAT_POWERSAVE_DEMO */
 #ifdef SUPPORT_SWTMR_TO_WKUP_FROM_BMPS
 #if 1
+    /* IMPS does not set pm_type, so it remains PM_MODE_BMPS from init value. 
+     * Both BMPS and IMPS will trigger wlan wakeup here */
     if ((nt_socpm_status() > 0) && (PM_STRUCT *)gdevp->pPmStruct != NULL &&
         (PM_GET_RRI_STATE((PM_STRUCT *)gdevp->pPmStruct) == PM_RRI_MAC_DOWN_MCUSLP) &&
         ((PM_STRUCT *)(gdevp->pPmStruct))->pm_type == PM_MODE_BMPS) {
-        NT_LOG_PRINT(SOCPM, CRIT, "send pm");
+        NT_LOG_PRINT(SOCPM, INFO, "send pm");
         PM_SET_SLEEP_EXIT_REASON((PM_STRUCT *)gdevp->pPmStruct, EXIT_REASON_EXT_INT);
-        // _socpm_slptmr_off();
-        // nt_send_pm_mode_cmd(0);
         nt_bmps_wakeup_callback(EXIT_REASON_EXT_INT);
     }
 #endif
