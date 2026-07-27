@@ -325,8 +325,10 @@ i2c_status i2c_close(i2c_instance instance)
 
     i2c_hal_disable(dev->hal);
 
-    if (dev->sync_sem)
+    if (dev->sync_sem) {
         nt_osal_semaphore_delete(dev->sync_sem);
+        dev->sync_sem = NULL;
+    }
 
     status = i2c_platform(enable);
 
@@ -524,6 +526,11 @@ i2c_status i2c_transfer(i2c_instance instance, i2c_msg *msgs, uint8_t num_msgs, 
         // Enable TX/RX interruptions
         i2c_hal_intr_mask(dev->hal, I2C_INTR_TX | I2C_INTR_RX);
 
+        if (!dev->sync_sem) {
+            status = I2C_ERROR_DEVICE_STATE;
+            break;
+        }
+
         // Take the sync sem which would be released after msg handle done in the ISR
         if (nt_pass != nt_osal_semaphore_take(dev->sync_sem, I2C_WAIT_DELAY)) {
             status = I2C_EEROR_TRANSFER_TIMEOUT;
@@ -690,7 +697,9 @@ static void i2c_transfer_done(i2c_dev *dev)
     i2c_hal_intr_mask(dev->hal, 0);
     i2c_hal_intr_clear_all(dev->hal, &value);
 
-    nt_osal_semaphore_give_from_isr(dev->sync_sem, &xHigherPriorityTaskWoken);
+    if(dev->sync_sem) {
+        nt_osal_semaphore_give_from_isr(dev->sync_sem, &xHigherPriorityTaskWoken);
+    }
 }
 
 void __attribute__((section(".after_ram_vectors"))) I2C_irq_handler(void)
