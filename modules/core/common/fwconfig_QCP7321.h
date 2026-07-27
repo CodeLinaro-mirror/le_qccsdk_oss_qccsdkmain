@@ -311,6 +311,12 @@ When enter BMPs, default WQ switched from WQ12 to WQ11. When exit BMPs,
 
 #endif /* SUPPORT_IMPS_IMPROVEMENTS */
 
+/* Cache the PBKDF2 PMK derived by PBKDF2-HMAC-SHA1 (keyed by SSID + passphrase) so that
+ * reconnecting to the same network after an IMPS mcu_sleep wakeup (SRAM/.bss is
+ * preserved across mcu_sleep) can skip the ~2.7s PBKDF2 computation. Cache is
+ * cleared on cold reset. */
+#define WMI_PBKDF2_PSK_CACHE
+
 //#define WAR_NO_TXC_FOR_TWT_ACTION
 
 /* Feature flag to co-ordinate with host for wake up and sleep using A2F and F2A signals
