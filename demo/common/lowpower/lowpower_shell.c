@@ -21,6 +21,7 @@
 #include "ethernet.h"
 #include "ip4.h"
 #include "udp.h"
+#include "etharp.h"
 
 #define TEST_SLP_TYPE_MCU     1
 #define TEST_SLP_TYPE_LIGHT   2
@@ -378,17 +379,47 @@ bool wakeup_cb_bcmc_filter_dtim(uint16_t type, bool bm_cast, void *wifi_frame, u
 {
     // uint32_t ip_frame_len;
     uint8_t *ip_frame;
+    uint8_t *arp_frame;
     if (bm_cast) {
         if (len < (WIFI_MAC_HEADER_LEN + LLC_SNAP_HEADER_LEN)) {
             return FALSE;
         }
 
         const uint8_t *llc_snap_header = wifi_frame + WIFI_MAC_HEADER_LEN;
-
-        if (llc_snap_header[6] != 0x08 || llc_snap_header[7] != 0x00) {
-            return TRUE;
+        //if it is arp packet and target ip is local ip, it should be in the whitelist
+        if (llc_snap_header[6] == 0x08 && llc_snap_header[7] == 0x06) {
+            arp_frame = wifi_frame + WIFI_MAC_HEADER_LEN + LLC_SNAP_HEADER_LEN;
+            struct etharp_hdr *arp = (struct etharp_hdr*)(arp_frame);
+            uint8_t netid = 0;
+            const ip4_addr_t *local_ip;
+            struct netif* netif = NULL;
+            #if 0
+            printf("It is a ARP packet!\r\n");
+            for(uint8_t i=0;i<4;i++) {
+            printf("%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\r\n",
+            arp_frame[i*8+0], arp_frame[i*8+1], arp_frame[i*8+2], arp_frame[i*8+3], arp_frame[i*8+4], arp_frame[i*8+5], arp_frame[i*8+6], arp_frame[i*8+7]);
+            }
+            #endif
+            NETIF_FOREACH(netif) {
+                if (STA_DEVICE == ((device_t *)netif->state)->role) {
+                netid = netif->num+1;   /* found! */
+                }
+            }
+            netif = netif_get_by_index(netid);
+            if(netif) {
+                local_ip = netif_ip4_addr(netif);
+                //printf("ARP handle Test 1\r\n");
+                if(memcmp(&arp->dipaddr, &local_ip->addr, 4)==0)
+                {
+                //printf("ARP handle Test 2\r\n");
+                    return TRUE;
+                }
+            }
         }
-
+        //if it is not ip packet, drop it
+        if (llc_snap_header[6] != 0x08 || llc_snap_header[7] != 0x00) {
+            return FALSE;
+        }
         // ip_frame_len = len - (WIFI_MAC_HEADER_LEN + LLC_SNAP_HEADER_LEN);
         ip_frame = wifi_frame + WIFI_MAC_HEADER_LEN + LLC_SNAP_HEADER_LEN;
 
