@@ -54,6 +54,7 @@ static nt_osal_timer_handle_t bmps_cb_exit_timer;
 qurt_signal_t bmps_lowpower_cb_exit_task_signal;
 uint8_t bmps_cb_uc_bc_wakeup = 0;
 bool bmps_lowpower_infinite_task_created = false;
+extern uint8_t g_slp_tick_log_enabled;
 
 extern lpr_wmi_t g_lowpower_wmi;
 
@@ -881,6 +882,17 @@ static qapi_Status_t bmps_stats(uint32_t Parameter_Count, QAPI_Console_Parameter
 
     return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
 }
+
+static qapi_Status_t slp_tick_log(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
+{
+    if (Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+        return QAPI_ERROR_CONSOLE_COMMAND_STATUS_USAGE;
+    }
+    g_slp_tick_log_enabled = Parameter_List[0].Integer_Value ? 1 : 0;
+    printf("sleep tick log %s\n", g_slp_tick_log_enabled ? "enabled" : "disabled");
+    return QAPI_OK;
+}
+
 const QAPI_Console_Command_t lowpower_shell_cmds[] = {
     // cmd_function    cmd_string               usage_string             description
     {pm_enable, "pm_enable", "<1/0>", "Enable/disable system power management\n"},
@@ -915,7 +927,7 @@ const QAPI_Console_Command_t lowpower_shell_cmds[] = {
     {bmps_power_optimization_enable, "bmps_power_optimization_enable", "<1/0>", "bmps_power_optimization_enable\n"},
     {bmps_compress_qos_null_enable, "bmps_compress_qos_null_enable", "<1/0>", "bmps_compress_qos_null_enable\n"},
     {bmps_stats, "bmps_stats", "bmps_stats get: to get the stats\nbmps_stats set <period>: to set the period to record the stats", "bmps_stats\n"},
-
+    {slp_tick_log, "slp_tick_log", "<1:enable | 0:disable>", "Enable/disable tick count logging on sleep/wakeup\n"},
 };
 
 const QAPI_Console_Command_Group_t lowpower_shell_cmd_group = {

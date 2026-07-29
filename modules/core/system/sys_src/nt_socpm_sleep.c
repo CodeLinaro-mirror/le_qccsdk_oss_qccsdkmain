@@ -81,6 +81,7 @@ extern GPIO_Config_t gpio_config;
 #endif
 
 extern int rri_force_wakeup;
+uint8_t g_slp_tick_log_enabled = 0;
 
 // -------------------------------------------------------------------
 // local fns control
@@ -1330,6 +1331,10 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         }
 
         vPreSleepProcessing(_socpm_slp_mode);
+
+        if (_socpm_slp_mode == mcu_sleep && g_slp_tick_log_enabled) {
+            NT_LOG_PRINT(SOCPM, ERR, "sleep_tick=%d\n",xTaskGetTickCount());
+        }
 
         /* Save current context and call WFI */
         _socpm_ctxt_save();

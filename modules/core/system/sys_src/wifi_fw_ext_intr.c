@@ -56,6 +56,7 @@
  * ----------------------------------------------------------------------*/
 extern SOCPM_STRUCT g_socpm_struct;
 static SemaphoreHandle_t _socpm_mutex = NULL;
+extern uint8_t g_slp_tick_log_enabled;
 
 #define BMPS_EXIT_CMD_MIN_INTERVAL_MS  20U
 volatile TickType_t s_last_bmps_exit_tick = 0;
@@ -365,6 +366,10 @@ void __attribute__((section(".after_ram_vectors"))) aon_a2f_assert_isr_handler(v
     // Clear the interrupt
     HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_CLR, EXT_WAKEUP_INTR_CLR, 1);
     HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_CLR, EXT_WAKEUP_INTR_CLR, 0);
+
+    if (g_slp_tick_log_enabled) { 
+        NT_LOG_PRINT(SOCPM, ERR, "isr_tick=%d",xTaskGetTickCountFromISR());
+    }
 
     g_socpm_struct.a2f_asserted = TRUE;
     //g_socpm_struct.host_supports_a2f = TRUE;
