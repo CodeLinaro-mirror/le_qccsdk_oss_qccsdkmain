@@ -51,10 +51,11 @@ static int wlan_8021x_mode_switch_prepare_cb(unsigned int dest_mode_id,
 
     for (i = 0; i < intfs_cnt; i++) {
       wl8021x_intf = &wl8021x_global->wl8021x_intfs[i];
-      if (wl8021x_intf->eapol_sock) {
+      wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
+      if (wl8021x_intf->eapol_sock >= 0) {
         info_printf("%s close socket\n", __FUNCTION__);
         closesocket(wl8021x_intf->eapol_sock);
-        wl8021x_intf->eapol_sock = 0;
+        wl8021x_intf->eapol_sock = -1;
       }
     }
   }
@@ -113,6 +114,7 @@ static void wlan_8021x_associated_event(void *eloop_ctx, void *timeout_ctx) {
 
   info_printf("%s +++\n", __FUNCTION__);
   if (wlan_lib_auth_is_8021x(suppl_intf->auth_mode) == true) {
+    wlan_8021x_eap_enter_ps_hold(wl8021x_intf);
     wlan_8021x_initiate_eapol(wl8021x_intf);
     eapol_sm_notify_portEnabled(wl8021x_intf->eapol, false);
     eapol_sm_notify_portValid(wl8021x_intf->eapol, false);
@@ -141,6 +143,7 @@ static void wlan_8021x_disconnected_event(void *eloop_ctx, void *timeout_ctx) {
     eapol_sm_notify_portValid(wl8021x_intf->eapol, false);
     eapol_sm_notify_config(wl8021x_intf->eapol, NULL, NULL);
   }
+  wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
   info_printf("%s ---\n", __FUNCTION__);
 }
 
@@ -340,11 +343,12 @@ static void wlan_8021x_intf_exit(wlan_8021x_intf_t *wl8021x_intf) {
     eapol_sm_notify_config(wl8021x_intf->eapol, NULL, NULL);
     WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_INIT;
   }
+  wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
   wlan_8021x_deinit_eapol(wl8021x_intf);
-  if (wl8021x_intf->eapol_sock) {
+  if (wl8021x_intf->eapol_sock >= 0) {
     eloop_unregister_read_sock(wl8021x_intf->eapol_sock);
     closesocket(wl8021x_intf->eapol_sock);
-    wl8021x_intf->eapol_sock = 0;
+    wl8021x_intf->eapol_sock = -1;
   }
   os_free(p_eap_peer_config->eap_methods);
   p_eap_peer_config->eap_methods = NULL;
@@ -586,6 +590,7 @@ int wlan_8021x_init(void) {
   /* preset before initialization */
   for (i = 0; i < intfs_cnt; i++) {
     wl8021x_intf = &wl8021x_global->wl8021x_intfs[i];
+    wl8021x_intf->eapol_sock = -1;
     wl8021x_intf->wl8021x_global = wl8021x_global;
     wl8021x_intf->wl8021x_intf_id = i;
     WL8021X_INTF_2_SUPPL_INTF(wl8021x_intf) = g_suppl_global->suppl_intfs[i];

@@ -7,6 +7,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <stdarg.h>
 #include "nt_socpm_sleep.h"
 #include "uart.h"
+#include "ferm_uart.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
@@ -97,6 +98,12 @@ static int _uart_rx_buf_idx;
 ;
 static uint32_t _uart_baud_rate = UART_BAUD_RATE_230400;
 static char _uart_rx_buf[512];
+
+uart_baudrate uart_baudrate_table[6] = {
+    {115200, 0x20}, {57600, 0x40},
+    {38400, 0x60},  {19200, 0xc0},  
+    {9600, 0x180},   {4800, 0x300},
+};
 
 #if (defined CONFIG_NT_RCLI)
 volatile char cUartInputString[cmdMAX_INPUT_SIZE];
@@ -200,7 +207,7 @@ void __attribute__((section(".__sect_ps_txt"))) uart_init(void)
 #ifdef FERMION_SILICON
 
     uint32_t uart_config = 0;
-
+    uint32_t divisor = 0x20;
 #if CONFIG_BOARD_QCC730_UART_ENABLE
     uart_gpio_enable(CONFIG_BOARD_QCC730_UART_ENABLE);
 #else
@@ -222,8 +229,9 @@ void __attribute__((section(".__sect_ps_txt"))) uart_init(void)
     HW_REG_WR(QWLAN_UART_UART_LCR_REG, QWLAN_UART_UART_LCR_DLAB_MASK | QWLAN_UART_UART_LCR_DLS_MASK);
     // Configure the DLL will configure the baud rate
     // Value will be determined using formula Baud rate = (system_clock)/(16 * divisor)
-    HW_REG_WR(SYS_UART_DLL, UART_DLL_BAUD_PBL);
-    HW_REG_WR(QWLAN_UART_UART_DLH_REG, QWLAN_UART_UART_DLH_DEFAULT);
+    divisor = uart_baudrate_table[CONFIG_UART_BAUDRATE_TABLE_INDEX].divisor;
+    HW_REG_WR(SYS_UART_DLL, divisor & 0xFF);
+    HW_REG_WR(QWLAN_UART_UART_DLH_REG, (divisor >> 8) & 0x7F);
     // Disable the DLAB in LCR register
     HW_REG_WR(QWLAN_UART_UART_LCR_REG, QWLAN_UART_UART_LCR_DLS_MASK);
     nt_nop_delay(10);

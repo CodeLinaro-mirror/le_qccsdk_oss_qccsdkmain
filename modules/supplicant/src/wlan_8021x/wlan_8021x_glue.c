@@ -13,12 +13,72 @@
 #include "supplicant_cxt.h"
 
 #include "crypto/sha1.h"
+#include "crypto/sha256.h"
+#include "wmi.h"
 #include "printfext.h"
 #include "qapi_status.h"
 #include "qapi_wlan_base.h"
 #include "sockets.h"
+#include "wlan_8021x.h"
 #include "wlan_8021x_cfg.h"
 #include "wlan_8021x_cxt.h"
+#include "qapi/qapi_lowpower.h"
+#include "lowpower_internal.h"
+#include "qcc730_os.h"
+
+extern lpr_wmi_t g_lowpower_wmi;
+
+/* Watchdog: if 4-way handshake doesn't complete within this window after
+ * EAP-Success, resume BMPS anyway so the system isn't permanently stuck
+ * out of power save (e.g. AP never sends M1, MIC failure, etc.). */
+#define WLAN_8021X_4WAY_HOLD_WATCHDOG_MS 3000
+
+static void wlan_8021x_eap_leave_ps_hold_watchdog(void *eloop_ctx,
+                                                  void *timeout_ctx) {
+  wlan_8021x_intf_t *wl8021x_intf = (wlan_8021x_intf_t *)timeout_ctx;
+  if (wl8021x_intf->bmps_held_for_eap) {
+    warn_printf("8021X: 4-way watchdog fired, resuming BMPS\n");
+    if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_AUTHENTICATED) {
+      WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_PMK_CACHED;
+      eapol_sm_notify_portEnabled(wl8021x_intf->eapol, false);
+    }
+    wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
+  }
+}
+
+void wlan_8021x_eap_enter_ps_hold(wlan_8021x_intf_t *wl8021x_intf) {
+  if (wl8021x_intf->bmps_held_for_eap) return;
+  if (g_lowpower_wmi.bmps_cfg.bmps_enable.enable) {
+    qapi_bmps_cfg(0, 0);
+    wl8021x_intf->bmps_held_for_eap = true;
+    info_printf("8021X: BMPS suspended for EAP\n");
+  }
+}
+
+void wlan_8021x_eap_leave_ps_hold(wlan_8021x_intf_t *wl8021x_intf) {
+  /* Always cancel the watchdog, even if not held - cheap, idempotent. */
+  eloop_cancel_timeout(wlan_8021x_eap_leave_ps_hold_watchdog, NULL,
+                       wl8021x_intf);
+  if (!wl8021x_intf->bmps_held_for_eap) return;
+  qapi_bmps_cfg(1, 0);
+  wl8021x_intf->bmps_held_for_eap = false;
+  info_printf("8021X: BMPS resumed\n");
+}
+
+/* Arm the watchdog. Caller has just decided to keep BMPS held until the
+ * 4-way handshake completes; if it doesn't, this fires and force-resumes.
+ * Skip arming if BMPS isn't actually held (e.g. user hadn't enabled BMPS
+ * when association happened) - nothing to release later, and PMKSA-cache
+ * fast path also lands here without M3 ever coming back to the host. */
+static void wlan_8021x_eap_arm_leave_watchdog(wlan_8021x_intf_t *wl8021x_intf) {
+  if (!wl8021x_intf->bmps_held_for_eap) return;
+  eloop_cancel_timeout(wlan_8021x_eap_leave_ps_hold_watchdog, NULL,
+                       wl8021x_intf);
+  eloop_register_timeout(WLAN_8021X_4WAY_HOLD_WATCHDOG_MS / 1000,
+                         (WLAN_8021X_4WAY_HOLD_WATCHDOG_MS % 1000) * 1000,
+                         wlan_8021x_eap_leave_ps_hold_watchdog, NULL,
+                         wl8021x_intf);
+}
 
 /**
  * wlan_generate_pmkid - Calculate PMK identifier
@@ -26,24 +86,38 @@
  * @pmk_len: Length of pmk in bytes
  * @auth_addr: Authenticator address
  * @suppl_addr: Supplicant address
- * @pmkid: Buffer for PMKID
+ * @pmkid: Buffer for PMKID (16 bytes)
+ * @auth_mode: AUTH_MODE bitmask, selects the hash:
+ *   WPA2 802.1X (SHA1 AKM)        → HMAC-SHA1-128
+ *   WPA2-SHA256 / WPA3-SHA256 /
+ *   WPA3-Enterprise-only          → HMAC-SHA256-128
  *
- * IEEE Std 802.11i-2004 - 8.5.1.2 Pairwise key hierarchy
- * PMKID = HMAC-SHA1-128(PMK, "PMK Name" || AA || SPA)
+ * IEEE 802.11-2020 12.7.1.3: PMKID = Truncate-128(HMAC-Hash(PMK,
+ *   "PMK Name" || AA || SPA))
+ *
+ * WPA3-Enterprise-192bit (CNSA, akm 00-0F-AC:12) wants HMAC-SHA384-128
+ * but sha384 isn't linked into this build; that mode is left on the
+ * SHA1 fallback branch and is currently unsupported for fast reauth.
  */
 int wlan_generate_pmkid(const u8 *pmk, size_t pmk_len, const u8 *auth_addr,
-                        const u8 *suppl_addr, u8 *pmkid) {
+                        const u8 *suppl_addr, u8 *pmkid,
+                        unsigned short auth_mode) {
   char *title = "PMK Name";
   const u8 *addr[3];
   const size_t len[3] = {8, ETH_ALEN, ETH_ALEN};
-  unsigned char hash[SHA1_MAC_LEN];
+  unsigned char hash[SHA256_MAC_LEN];
   int iRet;
 
   addr[0] = (u8 *)title;
   addr[1] = auth_addr;
   addr[2] = suppl_addr;
 
-  iRet = hmac_sha1_vector(pmk, pmk_len, 3, addr, len, hash);
+  if (auth_mode & (WMI_WPA2_SHA256_AUTH | WMI_WPA3_SHA256_AUTH |
+                   WMI_WPA3_ENTERPRISE_ONLY_AUTH)) {
+    iRet = hmac_sha256_vector(pmk, pmk_len, 3, addr, len, hash);
+  } else {
+    iRet = hmac_sha1_vector(pmk, pmk_len, 3, addr, len, hash);
+  }
   if (iRet != 0)
     return iRet;
 
@@ -134,8 +208,8 @@ static int wlan_8021x_ether_send(wlan_8021x_intf_t *wl8021x_intf,
                                  size_t len) {
   int ret;
   int sock = socket(AF_PACKET, SOCK_RAW, ETHPROTO_EAP);
-  if (sock == QAPI_ERROR) {
-    warn_printf("ERROR: Failed to create socket\n");
+  if (sock < 0) {
+    warn_printf("ERROR: Failed to create EAPOL socket: %d\n", sock);
     return QAPI_ERROR;
   }
   ret = sendto(sock, (char *)buf, len, 0, NULL, 0);
@@ -210,22 +284,27 @@ static void wlan_8021x_eapol_cb(struct eapol_sm *eapol,
   info_printf("%s\n", __FUNCTION__);
   if (result != EAPOL_SUPP_RESULT_SUCCESS) {
     WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_AUTHENTICAT_FAILED;
+    wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
     return;
   }
 
-  if (!suppl_intf->pmk_len) {
-    info_printf("Configure PMK for driver-based RSN 4-way handshake\n");
-    wlan_8021x_get_pmk(suppl_intf->pmk, &suppl_intf->pmk_len, wl8021x_intf);
-    if (suppl_intf->pmk_len) {
-      info_printf("%s set pmk\n", __FUNCTION__);
-      for (i = 0; i < suppl_intf->pmk_len; i++) {
-                printf("%02x", ((uint8_t *)suppl_intf->pmk)[i]);
-      }
-      printf("\n");
-      wlan_set_pmk(suppl_intf->dev_id, suppl_intf->pmk, suppl_intf->pmk_len);
-    }
+  /* Always fetch and push the PMK: on reauth the EAP method derives a new
+   * key, so the cached pmk_len != 0 guard must not be used. */
+  info_printf("Configure PMK for driver-based RSN 4-way handshake\n");
+  suppl_intf->pmk_len = 0;
+  wlan_8021x_get_pmk(suppl_intf->pmk, &suppl_intf->pmk_len, wl8021x_intf);
+  if (suppl_intf->pmk_len) {
+    wlan_set_pmk(suppl_intf->dev_id, suppl_intf->pmk, suppl_intf->pmk_len);
   }
   WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_AUTHENTICATED;
+  /* Don't leave PS hold yet: the driver-based RSN 4-way handshake
+   * (M1/M2/M3/M4 + PTK/GTK install + PMKID set) hasn't started.  If we
+   * resume BMPS here the device may sleep mid-handshake; on wakeup the
+   * RX path observed to stay deaf until the next disconnect/reauth.
+   * Resume only after rx_eapol_key_notify finishes installing PMKID
+   * (state -> PMK_CACHED).  Watchdog covers the case where M1 never
+   * arrives. */
+  wlan_8021x_eap_arm_leave_watchdog(wl8021x_intf);
 }
 
 static void wlan_8021x_cert_cb(void *ctx, int depth, const char *subject,
@@ -317,6 +396,7 @@ void wlan_8021x_rx_eapol_data_notify(wlan_8021x_intf_t *wl8021x_intf) {
 #ifdef CONFIG_ENABLE_REAUTH
   if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_PMK_CACHED) {
     // it is reauth
+    wlan_8021x_eap_enter_ps_hold(wl8021x_intf);
     WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_AUTHENTICATING;
   }
 #endif
@@ -325,6 +405,7 @@ void wlan_8021x_rx_eapol_data_notify(wlan_8021x_intf_t *wl8021x_intf) {
 void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
   suppl_intf_t *suppl_intf =
       (suppl_intf_t *)WL8021X_INTF_2_SUPPL_INTF(wl8021x_intf);
+  bool watchdog_armed = false;
   log_printf("%s +++\n", __FUNCTION__);
 
   if (wlan_lib_auth_is_8021x(suppl_intf->auth_mode) != true) {
@@ -332,7 +413,10 @@ void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
   }
 
   if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_AUTHENTICATED) {
-    /* rx eapol key after auth is completed, then set pmkid */
+    /* rx eapol key (M1) after EAP auth completed — set PMKID so FW can
+     * complete the 4-way handshake (M2/M3/M4) autonomously.
+     * Transition to PMK_CACHED immediately so reauth packets arriving
+     * later (wlan_8021x_rx_eapol) can re-enable the SM. */
     int res = 0;
 
     if (!suppl_intf->pmk_len) {
@@ -343,7 +427,7 @@ void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
 
     res = wlan_generate_pmkid(suppl_intf->pmk, suppl_intf->pmk_len,
                               suppl_intf->bssid, suppl_intf->if_mac,
-                              suppl_intf->pmkid);
+                              suppl_intf->pmkid, suppl_intf->auth_mode);
     if (res) {
       warn_printf("%s failed to generate pmkid\n", __FUNCTION__);
       goto out;
@@ -356,7 +440,17 @@ void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
       goto out;
     }
 
+    /* FW handles 4-way autonomously from here — quiesce SM immediately
+     * so idleWhile timer won't cause reason=8 wakeups after BMPS resumes. */
+    eapol_sm_notify_portEnabled(wl8021x_intf->eapol, false);
     WL8021X_INTF_STATE(wl8021x_intf) = WL8021X_PMK_CACHED;
+
+    /* Hold BMPS and arm watchdog — each M1 retransmit resets the timer.
+     * enter_ps_hold is idempotent; needed here because a prior watchdog
+     * expiry may have already resumed BMPS. */
+    wlan_8021x_eap_enter_ps_hold(wl8021x_intf);
+    wlan_8021x_eap_arm_leave_watchdog(wl8021x_intf);
+    watchdog_armed = true;
   }
 
 #ifdef CONFIG_ENABLE_PMK_CACHE
@@ -369,6 +463,16 @@ void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf) {
   }
 #endif
 
+  if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_PMK_CACHED) {
+    /* Quiesce EAPOL SM to stop idleWhile timer from waking chip out of
+     * BMPS every second. */
+    eapol_sm_notify_portEnabled(wl8021x_intf->eapol, false);
+    if (!watchdog_armed) {
+      /* PMK cache path: 4-way already done by FW, safe to resume now. */
+      wlan_8021x_eap_leave_ps_hold(wl8021x_intf);
+    }
+  }
+
 out:
   log_printf("%s ---\n", __FUNCTION__);
 }
@@ -380,6 +484,14 @@ void wlan_8021x_rx_eapol(wlan_8021x_intf_t *wl8021x_intf,
 
   log_printf("%s\n", __FUNCTION__);
   wl8021x_intf->eapol_received++;
+
+  if (WL8021X_INTF_STATE(wl8021x_intf) == WL8021X_PMK_CACHED) {
+    /* Re-enable EAPOL SM before feeding the packet — it was quiesced after
+     * the previous handshake completed. */
+    eapol_sm_notify_portEnabled(wl8021x_intf->eapol, true);
+    eapol_sm_notify_portValid(wl8021x_intf->eapol, true);
+  }
+
   ret = eapol_sm_rx_eapol(wl8021x_intf->eapol, src_addr, buf, len,
                           FRAME_ENCRYPTION_UNKNOWN);
 

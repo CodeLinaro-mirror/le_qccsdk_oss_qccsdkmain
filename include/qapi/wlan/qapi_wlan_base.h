@@ -19,6 +19,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "qapi_types.h"
 #include "qapi_status.h"
 #include "qapi_wlan_misc.h"
+#include "chipset_log_wmi.h"
 
 /**
 @ingroup qapi_wlan
@@ -46,12 +47,14 @@ typedef struct // qapi_WLAN_Start_Scan_Params_s
      * used.  */
     uint8_t scan_Type;
     /**< This parameter currently supports only 0 as an input value. */
+    uint8_t ssid[__QAPI_WLAN_MAX_SSID_LEN];
+    /**< SSID to scan for. */
+    uint8_t ssid_Length;
+    /**< Length of the SSID. */
     uint8_t num_Channels;
     /**< Number of channels to scan. */
     uint16_t channel_List[1];
-    /**< List of channels to scan. */
-    uint8_t ssid[__QAPI_WLAN_MAX_SSID_LEN];
-    uint8_t ssid_Length;
+    /**< List of channels to scan. Must be the last field; allocate extra memory for more than one channel. */
 } qapi_WLAN_Start_Scan_Params_t;
 
 /**
@@ -422,11 +425,19 @@ typedef enum {
 @ingroup qapi_wlan
 Data structure to set 11n HT configurations.
 */
+/** @ingroup qapi_wlan
+ * Band bitmask for qapi_WLAN_11n_HT_Config_t.band. Values must match the
+ * firmware WMI_HT_BAND_* definitions. 0 (unset) means all bands. */
+#define QAPI_WLAN_HT_BAND_2G   (1 << 0) /**< Apply HT config to 2.4GHz only. */
+#define QAPI_WLAN_HT_BAND_5G   (1 << 1) /**< Apply HT config to 5GHz only. */
+#define QAPI_WLAN_HT_BAND_ALL  (QAPI_WLAN_HT_BAND_2G | QAPI_WLAN_HT_BAND_5G) /**< Apply to all bands. */
+
 typedef struct // qapi_WLAN_HT_Config_s
 {
     qapi_WLAN_11n_HT_Config_e htconfig;   /**< Enumeration that provides 11n HT configurations. */
     uint8_t sgi; /**< 20M short GI enable flag. */
     uint8_t mpdu_density;   /**< MPDU density (aka Minimum MPDU Start Spacing). */
+    uint8_t band; /**< QAPI_WLAN_HT_BAND_* bitmask the config applies to; 0 means all bands. */
 } qapi_WLAN_11n_HT_Config_t;
 
 /**
@@ -988,6 +999,15 @@ typedef struct {
     uint16_t real_power;                            /** The power that is set to driver.*/
 } qapi_WLAN_Get_Power_Evt_t;
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+typedef struct {
+    uint32_t request_id;
+    uint32_t payload_len;
+    chipset_log_header_t header;
+    chipset_log_stats_t stats;
+} qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t;
+#endif
+
 /**
 @ingroup qapi_wlan
 Set Rate.
@@ -1356,6 +1376,10 @@ None.
 */
 qapi_Status_t qapi_WLAN_Get_Regulatory_Info(qapi_WLAN_Reg_Evt_t *reg);
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+qapi_Status_t qapi_WLAN_Get_Chipset_Logging_Stats(uint8_t device_ID, qapi_WLAN_Get_Chipset_Logging_Stats_Evt_t *stats, uint32_t length);
+#endif
+
 /**
 @ingroup qapi_wlan
 Set WLAN TX rate.
@@ -1429,6 +1453,18 @@ qapi_Status_t qapi_WLAN_Disable_Mgmt_Filter(uint8_t device_ID);
 @return qapi_Status_t    QAPI_OK on success, other error code on failure.
 */
 qapi_Status_t qapi_WLAN_Recv_Mgmt_Frames(uint8_t *buffer, uint32_t buffer_len, uint32_t *frame_len, uint32_t timeout);
+
+/**
+@brief  API to be used for SAP to perform CSA.
+@param[in]  device_id        Device ID.
+@param[in]  switch_mode      Channel switch mode.
+@param[in]  channel          New channel number.
+@param[in]  is_6g            6G channel.
+@param[in]  switch_count     Channel switch count.
+
+@return qapi_Status_t       QAPI_OK on success, other error code on failure.
+*/
+qapi_Status_t qapi_WLAN_Sap_Csa(uint8_t device_ID, uint8_t switch_mode, uint16_t channel, uint8_t is_6g, uint8_t switch_count);
 
 _STRUCT_4BYTE_ALLIGN_CHECK(qapi_WLAN_Evt_Hdr_t)
 _STRUCT_4BYTE_ALLIGN_CHECK(qapi_WLAN_Enable_Evt_t)

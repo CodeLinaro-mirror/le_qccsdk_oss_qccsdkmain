@@ -674,8 +674,8 @@ static QAT_Command_Status_t Extend_Command_MqttInit(uint32_t Op_Type, uint32_t P
         case QAT_OP_EXEC: /* AT+WRTMEM */
         {
             snprintf(buffer, MQTT_STR_BUFFER_LENGTH,
-                     "+MQTTINIT=<session_id>,<transport scheme>,<ca_file>,<cert_file>,<key_file>,<sni>,<alpn "
-                     "protocol_name>\r\n");
+                     "+MQTTINIT=<session_id>,<transport scheme:ssl|sslnoverify|tcp>,<ca_file>,<cert_file>,<key_file>,"
+                     "<sni>,<alpn protocol_name>\r\n");
             rc = QAT_Response_Str(QAT_RC_OK, buffer);
             memset((void *)buffer, 0, MQTT_STR_BUFFER_LENGTH);
             break;

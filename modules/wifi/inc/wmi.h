@@ -30,6 +30,10 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "fwconfig_wlan.h"
 #include "nt_flags.h"
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+#include "chipset_log_wmi.h"
+#endif
+
 #define WMI_MAC_LEN 6 /* length of mac in bytes */
 #define ATH_MAC_LEN 6
 #define WMI_MAX_KEY_LEN 32
@@ -277,6 +281,9 @@ typedef enum {
     WMI_SET_APPIE_CMDID,
     WMI_SET_TX_POWER,
     WMI_GET_TX_POWER_CMDID,
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_PARAM_CMDID,
+#endif
     WMI_IMPS_SLEEP_EXIT_CMDID,
     WMI_IMPS_TIMEDOUT_HNDL_CMDID,
 
@@ -308,6 +315,11 @@ typedef enum {
 
     WMI_SET_PMK_CMDID,
     WMI_SET_PMKID_CMDID,
+    WMI_SET_SAP_CSA,
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_CHIPSET_LOGGING_STATS_CMDID,
+#endif
 
     WMI_CMD_MAX, /* Note: This cmd should be the last in the WMI_COMMAND_ID ENUM */
 } WMI_COMMAND_ID;
@@ -357,6 +369,14 @@ typedef enum {
     WMI_P2P_SDPD_RX_EVENTID,
     WMI_BMPS_GET_STATS_EVENTID,
     WMI_8021X_ASSOC_RESULT_EVTID,
+    WMI_WLAN_SAP_CSA_EVTID,
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_PARAM_EVTID,
+#endif
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WMI_GET_CHIPSET_LOGGING_STATS_EVTID,
+#endif
 
     WMI_MAX_EVTID,
 } WMI_EVENTT_ID;
@@ -468,6 +488,9 @@ typedef enum //@Wmi generic timedout handler events
 #endif // NT_FN_FTM_2016V
 #ifdef NT_FN_FTM
   nt_ftm_min_delta_expiry_cb_evntid,
+#ifdef NT_FN_RTT_DEMO
+  nt_unassoc_ftm_session_timeout_evntid,  /* unassociated FTM per-AP session timeout */
+#endif
 #endif // NT_FN_FTM
 #ifdef CONFIG_CHANNEL_SCHEDULER
   co_op_dwell_timeout_eventid,
@@ -695,6 +718,16 @@ typedef PREPACK struct {
     uint8_t enable;                 /* PMKID_ENABLE_FLG */
     uint8_t pmkid[WMI_PMKID_LEN];
 } POSTPACK WMI_SET_PMKID_CMD;
+
+/*
+ * WMI_SAP_CSA_CMD
+ */
+typedef PREPACK struct {
+    uint8_t mode;
+    uint8_t is_6g;
+    uint16_t channel;
+    uint8_t count;
+} POSTPACK WMI_SAP_CSA_CMD;
 
 /*
  * WMI_START_SCAN_CMD
@@ -1639,6 +1672,13 @@ typedef struct {
 #define WMI_HTCAP_TX_STBC (1 << 5)
 #define WMI_REQUIRE_HT (1 << 7)
 
+/* Band values for WMI_SET_HT_CAP_CMD.band — bitmask so HT can be enabled/
+ * disabled on a per-band basis. band == 0 is treated as "all bands" for
+ * backward compatibility with callers that don't set it. */
+#define WMI_HT_BAND_2G   (1 << 0)
+#define WMI_HT_BAND_5G   (1 << 1)
+#define WMI_HT_BAND_ALL  (WMI_HT_BAND_2G | WMI_HT_BAND_5G)
+
 typedef PREPACK struct {
     uint8_t band;   /* specifies which band to apply these values */
     uint8_t enable; /* allows 11n to be disabled on a per band basis */
@@ -2563,6 +2603,32 @@ typedef PREPACK struct {
     uint32_t pdev_param_value;
 } POSTPACK WMI_SET_PDEV_PARAM_CMD;
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+typedef PREPACK struct {
+    uint32_t param_id;
+    uint32_t param_value;
+} POSTPACK WMI_GET_PARAM_CMD;
+
+typedef PREPACK struct {
+    uint32_t param_id;
+    uint8_t param_value[12];
+} POSTPACK WMI_GET_PARAM_EVT;
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+typedef PREPACK struct {
+    uint32_t request_id;
+    uint32_t param_value;
+} POSTPACK WMI_GET_CHIPSET_LOGGING_STATS_CMD;
+
+typedef PREPACK struct {
+    uint32_t request_id;
+    uint32_t payload_len;
+    chipset_log_header_t header;
+    chipset_log_stats_t stats;
+} POSTPACK WMI_GET_CHIPSET_LOGGING_STATS_EVT;
+#endif
+
 typedef PREPACK struct {
     uint8_t scan_id;
 } POSTPACK WMI_SCAN_STOP_CMD;
@@ -2723,6 +2789,9 @@ typedef enum {
     WIFI_PARAM_SET_RSP_RATE = 23,
 	WIFI_PARAM_SET_BA_WINDOW_SIZE = 24,
     WIFI_PARAM_SET_CTS_TO_SELF = 25,
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    WIFI_PARAM_CHIPSET_LOGGING_ENABLE = 26,
+#endif
 
     WLAN_P2P_CONNECT,
     WLAN_P2P_CONNECT_CLIENT,

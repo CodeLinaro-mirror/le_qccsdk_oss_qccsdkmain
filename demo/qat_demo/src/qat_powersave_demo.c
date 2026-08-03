@@ -27,7 +27,9 @@ static QAT_Command_Status_t Extend_Command_PS_Enable(uint32_t Op_Type, uint32_t 
 static QAT_Command_Status_t Extend_Command_PS_STAListenInterval(uint32_t Op_Type, uint32_t Parameter_Count,
                                                     QAT_Parameter_t *Parameter_List);
 static QAT_Command_Status_t Extend_Command_PS_PeriodAwake(uint32_t Op_Type, uint32_t Parameter_Count,
-                                                    QAT_Parameter_t *Parameter_List);                                                         
+                                                    QAT_Parameter_t *Parameter_List);
+static QAT_Command_Status_t Extend_Command_PS_IgnoreBcmc(uint32_t Op_Type, uint32_t Parameter_Count,
+                                                    QAT_Parameter_t *Parameter_List);
 
 extern bool wakeup_cb_bcmc_filter_dtim(uint16_t type, bool bm_cast, void *wifi_frame, uint16_t len);
 extern uint64_t hres_timer_curr_time_us(void);
@@ -55,6 +57,7 @@ static QAT_Command_t QAT_POWERSAVE_Command_List[] = {
     {"+PSENABLE", Extend_Command_PS_Enable, QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM},
     {"+PSSTALI", Extend_Command_PS_STAListenInterval, QAT_OP_EXEC | QAT_OP_QUERY | QAT_OP_EXEC_W_PARAM},
     {"+PSPERAWAKE", Extend_Command_PS_PeriodAwake, QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM},
+    {"+PSIGNOREBCMC", Extend_Command_PS_IgnoreBcmc, QAT_OP_EXEC | QAT_OP_EXEC_W_PARAM},
 };
 
 /*-------------------------------------------------------------------------
@@ -170,26 +173,25 @@ static QAT_Command_Status_t Extend_Command_PS_Enable(uint32_t Op_Type, uint32_t 
                 rc = QAT_Response_Str(QAT_RC_QUIET_NO_CR, buffer);
             }
 
-            /* WMI_BMPS_IGNORE_BCMC_CMDID */
             qapi_bmps_rx_filter_enable(true);
             qapi_bmps_bcmc_rx_filter_cb_register(wakeup_cb_bcmc_filter_dtim, NULL);
-            WMI_BMPS_IGNORE_BCMC ignore_bcmc_data;
-            memset(&ignore_bcmc_data, 0, sizeof(ignore_bcmc_data));
-            ignore_bcmc_data.enable = 1;
-            wmi_cmd_send(WMI_BMPS_IGNORE_BCMC_CMDID, &ignore_bcmc_data, sizeof(ignore_bcmc_data)); 
-
-            fpci_evt_cb_reg((ps_evt_cb_t)&qat_notify_pm_state_cb, PWR_EVT_WMAC_PRE_SLEEP | PWR_EVT_WMAC_POST_AWAKE | PWR_EVT_WMAC_SLEEP_ABORT, PS_CALLBACK_QAT_PRIORITY, NULL);
             
             /* http keep alive */
-            qurt_signal_create(&http_sem);
+            static uint8_t http_sem_created = 0;
+            if (!http_sem_created) {
+                qurt_signal_create(&http_sem);
+                http_sem_created = 1;
+            }
 
             powersave_active = Parameter_List[0].Integer_Value ? 1 : 0;
             if (powersave_active) {
                 pm_set_powersave_policy(gdevp, PS_POLICY_ALLOWED_SLEEP);
                 spi_clear_ext_wakeup_flag();
                 printf("QAT: External wakeup flag cleared\r\n");
+                qapi_bmps_sleep_wakeup_cb((ps_evt_cb_t)&qat_notify_pm_state_cb,1);
             } else {
                 pm_set_powersave_policy(gdevp, PS_POLICY_NOT_ALLOWED_SLEEP);
+                qapi_bmps_sleep_wakeup_cb((ps_evt_cb_t)&qat_notify_pm_state_cb,0);
             }
 
             if (qapi_bmps_cfg(powersave_active, 0) != QAPI_OK) {
@@ -331,12 +333,27 @@ static QAT_Command_Status_t Extend_Command_PS_PeriodAwake(uint32_t Op_Type, uint
 
         case QAT_OP_EXEC_W_PARAM: /* AT+PSPERAWAKE= */
         {
-            if (Parameter_Count == 2 && Parameter_List[1].Integer_Is_Valid) {
-                period_ms = Parameter_List[1].Integer_Value;
+            if ((Parameter_Count != 1 && Parameter_Count != 2) || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+                rc = QAT_Response_Str(QAT_RC_ERROR,
+                                      "+PSPERAWAKE=<1/0> [period in ms to awake], Enable BMPS(DTIM) period awake");
+                return rc;
             }
+
+            if (Parameter_Count == 2) {
+                if ((Parameter_List[1].Integer_Is_Valid) && (Parameter_List[1].Integer_Value > 0)) {
+                    period_ms = Parameter_List[1].Integer_Value;
+                } else {
+                    rc = QAT_Response_Str(QAT_RC_ERROR,
+                                      "+PSPERAWAKE=<1/0> [period in ms to awake], Enable BMPS(DTIM) period awake");
+                    return rc;
+                }
+            }
+
             if (!s_timer_handle) {
                 s_timer_handle =
-                    xTimerCreate("MyTimer", (period_ms / portTICK_PERIOD_MS), 1 /* uxAutoReload */, NULL, timer_cb);
+                    xTimerCreate("MyTimer", pdMS_TO_TICKS(period_ms), 1 /* uxAutoReload */, NULL, timer_cb);
+            } else {
+                xTimerChangePeriod(s_timer_handle, pdMS_TO_TICKS(period_ms), portMAX_DELAY);
             }
 
             if (Parameter_List[0].Integer_Value) {
@@ -345,6 +362,49 @@ static QAT_Command_Status_t Extend_Command_PS_PeriodAwake(uint32_t Op_Type, uint
                 xTimerStop(s_timer_handle, portMAX_DELAY);
             }
             rc = QAT_Response_Str(QAT_RC_OK, NULL);
+            break;
+        }
+        default:;
+    }
+
+    return rc;
+}
+
+static QAT_Command_Status_t Extend_Command_PS_IgnoreBcmc(uint32_t Op_Type, uint32_t Parameter_Count,
+                                                    QAT_Parameter_t *Parameter_List)
+{
+    QAT_Command_Status_t rc = QAT_STATUS_ERROR_E;
+    char buffer[NORMAL_RESPONSE_BUFFER_LENGTH];
+
+    switch (Op_Type) {
+        case QAT_OP_EXEC: /* AT+PSIGNOREBCMC */
+        {
+            snprintf(buffer, NORMAL_RESPONSE_BUFFER_LENGTH,
+                     "+PSIGNOREBCMC=<1/0>, Ignore/Not ignore Bcast/Mcast wakeup during BMPS(DTIM)");
+            rc = QAT_Response_Str(QAT_RC_OK, buffer);
+            break;
+        }
+
+        case QAT_OP_EXEC_W_PARAM: /* AT+PSIGNOREBCMC= */
+        {
+            if (Parameter_Count != 1 || !Parameter_List || !Parameter_List[0].Integer_Is_Valid) {
+                rc = QAT_Response_Str(QAT_RC_ERROR,
+                                      "+PSIGNOREBCMC=<1/0>, Ignore/Not ignore Bcast/Mcast wakeup during BMPS(DTIM)");
+                return rc;
+            }
+
+            WMI_BMPS_IGNORE_BCMC ignore_bcmc_data;
+            memset(&ignore_bcmc_data, 0, sizeof(ignore_bcmc_data));
+            ignore_bcmc_data.enable = Parameter_List[0].Integer_Value ? 1 : 0;
+            qapi_Status_t ret = wmi_cmd_send(WMI_BMPS_IGNORE_BCMC_CMDID, &ignore_bcmc_data, sizeof(ignore_bcmc_data)); 
+
+            if (ret == QAPI_OK) {
+                snprintf(buffer, NORMAL_RESPONSE_BUFFER_LENGTH,
+                         "+PSIGNOREBCMC: %s", ignore_bcmc_data.enable ? "enabled" : "disabled");
+                rc = QAT_Response_Str(QAT_RC_OK, buffer);
+            } else {
+                rc = QAT_Response_Str(QAT_RC_ERROR, "+PSIGNOREBCMC: Ignore/Not ignore Bcast/Mcast wakeup failed");
+            }
             break;
         }
         default:;

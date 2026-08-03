@@ -13,6 +13,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "qapi_wlan_base.h"
 #endif
 
+extern dev_common_t *gpDevCommon;
+extern uint8_t dc_freq_to_chindex(dev_common_t *pDevCmn, uint32_t frequency);
+
 #ifdef CONFIG_6GHZ
 /*11 for 2G and 30 for 5G and 24 for 6G */
 #define SCAN_LIST_NUM_CHANNELS 68
@@ -203,22 +206,42 @@ void wlan_set_passphrase(const uint8_t *passphrase, uint8_t passphrase_len)
 void wlan_set_scan_param(WMI_START_SCAN_CMD *p_cmd, const qapi_WLAN_Start_Scan_Params_t *scan_Params)
 {
     memset(p_cmd, 0, sizeof(WMI_START_SCAN_CMD));
-    if (!scan_Params) {
-        p_cmd->scan_type = any_profile;
-        p_cmd->cnt_prof = 0;
-    } else {
+
+    if (scan_Params && scan_Params->ssid_Length > 0) {
         p_cmd->scan_type = specific_ssid;
         p_cmd->cnt_prof = 1;
         p_cmd->ssid[0].ssid_len = scan_Params->ssid_Length;
-        memscpy(p_cmd->ssid[0].ssid, scan_Params->ssid_Length, scan_Params->ssid, scan_Params->ssid_Length);
+        memscpy(p_cmd->ssid[0].ssid, scan_Params->ssid_Length,scan_Params->ssid, scan_Params->ssid_Length);
+    } else {
+        p_cmd->scan_type = any_profile;
+        p_cmd->cnt_prof = 0;
     }
+
     p_cmd->auth_mode = WMI_NONE_AUTH;
     p_cmd->crypto_type = NONE_CRYPT;
     p_cmd->probe_type = active_probe;
-    p_cmd->num_channels = SCAN_LIST_NUM_CHANNELS;
     int i;
-    for (i = 0; i < p_cmd->num_channels; i++) {
-        p_cmd->channel_list[i] = i;
+    if (scan_Params && scan_Params->num_Channels > 0) {
+        p_cmd->num_channels = scan_Params->num_Channels;
+        for (i = 0; i < scan_Params->num_Channels; i++) {
+            uint16_t ieee_chan = scan_Params->channel_List[i];
+#ifdef SUPPORT_5GHZ
+            /* Convert IEEE channel number to internal channel index. */
+            if (gpDevCommon) {
+                uint8_t chindex = dc_freq_to_chindex(gpDevCommon,
+                                      (uint32_t)IEEE_ieee2freq((int32_t)ieee_chan, FALSE));
+                p_cmd->channel_list[i] = (chindex != 0xFF) ? chindex : (ieee_chan - 1);
+            } else {
+                p_cmd->channel_list[i] = ieee_chan - 1;
+            }
+#else
+            p_cmd->channel_list[i] = ieee_chan - 1;
+#endif
+        }
+    } else {
+        p_cmd->num_channels = SCAN_LIST_NUM_CHANNELS;
+        for (i = 0; i < p_cmd->num_channels; i++)
+            p_cmd->channel_list[i] = i;
     }
     p_cmd->scan_only = true;
 }
@@ -358,7 +381,7 @@ qapi_Status_t wlan_set_phy_mode(uint8_t device_id, uint32_t phy_mode)
     return error;
 }
 
-int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig, uint8_t is_sgi, uint8_t mpdu_density)
+int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig, uint8_t is_sgi, uint8_t mpdu_density, uint8_t band)
 {
     int32_t error = QAPI_OK;
     WMI_SET_HT_CAP_CMD *cmd;
@@ -373,6 +396,8 @@ int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t h
         return QAPI_ERROR;
 
     memset(cmd, 0, sizeof(WMI_SET_HT_CAP_CMD));
+    /* band == 0 falls back to "all bands" in the firmware handler */
+    cmd->band = band;
     do {
         if (QAPI_WLAN_11N_DISABLED_E != htconfig) {
             cmd->enable = 1;
@@ -1261,6 +1286,55 @@ qapi_Status_t wlan_set_cts_to_self(uint8_t device_ID, uint32_t enable)
     error = get_wlan_qapi_error();
     return error;
 }
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+qapi_Status_t wlan_set_chipset_logging_enable(uint8_t device_ID, uint8_t enable)
+{
+    qapi_Status_t error = QAPI_OK;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_SET_PDEV_PARAM_CMD *cmd = &p_cxt->dev_param_cmd;
+
+    memset(cmd, 0, sizeof(WMI_SET_PDEV_PARAM_CMD));
+    cmd->pdev_param_id = WIFI_PARAM_CHIPSET_LOGGING_ENABLE;
+    cmd->pdev_param_value = enable;
+
+    wmi_dev_cmd_send(WMI_SET_PDEV_PARAM_CMDID, device_ID, cmd, sizeof(WMI_SET_PDEV_PARAM_CMD));
+
+    if (p_cxt->wlan_set_param_block_mode) {
+        p_cxt->param_id = WIFI_PARAM_CHIPSET_LOGGING_ENABLE;
+        qurt_signal_wait(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_SET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+    error = get_wlan_qapi_error();
+    if (error == QAPI_OK) {
+        p_cxt->chipset_logging_enabled = (qbool_t)enable;
+    }
+    return error;
+}
+
+qapi_Status_t wlan_get_chipset_logging_enable(uint8_t *enable)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    qapi_Status_t ret;
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    memset(&p_cxt->wmi_get_param_evt, 0, sizeof(WMI_GET_PARAM_EVT));
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+    ret = wmi_get_param(WIFI_PARAM_CHIPSET_LOGGING_ENABLE);
+    if (ret == QAPI_OK) {
+        qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+        if (WIFI_PARAM_CHIPSET_LOGGING_ENABLE == p_cxt->wmi_get_param_evt.param_id) {
+            *enable = p_cxt->wmi_get_param_evt.param_value[0];
+        } else {
+            err_printf("wmi_get_param_evt.param_id==%d not match\n", p_cxt->wmi_get_param_evt.param_id);
+            ret = QAPI_ERROR;
+        }
+        qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+    }
+    return ret;
+}
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
 
 #ifdef CONFIG_ENABLE_P2P_MODE
 /*FUNCTION*-----------------------------------------------------------------

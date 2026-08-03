@@ -7,6 +7,8 @@
 #ifndef _WLAN_8021X_H_
 #define _WLAN_8021X_H_
 
+#include <stdbool.h>
+
 int wlan_8021x_init(void);
 void wlan_8021x_exit(void);
 int wlan_8021x_event_cb(unsigned char device_ID, unsigned int event_ID,

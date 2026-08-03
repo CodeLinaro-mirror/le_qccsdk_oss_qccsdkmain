@@ -56,7 +56,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define UART_INTCFG__ERDA_OFFSET 1
 #define UART_FIFO_INT_BIT        4
 
-#define UART_TRANS_TIME_OUT      1000
+#define UART_TRANS_TIME_OUT      6000
 #define UART_UART_LSR_TEMPT_BUSY 0x00
 // ALL MAC FOR BAUD_RATE_CHANGE
 

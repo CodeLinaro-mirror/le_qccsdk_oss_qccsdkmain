@@ -1255,6 +1255,14 @@ void mqtt_client_process_cmd(uint32_t sessionIndex)
             }
             if (isAllSessionDisconn) {
                 mqttRxThreadCreated = false;
+                if (pMqttTaskCtrl->mqtt_keepalive_created) {
+                    nt_stop_timer(pMqttTaskCtrl->mqtt_keepalive_timer);
+                    if (nt_delete_timer(pMqttTaskCtrl->mqtt_keepalive_timer) != NT_TIMER_SUCCESS) {
+                        MQTT_CLIENT_PRINTF("MQTT keepalive timer delete failed\n");
+                    }
+                    pMqttTaskCtrl->mqtt_keepalive_timer = NULL;
+                    pMqttTaskCtrl->mqtt_keepalive_created = false;
+                }
             }
             break;
 
@@ -1442,7 +1450,7 @@ static void mqtt_client_help()
     MQTT_CLIENT_PRINTF("mqttc destroy <session_id>\n");
     MQTT_CLIENT_PRINTF("options:\n");
     MQTT_CLIENT_PRINTF("<session_id> demo session :, can be 0 or 1.\n");
-    MQTT_CLIENT_PRINTF("-s <transport_scheme> transport layer to use:ssl or tcp. Defaults to tcp.\n");
+    MQTT_CLIENT_PRINTF("-s <transport_scheme> transport layer to use:ssl, sslnoverify or tcp. Defaults to tcp.\n");
     MQTT_CLIENT_PRINTF(
         "--ca <file> file path containing trusted CA certificates to enable encrypted certificate. Defaults to "
         "null.\n");
@@ -1481,6 +1489,7 @@ void cleanupNetworkCredentials(MQTTClientSession_t *pMqttClientSess)
     }
 
     pMqttClientSess->tlsCredentials.disableSni = pdFALSE;
+    pMqttClientSess->tlsCredentials.disableServerVerify = pdFALSE;
 
     if (pMqttClientSess->tlsCredentials.pRootCa != NULL) {
         free((void *)pMqttClientSess->tlsCredentials.pRootCa);
@@ -1504,9 +1513,6 @@ void mqtt_keepalive_timer_cb(void)
 
     qurt_signal_set(&pMqttTaskCtrl->mqtt_client_signal, MQTT_PUB_KEEPALIVE);
 
-    if (nt_start_timer(pMqttTaskCtrl->mqtt_keepalive_timer) != NT_TIMER_SUCCESS) {
-        MQTT_CLIENT_PRINTF("QAT MQTT keepalive timer start failed\n");
-    }
 }
 
 qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Parameter_List)
@@ -1578,6 +1584,9 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
 
             if (strcasecmp(Parameter_List[index].String_Value, "ssl") == 0) {
                 pMqttClientSess->mqttTransportScheme = MQTT_OVER_SSL;
+            } else if (strcasecmp(Parameter_List[index].String_Value, "sslnoverify") == 0) {
+                pMqttClientSess->mqttTransportScheme = MQTT_OVER_SSL;
+                pMqttClientSess->tlsCredentials.disableServerVerify = pdTRUE;
             } else if (strcasecmp(Parameter_List[index].String_Value, "tcp") == 0) {
                 pMqttClientSess->mqttTransportScheme = MQTT_OVER_TCP;
             } else {
@@ -1776,8 +1785,8 @@ qapi_Status_t mqttc_init(uint32_t Parameter_Count, QAPI_Console_Parameter_t *Par
     }
 
     if (pMqttClientSess->mqttTransportScheme == MQTT_OVER_SSL) {
-        /*SSL mode must configure CA certificates */
-        if (pMqttClientSess->tlsCredentials.pRootCa == NULL) {
+        if (pMqttClientSess->tlsCredentials.disableServerVerify != pdTRUE &&
+            pMqttClientSess->tlsCredentials.pRootCa == NULL) {
             MQTT_CLIENT_PRINTF("MQTT session:%d init fail, SSL should configure CA certificates.\n",
                                pMqttClientSess->sessionIndex);
             goto fail;
@@ -1826,7 +1835,7 @@ void cleanupConnectInfo(MQTTClientSession_t *pMqttClientSess)
      * Control Packets being sent does not exceed the this Keep Alive value. In the
      * absence of sending any other Control Packets, the Client MUST send a
      * PINGREQ Packet. */
-    pMqttClientSess->connectInfo.keepAliveSeconds = MQTT_KEEP_ALIVE_INTERVAL_SECONDS;
+    pMqttClientSess->connectInfo.keepAliveSeconds = MQTT_KEEP_ALIVE_INTERVAL_SECONDS - 1;
 
     if (pMqttClientSess->connectInfo.pClientIdentifier != NULL) {
         free((char *)pMqttClientSess->connectInfo.pClientIdentifier);
@@ -1972,15 +1981,17 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
             pMqttClientSess->connectInfo.userNameLength = strlen(Parameter_List[index].String_Value);
 
-            pMqttClientSess->connectInfo.pUserName = malloc(pMqttClientSess->connectInfo.userNameLength + 1);
+            if (pMqttClientSess->connectInfo.userNameLength > 0) {
+                pMqttClientSess->connectInfo.pUserName = malloc(pMqttClientSess->connectInfo.userNameLength + 1);
 
-            if (pMqttClientSess->connectInfo.pUserName == NULL) {
-                MQTT_CLIENT_PRINTF("MQTT malloc username (%d) fail\n", pMqttClientSess->connectInfo.userNameLength + 1);
-                goto fail;
+                if (pMqttClientSess->connectInfo.pUserName == NULL) {
+                    MQTT_CLIENT_PRINTF("MQTT malloc username (%d) fail\n", pMqttClientSess->connectInfo.userNameLength + 1);
+                    goto fail;
+                }
+
+                memcpy((char *)pMqttClientSess->connectInfo.pUserName, Parameter_List[index].String_Value,
+                       pMqttClientSess->connectInfo.userNameLength + 1);
             }
-
-            memcpy((char *)pMqttClientSess->connectInfo.pUserName, Parameter_List[index].String_Value,
-                   pMqttClientSess->connectInfo.userNameLength + 1);
 
             index++;
         }
@@ -1997,15 +2008,17 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
 
             pMqttClientSess->connectInfo.passwordLength = strlen(Parameter_List[index].String_Value);
 
-            pMqttClientSess->connectInfo.pPassword = malloc(pMqttClientSess->connectInfo.passwordLength + 1);
+            if (pMqttClientSess->connectInfo.passwordLength > 0) {
+                pMqttClientSess->connectInfo.pPassword = malloc(pMqttClientSess->connectInfo.passwordLength + 1);
 
-            if (pMqttClientSess->connectInfo.pPassword == NULL) {
-                MQTT_CLIENT_PRINTF("MQTT malloc password (%d) fail\n", pMqttClientSess->connectInfo.passwordLength + 1);
-                goto fail;
+                if (pMqttClientSess->connectInfo.pPassword == NULL) {
+                    MQTT_CLIENT_PRINTF("MQTT malloc password (%d) fail\n", pMqttClientSess->connectInfo.passwordLength + 1);
+                    goto fail;
+                }
+
+                memcpy((char *)pMqttClientSess->connectInfo.pPassword, Parameter_List[index].String_Value,
+                       pMqttClientSess->connectInfo.passwordLength + 1);
             }
-
-            memcpy((char *)pMqttClientSess->connectInfo.pPassword, Parameter_List[index].String_Value,
-                   pMqttClientSess->connectInfo.passwordLength + 1);
 
             index++;
         }
@@ -2063,7 +2076,7 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
                     "default to 120000.\n");
             }
 
-            pMqttClientSess->connectInfo.keepAliveSeconds = Parameter_List[index].Integer_Value;
+            pMqttClientSess->connectInfo.keepAliveSeconds = Parameter_List[index].Integer_Value - 1;
             index++;
         }
 #ifdef CONFIG_QAT_MQTT_DEMO
@@ -2125,8 +2138,12 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
         pMqttClientSess->mqttState = MQTT_CONNECTED;
 
         if (pMqttTaskCtrl->mqtt_keepalive_created == false) {
+            uint32_t keepalive_ms = (pMqttClientSess->connectInfo.keepAliveSeconds > 0)
+                ? ((pMqttClientSess->connectInfo.keepAliveSeconds + 1) * 1000)
+                : MQTT_KEEP_ALIVE_INTERVAL_MSECONDS;
+            pMqttTaskCtrl->mqttkeepalive_time_bmps = keepalive_ms;
             pMqttTaskCtrl->mqtt_keepalive_timer = (nt_osal_timer_handle_t)nt_create_timer(
-                mqtt_keepalive_timer_cb, NULL, pMqttTaskCtrl->mqttkeepalive_time_bmps, FALSE);
+                mqtt_keepalive_timer_cb, NULL, keepalive_ms, TRUE);
 
             if (nt_start_timer(pMqttTaskCtrl->mqtt_keepalive_timer) != NT_TIMER_SUCCESS) {
                 MQTT_CLIENT_PRINTF("MQTT keepalive timer start failed\n");
@@ -2146,7 +2163,7 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
     }
 
     if (mqttThreadCreated == false) {
-        if (nt_qurt_thread_create(mqttc_task, "mqtt_client_task", 4096, pMqttClientSess, 6, NULL) != pdPASS) {
+        if (nt_qurt_thread_create(mqttc_task, "mqtt_client_task", 2048, pMqttClientSess, 6, NULL) != pdPASS) {
             MQTT_CLIENT_PRINTF("MQTT main thread create fail\n");
         } else {
             mqttThreadCreated = true;
@@ -2154,7 +2171,7 @@ qapi_Status_t mqttc_connect(uint32_t Parameter_Count, QAPI_Console_Parameter_t *
     }
 
     if (mqttRxThreadCreated == false) {
-        if (nt_qurt_thread_create(mqttc_rx_task, "mqtt_rx_client_task", 4096, pMqttClientSess, 6, NULL) != pdPASS) {
+        if (nt_qurt_thread_create(mqttc_rx_task, "mqtt_rx_client_task", 2048, pMqttClientSess, 6, NULL) != pdPASS) {
             MQTT_CLIENT_PRINTF("MQTT rx thread create fail\n");
         } else {
             mqttRxThreadCreated = true;

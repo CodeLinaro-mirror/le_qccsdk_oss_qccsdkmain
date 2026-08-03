@@ -20,4 +20,7 @@ void wlan_8021x_rx_eapol(wlan_8021x_intf_t *wl8021x_intf,
 void wlan_8021x_rx_eapol_key_notify(wlan_8021x_intf_t *wl8021x_intf);
 int wlan_8021x_force_eapol_success(wlan_8021x_intf_t *wl8021x_intf, int type);
 
+void wlan_8021x_eap_enter_ps_hold(wlan_8021x_intf_t *wl8021x_intf);
+void wlan_8021x_eap_leave_ps_hold(wlan_8021x_intf_t *wl8021x_intf);
+
 #endif /* _WLAN_8021X_GLUE_H_ */

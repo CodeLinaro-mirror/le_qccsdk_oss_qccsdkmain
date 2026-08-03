@@ -135,6 +135,9 @@ qapi_Status_t qapi_imps_disable_sleep(void)
         nt_stop_timer(g_ppm_common_struct.imps_struct_ctx.imps_cnx_wait_timer);
     }
     g_ppm_common_struct.imps_struct_ctx.imps_enabled = FALSE;
+
+    nt_imps_force_wlan_wakeup();
+
     return QAPI_OK;
 }
 

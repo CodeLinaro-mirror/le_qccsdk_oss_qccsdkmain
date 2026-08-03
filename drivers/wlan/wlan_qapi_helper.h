@@ -22,7 +22,7 @@ extern void wlan_preset_specific_param(void);
 extern qapi_Status_t wlan_set_channel(uint8_t device_id, uint16_t channel, qbool_t is_6g_index);
 extern qapi_Status_t wlan_set_country_code(uint8_t device_id, uint8_t *country_code);
 extern qapi_Status_t wlan_set_phy_mode(uint8_t device_id, uint32_t phy_mode);
-extern int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig, uint8_t is_sgi, uint8_t mpdu_density);
+extern int32_t wlan_set_11n_ht(uint8_t __attribute__((__unused__)) device_id, uint8_t htconfig, uint8_t is_sgi, uint8_t mpdu_density, uint8_t band);
 extern int32_t wlan_set_op_mode(uint8_t mode);
 extern qapi_Status_t wlan_get_mac_address(uint8_t __attribute__((__unused__)) device_ID,
                                           uint8_t mac_addr[__QAPI_WLAN_MAC_LEN]);
@@ -57,6 +57,10 @@ extern qapi_Status_t wlan_set_slot_time(uint8_t device_ID, uint32_t slot_time);
 extern qapi_Status_t wlan_get_slot_time(uint32_t *slot_time);
 extern qapi_Status_t wlan_set_edcca_threshold(uint8_t device_ID, uint8_t edcca_threshold);
 extern qapi_Status_t wlan_get_edcca_threshold(uint8_t *edcca_threshold);
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+extern qapi_Status_t wlan_set_chipset_logging_enable(uint8_t device_ID, uint8_t enable);
+extern qapi_Status_t wlan_get_chipset_logging_enable(uint8_t *enable);
+#endif
 extern qapi_Status_t wlan_set_tx_power(qapi_WLAN_Set_Txpower_Params_t txpower_params);
 extern qapi_Status_t wlan_get_tx_power(qapi_WLAN_Get_Power_Evt_t *txpower_params);
 extern qapi_Status_t wlan_set_bmiss_threshold(uint8_t device_ID, uint8_t bmiss_threshold);

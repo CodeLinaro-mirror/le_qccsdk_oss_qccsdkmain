@@ -520,6 +520,10 @@ system Feature Flags,|    |System Feature Flags,|	   |  system Feature Flags,|  
 #endif
 
 #ifdef NT_FN_FTM
+//#define NT_FN_RTT_DEMO
+#endif
+
+#ifdef NT_FN_FTM
 #ifndef NT_FN_FTM_2016V
 #define NT_FN_FTM_2016V
 #endif

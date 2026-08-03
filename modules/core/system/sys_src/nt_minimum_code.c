@@ -297,6 +297,10 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
     for (int i = 0; i < MIN_CMEM_INRUSH_DELAY; i++) {
         __asm volatile(" nop \n");
     }
+
+    nt_global_irq_init();
+    cpu_irq_disable();
+
     extern uint64_t nt_socpm_slp_time_total;
     extern int mcu_sleep_force;
     extern int nt_socpm_resume_f;
@@ -490,7 +494,7 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
             nt_socpm_sleep_deregister(_socpm_slp_list_idx_rtos);
             nt_socpm_sleep_deregister(BMPS_LIST);
             nt_socpm_sleep_deregister(_socpm_slp_list_idx_imps);
-            printf("intr only\r\n");
+
             wkup_us = 0;
         } else {
 #endif /* FIRMWARE_APPS_INFORMED_WAKE */
@@ -570,7 +574,7 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
         if(wkup_us<=0){
             uint32_t bd= BMU_READ_WQ_NR_CMD(HAL_BMUWQ_BMU_IDLE_BD);
             uint32_t ext_int = NT_REG_RD(NVIC_ICPR1) ;
-            if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK)))
+            if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK)) || !bd)
             {
                 HAL_REG_WR(QWLAN_AGC_AGC_RESET_REG, QWLAN_AGC_AGC_RESET_RESET_ERESET);
                 hal_wlan_sleep_trimmed();
@@ -600,7 +604,9 @@ void __attribute__((section(".ram_minimum_entry"), noreturn)) ram_minimum_code(v
             NT_REG_WR(QWLAN_PMU_CFG_AON_CNTL_MCU_SYSTEM_BOOT_COMPLETE_STATE_RESOURCE_REQ_REG, son_value);
 #endif /* if RMC_DISABLED_CODE */
             process_routine = 0;
-
+            
+            /* Set all IRQ to reset for both Sleepback and wakeup path*/
+            nt_global_irq_init();
             cpu_irq_disable();
             /**
             * Workaround to address incorrect __stack_ptr value after BMPS.

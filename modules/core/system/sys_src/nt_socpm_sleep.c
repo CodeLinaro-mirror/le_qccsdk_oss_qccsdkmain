@@ -348,7 +348,7 @@ TickType_t xMaximumPossibleSuppressedTicks = 0xFFFFFFF;  // maximum 54 bits conf
 // static uint32_t ulStoppedTimerCompensation = 2 / ( 1000 / 16000000 );
 
 // Sleep type for neutrino
-static sleep_mode _socpm_slp_mode;
+static sleep_mode _socpm_slp_mode= clk_gtd_sleep;
 
 // Variables for Holding sleep time
  int _socpm_slp_list_idx_rtos = _SOCPM_SLP_LST_IDX_INVALID;
@@ -957,10 +957,20 @@ void nt_socpm_slp_tmr_set(uint64_t sleep_time)  // in us
     sleep_time = _SOCPM_US_TO_AON_TICK(sleep_time);
     temp_1 = sleep_time;
 
-    NT_REG_WR(NT_NVIC_ICPR1, 0x00800000);  // Clear pending int
+    /* Clear FPSCR sticky flags → stops CCU from re-asserting FP exception NVIC pending bits */
+    __asm volatile("VMSR fpscr, %0" :: "r"(0));
+    NT_REG_WR(NT_NVIC_ICPR1, 0x00800000              /* sleep timer */
+                            | (1u << 29)              /* FPIXC */
+                            | (1u << 28)              /* FPOFC */
+                            | (1u << 27)              /* FPUFC */
+                            | (1u << 26)              /* FPIOC */
+                            | (1u << 25)              /* FPDZC */
+                            | (1u << 24));            /* FPIDC */
     temp_2 = NT_REG_RD(NT_NVIC_ISER1);
     temp_2 = temp_2 | 0x00800000;
     NT_REG_WR(NT_NVIC_ISER1, temp_2);
+
+    // nt_enable_device_irq(RRI_ccu_int_p_3);
 
     if (nt_socpm_sby_force == 1) {
         nt_socpm_sby_force = 0;
@@ -1190,10 +1200,7 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
 
         if (delta_hres_time_ms > 0) {
             vTaskStepTick(delta_hres_time_ms);
-        } 
-#ifdef SUPPORT_QCSPI_SLAVE
-            qcspi_slv_init();
-#endif /* SUPPORT_QCSPI_SLAVE */
+        }
     } 
 #endif /* CONFIG_QAT_POWERSAVE_DEMO */
     else {
@@ -1207,10 +1214,11 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
             nt_wpm_register_imps_standby();
         }
 #endif /* SUPPORT_IMPS_IMPROVEMENTS */
+            uint64_t updated_slp_val = 0;
 #if defined(SUPPORT_SLEEP_LIST_IMPROVEMENTS)
         if (_INVALID_SLP_LST_HD != _socpm_slp_lst_head &&
             (_socpm_slp_lst[_socpm_slp_lst_head].slp_info.slp_time != 0)) {
-            uint64_t updated_slp_val = 0;
+
 #if defined(SUPPORT_SWTMR_TO_WKUP_FROM_BMPS)
             updated_slp_val = nt_socpm_get_sleep_time(slp_val);
 #else
@@ -1286,14 +1294,41 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
             (g_socpm_struct.nvic_icpr_status[0] & NT_CM4_UART_INTERRUPT_BIT_MASK)
 #endif /* PLATFORM_FERMION */
         ) {
-            printf("a2f pend\r\n");
-            // _socpm_slp_mode = clk_gtd_sleep;
+            // printf("a2f pend\r\n");
+            _socpm_slp_mode = clk_gtd_sleep;
         }
         /* This function performs sleep recipe as per the sleep mode specified */
 #ifdef CONFIG_WATCH_DOG_ENABLE
         /* feed watchdog before sleep */
         nt_watchdog_bark_timer_reset();
 #endif
+
+        /* Guard against entering BMPS / MCU sleep without an armed wake source.
+         *
+         * Race: the sleep list head node registered for this BMPS pass can be
+         * deleted between nt_socpm_sleep_register() and the WFI below. When that
+         * delete empties the list, nt_socpm_sleep_lst_delete() neither re-arms the
+         * AON timer nor downgrades _socpm_slp_mode, so the AON expiry register is
+         * left at the "never expire" sentinel (0xFFFFFF/0xFFFFFFFF) written for an
+         * empty list. Entering WFI in mcu_sleep with that value means there is no
+         * wake source and the SoC sleeps forever (SysTick stays off at 0x6).
+         *
+         * Detect the condition (empty list or sentinel expiry) and fall back to
+         * clock-gated sleep, which keeps SysTick alive and lets the next idle pass
+         * re-arm correctly.
+         */
+        if (_socpm_slp_mode != clk_gtd_sleep) {
+            uint32_t _exp_msb = NT_REG_RD(QWLAN_PMU_WLAN_SLP_TMR_EXP_MSB_REG);
+            uint32_t _exp_lsb = NT_REG_RD(QWLAN_PMU_WLAN_SLP_TMR_EXP_LSB_REG);
+            if ((_socpm_slp_lst_head == _INVALID_SLP_LST_HD) ||
+                (_exp_msb == 0xFFFFFF && _exp_lsb == 0xFFFFFFFF)) {
+                NT_LOG_PRINT(SOCPM, ERR,
+                             "Abort BMPS: no wake source (head %d exp %x/%x mode %d)",
+                             _socpm_slp_lst_head, _exp_msb, _exp_lsb, _socpm_slp_mode);
+                _socpm_slp_mode = clk_gtd_sleep;
+            }
+        }
+
         vPreSleepProcessing(_socpm_slp_mode);
 
         /* Save current context and call WFI */
@@ -1330,7 +1365,7 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         // nt_gpio_pin_write(NT_GPIOA, GPIO_PIN_5, NT_GPIO_HIGH);
 #endif
         /* Stop Sleep timer.  Give Control Back to SYSTICK Handler*/
-        _socpm_slptmr_off();
+        // _socpm_slptmr_off();
         // Get the slept time
         // nt_socpm_resume_f = 1;
         /* Wind the tick forward by the number of tick periods that the CPU
@@ -1361,7 +1396,12 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         _socpm_systick_on();
         /* Re-enable the interrupts*/
         // GC:TODO
-        NT_SOCPM_IRQ_ENABLE();
+
+            uint32_t lic_int_status = NT_REG_RD(QWLAN_PMU_AON_LIC_INT_STAT_REG);
+            uint32_t ext_int = NT_REG_RD(NVIC_ICPR1) ;
+            // printf("AON_LIC_INT_STAT: 0x%x, ICPR1:0x%x\r\n",lic_int_status, ext_int);
+
+   
         /**
         * nt_socpm_slp_time_total sometimes is smaller than the real passing sleep time during Systick closed,
         *because it does not calculate the time when receive beacon, use the delta of hres timer is more accurate
@@ -1384,6 +1424,8 @@ void nt_socpm_soc_sleep_processing(uint64_t slp_val)
         } else {
             vTaskStepTick(slp_exp);
         }
+
+        NT_SOCPM_IRQ_ENABLE();
 #if 0
         NT_LOG_PRINT(DPM, ERR,"slp:%dms  slp:%dus aonTm:%dus\n\r",
                 (uint32_t)slp_exp, (uint32_t)slp_exp_us, (uint32_t)cur_aon_us);
@@ -1832,13 +1874,6 @@ void nt_socpm_slp_enter(uint64_t slp_us)
     
     uint32_t lic_int_status = NT_REG_RD(QWLAN_PMU_AON_LIC_INT_STAT_REG);
     uint32_t ext_int = NT_REG_RD(NVIC_ICPR1) ;
-    if ((lic_int_status & QWLAN_PMU_AON_LIC_INT_STAT_EXT_WAKEUP_INTR_STAT_RAW_MASK )|| (ext_int& (A2F_ASSERT_INTR_NVIC1_MASK))) 
-    {
-        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_CLR, EXT_WAKEUP_INTR_CLR, 1);
-        HWIO_OUTXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_AON_LIC_INT_CLR, EXT_WAKEUP_INTR_CLR, 0);
-
-        NT_REG_WR(NVIC_ICPR1, A2F_ASSERT_INTR_NVIC1_MASK);
-    }
 
     __asm volatile("dsb" ::: "memory");
     __asm volatile("wfi");
@@ -2537,7 +2572,7 @@ int nt_socpm_sleep_register(nt_socpm_sleep_t *slp_info, int list_idx)
 
 void nt_socpm_sleep_deregister(int list_idx)
 {
-    _socpm_slptmr_off();
+    // _socpm_slptmr_off();
     nt_socpm_sleep_lst_delete(list_idx);
 }
 
@@ -2550,7 +2585,7 @@ int nt_socpm_sleep_lst_delete(int list_idx)
         return _SOCPM_SLP_LST_IDX_INVALID;
     }
 
-    _socpm_slptmr_off();
+    // _socpm_slptmr_off();
 
     if (_INVALID_SLP_LST_HD == _socpm_slp_lst_head) {
         // List empty. So entry had already been deleted earlier
@@ -2597,6 +2632,7 @@ uint64_t freertosdefaultminimum(uint32_t wkup_delay_us)
         pPmStruct = (PM_STRUCT *)gdevp->pPmStruct;
         set_sleep_exit_reason();
 
+        HAL_REG_WR(QWLAN_AGC_AGC_RESET_REG, QWLAN_AGC_AGC_RESET_RESET_ERESET);
         if (pPmStruct->bConnected) {
             {
                 // nt_hal_rri_soft_reset_rri_engine();
@@ -2620,7 +2656,7 @@ uint64_t freertosdefaultminimum(uint32_t wkup_delay_us)
                 // PM_SET_RRI_STATE(pPmStruct, PM_RRI_TXRX_READY);
             }
 
-            // rri_force_wakeup = 1;
+            rri_force_wakeup = 0;
         }
     }
 
@@ -3112,15 +3148,42 @@ static void _socpm_slpcfg_mcuslp(void)
                    (value & ~QWLAN_RXP_CONFIG_CFG_RXP_EN_MASK));  // Disable RX
 
         /*clear any pending AON timer interrupts. If AON interrupt is pending, wifi doesnt move to sleep state*/
+        {
+            uint32_t exp_lsb = NT_REG_RD(QWLAN_PMU_WLAN_SLP_TMR_EXP_LSB_REG);
+            uint32_t exp_msb = NT_REG_RD(QWLAN_PMU_WLAN_SLP_TMR_EXP_MSB_REG);
+            uint32_t aon_int  = NT_REG_RD(QWLAN_PMU_AON_SLP_TIMER_INT_STS_REG);
+            uint32_t wlan_sts = NT_REG_RD(QWLAN_PMU_WLAN_SLP_TMR_STS_REG);
+            NT_LOG_PRINT(SOCPM, INFO,
+                "before_slptmr_off: exp=%u|%u aon_int=%u wlan_raw=%u lic=%u nvic1=%x pm=%u rri=%u exit=%u",
+                exp_msb, exp_lsb, aon_int, wlan_sts,
+                NT_REG_RD(QWLAN_PMU_AON_LIC_INT_STAT_REG),
+                NT_REG_RD(NT_CM4_NVIC_ISER1_CLEAR_PENDING_REG),
+                (uint32_t)pPmStruct->pm_type,
+                (uint32_t)pPmStruct->rri_state,
+                (uint32_t)pPmStruct->sleep_exit_reason);
+        }
         _socpm_slptmr_off();
 
+        uint32_t nvic_pend = NT_REG_RD(NT_CM4_NVIC_ISER1_CLEAR_PENDING_REG);
+        if (nvic_pend & AON_TIMER_INTR_NVIC1_MASK) {
+        
+            NT_REG_WR(NT_CM4_NVIC_ISER1_CLEAR_PENDING_REG, AON_TIMER_INTR_NVIC1_MASK);
+            
+        }
+
+        extern int BMPS_LIST;
+        if(BMPS_LIST != _INVALID_SLP_LST_HD && _socpm_slp_lst[BMPS_LIST].slp_info.slp_cb_fn)
+        {
+            _socpm_slp_lst[BMPS_LIST].slp_info.slp_cb_fn();
+        }
+        
         PM_SET_WLAN_STATE_OFF(pPmStruct);
         NT_REG_WR(QWLAN_PMU_CFG_WIFI_SS_STATE_REG, NT_PMU_CFG_WIFI_SLEEP_OFFSET);
 
         wifi_ss_state =
             HWIO_INXF(SEQ_WCSS_PMU_OFFSET, NEUTRINO_PMU_PRONTO_LP_FRODO_PMU_CFG_WIFI_SS_STATE, WIFI_SS_CURR_STATE);
 
-        NT_LOG_PRINT(SOCPM, ERR, " wifi_ss_state %x", (uint32_t)wifi_ss_state);
+        NT_LOG_PRINT(SOCPM, ERR, " wifi_ss_state %d \r\n", (uint32_t)wifi_ss_state);
     }
 
     PM_SET_RRI_STATE(pPmStruct, PM_RRI_MAC_DOWN_MCUSLP);
@@ -4241,7 +4304,7 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode,bool warm_boot)
     /* Disable the GPIO retension */
     NT_REG_WR(QWLAN_PMU_CFG_IO_RET_CNTL_REG, QWLAN_PMU_CFG_IO_RET_CNTL_DEFAULT);
 #endif /* GPIO_RETENTION_IN_SLP */
-    uart_init();
+    // uart_init();
 
     HAL_REG_WR(QWLAN_PMU_CFG_WIFI_SS_STATE_REG, NT_PMU_CFG_WIFI_CONFIG_OFFSET);  // Set wifi config state
 
@@ -4286,6 +4349,8 @@ void nt_socpm_handle_sleep_entry_failure(sleep_mode mode,bool warm_boot)
     NT_REG_WR(CACHE_REG_BASE, 0x01);
     NT_REG_WR(CACHE_REG_BASE, 0x00);
 
+    /* Set all IRQ to reset for both Sleepback and wakeup path*/
+    nt_global_irq_init();
     portENABLE_INTERRUPTS(); /* Sets the BASEPRI to 0x00*/
     portNVIC_SYSPRI2_REG |= portNVIC_PENDSV_PRI;
     portNVIC_SYSPRI2_REG |= portNVIC_SYSTICK_PRI;

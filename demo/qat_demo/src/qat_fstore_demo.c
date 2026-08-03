@@ -18,7 +18,7 @@
  * Preprocessor Definitions and Constants
  *-----------------------------------------------------------------------*/
 #define FSTORE_MOUNT_POINT     "/lfs"
-#define FSTORE_MAX_PATH        128
+#define FSTORE_MAX_PATH        130
 #define FSTORE_READ_CHUNK_SIZE 512
 #define FSTORE_CHUNK_HEX_MAX   128  /* max bytes per hex chunk = 256 hex chars */
 
@@ -58,44 +58,55 @@ static QAT_Command_t QAT_Fstore_Command_List[] = {
 static int normalize_path(const char *input, char *out, size_t out_sz)
 {
     bool has_prefix = strncmp(input, FSTORE_MOUNT_POINT, strlen(FSTORE_MOUNT_POINT)) == 0;
-    size_t needed = has_prefix
-        ? strlen(input) + 1
-        : strlen(FSTORE_MOUNT_POINT) + 1 + strlen(input) + 1;
-
-    if (needed > out_sz) {
-        return -1;
-    }
 
     if (has_prefix) {
+        if (strlen(input) + 1 > out_sz) {
+            return -1;
+        }
         snprintf(out, out_sz, "%s", input);
+    } else if (input[0] == '/') {
+        /* Input starts with '/' but not the mount point: concatenate directly
+         * to avoid double slash (e.g. /lfs + /foo/bar → /lfs/foo/bar). */
+        if (strlen(FSTORE_MOUNT_POINT) + strlen(input) + 1 > out_sz) {
+            return -1;
+        }
+        snprintf(out, out_sz, "%s%s", FSTORE_MOUNT_POINT, input);
     } else {
+        /* Relative path: insert separator. */
+        if (strlen(FSTORE_MOUNT_POINT) + 1 + strlen(input) + 1 > out_sz) {
+            return -1;
+        }
         snprintf(out, out_sz, "%s/%s", FSTORE_MOUNT_POINT, input);
     }
     return 0;
 }
 
 /*-------------------------------------------------------------------------
- * Helper: create parent directory (1 level deep)
+ * Helper: create all intermediate directories (mkdir -p semantics)
  *-----------------------------------------------------------------------*/
 static void mkdir_parent(const char *path)
 {
     char dir[FSTORE_MAX_PATH];
-    const char *slash = strrchr(path, '/');
+    /* Start scanning after the mount point prefix */
+    const char *p = path + strlen(FSTORE_MOUNT_POINT);
 
-    if (!slash || slash == path) {
-        return;
+    while (*p == '/') {
+        p++;
     }
-    size_t dir_len = (size_t)(slash - path);
-    if (dir_len == 0 || dir_len >= sizeof(dir)) {
-        return;
-    }
-    snprintf(dir, sizeof(dir), "%.*s", (int)dir_len, path);
 
-    /* Skip if it's just the mount point itself */
-    if (strcmp(dir, FSTORE_MOUNT_POINT) == 0) {
-        return;
+    while (*p) {
+        const char *slash = strchr(p, '/');
+        if (!slash) {
+            break;  /* last component is the filename, stop */
+        }
+        size_t dir_len = (size_t)(slash - path);
+        if (dir_len == 0 || dir_len >= sizeof(dir)) {
+            break;
+        }
+        snprintf(dir, sizeof(dir), "%.*s", (int)dir_len, path);
+        vfs_mkdir(dir);  /* ignore error — EEXIST is fine */
+        p = slash + 1;
     }
-    vfs_mkdir(dir);  /* ignore error — EEXIST is fine */
 }
 
 /*-------------------------------------------------------------------------
@@ -201,6 +212,12 @@ static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t 
                     decode[i] = (uint8_t)((hi << 4) | lo);
                 }
 
+                if (writefile_state.total_len > 0 &&
+                    writefile_state.received_len + byte_count > writefile_state.total_len) {
+                    QAT_Response_Str(QAT_RC_ERROR, "+WRITEFILE: data exceeds declared length");
+                    return QAT_STATUS_SUCCESS_E;
+                }
+
                 int32_t written = vfs_write(&writefile_state.file, decode, byte_count);
                 if (written < 0) {
                     vfs_close(&writefile_state.file);
@@ -214,11 +231,17 @@ static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t 
 
                 if (writefile_state.total_len > 0 &&
                     writefile_state.received_len >= writefile_state.total_len) {
-                    vfs_close(&writefile_state.file);
+                    int close_ret = vfs_close(&writefile_state.file);
                     writefile_state.active = false;
-                    snprintf(response, sizeof(response), "+WRITEFILE: %zu bytes written",
-                             writefile_state.received_len);
-                    QAT_Response_Str(QAT_RC_OK, response);
+                    if (close_ret < 0) {
+                        snprintf(response, sizeof(response),
+                                 "+WRITEFILE: close failed (%d)", close_ret);
+                        QAT_Response_Str(QAT_RC_ERROR, response);
+                    } else {
+                        snprintf(response, sizeof(response), "+WRITEFILE: %u bytes written",
+                                 (unsigned)writefile_state.received_len);
+                        QAT_Response_Str(QAT_RC_OK, response);
+                    }
                 } else {
                     QAT_Response_Str(QAT_RC_OK, NULL);
                 }
@@ -235,7 +258,7 @@ static QAT_Command_Status_t Extend_Command_WriteFile(uint32_t Op_Type, uint32_t 
                 writefile_state.active = false;
                 QAT_Response_Str(QAT_RC_OK, "+WRITEFILE: transfer aborted");
             } else {
-                QAT_Response_Str(QAT_RC_QUIET,
+                QAT_Response_Str(QAT_RC_OK,
                     "+WRITEFILE=<path>,C,<size>  or  +WRITEFILE=<path>,A,<hex>");
             }
             break;
@@ -253,7 +276,7 @@ static QAT_Command_Status_t Extend_Command_ReadFile(uint32_t Op_Type, uint32_t P
     char response[64];
 
     if (Op_Type != QAT_OP_EXEC_W_PARAM) {
-        QAT_Response_Str(QAT_RC_QUIET, "+READFILE=<path>");
+        QAT_Response_Str(QAT_RC_OK, "+READFILE=<path>");
         return QAT_STATUS_SUCCESS_E;
     }
 
@@ -315,7 +338,7 @@ static QAT_Command_Status_t Extend_Command_DelFile(uint32_t Op_Type, uint32_t Pa
     char response[64];
 
     if (Op_Type != QAT_OP_EXEC_W_PARAM) {
-        QAT_Response_Str(QAT_RC_QUIET, "+DELFILE=<path>");
+        QAT_Response_Str(QAT_RC_OK, "+DELFILE=<path>");
         return QAT_STATUS_SUCCESS_E;
     }
 

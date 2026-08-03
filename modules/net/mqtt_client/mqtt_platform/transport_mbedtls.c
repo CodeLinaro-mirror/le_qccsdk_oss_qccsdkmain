@@ -332,11 +332,19 @@ static int32_t setCredentials(SSLContext_t *pSslContext, const NetworkCredential
     pSslContext->certProfile = mbedtls_x509_crt_profile_default;
 
     /* Set SSL authmode and the RNG context. */
-    mbedtls_ssl_conf_authmode(&(pSslContext->config), MBEDTLS_SSL_VERIFY_REQUIRED);
+    if (pNetworkCredentials->disableServerVerify == pdTRUE) {
+        mbedtls_ssl_conf_authmode(&(pSslContext->config), MBEDTLS_SSL_VERIFY_NONE);
+    } else {
+        mbedtls_ssl_conf_authmode(&(pSslContext->config), MBEDTLS_SSL_VERIFY_REQUIRED);
+    }
     mbedtls_ssl_conf_rng(&(pSslContext->config), mbedtls_ctr_drbg_random, &(pSslContext->ctrDrbgContext));
     mbedtls_ssl_conf_cert_profile(&(pSslContext->config), &(pSslContext->certProfile));
 
-    mbedtlsError = setRootCa(pSslContext, pNetworkCredentials->pRootCa, pNetworkCredentials->rootCaSize);
+    if (pNetworkCredentials->disableServerVerify != pdTRUE) {
+        mbedtlsError = setRootCa(pSslContext, pNetworkCredentials->pRootCa, pNetworkCredentials->rootCaSize);
+    } else {
+        mbedtlsError = 0;
+    }
 
     if ((pNetworkCredentials->pClientCert != NULL) && (pNetworkCredentials->pPrivateKey != NULL)) {
         if (mbedtlsError == 0) {
@@ -418,7 +426,9 @@ static TlsTransportStatus_t tlsSetup(NetworkContext_t *pNetworkContext, const ch
     configASSERT(pNetworkContext->pParams != NULL);
     configASSERT(pHostName != NULL);
     configASSERT(pNetworkCredentials != NULL);
-    configASSERT(pNetworkCredentials->pRootCa != NULL);
+    if (pNetworkCredentials->disableServerVerify != pdTRUE) {
+        configASSERT(pNetworkCredentials->pRootCa != NULL);
+    }
 
     pTlsTransportParams = pNetworkContext->pParams;
     /* Initialize the mbed TLS context structures. */
@@ -574,7 +584,7 @@ TlsTransportStatus_t TLS_FreeRTOS_Connect(NetworkContext_t *pNetworkContext, con
              "pHostName=%p, pNetworkCredentials=%p.",
              pNetworkContext, pHostName, pNetworkCredentials));
         returnStatus = TLS_TRANSPORT_INVALID_PARAMETER;
-    } else if ((pNetworkCredentials->pRootCa == NULL)) {
+    } else if ((pNetworkCredentials->disableServerVerify != pdTRUE) && (pNetworkCredentials->pRootCa == NULL)) {
         LogError(("pRootCa cannot be NULL."));
         returnStatus = TLS_TRANSPORT_INVALID_PARAMETER;
     } else {

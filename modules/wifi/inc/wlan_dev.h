@@ -687,6 +687,9 @@ typedef struct devh_s {
     struct ieee80211_ie_htinfo ht_op_ie_info;
     /* if ht_allowed == 0 then HT is not allowed by the host or internally for that band */
     uint8_t ht_allowed;
+    /* set by user via Set11nHTCap disable; prevents connect path from re-enabling HT.
+     * WMI_HT_BAND_* bitmask: bit per band the user disabled HT on (2G/5G). */
+    uint8_t ht_user_disabled;
 #endif // NT_FN_HT
 
     uint16_t rsn_cap;

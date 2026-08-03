@@ -37,6 +37,11 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define WLAN_WMI_CMD_SIG_MASK_PROV_DISC_REQ 0x400000
 #endif
 #define WLAN_WMI_CMD_SIG_MASK_GET_BMPS_STATS 0x800000
+#define WLAN_WMI_CMD_SIG2_MASK_SAP_CSA_STATUS 0x1
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+#define WLAN_WMI_CMD_SIG2_MASK_GET_PARAM 0x2
+#define WLAN_WMI_CMD_SIG2_MASK_GET_CHIPSET_LOGGING_STATS 0x4
+#endif
 
 extern qapi_Status_t wmi_cmd_send(WMI_COMMAND_ID cmd_id, void *p_data, uint32_t data_len);
 extern qapi_Status_t wmi_dev_cmd_send(WMI_COMMAND_ID cmd_id, uint8_t dev_id, void *p_data, uint32_t data_len);
@@ -62,6 +67,12 @@ extern qapi_Status_t wmi_get_rate(void);
 extern qapi_Status_t wmi_send_raw(void);
 extern qapi_Status_t wmi_set_mgmt_filter(void);
 extern qapi_Status_t wmi_get_tx_power(void);
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+extern qapi_Status_t wmi_get_param(uint32_t param_id);
+#endif
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+extern qapi_Status_t wmi_get_chipset_logging_stats(uint32_t request_id);
+#endif
 #ifdef CONFIG_WPS
 extern qapi_Status_t wmi_stop_scan(void);
 #endif

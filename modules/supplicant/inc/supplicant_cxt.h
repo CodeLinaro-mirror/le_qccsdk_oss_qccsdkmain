@@ -85,7 +85,7 @@ extern int wlan_set_pmkid(unsigned char dev_id, unsigned char *pmkid,
                           unsigned char *bssid, bool enable);
 extern int wlan_generate_pmkid(const u8 *pmk, size_t pmk_len,
                                const u8 *auth_addr, const u8 *suppl_addr,
-                               u8 *pmkid);
+                               u8 *pmkid, unsigned short auth_mode);
 extern unsigned char suppl_get_intf_id(suppl_global_t *suppl_global,
                                        unsigned char device_ID);
 

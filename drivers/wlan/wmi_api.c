@@ -657,6 +657,46 @@ static void wmi_get_tx_power_event(void *msg)
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
 }
 
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+static void wmi_get_param_event(void *msg)
+{
+    if (!msg) {
+        warn_printf("msg NULL\n");
+        return;
+    }
+
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_GET_PARAM_EVT *result = (WMI_GET_PARAM_EVT *)msg;
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    memscpy(&p_cxt->wmi_get_param_evt, sizeof(WMI_GET_PARAM_EVT),
+            result, sizeof(WMI_GET_PARAM_EVT));
+    set_wlan_qapi_error(QAPI_OK);
+    qurt_signal_set(&p_cxt->wlan_cmd_done2, WLAN_WMI_CMD_SIG2_MASK_GET_PARAM);
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+}
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+static void wmi_get_chipset_logging_stats_event(void *msg)
+{
+    if (!msg) {
+        warn_printf("msg NULL\n");
+        return;
+    }
+
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_GET_CHIPSET_LOGGING_STATS_EVT *result = (WMI_GET_CHIPSET_LOGGING_STATS_EVT *)msg;
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    memscpy(&p_cxt->wmi_get_chipset_logging_stats_evt, sizeof(WMI_GET_CHIPSET_LOGGING_STATS_EVT),
+            result, sizeof(WMI_GET_CHIPSET_LOGGING_STATS_EVT));
+    set_wlan_qapi_error(QAPI_OK);
+    qurt_signal_set(&p_cxt->wlan_cmd_done2, WLAN_WMI_CMD_SIG2_MASK_GET_CHIPSET_LOGGING_STATS);
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+}
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
+
 static void wmi_get_rate_event(void *msg)
 {
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
@@ -681,6 +721,25 @@ static void wmi_get_bmps_stats_event(void *msg)
 
     if (p_cxt->wlan_disable_block_mode) {
         qurt_signal_set(&p_cxt->wlan_cmd_done, WLAN_WMI_CMD_SIG_MASK_GET_BMPS_STATS);
+    }
+
+    qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+}
+
+static void wmi_wlan_sap_csa_event(void *msg)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+
+    qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+    uint8_t ret = (uint8_t)msg;
+    if (ret) {
+        set_wlan_qapi_error(QAPI_ERROR);
+    } else {
+        set_wlan_qapi_error(QAPI_OK);
+    }
+
+    if (p_cxt->wlan_sap_csa_block_mode) {
+        qurt_signal_set(&p_cxt->wlan_cmd_done2, WLAN_WMI_CMD_SIG2_MASK_SAP_CSA_STATUS);
     }
 
     qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
@@ -1169,11 +1228,21 @@ static void wmi_8021x_assoc_result_event(void *msg)
     wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
     qapi_WLAN_Connect_Cb_Info_t cxnInfo;
     int intf_id;
-    
+    WMI_EAP_ASSOC_RESULT_MSG *result = (WMI_EAP_ASSOC_RESULT_MSG *)msg;
+
     memset(&cxnInfo, 0, sizeof(qapi_WLAN_Connect_Cb_Info_t));
 
     cxnInfo.value = true;
-    memcpy(cxnInfo.mac_Addr, ((WMI_EAP_ASSOC_RESULT_MSG *)msg)->bssid, __QAPI_WLAN_MAC_LEN);
+    memcpy(cxnInfo.mac_Addr, result->bssid, __QAPI_WLAN_MAC_LEN);
+
+    /* Refresh host-side auth_mode with the value negotiated by the driver.
+     * The user previously called set_auth_mode with the configured set
+     * (e.g. transition mode passes WMI_WPA2_AUTH | WMI_WPA2_SHA256_AUTH);
+     * here we narrow it to the single AKM the driver actually negotiated
+     * with the AP (wlan_wpa_keymgmt_rsn returns one of WMI_WPA2_AUTH /
+     * WMI_WPA2_SHA256_AUTH / WMI_WPA3_*). The supplicant uses this to pick
+     * the right hash for the PMKID (SHA1 vs SHA256). */
+    wlan_8021x_set_auth_mode(result->auth_mode);
 
     wlan_8021x_event_cb(WLAN_SUPPLICANT_INTERFACE_ID, QAPI_WLAN_CONNECT_CB_E, g_wl8021x_global, (void *)&cxnInfo, sizeof(cxnInfo));
 }
@@ -1240,6 +1309,16 @@ static void wmi_event_dispatch(event_t event_id, void *data)
     case WMI_GET_TX_POWER_EVTID:
         wmi_get_tx_power_event(data);
         break;
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    case WMI_GET_PARAM_EVTID:
+        wmi_get_param_event(data);
+        break;
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+    case WMI_GET_CHIPSET_LOGGING_STATS_EVTID:
+        wmi_get_chipset_logging_stats_event(data);
+        break;
+#endif
     case WMI_MGMT_FRAME_FILTER_EVTID:
         wmi_set_mgmt_filter_event(data);
         break;
@@ -1274,6 +1353,9 @@ static void wmi_event_dispatch(event_t event_id, void *data)
         wmi_control_rx_p2p(event_id, data);
         break;
 #endif
+    case WMI_WLAN_SAP_CSA_EVTID:
+        wmi_wlan_sap_csa_event(data);
+        break;
     default:
         break;
     }
@@ -1824,6 +1906,68 @@ qapi_Status_t wmi_get_tx_power(void)
     }
 
     ret = get_wlan_qapi_error();
+    return ret;
+}
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+qapi_Status_t wmi_get_param(uint32_t param_id)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_GET_PARAM_CMD cmd;
+    qapi_Status_t ret;
+
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.param_id = param_id;
+
+    wmi_cmd_send(WMI_GET_PARAM_CMDID, &cmd, sizeof(cmd));
+    qurt_signal_wait(&p_cxt->wlan_cmd_done2, WLAN_WMI_CMD_SIG2_MASK_GET_PARAM, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    ret = get_wlan_qapi_error();
+    return ret;
+}
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
+
+#ifdef WLAN_CHIPSET_LOG_ENABLE
+qapi_Status_t wmi_get_chipset_logging_stats(uint32_t request_id)
+{
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_GET_CHIPSET_LOGGING_STATS_CMD cmd;
+    qapi_Status_t ret;
+
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.request_id = request_id;
+
+    wmi_cmd_send(WMI_GET_CHIPSET_LOGGING_STATS_CMDID, &cmd, sizeof(cmd));
+    qurt_signal_wait(&p_cxt->wlan_cmd_done2, WLAN_WMI_CMD_SIG2_MASK_GET_CHIPSET_LOGGING_STATS, QURT_SIGNAL_ATTR_CLEAR_MASK);
+    ret = get_wlan_qapi_error();
+    return ret;
+}
+#endif /* WLAN_CHIPSET_LOG_ENABLE */
+
+qapi_Status_t wmi_wlan_sap_csa(uint8_t device_ID, uint8_t switch_mode, uint16_t channel, uint8_t is_6g, uint8_t switch_count)
+{
+    qapi_Status_t ret = QAPI_OK;
+    wlan_qapi_cxt_t *p_cxt = gp_wlan_qapi_cxt;
+    WMI_SAP_CSA_CMD *csa_data = &p_cxt->sap_csa;
+
+    csa_data->mode = switch_mode;
+    csa_data->channel = channel;
+    csa_data->is_6g = is_6g;
+    csa_data->count = switch_count;
+
+    wmi_cmd_send(WMI_SET_SAP_CSA, csa_data, sizeof(WMI_SAP_CSA_CMD));
+    if (p_cxt->wlan_sap_csa_block_mode) {
+        qurt_signal_wait(&p_cxt->wlan_cmd_done2, WLAN_WMI_CMD_SIG2_MASK_SAP_CSA_STATUS,
+                         QURT_SIGNAL_ATTR_CLEAR_MASK | QURT_SIGNAL_ATTR_WAIT_ANY);
+    } else {
+        log_printf("unblock mode, should check WMI cmd done in event cb\n");
+    }
+
+    if (p_cxt->wlan_sap_csa_block_mode) {
+        qurt_mutex_lock(&p_cxt->wlan_qapi_cxt_mutex);
+        ret = get_wlan_qapi_error();
+        qurt_mutex_unlock(&p_cxt->wlan_qapi_cxt_mutex);
+    }
+
     return ret;
 }
 
