@@ -1237,11 +1237,9 @@ static qapi_Status_t Connect(uint32_t __attribute__((__unused__)) Parameter_Coun
 
     info_printf("connect to ssid %s\n", ssid);
     ret = qapi_WLAN_Commit(deviceId);
-	if(deviceId == NT_DEV_AP_ID && ret == QAPI_OK) {
-		memscpy(p_cxt->ssid, ssidLength, ssid, ssidLength);
-        p_cxt->ssid[ssidLength] = 0;
-        p_cxt->ssid_length = ssidLength;
-	}
+    memscpy(p_cxt->ssid, ssidLength, ssid, ssidLength);
+    p_cxt->ssid[ssidLength] = 0;
+    p_cxt->ssid_length = ssidLength;
     return ret;
 }
 
