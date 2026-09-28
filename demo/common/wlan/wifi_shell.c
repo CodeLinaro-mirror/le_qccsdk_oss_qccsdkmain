@@ -185,11 +185,12 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
     for (i = 0;i<num_scan;i++) {
         memscpy(temp_ssid,list[i].ssid_Length,list[i].ssid,list[i].ssid_Length);
         temp_ssid[list[i].ssid_Length] = '\0';
-        if (list[i].ssid_Length == 0) {
-            info_printf("ssid = SSID Not available\r\n\n");
+        if (list[i].ssid_Length == 0 || temp_ssid[0] == 0) {
+            info_printf("ssid = SSID Not available\r\n");
         } else {
+            info_printf("ssid = %s\r\n",temp_ssid);
+        }
             {
-                info_printf("ssid = %s\r\n",temp_ssid);
                 info_printf("bssid = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\r\n",list[i].bssid[0],list[i].bssid[1],list[i].bssid[2],list[i].bssid[3],list[i].bssid[4],list[i].bssid[5]);
                 info_printf("channel = %d\r\n",list[i].channel);
                 info_printf("indicator = %d\r\n",list[i].rssi);
@@ -280,7 +281,6 @@ static void print_scan_results(qapi_WLAN_Scan_Comp_Evt_t *scan_coml_evt)
                     printf("NONE! ");
                 }
             }
-        }
 
         if(i!= num_scan-1) {
             printf("\n ");
